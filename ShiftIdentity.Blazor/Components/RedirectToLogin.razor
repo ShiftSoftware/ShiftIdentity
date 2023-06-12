@@ -1,0 +1,22 @@
+﻿@using Microsoft.AspNetCore.Components.Authorization;
+@using ShiftSoftware.ShiftIdentity.Blazor.Services;
+@inject NavigationManager NavManager
+@inject CodeVerifierService CodeVerifierService
+@inject ShiftIdentityService ShiftIdentityService
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationStateTask { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authenticationState = await AuthenticationStateTask;
+
+        if (authenticationState?.User?.Identity is null || !authenticationState.User.Identity.IsAuthenticated)
+        {
+            var returnUrl = NavManager.ToBaseRelativePath(NavManager.Uri);
+
+            await ShiftIdentityService.LoginAsync(returnUrl);
+        }
+    }
+}

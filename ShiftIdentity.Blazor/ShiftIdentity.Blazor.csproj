@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+	<PropertyGroup>
+		<TargetFramework>net7.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<AssemblyName>ShiftSoftware.ShiftIdentity.Blazor</AssemblyName>
+		<RootNamespace>ShiftSoftware.ShiftIdentity.Blazor</RootNamespace>
+		<PackageId>ShiftSoftware.ShiftIdentity.Blazor</PackageId>
+		<Version>1.5.1.0</Version>
+		<PackageProjectUrl>https://github.com/ShiftSoftware/ShiftIdentity</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/ShiftSoftware/ShiftIdentity</RepositoryUrl>
+		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+		<PackageIcon>icon.png</PackageIcon>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Blazored.LocalStorage" Version="4.3.0" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="7.0.3" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="7.0.1" />
+		<PackageReference Include="Polly" Version="7.2.3" />
+		<PackageReference Include="ShiftSoftware.TypeAuth.Blazor" Version="1.4.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\ShiftIdentity.Model\ShiftIdentity.Model.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="Images\icon.png" Pack="true" PackagePath="\" />
+		<Folder Include="Images\" />
+	</ItemGroup>
+</Project>

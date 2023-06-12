@@ -1,0 +1,18 @@
+﻿@page "/Auth/Token"
+@using ShiftSoftware.ShiftIdentity.Blazor.Services;
+@inject ShiftIdentityService ShiftIdentityService
+
+@code {
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string ReturnUrl { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public Guid AuthCode { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ShiftIdentityService.GetTokenAsync(AuthCode, ReturnUrl);
+    }
+}

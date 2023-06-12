@@ -1,0 +1,23 @@
+trigger:
+- master
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+
+ - script: dotnet remove ShiftIdentity.Dashboard.AspNetCore/ShiftIdentity.Dashboard.AspNetCore.csproj reference ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Launcher/ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Launcher.csproj
+   displayName: 'Remove Launcher Reference'
+
+ - script: dotnet build ShiftIdentity.AspNetCore --configuration release
+   displayName: 'dotnet build ShiftIdentity.Blazor'
+
+ - script: dotnet pack ShiftIdentity.AspNetCore --configuration release --output $(Build.ArtifactStagingDirectory)
+   displayName: 'dotnet pack'
+
+ - task: NuGetCommand@2
+   inputs:
+    command: 'push'
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
+    nuGetFeedType: 'external'
+    publishFeedCredentials: 'NuGet.org'

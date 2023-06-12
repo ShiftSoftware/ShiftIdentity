@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net7.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+
+		<PackageId>ShiftSoftware.ShiftIdentity.AspNetCore</PackageId>
+		<Product>Shift Identity AspNetCore</Product>
+		<AssemblyName>ShiftSoftware.ShiftIdentity.AspNetCore</AssemblyName>
+		<Version>1.5.1.0</Version>
+		<Authors>aza.asim,Shift Software,Nahro</Authors>
+		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+		<IsPackable>True</IsPackable>
+		<PackageIcon>icon.png</PackageIcon>
+		<RootNamespace>ShiftSoftware.ShiftIdentity.AspNetCore</RootNamespace>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <Compile Remove="Controllers\API\AuthController.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="7.0.4" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0" />
+		<PackageReference Include="Moq" Version="4.18.4" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="Images\icon.png" Pack="true" PackagePath="\" />
+		<Folder Include="Controllers\API\" />
+		<Folder Include="Images\" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\ShiftIdentity.Core\ShiftIdentity.Core.csproj" />
+	</ItemGroup>
+
+</Project>
