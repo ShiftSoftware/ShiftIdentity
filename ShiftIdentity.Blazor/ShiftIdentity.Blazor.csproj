@@ -23,11 +23,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\ShiftIdentity.Model\ShiftIdentity.Model.csproj" />
+		<None Include="Images\icon.png" Pack="true" PackagePath="\" />
+		<Folder Include="Images\" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Include="Images\icon.png" Pack="true" PackagePath="\" />
-		<Folder Include="Images\" />
+	  <ProjectReference Include="..\ShiftIdentity.Core\ShiftIdentity.Core.csproj" />
 	</ItemGroup>
 </Project>

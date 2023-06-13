@@ -1,14 +1,11 @@
 ﻿using ShiftSoftware.ShiftEntity.Model;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using ShiftSoftware.ShiftIdentity.Core.DTOs;
+using ShiftSoftware.ShiftIdentity.Core.Models;
 using System.Net.Http.Json;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace ShiftSoftware.ShiftIdentity.Model;
+namespace ShiftSoftware.ShiftIdentity.Blazor.Services;
 
-public class ShiftIdentityProvider
+internal class ShiftIdentityProvider : IShiftIdentityProvider
 {
     private readonly HttpClient http;
 

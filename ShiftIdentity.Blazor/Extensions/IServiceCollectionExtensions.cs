@@ -2,7 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using ShiftSoftware.ShiftIdentity.Blazor.Services;
-using ShiftSoftware.ShiftIdentity.Model;
+using ShiftSoftware.ShiftIdentity.Core.Models;
 
 namespace ShiftSoftware.ShiftIdentity.Blazor.Extensions;
 
@@ -21,7 +21,7 @@ public static class IServiceCollectionExtensions
         services.TryAddScoped<CodeVerifierService>();
         services.TryAddScoped<StorageService>();
         services.TryAddScoped<ShiftIdentityService>();
-        services.TryAddScoped<ShiftIdentityProvider>();
+        services.TryAddScoped<IShiftIdentityProvider, ShiftIdentityProvider>();
         services.TryAddScoped<HttpMessageHandlerService>();
         services.AddTransient<RefreshTokenMessageHandler>();
 

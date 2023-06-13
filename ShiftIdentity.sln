@@ -5,8 +5,6 @@ VisualStudioVersion = 17.4.33213.308
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ShiftIdentity.Blazor", "ShiftIdentity.Blazor\ShiftIdentity.Blazor.csproj", "{38F3F70E-3221-44C4-BC4B-6020CC6A0DE5}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ShiftIdentity.Model", "ShiftIdentity.Model\ShiftIdentity.Model.csproj", "{BD6E3202-FFD5-466F-9CA2-FA8703E5046F}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ShiftIdentity.AspNetCore", "ShiftIdentity.AspNetCore\ShiftIdentity.AspNetCore.csproj", "{914EF3F0-8279-4721-AC59-158F40A5950B}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ShiftIdentity.Core", "ShiftIdentity.Core\ShiftIdentity.Core.csproj", "{14F407E2-6040-4AD5-ACA2-726DAB10230E}"
@@ -21,10 +19,6 @@ Global
 		{38F3F70E-3221-44C4-BC4B-6020CC6A0DE5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{38F3F70E-3221-44C4-BC4B-6020CC6A0DE5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{38F3F70E-3221-44C4-BC4B-6020CC6A0DE5}.Release|Any CPU.Build.0 = Release|Any CPU
-		{BD6E3202-FFD5-466F-9CA2-FA8703E5046F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{BD6E3202-FFD5-466F-9CA2-FA8703E5046F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{BD6E3202-FFD5-466F-9CA2-FA8703E5046F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{BD6E3202-FFD5-466F-9CA2-FA8703E5046F}.Release|Any CPU.Build.0 = Release|Any CPU
 		{914EF3F0-8279-4721-AC59-158F40A5950B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{914EF3F0-8279-4721-AC59-158F40A5950B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{914EF3F0-8279-4721-AC59-158F40A5950B}.Release|Any CPU.ActiveCfg = Release|Any CPU

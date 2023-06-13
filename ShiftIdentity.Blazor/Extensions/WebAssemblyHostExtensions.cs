@@ -3,7 +3,8 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using ShiftSoftware.ShiftIdentity.Blazor.Services;
-using ShiftSoftware.ShiftIdentity.Model;
+using ShiftSoftware.ShiftIdentity.Core.DTOs;
+using ShiftSoftware.ShiftIdentity.Core.Models;
 using ShiftSoftware.TypeAuth.Blazor.Services;
 using System.Net;
 using System.Net.Http.Headers;
@@ -15,7 +16,7 @@ public static class WebAssemblyHostExtensions
     public static async Task<WebAssemblyHost> RefreshTokenAsync(this WebAssemblyHost host, int everySeconds)
     {
         //Get injected services
-        var shiftIdentityProvider = host.Services.GetRequiredService<ShiftIdentityProvider>();
+        var shiftIdentityProvider = host.Services.GetRequiredService<IShiftIdentityProvider>();
         var tokenProvider = host.Services.GetRequiredService<IIdentityTokenProvider>();
         var navManager = host.Services.GetRequiredService<NavigationManager>();
         var http = host.Services.GetRequiredService<HttpClient>();
@@ -38,7 +39,7 @@ public static class WebAssemblyHostExtensions
     }
 
     private static async Task RefreshAsync(
-        ShiftIdentityProvider shiftIdentityProvider,
+        IShiftIdentityProvider shiftIdentityProvider,
         IIdentityTokenProvider tokenProvider,
         TypeAuthService? typeAuth,
         AuthenticationStateProvider? authStateProvider,

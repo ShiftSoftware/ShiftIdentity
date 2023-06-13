@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
-using ShiftSoftware.ShiftIdentity.Model;
+using ShiftSoftware.ShiftIdentity.Core.DTOs;
+using ShiftSoftware.ShiftIdentity.Core.Models;
 
 namespace ShiftSoftware.ShiftIdentity.Blazor.Services;
 
@@ -10,14 +11,14 @@ public class ShiftIdentityService
     private readonly CodeVerifierService codeVerifierService;
     private readonly StorageService storageService;
     private readonly IIdentityTokenStore tokenStore;
-    private readonly ShiftIdentityProvider shiftIdentityProvider;
+    private readonly IShiftIdentityProvider shiftIdentityProvider;
 
     public ShiftIdentityService(ShiftIdentityBlazorOptions options, 
         NavigationManager navManager,
         CodeVerifierService codeVerifierService,
         StorageService storageService,
         IIdentityTokenStore tokenStore,
-        ShiftIdentityProvider shiftIdentityProvider)
+        IShiftIdentityProvider shiftIdentityProvider)
     {
         this.options = options;
         this.navManager = navManager;
