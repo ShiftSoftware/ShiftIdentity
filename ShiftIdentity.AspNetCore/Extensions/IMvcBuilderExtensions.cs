@@ -1,18 +1,26 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Moq;
+using ShiftSoftware.ShiftIdentity.AspNetCore.Fakes;
+using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
+using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
+using ShiftSoftware.ShiftIdentity.Core.DTOs;
+using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.ShiftIdentity.Core.Models;
-using ShiftSoftware.ShiftIdentity.Core.Services;
+using ShiftSoftware.ShiftIdentity.Core.Repositories;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using static System.Formats.Asn1.AsnWriter;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Extensions;
 
 public static class IMvcBuilderExtensions
 {
-    public static IMvcBuilder AddShiftIdentity(this IMvcBuilder builder, string tokenIssuer, string tokenKey, string[] allowedScopes)
+    public static IMvcBuilder AddShiftIdentity(this IMvcBuilder builder, string tokenIssuer, string tokenKey)
     {
         builder.Services.AddAuthentication(a =>
         {
@@ -64,54 +72,20 @@ public static class IMvcBuilderExtensions
 
         builder.Services.AddAuthorization(options =>
         {
-            options.AddPolicy("Scopes", policy =>
-            {
-                policy.RequireAuthenticatedUser();
-                policy.RequireClaim("scope", allowedScopes);
-            });
+            //options.AddPolicy("Scopes", policy =>
+            //{
+            //    policy.RequireAuthenticatedUser();
+            //    policy.RequireClaim("scope", allowedScopes);
+            //});
         });
-        builder.AddMvcOptions(o => o.Filters.Add(new AuthorizeFilter("Scopes")));
+        //builder.AddMvcOptions(o => o.Filters.Add(new AuthorizeFilter("Scopes")));
 
         builder.Services.AddSingleton<AuthCodeStoreService>();
-
-        ////Remove controllers of the "ShiftIdentity.Dashboard.AspNetCore" from being discovered
-        //builder.PartManager.ApplicationParts.Remove(
-        //    builder.PartManager.ApplicationParts.FirstOrDefault(f =>
-        //        f.Name == typeof(Dashboard.AspNetCore.WebMaker).Assembly.GetName().Name)
-        //    );
-
-        //builder.PartManager.ApplicationParts.Remove(
-        //    builder.PartManager.ApplicationParts.FirstOrDefault(f =>
-        //        f.Name == Assembly.GetExecutingAssembly().GetName().Name)
-        //    );
 
         return builder;
     }
 
-    public static IMvcBuilder AddFakeIdentity(this IMvcBuilder builder, TokenSettingsModel tokenConfiguration,
-        TokenUserDataDTO userData, string[] scopes,
-        AppModel app, string? userPassword, params object[] accessTrees)
-    {
-        return builder.AddFakeIdentity(tokenConfiguration, userData, scopes, app, userPassword, accessTrees.Select(x => JsonSerializer.Serialize(x)));
-    }
-
-    public static IMvcBuilder AddFakeIdentity(this IMvcBuilder builder, TokenSettingsModel tokenConfiguration,
-        TokenUserDataDTO userData, string[] scopes,
-        AppModel app, string? userPassword, object accessTree)
-    {
-        return builder.AddFakeIdentity(tokenConfiguration, userData, scopes, app, userPassword, new string[] { JsonSerializer.Serialize(accessTree) });
-    }
-
-    public static IMvcBuilder AddFakeIdentity(this IMvcBuilder builder, TokenSettingsModel tokenConfiguration,
-        TokenUserDataDTO userData, string[] scopes,
-        AppModel app, string? userPassword, string accessTree)
-    {
-        return builder.AddFakeIdentity(tokenConfiguration, userData, scopes, app, userPassword, new string[] { accessTree });
-    }
-
-    public static IMvcBuilder AddFakeIdentity(this IMvcBuilder builder, TokenSettingsModel tokenConfiguration,
-        TokenUserDataDTO userData, string[] scopes,
-        AppModel app, string? userPassword, params string[] accessTrees)
+    public static IMvcBuilder AddFakeIdentity(this IMvcBuilder builder, TokenSettingsModel tokenConfiguration, TokenUserDataDTO userData, AppModel app, string? userPassword, params string[] accessTrees)
     {
         //Fixed configurations
         var configuration = new ShiftIdentityConfiguration
@@ -138,9 +112,19 @@ public static class IMvcBuilderExtensions
             }
         };
 
-        builder.Services.AddSingleton(new ShiftIdentityOptions(userData, scopes, app, accessTrees, configuration, userPassword));
+        builder.Services.AddSingleton(new ShiftIdentityOptions(userData, app, accessTrees, configuration, userPassword));
 
         builder.AddApplicationPart(Assembly.GetExecutingAssembly());
+
+        builder.Services.AddScoped<IUserRepository, UserRepository>();
+        builder.Services.AddScoped<IAppRepository, AppRepository>();
+        builder.Services.AddScoped<IClaimService, ClaimService>();
+
+        builder.Services.AddScoped<AuthCodeService>();
+        builder.Services.AddScoped<AuthService>();
+        builder.Services.AddScoped<ClaimService>();
+        builder.Services.AddScoped<HashService>();
+        builder.Services.AddScoped<TokenService>();
 
         return builder;
     }

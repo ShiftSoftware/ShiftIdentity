@@ -1,8 +1,8 @@
 ﻿using ShiftSoftware.ShiftEntity.Model.HashId;
 
-namespace ShiftSoftware.ShiftIdentity.Core.Models;
+namespace ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 
-public class _UserHashId : JsonHashIdConverterAttribute
+internal class _UserHashId : JsonHashIdConverterAttribute
 {
     public _UserHashId() : base(HashId.UserIdsSalt, HashId.UserIdsMinHashLength, HashId.UserIdsAlphabet)
     {

@@ -1,10 +1,13 @@
-﻿using System.Threading.Tasks;
+﻿using ShiftSoftware.ShiftIdentity.Core.DTOs;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace ShiftSoftware.ShiftIdentity.Core.Models
+namespace ShiftSoftware.ShiftIdentity.Core.Models;
+
+public interface IIdentityTokenStore
 {
-
-    public interface IIdentityTokenStore
-    {
-        Task StoreTokenAsync(TokenDTO token);
-    }
+    public Task StoreTokenAsync(TokenDTO token);
 }

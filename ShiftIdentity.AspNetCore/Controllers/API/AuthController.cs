@@ -1,6 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Moq;
+using ShiftSoftware.ShiftEntity.Model;
+using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
+using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
+using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.Models;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Controllers.API;
@@ -10,49 +13,58 @@ namespace ShiftSoftware.ShiftIdentity.AspNetCore.Controllers.API;
 [AllowAnonymous]
 public class AuthController : ControllerBase
 {
-    private readonly ShiftIdentityOptions options;
+    private readonly AuthService authService;
+    private readonly AuthCodeService authCodeService;
+    private readonly TokenService tokenService;
+    private readonly IClaimService claimService;
 
     public AuthController(
-        ShiftIdentityOptions options)
+            AuthService authService,
+            AuthCodeService authCodeService,
+            TokenService tokenService,
+            IClaimService claimService
+        )
     {
-        this.options = options;
+        this.authService = authService;
+        this.authCodeService = authCodeService;
+        this.tokenService = tokenService;
+        this.claimService = claimService;
     }
 
     [HttpPost("Login")]
     [AllowAnonymous]
     public async Task<IActionResult> Login(LoginDTO loginDto)
     {
-        var hash= HashService.GenerateHash(options.UserPassword);
+        var result = await authService.LoginAsync(loginDto);
 
-        var userRepo = new Mock<IUserRepository>();
-        userRepo.Setup(s => s.GetUserByUsernameAsync(options.UserData.Username.ToLower())).ReturnsAsync(
-            new User()
+        if (result.Result != LoginResultEnum.Success)
+            return BadRequest(new ShiftEntityResponse<TokenDTO>
             {
-                Email = options.UserData.Emails?.FirstOrDefault()?.Email ?? "",
-                Phone = options.UserData.Phones?.FirstOrDefault()?.Phone ?? "",
-                FullName = options.UserData.FullName,
-                Username = options.UserData.Username,
-                IsActive = true,
-                AccessTrees = options.AccessTrees.Select(x => new UserAccessTree
+                Message = new Message
                 {
-                    AccessTree = new AccessTree
-                    {
-                        Tree = x
-                    }
-                }),
-                PasswordHash = hash.PasswordHash,
-                Salt = hash.Salt,
-            }.CreateShiftEntity(null, options.UserData.ID));
-        userRepo.Setup(x=> x.SaveChangesAsync()).Returns(Task.CompletedTask);
+                    Body = result.ErrorMessage
+                }
+            });
 
-        var scopeRepo= new Mock<IScopeRepository>();
-        scopeRepo.Setup(x => x.GetAllScopesAsync()).ReturnsAsync(options.Scopes.Select(x => new ScopeDTO { Name = x }));
+        return Ok(new ShiftEntityResponse<TokenDTO>(result.Token));
+    }
 
-        //var tokenService = new TokenService(options.Configuration, scopeRepo.Object, null);
-        //var authService = new AuthService(userRepo.Object, options.Configuration, tokenService, null);
-        //var authController= new Dashboard.AspNetCore.Controllers.AuthController(authService, null, tokenService, null);
+    [HttpPost("Refresh")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Refresh([FromBody] RefreshDTO dto)
+    {
+        var token = await tokenService.RefreshAsync(dto.RefreshToken);
 
-        //return await authController.Login(loginDto);
+        if (token is null)
+            return Unauthorized(new ShiftEntityResponse<TokenDTO>
+            {
+                Message = new Message
+                {
+                    Body = "Invalid refresh token"
+                }
+            });
+
+        return Ok(new ShiftEntityResponse<TokenDTO>(token));
     }
 
     /// <summary>
@@ -63,55 +75,28 @@ public class AuthController : ControllerBase
     [HttpPost("AuthCode")]
     public async Task<IActionResult> GenerateAuthCode([FromBody] GenerateAuthCodeDTO generateAuthCodeDto)
     {
-        var claimService = new Mock<IClaimService>();
-        claimService.Setup(s => s.GetUser()).Returns(options.UserData);
+        var loginUser = claimService.GetUser();
 
-        var appRepo = new Mock<IAppRepository>();
-        appRepo.Setup(s => s.GetAppAsync(options.App.AppId.ToLower())).ReturnsAsync(new App
-        {
-            AppId = options.App.AppId,
-            DisplayName = options.App.DisplayName,
-            RedirectUri = options.App.RedirectUri,
-            Scopes = options.Scopes.Select(x => new AppScope { Scope = new Scope { Name = x } })
-        });
+        var authCode = await authCodeService.GenerateCodeAsync(generateAuthCodeDto, loginUser.ID);
 
-        //var authController = new Dashboard.AspNetCore.Controllers.AuthController(
-        //    new AuthService(null, options.Configuration, null, new AuthCodeService(appRepo.Object, authCodeStoreService)),
-        //    new AuthCodeService(appRepo.Object, authCodeStoreService),
-        //    null,
-        //    claimService.Object
-        //    );
-
-        //return await authController.GenerateAuthCode(generateAuthCodeDto);
-    }
-
-    [HttpPost("Refresh")]
-    [AllowAnonymous]
-    public async Task<IActionResult> Refresh([FromBody] RefreshDTO dto)
-    {
-        var userRepo = new Mock<IUserRepository>();
-        userRepo.Setup(s => s.FindAsync(options.UserData.ID, It.IsAny<DateTime?>(), It.IsAny<bool>())).ReturnsAsync(
-            new User()
+        if (authCode is null)
+            return BadRequest(new ShiftEntityResponse<AuthCodeDTO>
             {
-                Email = options.UserData.Emails?.FirstOrDefault()?.Email ?? "",
-                Phone = options.UserData.Phones?.FirstOrDefault()?.Phone ?? "",
-                FullName = options.UserData.FullName,
-                Username = options.UserData.Username,
-                IsActive = true,
-                AccessTrees = options.AccessTrees.Select(x => new UserAccessTree
+                Message = new Message
                 {
-                    AccessTree = new AccessTree
-                    {
-                        Tree = x
-                    }
-                })
-            }.CreateShiftEntity(null, options.UserData.ID));
+                    Body = "Failed to genearate auth-code"
+                }
+            });
 
-        var tokenService = new TokenService(options.Configuration, null, userRepo.Object);
+        var authCodeDto = new AuthCodeDTO
+        {
+            AppDisplayName = authCode.AppDisplayName,
+            Code = authCode.Code,
+            ReturnUrl = generateAuthCodeDto.ReturnUrl,
+            RedirectUri = authCode.RedirectUri
+        };
 
-        //var authController = new Dashboard.AspNetCore.Controllers.AuthController(null, null, tokenService, null);
-
-        //return await authController.Refresh(dto);
+        return Ok(new ShiftEntityResponse<AuthCodeDTO>(authCodeDto));
     }
 
     /// <summary>
@@ -123,38 +108,17 @@ public class AuthController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> GenereateExternalTokenWithAppIdOnly([FromBody] GenerateExternalTokenWithAppIdOnlyDTO dto)
     {
-        var userRepo = new Mock<IUserRepository>();
-        userRepo.Setup(s => s.FindAsync(options.UserData.ID, It.IsAny<DateTime?>(), It.IsAny<bool>())).ReturnsAsync(
-            new User()
+        var token = await authService.GenrerateExternalTokenWithAppIdOnly(dto);
+
+        if (token is null)
+            return BadRequest(new ShiftEntityResponse<TokenDTO>
             {
-                Email = options.UserData.Emails?.FirstOrDefault()?.Email ?? "",
-                Phone = options.UserData.Phones?.FirstOrDefault()?.Phone ?? "",
-                FullName = options.UserData.FullName,
-                Username = options.UserData.Username,
-                IsActive = true,
-                AccessTrees = options.AccessTrees.Select(x => new UserAccessTree
+                Message = new Message
                 {
-                    AccessTree = new AccessTree
-                    {
-                        Tree = x
-                    }
-                })
-            }.CreateShiftEntity(null, options.UserData.ID));
+                    Body = "Failed to genearate token"
+                }
+            });
 
-        var appRepo = new Mock<IAppRepository>();
-        appRepo.Setup(s => s.GetAppAsync(options.App.AppId.ToLower())).ReturnsAsync(new App
-        {
-            AppId = options.App.AppId.ToLower(),
-            DisplayName = options.App.DisplayName,
-            RedirectUri = options.App.RedirectUri,
-            Scopes = options.Scopes.Select(x => new AppScope { Scope = new Scope { Name = x } })
-        });
-
-        //var authCodeService = new AuthCodeService(appRepo.Object, authCodeStoreService);
-        //var tokenService = new TokenService(options.Configuration, null, null);
-        //var authService = new AuthService(userRepo.Object, options.Configuration, tokenService, authCodeService);
-        //var authController = new Dashboard.AspNetCore.Controllers.AuthController(authService, authCodeService, tokenService, null);
-
-        //return await authController.GenereateExternalTokenWithAppIdOnly(dto);
+        return Ok(new ShiftEntityResponse<TokenDTO>(token));
     }
 }

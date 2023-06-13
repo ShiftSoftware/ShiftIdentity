@@ -1,4 +1,5 @@
-﻿using ShiftSoftware.ShiftIdentity.Core.Models;
+﻿using ShiftSoftware.ShiftIdentity.Core.DTOs;
+using ShiftSoftware.ShiftIdentity.Core.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,8 +12,6 @@ public class ShiftIdentityOptions
 {
     public TokenUserDataDTO UserData { get; private set; }
 
-    public string[] Scopes { get; private set; }
-
     public AppModel App { get; private set; }
 
     public string[] AccessTrees { get; private set; }
@@ -22,14 +21,12 @@ public class ShiftIdentityOptions
     public ShiftIdentityConfiguration Configuration { get;private set; }
 
     public ShiftIdentityOptions(TokenUserDataDTO userData,
-        string[] scopes,
         AppModel app,
         string[] accessTrees,
         ShiftIdentityConfiguration configuration,
         string? userPassword = null)
     {
         this.UserData = userData;
-        this.Scopes = scopes;
         this.App = app;
         this.AccessTrees = accessTrees;
         this.Configuration = configuration;

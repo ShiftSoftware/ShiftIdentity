@@ -1,6 +1,5 @@
-﻿using ShiftSoftware.ShiftIdentity.Core.ToDelete;
-using System;
-using System.Collections.Generic;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace ShiftSoftware.ShiftIdentity.Core.Models
 {
@@ -10,22 +9,21 @@ namespace ShiftSoftware.ShiftIdentity.Core.Models
 
         public long UserID { get; set; }
 
-        public string AppDisplayName { get; set; }
+        public string AppDisplayName { get; set; } = default!;
 
-        private string appId;
+        private string appId = default!;
 
+        [Required]
         public string AppId
         {
             get { return appId.ToLower(); }
             set { appId = value.ToLower(); }
         }
 
-        public DateTime Expire { get; set; }
+        public DateTime Expire { get; set; } = default!;
 
-        public string CodeChallenge { get; set; }
+        public string CodeChallenge { get; set; } = default!;
 
-        public List<ScopeDTO> Scopes { get; set; }
-
-        public string RedirectUri { get; set; }
+        public string RedirectUri { get; set; } = default!;
     }
 }

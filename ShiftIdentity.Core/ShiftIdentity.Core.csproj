@@ -1,19 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-	  <RootNamespace>ShiftSoftware.ShiftIdentity.Core</RootNamespace>
-	  <AssemblyName>ShiftSoftware.ShiftIdentity.Core</AssemblyName>
-	  <PackageId>ShiftSoftware.ShiftIdentity.Core</PackageId>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<LangVersion>latest</LangVersion>
+		<Nullable>enable</Nullable>
+		<RootNamespace>ShiftSoftware.ShiftIdentity.Core</RootNamespace>
+		<AssemblyName>ShiftSoftware.ShiftIdentity.Core</AssemblyName>
+		<PackageId>ShiftSoftware.ShiftIdentity.Core</PackageId>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="ShiftSoftware.ShiftEntity.Model" Version="1.6.0.1" />
-    <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="NewFolder\" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="ShiftSoftware.ShiftEntity" Version="1.6.0.3" />
+		<PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
+	</ItemGroup>
 
 </Project>
