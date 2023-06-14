@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
+using ShiftSoftware.ShiftEntity.Model.HashId;
 
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 
 public class UserDTO : ShiftEntityDTO
 {
-    [_UserHashId]
+    [UserHashIdConverter]
     public override string? ID { get; set; }
     #region Security
     [Required]

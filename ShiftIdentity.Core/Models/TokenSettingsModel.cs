@@ -1,13 +1,12 @@
-﻿namespace ShiftSoftware.ShiftIdentity.Core.Models
+﻿namespace ShiftSoftware.ShiftIdentity.Core.Models;
+
+public class TokenSettingsModel
 {
-    public class TokenSettingsModel
-    {
-        public string Key { get; set; } = default!;
+    public string Key { get; set; } = default!;
 
-        public string Issuer { get; set; } = default!;
+    public string Issuer { get; set; } = default!;
 
-        public string Audience { get; set; } = default!;
+    public string Audience { get; set; } = default!;
 
-        public int ExpireSeconds { get; set; }
-    }
+    public int ExpireSeconds { get; set; }
 }

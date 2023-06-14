@@ -9,21 +9,18 @@ public class ShiftIdentityService
     private readonly ShiftIdentityBlazorOptions options;
     private readonly NavigationManager navManager;
     private readonly CodeVerifierService codeVerifierService;
-    private readonly StorageService storageService;
-    private readonly IIdentityTokenStore tokenStore;
+    private readonly IIdentityStore tokenStore;
     private readonly IShiftIdentityProvider shiftIdentityProvider;
 
     public ShiftIdentityService(ShiftIdentityBlazorOptions options, 
         NavigationManager navManager,
         CodeVerifierService codeVerifierService,
-        StorageService storageService,
-        IIdentityTokenStore tokenStore,
+        IIdentityStore tokenStore,
         IShiftIdentityProvider shiftIdentityProvider)
     {
         this.options = options;
         this.navManager = navManager;
         this.codeVerifierService = codeVerifierService;
-        this.storageService = storageService;
         this.tokenStore = tokenStore;
         this.shiftIdentityProvider = shiftIdentityProvider;
     }
@@ -59,7 +56,7 @@ public class ShiftIdentityService
         if(response.IsSuccess)
         {
             await tokenStore.StoreTokenAsync(response?.Data.Entity!);
-            await storageService.RemoveCodeVerifierAsync();
+            await tokenStore.RemoveCodeVerifierAsync();
             navManager.NavigateTo("/" + returnUrl, true);
         }
         else

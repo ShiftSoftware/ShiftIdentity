@@ -1,20 +1,18 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using Moq;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Fakes;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
+using ShiftSoftware.ShiftIdentity.Core.DTOs.App;
+using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.ShiftIdentity.Core.Models;
 using ShiftSoftware.ShiftIdentity.Core.Repositories;
 using System.Reflection;
 using System.Text;
-using System.Text.Json;
-using static System.Formats.Asn1.AsnWriter;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Extensions;
 
@@ -72,21 +70,28 @@ public static class IMvcBuilderExtensions
 
         builder.Services.AddAuthorization(options =>
         {
+            options.AddPolicy("ChangePassword", policy => policy.RequireClaim(ShiftIdentityClaims.ExternalToken, false.ToString().ToLower()));
+
             //options.AddPolicy("Scopes", policy =>
             //{
             //    policy.RequireAuthenticatedUser();
             //    policy.RequireClaim("scope", allowedScopes);
             //});
         });
-        //builder.AddMvcOptions(o => o.Filters.Add(new AuthorizeFilter("Scopes")));
 
-        builder.Services.AddSingleton<AuthCodeStoreService>();
+        builder.AddMvcOptions(o => o.Filters.Add(new AuthorizeFilter()));
 
         return builder;
     }
 
-    public static IMvcBuilder AddFakeIdentity(this IMvcBuilder builder, TokenSettingsModel tokenConfiguration, TokenUserDataDTO userData, AppModel app, string? userPassword, params string[] accessTrees)
+    public static IMvcBuilder AddFakeIdentityEndPoints(this IMvcBuilder builder, TokenSettingsModel tokenConfiguration, TokenUserDataDTO userData, AppDTO app, string? userPassword, params string[] accessTrees)
     {
+        builder.Services.AddSingleton<AuthCodeStoreService>();
+        builder.Services.AddScoped<AuthCodeService>();
+        builder.Services.AddScoped<AuthService>();
+        builder.Services.AddScoped<TokenService>();
+        builder.Services.AddScoped<HashService>();
+
         //Fixed configurations
         var configuration = new ShiftIdentityConfiguration
         {
@@ -94,7 +99,7 @@ public static class IMvcBuilderExtensions
             RefreshToken = new TokenSettingsModel
             {
                 Audience = "Shift-FakeIdentity",
-                Key = "VeryStrongKeyRequiredForThisEncryption",
+                Key = "VeryStrongKeyRequiredForThisEncryption-VeryStrongKeyRequiredForThisEncryption",
                 Issuer = "Shift-FakeIdentity",
                 ExpireSeconds = 31557600
             },
@@ -112,19 +117,13 @@ public static class IMvcBuilderExtensions
             }
         };
 
-        builder.Services.AddSingleton(new ShiftIdentityOptions(userData, app, accessTrees, configuration, userPassword));
+        builder.Services.AddSingleton(new ShiftIdentityOptions(userData, app, accessTrees, configuration, userPassword) { IsFakeIdentity = true });
 
-        builder.AddApplicationPart(Assembly.GetExecutingAssembly());
+        //builder.AddApplicationPart(Assembly.GetExecutingAssembly());
 
-        builder.Services.AddScoped<IUserRepository, UserRepository>();
-        builder.Services.AddScoped<IAppRepository, AppRepository>();
-        builder.Services.AddScoped<IClaimService, ClaimService>();
-
-        builder.Services.AddScoped<AuthCodeService>();
-        builder.Services.AddScoped<AuthService>();
-        builder.Services.AddScoped<ClaimService>();
-        builder.Services.AddScoped<HashService>();
-        builder.Services.AddScoped<TokenService>();
+        builder.Services.AddScoped<IUserRepository, FakeUserRepository>();
+        builder.Services.AddScoped<IAppRepository, FakeAppRepository>();
+        builder.Services.AddScoped<IClaimService, FakeClaimService>();
 
         return builder;
     }

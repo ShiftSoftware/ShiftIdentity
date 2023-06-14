@@ -1,5 +1,6 @@
 ﻿using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
+using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 using System.Threading.Tasks;
 
 namespace ShiftSoftware.ShiftIdentity.Core.Models;

@@ -4,6 +4,7 @@ using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
+using ShiftSoftware.ShiftIdentity.Core.DTOs.Auth;
 using ShiftSoftware.ShiftIdentity.Core.Models;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Controllers.API;
@@ -17,18 +18,21 @@ public class AuthController : ControllerBase
     private readonly AuthCodeService authCodeService;
     private readonly TokenService tokenService;
     private readonly IClaimService claimService;
+    private readonly ShiftIdentityOptions shiftIdentityOptions;
 
     public AuthController(
             AuthService authService,
             AuthCodeService authCodeService,
             TokenService tokenService,
-            IClaimService claimService
+            IClaimService claimService,
+            ShiftIdentityOptions shiftIdentityOptions
         )
     {
         this.authService = authService;
         this.authCodeService = authCodeService;
         this.tokenService = tokenService;
         this.claimService = claimService;
+        this.shiftIdentityOptions = shiftIdentityOptions;
     }
 
     [HttpPost("Login")]
@@ -75,12 +79,17 @@ public class AuthController : ControllerBase
     [HttpPost("AuthCode")]
     public async Task<IActionResult> GenerateAuthCode([FromBody] GenerateAuthCodeDTO generateAuthCodeDto)
     {
+        if (!this.shiftIdentityOptions.IsFakeIdentity && !HttpContext!.User!.Identity!.IsAuthenticated)
+        {
+            return Unauthorized();
+        }
+
         var loginUser = claimService.GetUser();
 
         var authCode = await authCodeService.GenerateCodeAsync(generateAuthCodeDto, loginUser.ID);
 
         if (authCode is null)
-            return BadRequest(new ShiftEntityResponse<AuthCodeDTO>
+            return BadRequest(new ShiftEntityResponse<AuthCodeModel>
             {
                 Message = new Message
                 {
@@ -88,15 +97,16 @@ public class AuthController : ControllerBase
                 }
             });
 
-        var authCodeDto = new AuthCodeDTO
+        var authCodeDto = new AuthCodeModel
         {
+            AppId = authCode.AppId,
             AppDisplayName = authCode.AppDisplayName,
             Code = authCode.Code,
             ReturnUrl = generateAuthCodeDto.ReturnUrl,
             RedirectUri = authCode.RedirectUri
         };
 
-        return Ok(new ShiftEntityResponse<AuthCodeDTO>(authCodeDto));
+        return Ok(new ShiftEntityResponse<AuthCodeModel>(authCodeDto));
     }
 
     /// <summary>

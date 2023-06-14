@@ -3,42 +3,34 @@ using Microsoft.AspNetCore.Components.Authorization;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.Models;
-using ShiftSoftware.TypeAuth.Blazor.Services;
-using System.Net;
 using System.Net.Http.Json;
 
 namespace ShiftSoftware.ShiftIdentity.Blazor.Services;
 
 public class HttpMessageHandlerService
 {
-    private readonly TypeAuthService? typeAuth;
     private readonly AuthenticationStateProvider? authStateProvider;
     private readonly NavigationManager navManager;
     private readonly ShiftIdentityBlazorOptions options;
-    private readonly IIdentityTokenProvider tokenProvider;
-    private readonly IIdentityTokenStore tokenStore;
+    private readonly IIdentityStore tokenStore;
     private HttpClient http;
 
     public HttpMessageHandlerService(
         NavigationManager navManager,
         ShiftIdentityBlazorOptions options,
-        IIdentityTokenProvider tokenProvider,
-        IIdentityTokenStore tokenStore,
-        TypeAuthService? typeAuth = null,
+        IIdentityStore tokenStore,
         AuthenticationStateProvider? authStateProvider = null)
     {
-        this.typeAuth = typeAuth;
         this.authStateProvider = authStateProvider;
         this.navManager = navManager;
         this.options = options;
-        this.tokenProvider = tokenProvider;
         this.tokenStore = tokenStore;
         http = new HttpClient() { BaseAddress = new Uri(options.BaseUrl) };
     }
 
     public async Task RefreshAsync()
     {
-        var storedToken = await tokenProvider.GetTokenAsync();
+        var storedToken = await tokenStore.GetTokenAsync();
 
         var headerToken = http.DefaultRequestHeaders?.Authorization?.Parameter;
 
@@ -68,9 +60,5 @@ public class HttpMessageHandlerService
         //Notify AuthenticationStateProvider that state has changed
         if (authStateProvider is not null)
             await authStateProvider.GetAuthenticationStateAsync();
-
-        //Notify TypeAuth that state has changed
-        if (typeAuth is not null)
-            typeAuth.AuthStateHasChanged();
     }
 }

@@ -155,10 +155,6 @@ validationParameters) =>
 
             if (user?.Phone is not null)
                 result.UserData.Phones = new List<PhoneDTO> { new PhoneDTO { Phone = user.Phone } };
-
-            //Put superadmin role in the result
-            if (user!.IsSuperAdmin)
-                result.UserData.Roles = new List<string> { "superadmin" };
         }
 
         return result;

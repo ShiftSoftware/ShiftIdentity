@@ -1,5 +1,4 @@
 ﻿using ShiftSoftware.ShiftEntity.Model.Dtos;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using ShiftSoftware.ShiftEntity.Model.HashId;
 

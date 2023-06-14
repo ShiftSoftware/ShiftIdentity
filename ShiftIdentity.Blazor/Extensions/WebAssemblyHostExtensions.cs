@@ -5,7 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 using ShiftSoftware.ShiftIdentity.Blazor.Services;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.Models;
-using ShiftSoftware.TypeAuth.Blazor.Services;
 using System.Net;
 using System.Net.Http.Headers;
 
@@ -17,22 +16,20 @@ public static class WebAssemblyHostExtensions
     {
         //Get injected services
         var shiftIdentityProvider = host.Services.GetRequiredService<IShiftIdentityProvider>();
-        var tokenProvider = host.Services.GetRequiredService<IIdentityTokenProvider>();
         var navManager = host.Services.GetRequiredService<NavigationManager>();
         var http = host.Services.GetRequiredService<HttpClient>();
-        var storeToken = host.Services.GetRequiredService<IIdentityTokenStore>();
+        var tokenStore = host.Services.GetRequiredService<IIdentityStore>();
         var shiftIdentityService = host.Services.GetRequiredService<ShiftIdentityService>();
         var options = host.Services.GetRequiredService<ShiftIdentityBlazorOptions>();
-        var typeAuth = host.Services.GetService<TypeAuthService>();
         var authStateProvider = host.Services.GetService<AuthenticationStateProvider>();
 
-        await RefreshAsync(shiftIdentityProvider, tokenProvider, typeAuth, authStateProvider, navManager, http, storeToken, 
+        await RefreshAsync(shiftIdentityProvider, authStateProvider, navManager, http, tokenStore, 
             shiftIdentityService, options);
 
         var timer = new System.Timers.Timer(TimeSpan.FromSeconds(everySeconds));
         timer.Enabled = true;
         timer.Elapsed += async (s, e) =>
-            await RefreshAsync(shiftIdentityProvider, tokenProvider, typeAuth, authStateProvider, navManager, http, storeToken, 
+            await RefreshAsync(shiftIdentityProvider, authStateProvider, navManager, http, tokenStore, 
             shiftIdentityService, options);
 
         return host;
@@ -40,26 +37,24 @@ public static class WebAssemblyHostExtensions
 
     private static async Task RefreshAsync(
         IShiftIdentityProvider shiftIdentityProvider,
-        IIdentityTokenProvider tokenProvider,
-        TypeAuthService? typeAuth,
         AuthenticationStateProvider? authStateProvider,
         NavigationManager navManager,
         HttpClient http,
-        IIdentityTokenStore storeToken,
+        IIdentityStore tokenStore,
         ShiftIdentityService shiftIdentityService,
         ShiftIdentityBlazorOptions options)
     {
 
-        var storedToken = await tokenProvider.GetTokenAsync();
+        var storedToken = await tokenStore.GetTokenAsync();
 
         var headerToken = http.DefaultRequestHeaders?.Authorization?.Parameter;
 
         if (headerToken is not null && headerToken != storedToken.Token)
         {
             //Set authorize header of http-client for prevent refresh on multiple tabs or windows
-            http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", storedToken?.Token);
+            //http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", storedToken?.Token);
 
-            await NofityChanges(typeAuth, authStateProvider);
+            await NofityChanges(authStateProvider);
             return;
         }
 
@@ -72,12 +67,12 @@ public static class WebAssemblyHostExtensions
             if (result.IsSuccess)
             {
                 //Store new token
-                await storeToken.StoreTokenAsync(result?.Data?.Entity!);
+                await tokenStore.StoreTokenAsync(result?.Data?.Entity!);
 
                 //Set authorize header of http-client for prevent refresh on multiple tabs or windows
-                http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", result?.Data?.Entity?.Token);
+                //http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", result?.Data?.Entity?.Token);
 
-                await NofityChanges(typeAuth, authStateProvider);
+                await NofityChanges( authStateProvider);
             }
             else if (result.StatusCode == HttpStatusCode.Unauthorized)
             {
@@ -87,16 +82,10 @@ public static class WebAssemblyHostExtensions
         catch (Exception){}
     }
 
-    private static async Task NofityChanges(
-        TypeAuthService? typeAuth,
-        AuthenticationStateProvider? authStateProvider)
+    private static async Task NofityChanges(AuthenticationStateProvider? authStateProvider)
     {
         //Notify AuthenticationStateProvider that state has changed
         if (authStateProvider is not null)
             await authStateProvider.GetAuthenticationStateAsync();
-
-        //Notify TypeAuth that state has changed
-        if (typeAuth is not null)
-            typeAuth.AuthStateHasChanged();
     }
 }

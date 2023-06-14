@@ -1,11 +1,10 @@
-﻿namespace ShiftSoftware.ShiftIdentity.Core.Models
+﻿namespace ShiftSoftware.ShiftIdentity.Core.Models;
+
+public class SecuritySettingsModel
 {
-    public class SecuritySettingsModel
-    {
-        public int LoginAttemptsForLockDown { get; set; }
+    public int LoginAttemptsForLockDown { get; set; }
 
-        public int LockDownInMinutes { get; set; }
+    public int LockDownInMinutes { get; set; }
 
-        public bool RequirePasswordChange { get; set; }
-    }
+    public bool RequirePasswordChange { get; set; }
 }

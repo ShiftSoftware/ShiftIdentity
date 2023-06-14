@@ -1,10 +1,9 @@
 ﻿
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 
-namespace ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces
+namespace ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
+
+public interface IClaimService
 {
-    public interface IClaimService
-    {
-        TokenUserDataDTO GetUser();
-    }
+    TokenUserDataDTO GetUser();
 }

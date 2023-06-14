@@ -1,84 +1,83 @@
-﻿using ShiftSoftware.ShiftIdentity.Core.DTOs;
+﻿using ShiftSoftware.ShiftIdentity.Core.DTOs.Auth;
 using ShiftSoftware.ShiftIdentity.Core.Models;
 using ShiftSoftware.ShiftIdentity.Core.Repositories;
 
-namespace ShiftSoftware.ShiftIdentity.AspNetCore.Services
+namespace ShiftSoftware.ShiftIdentity.AspNetCore.Services;
+
+public class AuthCodeService
 {
-    public class AuthCodeService
+    private readonly IAppRepository appRepo;
+    private readonly AuthCodeStoreService authCodeStoreService;
+
+    public AuthCodeService(
+        IAppRepository appRepo,
+        AuthCodeStoreService authCodeStoreService)
     {
-        private readonly IAppRepository appRepo;
-        private readonly AuthCodeStoreService authCodeStoreService;
+        this.appRepo = appRepo;
+        this.authCodeStoreService = authCodeStoreService;
+    }
 
-        public AuthCodeService(
-            IAppRepository appRepo,
-            AuthCodeStoreService authCodeStoreService)
+    public async Task<AuthCodeModel?> GenerateCodeAsync(GenerateAuthCodeDTO authCodeDto, long userId, int expireInMinutes = 5)
+    {
+        authCodeStoreService.RemoveExpireCodes();
+
+        //The reutrn-url must be relative,
+        //that means no external return-url allowed
+        if (IsAbsoluteUrl(authCodeDto.ReturnUrl!))
+            return null;
+
+        var app = await appRepo.GetAppAsync(authCodeDto.AppId);
+
+        if (app is null)
+            return null;
+
+        var code = new AuthCodeModel
         {
-            this.appRepo = appRepo;
-            this.authCodeStoreService = authCodeStoreService;
-        }
+            AppId = app.AppId,
+            AppDisplayName = app.DisplayName,
+            CodeChallenge = authCodeDto.CodeChallenge,
+            Expire = DateTime.UtcNow.AddMinutes(expireInMinutes),
+            UserID = userId,
+            Code = Guid.NewGuid(),
+            RedirectUri = app.RedirectUri
+        };
 
-        public async Task<AuthCodeModel?> GenerateCodeAsync(GenerateAuthCodeDTO authCodeDto, long userId, int expireInMinutes = 5)
-        {
-            authCodeStoreService.RemoveExpireCodes();
+        authCodeStoreService.AddCode(code);
 
-            //The reutrn-url must be relative,
-            //that means no external return-url allowed
-            if (IsAbsoluteUrl(authCodeDto.ReturnUrl!))
-                return null;
+        return code;
+    }
 
-            var app = await appRepo.GetAppAsync(authCodeDto.AppId);
+    private bool IsAbsoluteUrl(string url)
+    {
+        Uri result;
+        return Uri.TryCreate(url, UriKind.Absolute, out result);
+    }
 
-            if (app is null)
-                return null;
+    public async Task<AuthCodeModel?> VerifyCodeByAppIdOnly(string appId, Guid code, string codeVerifier)
+    {
+        authCodeStoreService.RemoveExpireCodes();
 
-            var code = new AuthCodeModel
-            {
-                AppId = app.AppId,
-                AppDisplayName = app.DisplayName,
-                CodeChallenge = authCodeDto.CodeChallenge,
-                Expire = DateTime.UtcNow.AddMinutes(expireInMinutes),
-                UserID = userId,
-                Code = Guid.NewGuid(),
-                RedirectUri = app.RedirectUri
-            };
+        var authCode = authCodeStoreService.GetCode(code);
 
-            authCodeStoreService.AddCode(code);
+        if (authCode == null)
+            return null;
 
-            return code;
-        }
+        if (authCode.AppId.Trim().ToString() != appId)
+            return null;
 
-        private bool IsAbsoluteUrl(string url)
-        {
-            Uri result;
-            return Uri.TryCreate(url, UriKind.Absolute, out result);
-        }
+        var app = await appRepo.GetAppAsync(authCode.AppId);
+        if (app is null)
+            return null;
 
-        public async Task<AuthCodeModel?> VerifyCodeByAppIdOnly(string appId, Guid code, string codeVerifier)
-        {
-            authCodeStoreService.RemoveExpireCodes();
+        if (app.AppSecret is not null)
+            return null;
 
-            var authCode = authCodeStoreService.GetCode(code);
+        var hash = HashService.SHA512GenerateHash(codeVerifier);
+        if (hash.ToLower() != authCode.CodeChallenge.ToLower())
+            return null;
 
-            if (authCode == null)
-                return null;
+        authCodeStoreService.RemoveCode(authCode);
 
-            if (authCode.AppId.Trim().ToString() != appId)
-                return null;
-
-            var app = await appRepo.GetAppAsync(authCode.AppId);
-            if (app is null)
-                return null;
-
-            if (app.AppSecret is not null)
-                return null;
-
-            var hash = HashService.SHA512GenerateHash(codeVerifier);
-            if (hash.ToLower() != authCode.CodeChallenge.ToLower())
-                return null;
-
-            authCodeStoreService.RemoveCode(authCode);
-
-            return authCode;
-        }
+        return authCode;
     }
 }

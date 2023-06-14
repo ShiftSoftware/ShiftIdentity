@@ -1,14 +1,13 @@
-﻿namespace ShiftSoftware.ShiftIdentity.Core.DTOs
+﻿namespace ShiftSoftware.ShiftIdentity.Core.DTOs;
+
+
+public class TokenDTO
 {
+    public string Token { get; set; } = default!;
 
-    public class TokenDTO
-    {
-        public string Token { get; set; }
+    public string RefreshToken { get; set; } = default!;
 
-        public string RefreshToken { get; set; }
+    public bool RequirePasswordChange { get; set; }
 
-        public bool RequirePasswordChange { get; set; }
-
-        public TokenUserDataDTO UserData { get; set; }
-    }
+    public TokenUserDataDTO UserData { get; set; } = default!;
 }

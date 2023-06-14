@@ -1,4 +1,5 @@
 ﻿using Blazored.LocalStorage;
+using ShiftSoftware.ShiftIdentity.Core.Models;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -6,18 +7,18 @@ namespace ShiftSoftware.ShiftIdentity.Blazor.Services;
 
 public class CodeVerifierService
 {
-    private readonly StorageService storageService;
+    private readonly IIdentityStore tokenStore;
 
-    public CodeVerifierService(StorageService storageService)
+    public CodeVerifierService(IIdentityStore tokenStore)
     {
-        this.storageService = storageService;
+        this.tokenStore = tokenStore;
     }
 
     public async Task<string> GenerateCodeChallengeAsync()
     {
         var codeVerifier = Guid.NewGuid().ToString();
 
-        await storageService.StoreCodeVerifierAsync(codeVerifier);
+        await tokenStore.StoreCodeVerifierAsync(codeVerifier);
 
         var sha512 = SHA512.Create();
 
@@ -29,6 +30,6 @@ public class CodeVerifierService
 
     public async Task<string> LoadCodeVerifierAsync()
     {
-        return await storageService.LoadCodeVerifierAsync();
+        return await tokenStore.LoadCodeVerifierAsync();
     }
 }

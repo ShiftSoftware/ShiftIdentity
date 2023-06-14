@@ -1,14 +1,14 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
-using ShiftSoftware.ShiftIdentity.Core.Models;
+using ShiftSoftware.ShiftEntity.Model.HashId;
 
-namespace ShiftSoftware.ShiftIdentity.Core.DTOs
+namespace ShiftSoftware.ShiftIdentity.Core.DTOs.User
 {
 
     public class UserDataDTO : ShiftEntity.Model.Dtos.ShiftEntityDTO
     {
-        [_UserHashId]
-        public override string ID { get; set; } = default!;
+        [UserHashIdConverter]
+        public override string? ID { get; set; }
         [Required]
         [MaxLength(255)]
         public string Username { get; set; } = default!;

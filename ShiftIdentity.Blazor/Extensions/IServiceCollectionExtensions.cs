@@ -1,6 +1,10 @@
 ﻿using Blazored.LocalStorage;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using ShiftSoftware.ShiftIdentity.Blazor.Handlers;
+//using ShiftSoftware.ShiftIdentity.Blazor.Handlers;
+using ShiftSoftware.ShiftIdentity.Blazor.Providers;
 using ShiftSoftware.ShiftIdentity.Blazor.Services;
 using ShiftSoftware.ShiftIdentity.Core.Models;
 
@@ -19,11 +23,16 @@ public static class IServiceCollectionExtensions
         services.AddBlazoredLocalStorage();
         services.TryAddSingleton<ShiftIdentityBlazorOptions>(x => new ShiftIdentityBlazorOptions(appId, baseUrl, frontEndBaseUrl));
         services.TryAddScoped<CodeVerifierService>();
-        services.TryAddScoped<StorageService>();
         services.TryAddScoped<ShiftIdentityService>();
         services.TryAddScoped<IShiftIdentityProvider, ShiftIdentityProvider>();
         services.TryAddScoped<HttpMessageHandlerService>();
-        services.AddTransient<RefreshTokenMessageHandler>();
+        services.AddTransient<TokenMessageHandlerWithAutoRefresh>();
+        services.TryAddScoped<IIdentityStore, IdentityLocalStorageService>();
+
+        services.TryAddScoped<AuthenticationStateProvider, ShiftIdentityAuthStateProvider>();
+        services.AddTransient<TokenMessageHandler>();
+        services.AddAuthorizationCore();
+
 
         return services;
     }

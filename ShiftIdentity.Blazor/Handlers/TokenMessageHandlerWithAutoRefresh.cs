@@ -5,22 +5,22 @@ using ShiftSoftware.ShiftIdentity.Core.Models;
 using System.Net;
 using System.Net.Http.Headers;
 
-namespace ShiftSoftware.ShiftIdentity.Blazor;
+namespace ShiftSoftware.ShiftIdentity.Blazor.Handlers;
 
-public class RefreshTokenMessageHandler : DelegatingHandler
+public class TokenMessageHandlerWithAutoRefresh : DelegatingHandler
 {
     private readonly AsyncRetryPolicy<HttpResponseMessage> _policy;
     private readonly HttpMessageHandlerService httpMessageHandlerService;
-    private readonly IIdentityTokenProvider tokenProvider;
+    private readonly IIdentityStore tokenStore;
 
-    public RefreshTokenMessageHandler(HttpMessageHandlerService httpMessageHandlerService, IIdentityTokenProvider tokenProvider)
+    public TokenMessageHandlerWithAutoRefresh(HttpMessageHandlerService httpMessageHandlerService, IIdentityStore tokenProvider)
     {
         //add this to solve "The inner handler has not been assigned"
         InnerHandler = new HttpClientHandler();
 
         this.httpMessageHandlerService = httpMessageHandlerService;
-        this.tokenProvider = tokenProvider;
-        _policy = Polly.Policy
+        tokenStore = tokenProvider;
+        _policy = Policy
             .HandleResult<HttpResponseMessage>(r => r.StatusCode is HttpStatusCode.Unauthorized)
             .RetryAsync(async (_, _) => await httpMessageHandlerService.RefreshAsync());
     }
@@ -28,7 +28,7 @@ public class RefreshTokenMessageHandler : DelegatingHandler
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         => await _policy.ExecuteAsync(async () =>
         {
-            var token = (await tokenProvider.GetTokenAsync())?.Token ?? "";
+            var token = (await tokenStore.GetTokenAsync())?.Token ?? "";
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             return await base.SendAsync(request, cancellationToken);

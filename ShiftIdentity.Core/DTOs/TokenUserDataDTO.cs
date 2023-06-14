@@ -7,19 +7,13 @@ namespace ShiftSoftware.ShiftIdentity.Core.DTOs
     {
         public long ID { get; set; }
 
-        public string Username { get; set; }
+        public string Username { get; set; } = default!;
 
-        public string FullName { get; set; }
+        public string FullName { get; set; } = default!;
 
-        public IEnumerable<string> Roles { get; set; }
+        public List<EmailDTO> Emails { get; set; } = default!;
 
-        public List<EmailDTO> Emails { get; set; }
+        public List<PhoneDTO> Phones { get; set; } = default!;
 
-        public List<PhoneDTO> Phones { get; set; }
-
-        public TokenUserDataDTO()
-        {
-            Roles = new List<string>();
-        }
     }
 }
