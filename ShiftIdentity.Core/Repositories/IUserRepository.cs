@@ -8,7 +8,7 @@ namespace ShiftSoftware.ShiftIdentity.Core.Repositories;
 
 public interface IUserRepository
 {
-    Task<User?> FindAsync(long id, DateTime? asOf = null, bool ignoreGlobalFilters = false);
+    Task<User> FindAsync(long id, DateTime? asOf = null, bool ignoreGlobalFilters = false);
     Task<User?> GetUserByUsernameAsync(string username);
     Task SaveChangesAsync();
     IQueryable<UserListDTO> OdataList(bool ignoreGlobalFilters = false);

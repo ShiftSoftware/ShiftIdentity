@@ -9,6 +9,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ShiftIdentity.AspNetCore", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ShiftIdentity.Core", "ShiftIdentity.Core\ShiftIdentity.Core.csproj", "{14F407E2-6040-4AD5-ACA2-726DAB10230E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShiftIdentity.Dashboard.AspNetCore", "ShiftIdentity.Dashboard.AspNetCore\ShiftIdentity.Dashboard.AspNetCore.csproj", "{7B08F98F-7B11-4C0C-BCBB-8565198A6A11}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{14F407E2-6040-4AD5-ACA2-726DAB10230E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{14F407E2-6040-4AD5-ACA2-726DAB10230E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{14F407E2-6040-4AD5-ACA2-726DAB10230E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7B08F98F-7B11-4C0C-BCBB-8565198A6A11}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7B08F98F-7B11-4C0C-BCBB-8565198A6A11}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7B08F98F-7B11-4C0C-BCBB-8565198A6A11}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7B08F98F-7B11-4C0C-BCBB-8565198A6A11}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using ShiftSoftware.ShiftIdentity.Core.Entities;
+using System.ComponentModel.DataAnnotations;
 
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.UserManager;
 
@@ -7,10 +8,10 @@ public class ChangePasswordDTO
     [Required]
     [MaxLength(255)]
     [DataType(DataType.Password)]
-    //[Password(
-    //    requiredLength: 6,
-    //    requiredUniqueChars: 3,
-    //    requireDigit: true)]
+    [Password(
+        requiredLength: 6,
+        requiredUniqueChars: 3,
+        requireDigit: true)]
     public string NewPassword { get; set; } = default!;
 
     [Compare(nameof(NewPassword))]
