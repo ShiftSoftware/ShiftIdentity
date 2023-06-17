@@ -1,16 +1,16 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
 using ShiftSoftware.ShiftEntity.Web.Services;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
+using ShiftSoftware.ShiftIdentity.Core.Repositories;
 
-namespace ShiftIdentity.Dashboard.AspNetCore.Controllers
+namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
 {
     [Authorize]
     public class PublicUserController : ControllerBase
     {
-        UserRepository userRepository;
-        public PublicUserController(UserRepository userRepository)
+        IUserRepository userRepository;
+        public PublicUserController(IUserRepository userRepository)
         {
             this.userRepository = userRepository;
         }

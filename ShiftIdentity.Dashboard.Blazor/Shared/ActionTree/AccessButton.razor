@@ -1,0 +1,80 @@
+﻿@using ShiftSoftware.TypeAuth.Core
+
+<MudButton Style="@style" Class="@cssClass" Size="Size.Small" Color="@color"
+           Disabled="@(!TypeAuth_LoggedInUser.Can(ActionTreeItem!.Action!, Access, ActionTreeItem.TypeName) || hasWildCardCard || Disabled)"
+           OnClick="Bind"
+           Variant="@((TypeAuth_View.Can(ActionTreeItem!.Action!, Access, ActionTreeItem.TypeName) && !hasWildCardCard) || wildCardChecked ? Variant.Filled : Variant.Text)"
+           StartIcon="@((TypeAuth_View.Can(ActionTreeItem!.Action!, Access, ActionTreeItem.TypeName) && !hasWildCardCard) || wildCardChecked ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckBoxOutlineBlank)">
+    @ChildContent
+</MudButton>
+
+
+@code {
+    private Color color;
+
+    private bool wildCardChecked;
+
+    private bool hasWildCardCard;
+
+    private string style = "";
+
+    private string cssClass = "";
+
+    [Parameter]
+    public RenderFragment ChildContent { get; set; } = default!;
+
+
+    [Parameter]
+    public Access Access { get; set; } = default!;
+
+    [Parameter]
+    public TypeAuthContext TypeAuth_LoggedInUser { get; set; } = default!;
+
+    [Parameter]
+    public TypeAuthContext TypeAuth_View { get; set; } = default!;
+
+    [Parameter]
+    public ActionTreeItem ActionTreeItem { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback AfterBind { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    protected override void OnInitialized()
+    {
+        this.color = Access == Access.Delete ? Color.Error : Access == Access.Write ? Color.Warning : Access == Access.Read ? Color.Success : Color.Default;
+
+        if (Access == Access.Maximum)
+        {
+            this.cssClass = "no-margin";
+
+            this.style = "padding: 2px; min-width: auto;";
+
+            this.color = Color.Primary;
+        }
+        else
+        {
+            this.style = "padding: 1px 8px; font-size: 12px;";
+        }
+
+
+        base.OnInitialized();
+    }
+
+    protected override void OnParametersSet()
+    {
+        this.wildCardChecked = ActionTreeItem.AdditionalData?.Parent?.WildCardAccess?.Contains(Access);
+
+        this.hasWildCardCard = ActionTreeItem.AdditionalData?.Parent?.WildCardAccess?.Count > 0;
+
+        base.OnParametersSet(); 
+    }
+
+    private async Task Bind()
+    {
+        TypeAuth_View.ToggleAccess(ActionTreeItem!.Action!, Access, ActionTreeItem.TypeName);
+        await AfterBind.InvokeAsync();
+    }
+}

@@ -1,36 +1,43 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using ShiftSoftware.ShiftIdentity.Core.Models;
-using ShiftSoftware.ShiftIdentity.Core;
-using ShiftSoftware.ShiftEntity.Web.Extensions;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.App;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 using ShiftSoftware.ShiftEntity.Web;
+using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
+using ShiftSoftware.ShiftIdentity.Core.Models;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
+using ShiftSoftware.ShiftIdentity.Core.Repositories;
+using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
+using ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
+using Microsoft.AspNetCore.Mvc;
 
-namespace ShiftIdentity.Dashboard.AspNetCore.Extentsions;
+namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Extentsions;
 
 public static class IMvcBuilderExtensions
 {
-    public static IMvcBuilder AddShiftIdentityDashoard(this IMvcBuilder builder, ShiftIdentityConfiguration configuration)
+    public static IMvcBuilder AddShiftIdentityDashboard<TDbContext>(this IMvcBuilder builder, ShiftIdentityConfiguration shiftIdentityConfiguration) where TDbContext : ShiftIdentityDB
     {
-        if (configuration.ActionTrees is null)
-            configuration.ActionTrees = new List<Type>() { typeof(ShiftIdentityActions) };
+        builder.Services.TryAddSingleton(shiftIdentityConfiguration);
 
-        builder.AddShiftEntity(o =>
-        {
-            o.WrapValidationErrorResponseWithShiftEntityResponse(true);
-            o.ODatat.DefaultOptions();
-            var b = o.ODatat.ODataConvention;
-            b.EntitySet<AppDTO>("App");
-            b.EntitySet<AccessTreeDTO>("AccessTree");
-            b.EntitySet<UserListDTO>("User");
-            b.EntitySet<PublicUserListDTO>("PublicUser");
+        builder.Services.AddSingleton<AuthCodeStoreService>();
+        builder.Services.AddScoped<AuthCodeService>();
+        builder.Services.AddScoped<AuthService>();
+        builder.Services.AddScoped<TokenService>();
+        builder.Services.AddScoped<HashService>();
 
-            o.HashId.RegisterHashId(configuration.HashIdSettings.AcceptUnencodedIds);
-            o.HashId.RegisterUserIdsHasher(configuration.HashIdSettings.UserIdsSalt,
-                configuration.HashIdSettings.UserIdsMinHashLength,
-                configuration.HashIdSettings.UserIdsAlphabet);
-        });
+        builder.Services.AddScoped<IUserRepository, UserRepository>();
+        builder.Services.AddScoped<IAppRepository, AppRepository>();
+        builder.Services.AddScoped<AccessTreeRepository>();
+
+        builder.Services.AddScoped<UserRepository>();
+        builder.Services.AddScoped<AppRepository>();
+        
+        builder.Services.AddScoped<IClaimService, ClaimService>();
+
+        builder.Services.AddScoped<ShiftIdentityDB, TDbContext>();
 
         return builder;
     }

@@ -1,0 +1,77 @@
+﻿@using MudBlazor;
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
+@using ShiftSoftware.ShiftEntity.Model
+@using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services
+@inject AccessTreeService AccessTreeService
+
+@if (accessTrees is not null)
+{
+    <MudPaper Elevation="2">
+        <MudToolBar Dense="true" DisableGutters="false" Class="light-toolbar shift-toolbar-header">
+            <MudIcon Icon="@Icons.Material.Filled.AccountTree"></MudIcon>
+            <MudText Class="px-4" Style="margin:0;">Access Trees</MudText>
+        </MudToolBar>
+
+        <MudTreeView Items="@treeItems" T="TreeItemAccessTree" ExpandOnClick="true" Hover="true">
+            <ItemTemplate>
+                <MudTreeViewItem T="TreeItemAccessTree" @bind-Expanded="@context.IsExpanded" Items="@context.TreeItems">
+                    <Content>
+                        <MudTreeViewItemToggleButton @bind-Expanded="@context.IsExpanded" Visible="@context.HasChild" />
+                        <MudCheckBox T="bool?" ReadOnly="ReadOnly" Disabled="Disabled" Checked="@(context.HasPartialChildSelection() ? null : context.IsChecked)"
+                                 CheckedChanged="@((e) => CheckChanged(context))"></MudCheckBox>
+                        <MudText>@context.Text</MudText>
+                    </Content>
+                </MudTreeViewItem>
+            </ItemTemplate>
+        </MudTreeView>
+    </MudPaper>
+}
+
+@code {
+    [Parameter]
+    public IEnumerable<AccessTreeDTO> Value { get; set; }
+    [Parameter]
+    public EventCallback<IEnumerable<AccessTreeDTO>> ValueChanged { get; set; }
+    [Parameter]
+    public bool ReadOnly { get; set; }
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    private List<AccessTreeDTO> accessTrees { get; set; }
+    private HashSet<TreeItemAccessTree> treeItems = new HashSet<TreeItemAccessTree>();
+
+    protected async override Task OnInitializedAsync()
+    {
+        var result = await AccessTreeService.GetAllAccessTreesAsync();
+
+        if (result.IsSuccess)
+        {
+            this.accessTrees = result.Data?.Value!;
+
+            foreach (var group in accessTrees)
+            {
+                var item = new TreeItemAccessTree(group.Name!);
+
+                //foreach (var i in group.ToList())
+                //{
+                //    var child = item.AddChild(i.Name, i);
+                //    if (Value.Any(x => x.ID == i.ID))
+                //        TreeItemAccessTree.CheckedChanged(child);
+                //}
+
+                this.treeItems.Add(item);
+            }
+        }
+
+        await base.OnInitializedAsync();
+    }
+
+    internal async Task CheckChanged(TreeItemAccessTree item)
+    {
+        TreeItemAccessTree.CheckedChanged(item);
+
+        Value = treeItems.SelectMany(x => x.TreeItems).Where(x => x.IsChecked).Select(x => x.AccessTree)!;
+
+        await ValueChanged.InvokeAsync(Value);
+    }
+}

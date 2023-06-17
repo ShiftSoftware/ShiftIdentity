@@ -1,0 +1,201 @@
+﻿@using ShiftSoftware.TypeAuth.Core;
+@inject ShiftSoftware.TypeAuth.Blazor.Services.TypeAuthService tAuth
+
+
+<style>
+    .mud-treeview-item-content {
+        padding: 0;
+    }
+
+    .no-margin .mud-button-icon-start {
+        margin: 0 !important;
+    }
+
+    .type-auth-tree-text {
+        margin: 0;
+    }
+
+        .type-auth-tree-text .mud-input-slot {
+            padding: 3.8px 10px !important;
+            font-size: 14px !important;
+            background: #fafafa !important;
+        }
+</style>
+
+<MudPaper Elevation="2">
+    <MudToolBar Dense="true" DisableGutters="false" Class="light-toolbar shift-toolbar-header">
+        <MudIcon Icon="@Icons.Material.Filled.LockOpen"></MudIcon>
+        <MudText Class="px-4" Style="margin:0;">Actions</MudText>
+    </MudToolBar>
+
+   
+    @if (this.TreeItems.Count == 0)
+    {
+        <MudAlert Severity="Severity.Warning">No Items found.</MudAlert>
+    }
+    else
+    {
+        <MudTreeView Items="@TreeItems" ExpandOnClick="true" Hover="true">
+            <ItemTemplate>
+                @if (context.ActionTreeItems.Count > 0 || context.Action != null)
+                {
+                    <MudTreeViewItem Items="@context.ActionTreeItems" ExpandedChanged="@((x) => {context.AdditionalData!.Expanded = x;})" Expanded="@((bool) context.AdditionalData!.Expanded)">
+                        <Content>
+                            <MudTreeViewItemToggleButton ExpandedChanged="@((x) => { context.AdditionalData!.Expanded = x;})" Visible="@(context.ActionTreeItems.Count > 0)" Expanded="@((bool) context.AdditionalData!.Expanded)" />
+                            @{
+                            string StyleString = "";
+
+                            if (context?.AdditionalData?.Parent?.WildCardAccess?.Count > 0)
+                            {
+                                StyleString = "transition:0.3s; padding-left:10px; padding-right:10px; display:flex; width:100%; align-items:center; border-top:1px solid #e1e1e1; padding-top:12px; padding-bottom:12px; opacity:0.6; background-color: var(--mud-palette-action-default-hover);";
+                            }
+                            else
+                            {
+                                StyleString = "transition:0.3s; padding-left:10px; padding-right:10px; display:flex; width:100%; align-items:center; border-top:1px solid #e1e1e1; padding-top:12px; padding-bottom:12px;";
+                            }
+                        }
+                        <div style="@StyleString">
+
+                            <ActionTreeItemIcon ActionTreeItem="context" />
+
+                            <MudText>@(context?.DisplayName ?? context?.TypeName)</MudText>
+
+                                <MudSpacer />
+
+                                @if (context?.ActionTreeItems.Count > 0)
+                            {
+                                <div style="margin-right:5px;">
+                                    <WildCardAccessButton LoggedInUserTreeItems="LoggedInUserTreeItems_Flattened" Access="Access.Maximum"
+                                                  @bind-ActionTreeItem="context" Disabled="@(ReadOnly || Disabled)">
+                                        Max
+                                    </WildCardAccessButton>
+                                </div>
+                                <div style="margin-right:5px;">
+                                    <WildCardAccessButton LoggedInUserTreeItems="LoggedInUserTreeItems_Flattened" Access="Access.Delete"
+                                                  @bind-ActionTreeItem="context" Disabled="@(ReadOnly || Disabled)">
+                                        Delete
+                                    </WildCardAccessButton>
+                                </div>
+                                <div style="margin-right:5px;">
+                                    <WildCardAccessButton LoggedInUserTreeItems="LoggedInUserTreeItems_Flattened" Access="Access.Write"
+                                                  @bind-ActionTreeItem="context" Disabled="@(ReadOnly || Disabled)">
+                                        Write
+                                    </WildCardAccessButton>
+                                </div>
+                                <div>
+                                    <WildCardAccessButton LoggedInUserTreeItems="LoggedInUserTreeItems_Flattened" Access="Access.Read"
+                                                  @bind-ActionTreeItem="context" Disabled="@(ReadOnly || Disabled)">
+                                        Read
+                                    </WildCardAccessButton>
+                                </div>
+                            }
+                            else
+                            {
+                                @if (context?.Action?.Type == ActionType.ReadWriteDelete)
+                                {
+                                    <AccessButton ActionTreeItem="context" Access="Access.Delete" TypeAuth_LoggedInUser="tAuth_LoggedInUser"
+                                      TypeAuth_View="tAuth_View" Disabled="@(ReadOnly || Disabled)">Delete</AccessButton>
+                                }
+
+                                @if (context?.Action?.Type == ActionType.ReadWriteDelete || context?.Action?.Type == ActionType.ReadWrite)
+                                {
+                                    <div style="margin: 0 5px;">
+                                        <AccessButton ActionTreeItem="context" Access="Access.Write" TypeAuth_LoggedInUser="tAuth_LoggedInUser"
+                                          TypeAuth_View="tAuth_View" Disabled="@(ReadOnly || Disabled)">Write</AccessButton>
+                                    </div>
+                                }
+
+                                @if (context?.Action?.Type == ActionType.ReadWriteDelete || context?.Action?.Type == ActionType.ReadWrite || context?.Action?.Type == ActionType.Read)
+                                {
+                                    <AccessButton ActionTreeItem="context" Access="Access.Read" TypeAuth_LoggedInUser="tAuth_LoggedInUser"
+                                      TypeAuth_View="tAuth_View" Disabled="@(ReadOnly || Disabled)">Read</AccessButton>
+                                }
+
+                                @if (context?.Action?.Type == ActionType.Boolean)
+                                {
+                                    <AccessButton ActionTreeItem="context" Access="Access.Maximum" TypeAuth_LoggedInUser="tAuth_LoggedInUser"
+                                      TypeAuth_View="tAuth_View" Disabled="@(ReadOnly || Disabled)" />
+                                }
+
+                                @if (context?.Action?.Type == ActionType.Text)
+                                {
+                                    <TextAccessField ActionTreeItem="context" TypeAuth_LoggedInUser="tAuth_LoggedInUser" TypeAuth_View="tAuth_View"
+                                          ReadOnly="ReadOnly" Disabled="Disabled" />
+                                }
+                            }
+                        </div>
+                    </Content>
+                </MudTreeViewItem>
+                }
+            </ItemTemplate>
+        </MudTreeView>
+    }
+</MudPaper>
+
+@code {
+    private HashSet<ActionTreeItem> TreeItems = new HashSet<ActionTreeItem> { };
+    private List<ActionTreeItem> LoggedInUserTreeItems_Flattened = new List<ActionTreeItem> { };
+
+    TypeAuthContext tAuth_View = new TypeAuthContext();
+    TypeAuthContext tAuth_LoggedInUser = new TypeAuthContext();
+
+    bool initialized = false;
+
+    [Parameter]
+    public string Tree { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<string> TreeChanged { get; set; }
+
+    [Parameter]
+    public bool ReadOnly { get; set; }
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        this.tAuth_LoggedInUser = tAuth;
+
+        var typeAuthBuilder = new TypeAuthContextBuilder();
+
+        foreach (var item in this.tAuth_LoggedInUser.ActionTree.ActionTreeItems)
+        {
+            typeAuthBuilder.AddActionTree(item.Type!);
+        }
+
+        this.tAuth_View = typeAuthBuilder
+        .AddAccessTree(Tree)
+        .Build();
+
+        this.TraverseTree(tAuth_View.ActionTree, null);
+
+        this.TraverseTree(tAuth_LoggedInUser.ActionTree, null, this.LoggedInUserTreeItems_Flattened);
+
+        var tree = tAuth_View.ActionTree.ActionTreeItems;
+
+        tree = tree.ToHashSet();
+       
+        this.TreeItems = tree;
+        this.initialized = true;
+    }
+
+    void TraverseTree(ActionTreeItem tree, ActionTreeItem? parent, List<ActionTreeItem>? flattenedList = null)
+    {
+        if (flattenedList != null)
+            flattenedList.Add(tree);
+
+        tree.AdditionalData = new AdditionalTreeItem
+            {
+                Expanded = false,
+                Parent = parent,
+            };
+
+        foreach (var item in tree.ActionTreeItems)
+            TraverseTree(item, tree, flattenedList);
+    }
+
+    public string GenerateAccessTree()
+    {
+        return this.tAuth_View.GenerateAccessTree(tAuth_LoggedInUser);
+    }
+}

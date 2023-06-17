@@ -5,12 +5,13 @@ using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.App;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.ShiftIdentity.Core.Repositories;
+using ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data;
 
-namespace ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
+namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
 
-public class AppRepository : 
+public class AppRepository :
     ShiftRepository<App>,
-    IShiftRepositoryAsync<App, AppDTO, AppDTO>, 
+    IShiftRepositoryAsync<App, AppDTO, AppDTO>,
     IAppRepository
 {
 

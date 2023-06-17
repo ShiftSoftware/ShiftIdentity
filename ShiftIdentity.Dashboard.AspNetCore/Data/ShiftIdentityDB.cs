@@ -2,7 +2,7 @@
 using ShiftSoftware.EFCore.SqlServer;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 
-namespace ShiftIdentity.Dashboard.AspNetCore.Data
+namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data
 {
     public class ShiftIdentityDB : ShiftDbContext
     {

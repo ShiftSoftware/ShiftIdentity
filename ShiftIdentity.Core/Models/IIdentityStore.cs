@@ -6,6 +6,7 @@ namespace ShiftSoftware.ShiftIdentity.Core.Models;
 public interface IIdentityStore
 {
     public Task<TokenDTO> GetTokenAsync();
+    public string? GetToken();
     public Task StoreTokenAsync(TokenDTO token);
     public Task RemoveTokenAsync();
     public Task StoreCodeVerifierAsync(string code);

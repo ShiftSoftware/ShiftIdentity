@@ -8,7 +8,7 @@ using ShiftSoftware.TypeAuth.AspNetCore.Services;
 using ShiftSoftware.TypeAuth.Core;
 using System.Net;
 
-namespace ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
+namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
 
 public class AccessTreeRepository : ShiftRepository<AccessTree>,
     IShiftRepositoryAsync<AccessTree, AccessTreeDTO, AccessTreeDTO>

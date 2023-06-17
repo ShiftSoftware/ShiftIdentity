@@ -1,0 +1,55 @@
+@attribute [Authorize]
+@layout Shared.DefaultLayout
+@attribute [Route($"/{nameof(AppForm)}/{{Key?}}")]
+@inherits ShiftForm<AppForm, ShiftSoftware.ShiftIdentity.Core.DTOs.App.AppDTO>
+@inject HttpClient Http
+
+
+<ShiftEntityForm @bind-Mode="Mode"
+                 @bind-Value="TheItem"
+                 @ref="FormContainer"
+                 Action="App"
+                 Title="App"
+                 Settings="@FormSetting"
+                 @bind-Key="@Key"
+                 T="ShiftSoftware.ShiftIdentity.Core.DTOs.App.AppDTO">
+
+    <MudTextField ReadOnly="@ReadOnly"
+                  Disabled="@Disabled"
+                  OnlyValidateIfDirty="true"
+                  Label="Display Name"
+                  @bind-Value="TheItem.DisplayName"
+                  For="@(() => TheItem.DisplayName)" />
+
+    <MudTextField ReadOnly="@ReadOnly"
+                  Disabled="@Disabled"
+                  OnlyValidateIfDirty="true"
+                  Label="App ID"
+                  @bind-Value="TheItem.AppId"
+                  For="@(() => TheItem.AppId)" />
+
+    <MudTextField ReadOnly="@ReadOnly"
+                  Disabled="@Disabled"
+                  OnlyValidateIfDirty="true"
+                  Label="Description"
+                  @bind-Value="TheItem.Description"
+                  For="@(() => TheItem.Description)" />
+
+    <MudTextField ReadOnly="@ReadOnly"
+                  Disabled="@Disabled"
+                  OnlyValidateIfDirty="true"
+                  Label="Redirect Uri"
+                  @bind-Value="TheItem.RedirectUri"
+                  For="@(() => TheItem.RedirectUri)" />
+
+    <MudTextField ReadOnly="@ReadOnly"
+                  Disabled="@Disabled"
+                  OnlyValidateIfDirty="true"
+                  Label="Post Logout Redirect Uri"
+                  @bind-Value="TheItem.PostLogoutRedirectUri"
+                  For="@(() => TheItem.PostLogoutRedirectUri)" />
+</ShiftEntityForm>
+
+@code {
+
+}

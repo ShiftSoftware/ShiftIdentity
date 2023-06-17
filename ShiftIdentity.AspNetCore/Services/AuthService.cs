@@ -7,19 +7,19 @@ namespace ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 public class AuthService
 {
     private readonly IUserRepository userRepo;
-    private readonly ShiftIdentityOptions shiftIdentityOptions;
+    private readonly ShiftIdentityConfiguration shiftIdentityConfigurations;
     private readonly TokenService tokenService;
     private readonly AuthCodeService authCodeService;
 
     public AuthService(
         IUserRepository userRepo,
-        ShiftIdentityOptions configuration,
+        ShiftIdentityConfiguration shiftIdentityConfiguration,
         TokenService tokenService,
         AuthCodeService authCodeService
         )
     {
         this.userRepo = userRepo;
-        this.shiftIdentityOptions = configuration;
+        this.shiftIdentityConfigurations = shiftIdentityConfiguration;
         this.tokenService = tokenService;
         this.authCodeService = authCodeService;
     }
@@ -36,12 +36,12 @@ public class AuthService
             //If password is incorrect update logigattempts
             user.LoginAttempts++;
 
-            if (user.LoginAttempts >= shiftIdentityOptions.Configuration.Security.LoginAttemptsForLockDown)
+            if (user.LoginAttempts >= shiftIdentityConfigurations.Security.LoginAttemptsForLockDown)
             {
                 //If user exceeds login attemps for lockdown
                 //Reset loginattemps and set lockdownuntil
                 user.LoginAttempts = 0;
-                user.LockDownUntil = DateTime.UtcNow.AddMinutes(shiftIdentityOptions.Configuration.Security.LockDownInMinutes);
+                user.LockDownUntil = DateTime.UtcNow.AddMinutes(shiftIdentityConfigurations.Security.LockDownInMinutes);
             }
 
             await userRepo.SaveChangesAsync();
@@ -56,7 +56,7 @@ public class AuthService
         //If user is lockdown
         var lockdownUntil = user.LockDownUntil ?? new DateTime(0);
         if (lockdownUntil > DateTime.UtcNow)
-            return new LoginResultModel(LoginResultEnum.UserLockDown, $"User is lockdown for {shiftIdentityOptions.Configuration.Security.LockDownInMinutes} minutes");
+            return new LoginResultModel(LoginResultEnum.UserLockDown, $"User is lockdown for {shiftIdentityConfigurations.Security.LockDownInMinutes} minutes");
 
         //If user credentials are correct, then reset loginattempt and lockdownuntil
         user.LoginAttempts = 0;

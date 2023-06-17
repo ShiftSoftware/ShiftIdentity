@@ -8,7 +8,10 @@ internal class IdentityLocalStorageService : IIdentityStore
     private readonly ILocalStorageService localStorage;
     private readonly ISyncLocalStorageService syncLocalStorage;
 
+    //
     private const string tokenStorageKey = "token";
+    
+    
     private const string codeVerifierKey = "code-verifier";
 
     public IdentityLocalStorageService(ILocalStorageService localStorage, ISyncLocalStorageService syncLocalStorage)

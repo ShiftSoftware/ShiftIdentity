@@ -1,0 +1,31 @@
+﻿@using ShiftSoftware.TypeAuth.Core
+
+@if (ActionTreeItem.ActionTreeItems.Count > 0)
+{
+    <MudIcon Class="ml-0 mr-2" Icon="@Icons.Material.Filled.Folder" Color="Color.Primary" />
+}
+else if (ActionTreeItem?.Action?.Type == ActionType.Boolean)
+{
+    <MudIcon Size="Size.Small" Class="ml-0 mr-2" Icon="@Icons.Material.Outlined.ToggleOff" Style="opacity:0.5;" />
+}
+else if (ActionTreeItem?.Action?.Type == ActionType.Text)
+{
+    <MudIcon Size="Size.Small" Class="ml-0 mr-2" Icon="@Icons.Material.Outlined.TextFields" Style="opacity:0.5;" />
+}
+else if (ActionTreeItem?.Action?.Type == ActionType.Read)
+{
+    <MudIcon Size="Size.Small" Class="ml-0 mr-2" Icon="@Icons.Material.Outlined.RemoveRedEye" Style="opacity:0.5;" />
+}
+else if (ActionTreeItem?.Action?.Type == ActionType.ReadWrite)
+{
+    <MudIcon Size="Size.Small" Class="ml-0 mr-2" Icon="@Icons.Material.Outlined.Checklist" Style="opacity:0.5;" />
+}
+else if (ActionTreeItem?.Action?.Type == ActionType.ReadWriteDelete)
+{
+    <MudIcon Size="Size.Small" Class="ml-0 mr-2" Icon="@Icons.Material.Outlined.Checklist" Style="opacity:0.5;" />
+}
+
+@code{
+    [Parameter]
+    public ActionTreeItem ActionTreeItem { get; set; } = default!;
+}

@@ -12,12 +12,12 @@ namespace ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 
 public class TokenService
 {
-    private readonly ShiftIdentityOptions shiftIdentityOptions;
+    private readonly ShiftIdentityConfiguration shiftIdentityConfiguration;
     private readonly IUserRepository userRepository;
 
-    public TokenService(ShiftIdentityOptions configuration, IUserRepository userRepository)
+    public TokenService(ShiftIdentityConfiguration shiftIdentityConfiguration, IUserRepository userRepository)
     {
-        this.shiftIdentityOptions = configuration;
+        this.shiftIdentityConfiguration = shiftIdentityConfiguration;
         this.userRepository = userRepository;
     }
 
@@ -28,7 +28,7 @@ public class TokenService
 
     public TokenDTO? GenerateExternalJwtToken(User user, AuthCodeModel authCode)
     {
-        if (shiftIdentityOptions.Configuration.Security.RequirePasswordChange && user.RequireChangePassword)
+        if (shiftIdentityConfiguration.Security.RequirePasswordChange && user.RequireChangePassword)
             return null;
 
         return GenerateToken(user, true);
@@ -64,8 +64,8 @@ public class TokenService
             ValidateIssuer = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = shiftIdentityOptions.Configuration.RefreshToken.Issuer,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(shiftIdentityOptions.Configuration.RefreshToken.Key)),
+            ValidIssuer = shiftIdentityConfiguration.RefreshToken.Issuer,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(shiftIdentityConfiguration.RefreshToken.Key)),
             ClockSkew = TimeSpan.Zero,
             LifetimeValidator = (notBefore, expires, securityToken,
 validationParameters) =>
@@ -89,7 +89,7 @@ validationParameters) =>
 
     private TokenDTO GenerateToken(User user, bool external = false)
     {
-        var requirePasswordChange = shiftIdentityOptions.Configuration.Security.RequirePasswordChange && user.RequireChangePassword;
+        var requirePasswordChange = shiftIdentityConfiguration.Security.RequirePasswordChange && user.RequireChangePassword;
 
         var claims = new List<Claim>
             {
@@ -125,12 +125,12 @@ validationParameters) =>
                     claims.Add(new Claim(TypeAuthClaimTypes.AccessTree, accessTree.AccessTree.Tree));
         }
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(shiftIdentityOptions.Configuration.Token.Key));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(shiftIdentityConfiguration.Token.Key));
 
         var token = new JwtSecurityToken(
-            issuer: shiftIdentityOptions.Configuration.Token.Issuer,
+            issuer: shiftIdentityConfiguration.Token.Issuer,
             claims: claims,
-            expires: DateTime.UtcNow.AddSeconds(shiftIdentityOptions.Configuration.Token.ExpireSeconds),
+            expires: DateTime.UtcNow.AddSeconds(shiftIdentityConfiguration.Token.ExpireSeconds),
             signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature));
 
         string tokenString = new JwtSecurityTokenHandler().WriteToken(token);
@@ -167,13 +167,13 @@ validationParameters) =>
             new Claim(ClaimTypes.NameIdentifier, userId.ToString())
         };
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(shiftIdentityOptions.Configuration.RefreshToken.Key));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(shiftIdentityConfiguration.RefreshToken.Key));
 
         var token = new JwtSecurityToken(
-            issuer: shiftIdentityOptions.Configuration.RefreshToken.Issuer,
-            audience: shiftIdentityOptions.Configuration.RefreshToken.Audience,
+            issuer: shiftIdentityConfiguration.RefreshToken.Issuer,
+            audience: shiftIdentityConfiguration.RefreshToken.Audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddSeconds(shiftIdentityOptions.Configuration.RefreshToken.ExpireSeconds),
+            expires: DateTime.UtcNow.AddSeconds(shiftIdentityConfiguration.RefreshToken.ExpireSeconds),
             signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature));
 
         string tokenString = new JwtSecurityTokenHandler().WriteToken(token);

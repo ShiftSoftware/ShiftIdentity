@@ -1,0 +1,44 @@
+﻿@using ShiftSoftware.ShiftBlazor.Services
+
+@inherits ShiftMainLayout
+@inject NavigationManager navigationManager
+@inject SettingManager SettingManager
+@inject ShiftIdentityDashboardBlazorOptions ShiftIdentityDashboardBlazorOptions
+
+<MudRTLProvider RightToLeft="SettingManager.Settings.CurrentLanguage?.RTL ?? false">
+
+    <AddMudProviders />
+
+    <MudLayout>
+
+        <MudAppBar>
+            <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+            <MudLink Href="/"><MudText Style="color: #fff;">@ShiftIdentityDashboardBlazorOptions.Title</MudText></MudLink>
+
+            <MudSpacer />
+
+            <LanguageSwitcher />
+        </MudAppBar>
+
+        <MudDrawer @bind-Open="@_drawerOpen" ClipMode="DrawerClipMode.Docked" Elevation="1" Variant="@DrawerVariant.Mini" Breakpoint="Breakpoint.Lg" OpenMiniOnHover="true">
+            <NavMenu isDrawerOpen="_drawerOpen" />
+        </MudDrawer>
+
+        <MudMainContent>
+            <MudContainer MaxWidth="MaxWidth.ExtraLarge" Style="padding-block: 24px;">
+                @Body
+            </MudContainer>
+        </MudMainContent>
+
+    </MudLayout>
+
+</MudRTLProvider>
+
+@code {
+    bool _drawerOpen = false;
+
+    void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+}

@@ -7,11 +7,8 @@ using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.App;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
-using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.ShiftIdentity.Core.Models;
 using ShiftSoftware.ShiftIdentity.Core.Repositories;
-using System.Reflection;
 using System.Text;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Extensions;
@@ -114,10 +111,12 @@ public static class IMvcBuilderExtensions
                 AcceptUnencodedIds = true,
                 UserIdsSalt = "k02iUHSb2ier9fiui02349AbfJEI",
                 UserIdsMinHashLength = 5
-            }
+            },
+            IsFakeIdentity = true,
         };
 
-        builder.Services.AddSingleton(new ShiftIdentityOptions(userData, app, accessTrees, configuration, userPassword) { IsFakeIdentity = true });
+        builder.Services.AddSingleton(configuration);
+        builder.Services.AddSingleton(new ShiftIdentityOptions(userData, app, accessTrees, configuration, userPassword));
 
         //builder.AddApplicationPart(Assembly.GetExecutingAssembly());
 

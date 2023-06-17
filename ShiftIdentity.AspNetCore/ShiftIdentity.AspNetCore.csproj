@@ -18,6 +18,7 @@
 
 	<ItemGroup>
 	  <Compile Remove="AppModel.cs" />
+	  <Compile Remove="Controllers\MVC\AuthController.cs" />
 	  <Compile Remove="Extensions\ControllerBaseExtensions.cs" />
 	</ItemGroup>
 
@@ -25,12 +26,13 @@
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="7.0.4" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0" />
 		<PackageReference Include="Moq" Version="4.18.4" />
-		<PackageReference Include="ShiftSoftware.ShiftEntity.Web" Version="1.6.0.5" />
+		<PackageReference Include="ShiftSoftware.ShiftEntity.Web" Version="1.6.0.8" />
 		<PackageReference Include="ShiftSoftware.TypeAuth.Core" Version="1.4.1.2" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<None Include="Images\icon.png" Pack="true" PackagePath="\" />
+		<Folder Include="Controllers\MVC\" />
 		<Folder Include="Images\" />
 	</ItemGroup>
 

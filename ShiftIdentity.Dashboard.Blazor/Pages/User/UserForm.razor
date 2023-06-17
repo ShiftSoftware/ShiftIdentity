@@ -1,0 +1,101 @@
+@attribute [Authorize]
+@layout Shared.DefaultLayout
+
+@attribute [Route($"/{nameof(UserForm)}/{{Key?}}")]
+@inherits ShiftForm<UserForm, ShiftSoftware.ShiftIdentity.Core.DTOs.User.UserDTO>
+@inject HttpClient Http
+
+@using ShiftSoftware.ShiftBlazor.Enums
+@using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.User.AccessTreeTree
+
+<ShiftEntityForm @bind-Mode="Mode"
+                 @bind-Value="TheItem"
+                 @ref="FormContainer"
+                 Action="User"
+                 Title="User"
+                 Settings="@FormSetting"
+                 @bind-Key="@Key"
+                 OnTaskFinished="@(()=> ready=true)"
+                 T="ShiftSoftware.ShiftIdentity.Core.DTOs.User.UserDTO">
+
+    <MudTextField Immediate="true"
+                  ReadOnly="@ReadOnly"
+                  Disabled="@Disabled"
+                  OnlyValidateIfDirty="true"
+                  Label="Full Name"
+                  @bind-Value="TheItem.FullName"
+                  For="@(() => TheItem.FullName)" />
+
+    <MudTextField Immediate="true"
+                  ReadOnly="@ReadOnly"
+                  Disabled="@Disabled"
+                  OnlyValidateIfDirty="true"
+                  Label="Username"
+                  @bind-Value="TheItem.Username"
+                  For="@(() => TheItem.Username)" />
+
+    <MudTextField Immediate="true"
+                  InputType="InputType.Password"
+                  ReadOnly="@ReadOnly"
+                  Disabled="@Disabled"
+                  OnlyValidateIfDirty="true"
+                  Label="Password"
+                  @bind-Value="TheItem.Password"
+                  For="@(() => TheItem.Password)"
+                  HelperText="Choose a strong password" />
+
+    <MudTextField Immediate="true"
+                  ReadOnly="@ReadOnly"
+                  Disabled="@Disabled"
+                  OnlyValidateIfDirty="true"
+                  Label="Phone"
+                  @bind-Value="TheItem.Phone"
+                  For="@(() => TheItem.Phone)" />
+
+    <MudTextField Immediate="true"
+                  ReadOnly="@ReadOnly"
+                  Disabled="@Disabled"
+                  OnlyValidateIfDirty="true"
+                  Label="Email"
+                  @bind-Value="TheItem.Email"
+                  For="@(() => TheItem.Email)" />
+
+    <MudDatePicker ReadOnly="@ReadOnly"
+                   Disabled="@Disabled"
+                   @bind-Date="TheItem.BirthDate"
+                   For="@(() => TheItem.BirthDate)"
+                   Label="Birth Date" />
+
+    <MudItem>
+        <MudCheckBox ReadOnly="@ReadOnly"
+                     Disabled="@Disabled"
+                     For="@(() => TheItem.IsActive)"
+                     Label="Active"
+                     @bind-Checked="@TheItem.IsActive"></MudCheckBox>
+    </MudItem>
+
+    <AccessTreeTree @bind-Value="TheItem.AccessTrees"
+                    ReadOnly="@ReadOnly"
+                    Disabled="@Disabled" />
+
+    <br />
+
+    @if (ready || Mode == FormModes.View || Mode == FormModes.Create)
+    {
+        <ActionTree @ref="actionTree" @bind-Tree="TheItem.AccessTree" ReadOnly="@ReadOnly" Disabled="@Disabled" />
+    }
+</ShiftEntityForm>
+
+@code {
+    private bool ready = false;
+    Shared.ActionTree.ActionTree? actionTree;
+
+    protected override void OnInitialized()
+    {
+        if (TheItem.ID == default)
+            TheItem.AccessTree = "{}";
+
+        base.OnInitialized();
+    }
+}
+

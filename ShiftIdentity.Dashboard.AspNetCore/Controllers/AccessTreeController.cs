@@ -1,11 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
 using ShiftSoftware.ShiftEntity.Web;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.ShiftIdentity.Core;
+using ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
 
-namespace ShiftIdentity.Dashboard.AspNetCore.Controllers
+namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
 {
     [Route("api/[controller]")]
     public class AccessTreeController : ShiftEntitySecureControllerAsync<AccessTreeRepository, AccessTree, AccessTreeDTO, AccessTreeDTO>

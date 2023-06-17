@@ -13,15 +13,15 @@ public class ShiftIdentityAuthStateProvider : AuthenticationStateProvider
     {
         this.tokenStore = tokenStore;
     }
-    public override async Task<AuthenticationState> GetAuthenticationStateAsync()
+    public override Task<AuthenticationState> GetAuthenticationStateAsync()
     {
-        var token = await tokenStore.GetTokenAsync();
+        var token = tokenStore.GetToken();
 
         var identity = new ClaimsIdentity();
         if (token is not null)
         {
             var handler = new JwtSecurityTokenHandler();
-            var jsonToken = handler.ReadToken(token.Token);
+            var jsonToken = handler.ReadToken(token);
             var tokenS = jsonToken as JwtSecurityToken;
 
             identity = new ClaimsIdentity(tokenS?.Claims, "jwt");
@@ -32,6 +32,6 @@ public class ShiftIdentityAuthStateProvider : AuthenticationStateProvider
 
         NotifyAuthenticationStateChanged(Task.FromResult(state));
 
-        return state;
+        return Task.FromResult(state);
     }
 }

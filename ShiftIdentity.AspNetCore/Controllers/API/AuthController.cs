@@ -18,21 +18,21 @@ public class AuthController : ControllerBase
     private readonly AuthCodeService authCodeService;
     private readonly TokenService tokenService;
     private readonly IClaimService claimService;
-    private readonly ShiftIdentityOptions shiftIdentityOptions;
+    private readonly ShiftIdentityConfiguration shiftIdentityConfiguration;
 
     public AuthController(
             AuthService authService,
             AuthCodeService authCodeService,
             TokenService tokenService,
             IClaimService claimService,
-            ShiftIdentityOptions shiftIdentityOptions
+            ShiftIdentityConfiguration shiftIdentityConfiguration
         )
     {
         this.authService = authService;
         this.authCodeService = authCodeService;
         this.tokenService = tokenService;
         this.claimService = claimService;
-        this.shiftIdentityOptions = shiftIdentityOptions;
+        this.shiftIdentityConfiguration = shiftIdentityConfiguration;
     }
 
     [HttpPost("Login")]
@@ -79,7 +79,7 @@ public class AuthController : ControllerBase
     [HttpPost("AuthCode")]
     public async Task<IActionResult> GenerateAuthCode([FromBody] GenerateAuthCodeDTO generateAuthCodeDto)
     {
-        if (!this.shiftIdentityOptions.IsFakeIdentity && !HttpContext!.User!.Identity!.IsAuthenticated)
+        if (!this.shiftIdentityConfiguration.IsFakeIdentity && !HttpContext!.User!.Identity!.IsAuthenticated)
         {
             return Unauthorized();
         }

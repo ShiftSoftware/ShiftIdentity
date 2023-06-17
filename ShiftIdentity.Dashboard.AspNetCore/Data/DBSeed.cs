@@ -2,7 +2,7 @@
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.TypeAuth.Core;
 
-namespace ShiftIdentity.Dashboard.AspNetCore.Data
+namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data
 {
     public class DBSeed
     {

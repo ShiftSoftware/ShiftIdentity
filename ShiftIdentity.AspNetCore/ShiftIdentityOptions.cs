@@ -15,7 +15,6 @@ public class ShiftIdentityOptions
     public string? UserPassword { get; private set; }
 
     public ShiftIdentityConfiguration Configuration { get;private set; }
-    internal bool IsFakeIdentity { get; set; }
 
     public ShiftIdentityOptions(TokenUserDataDTO userData,
         AppDTO app,

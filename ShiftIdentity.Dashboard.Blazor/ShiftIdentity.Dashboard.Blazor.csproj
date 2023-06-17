@@ -1,0 +1,35 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+	<PropertyGroup>
+		<TargetFramework>net7.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+
+		<PackageId>ShiftSoftware.ShiftIdentity.Dashboard.Blazor</PackageId>
+		<Product>Shift Identity Dashboard Blazor</Product>
+		<AssemblyName>ShiftSoftware.ShiftIdentity.Dashboard.Blazor</AssemblyName>
+		<RootNamespace>ShiftSoftware.ShiftIdentity.Dashboard.Blazor</RootNamespace>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Blazored.LocalStorage" Version="4.3.0" />
+		<PackageReference Include="FluentValidation" Version="11.5.0" />
+		<PackageReference Include="libphonenumber-csharp" Version="8.13.6" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="7.0.2" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="7.0.2" PrivateAssets="all" />
+		<PackageReference Include="Microsoft.Extensions.Http" Version="7.0.0" />
+		<PackageReference Include="ShiftSoftware.ShiftBlazor" Version="1.4.3" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="7.0.3" />
+		<PackageReference Include="ShiftSoftware.TypeAuth.Blazor" Version="1.4.1.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\ShiftIdentity.Core\ShiftIdentity.Core.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Pages\AccessTree\" />
+	  <Folder Include="Pages\App\" />
+	</ItemGroup>
+
+</Project>

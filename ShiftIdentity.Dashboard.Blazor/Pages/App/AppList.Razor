@@ -1,0 +1,39 @@
+@attribute [Authorize]
+@layout Shared.DefaultLayout
+@attribute [Route($"/{nameof(AppList)}")]
+@using Syncfusion.Blazor.Grids
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.App;
+@using ShiftSoftware.ShiftBlazor.Enums
+
+<ShiftList Action="App"
+           Title="App List"
+           T="AppDTO"
+           ComponentType="typeof(AppForm)"
+           EnablePdfExport
+@ref="shiftList"
+           AutoGenerateColumns="false"
+           EnableCsvExcelExport>
+    <GridColumns>
+        <GridColumn HeaderText="ID" Field="@nameof(AppDTO.ID)" />
+        <GridColumn HeaderText="Display Name" Field="@nameof(AppDTO.DisplayName)" />
+        <GridColumn HeaderText="App Id" Field="@nameof(AppDTO.AppId)" />
+        <GridColumn HeaderText="Description" Field="@nameof(AppDTO.Description)" />
+
+        <GridColumn>
+            <Template>
+                <MudButton OnClick="() => shiftList!.OpenDialog(typeof(AppForm), (context as AppDTO)!.ID, ModalOpenMode.Popup)"
+                           Variant="Variant.Outlined"
+                           EndIcon="@Icons.Material.Filled.OpenInNew"
+                           Color="Color.Primary"
+                           Size="Size.Small">
+                    Show
+                </MudButton>
+            </Template>
+        </GridColumn>
+
+    </GridColumns>
+</ShiftList>
+
+@code {
+    ShiftList<AppDTO>? shiftList { get; set; } = default!;
+}

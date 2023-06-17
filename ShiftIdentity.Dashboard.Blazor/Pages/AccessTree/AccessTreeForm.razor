@@ -1,0 +1,32 @@
+@attribute [Authorize]
+@layout Shared.DefaultLayout
+@attribute [Route($"/{nameof(AccessTreeForm)}/{{Key?}}")]
+@inherits ShiftForm<AccessTreeForm, ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree.AccessTreeDTO>
+@using System.Text.Json
+@using Microsoft.CSharp
+
+<ShiftEntityForm @bind-Mode="Mode"
+                 @bind-Value="TheItem"
+                 @ref="FormContainer"
+                 Action="AccessTree"
+                 Title="Access Tree"
+                 @bind-Key="@Key"
+                 OnSubmit="()=> { TheItem.Tree =  actionTree!.GenerateAccessTree(); }">
+
+    <MudTextField ReadOnly="@ReadOnly"
+                  Disabled="@Disabled"
+                  OnlyValidateIfDirty="true"
+                  Label="Name"
+                  @bind-Value="TheItem.Name"
+                  For="@(() => TheItem.Name)" />
+
+
+    <br />
+    <br />
+
+    <ActionTree @ref="actionTree" @bind-Tree="TheItem.Tree" ReadOnly="@ReadOnly" Disabled="@Disabled" />
+</ShiftEntityForm>
+
+@code {
+    Shared.ActionTree.ActionTree? actionTree;
+}

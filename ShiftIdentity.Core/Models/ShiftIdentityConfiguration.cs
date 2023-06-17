@@ -14,4 +14,6 @@ public class ShiftIdentityConfiguration
     public HashIdSettings HashIdSettings { get; set; } = default!;
 
     public List<Type> ActionTrees { get; set; } = default!;
+
+    internal bool IsFakeIdentity { get; set; }
 }

@@ -7,15 +7,16 @@ using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.UserManager;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.ShiftIdentity.Core.Repositories;
+using ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data;
 using ShiftSoftware.TypeAuth.AspNetCore.Services;
 using ShiftSoftware.TypeAuth.Core;
 using System.Net;
 
-namespace ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
+namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
 
-public class UserRepository : 
+public class UserRepository :
     ShiftRepository<User>,
-    IShiftRepositoryAsync<User, UserListDTO, UserDTO>, 
+    IShiftRepositoryAsync<User, UserListDTO, UserDTO>,
     IUserRepository
 {
 
@@ -45,7 +46,7 @@ public class UserRepository :
     public ValueTask<User> DeleteAsync(User entity, long? userId = null)
     {
         entity.DeleteShiftEntity(userId);
-        return new ValueTask<User>( entity);
+        return new ValueTask<User>(entity);
     }
 
     public async Task<User> FindAsync(long id, DateTime? asOf = null, bool ignoreGlobalFilters = false)

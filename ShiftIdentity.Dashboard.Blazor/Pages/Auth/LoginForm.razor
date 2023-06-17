@@ -1,0 +1,116 @@
+﻿@attribute [Route($"login")]
+@layout Shared.EmptyLayout
+
+@using System.Text.RegularExpressions
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Authorization;
+@using ShiftSoftware.ShiftIdentity.Core.DTOs
+
+@inject ShiftIdentityDashboardBlazorOptions ShiftIdentityDashboardBlazorOptions
+@inject Services.AuthService AuthService
+@inject MessageService msgService
+@inject Services.StorageService storageService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavManager
+
+@*@inject Services.AuthService authService
+@inject MessageService msgService
+@inject Services.StorageService storageService
+@inject TypeAuth.Blazor.Services.TypeAuthService TypeAuth*@
+
+<MudGrid Justify="Justify.Center">
+    <MudItem xs="12" sm="10" md="8" lg="6" xl="6">
+        <MudPaper Class="pa-4">
+
+            <br />
+            <MudGrid Justify="Justify.Center">
+                <MudItem xs="11" sm="11" md="10" lg="8" xl=6>
+                    <MudImage Src="@ShiftIdentityDashboardBlazorOptions.LogoPath" Style="width:100%;" />
+                </MudItem>
+            </MudGrid>
+            <br />
+            <br />
+
+            <EditForm Model="@loginDto" OnValidSubmit="Login">
+                <DataAnnotationsValidator />
+                <MudTextField T="string" Label="Username" @bind-Value="loginDto.Username" For="@(() => loginDto.Username)" />
+
+                <MudTextField T="string" Label="Password" @bind-Value="loginDto.Password"
+                              For="@(() => loginDto.Password)" InputType="InputType.Password" />
+
+                <br />
+                <br />
+
+                <MudGrid Justify="Justify.Center">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit">Login</MudButton>
+                </MudGrid>
+            </EditForm>
+
+            <br />
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    LoginDTO loginDto { get; set; } = new LoginDTO();
+
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string ReturnUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await authenticationStateTask;
+
+        //Return to home if user already loged-in
+        if (authState?.User?.Identity?.IsAuthenticated ?? false)
+            NavManager.NavigateTo("/");
+    }
+
+    private async Task Login()
+    {
+        var loginResult = await this.AuthService.LoginAsync(loginDto);
+
+        if (!loginResult.IsSuccess)
+        {
+            msgService.Error(loginResult?.Data?.Message?.Body!, loginResult?.Data?.Message?.Title);
+
+            return;
+        }
+
+        await storageService.StoreTokenAsync(loginResult?.Data?.Entity!);
+
+        //Notify AuthenticationStateProvider and TypeAuth taht auth state has changed
+        await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        //TypeAuth.AuthStateHasChanged();
+
+        if (loginResult?.Data?.Entity?.RequirePasswordChange ?? false)
+        {
+            //var url = nameof(ChangePasswordForm);
+
+            //var queryStrings = new Dictionary<string, object?>();
+            //queryStrings.Add("ReturnUrl", ReturnUrl ?? "/");
+            //queryStrings.Add("Enforce", true);
+
+            //var uri = NavManager.GetUriWithQueryParameters(url, queryStrings);
+
+            //NavManager.NavigateTo(uri);
+            //return;
+        }
+
+        if (!String.IsNullOrWhiteSpace(ReturnUrl))
+        {
+            NavManager.NavigateTo(ReturnUrl, false);
+            return;
+        }
+        else
+        {
+            NavManager.NavigateTo("/", false);
+            return;
+        }
+    }
+}

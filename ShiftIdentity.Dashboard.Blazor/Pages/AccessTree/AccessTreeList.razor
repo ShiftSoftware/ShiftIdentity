@@ -1,0 +1,41 @@
+@layout Shared.DefaultLayout
+@attribute [Authorize]
+@attribute [Route($"/{nameof(AccessTreeList)}")]
+@using Syncfusion.Blazor.Grids
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
+@using Syncfusion.Blazor.Data
+@using ShiftSoftware.ShiftBlazor.Enums
+
+<ShiftList Action="AccessTree"
+           Title="Access Tree List"
+           T="AccessTreeDTO"
+           ComponentType="typeof(AccessTreeForm)"
+           EnablePdfExport
+           @ref="shiftList"
+           AutoGenerateColumns="false"
+           EnableCsvExcelExport>
+    <GridColumns>
+        <GridColumn HeaderText="ID" Field="@nameof(AccessTreeDTO.ID)" />
+        <GridColumn HeaderText="Name" Field="@nameof(AccessTreeDTO.Name)" />
+        <GridColumn HeaderText="Tree" Field="@nameof(AccessTreeDTO.Tree)" />
+        <GridColumn HeaderText="Scope" Field="Scope.DisplayName" />
+
+        <GridColumn>
+            <Template>
+                <MudButton OnClick="() => shiftList!.OpenDialog(typeof(AccessTreeForm), (context as AccessTreeDTO)!.ID, ModalOpenMode.Popup)"
+                           Variant="Variant.Outlined"
+                           EndIcon="@Icons.Material.Filled.OpenInNew"
+                           Color="Color.Primary"
+                           Size="Size.Small">
+                    Show
+                </MudButton>
+            </Template>
+        </GridColumn>
+
+    </GridColumns>
+</ShiftList>
+
+
+@code {
+    ShiftList<AccessTreeDTO>? shiftList { get; set; } = default!;
+}

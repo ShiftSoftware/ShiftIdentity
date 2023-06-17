@@ -1,0 +1,84 @@
+﻿@using ShiftSoftware.TypeAuth.Core
+@using ShiftSoftware.TypeAuth.Core.Actions;
+
+@if (textAction != null)
+{
+    <MudTextField Value="@(wildCardChecked ? textAction.MaximumAccess : (hasWildCardCard ? textAction.MinimumAccess : TypeAuth_View.AccessValue(textAction) ))"
+              Disabled="@(hasWildCardCard || Disabled)"
+              TextChanged="@((e) => TextChanged(e))"
+              Variant="Variant.Outlined" Class="type-auth-tree-text" 
+              ReadOnly="ReadOnly" />
+}
+@if (dynamicTextAction != null)
+{
+    <MudTextField Value="@(wildCardChecked ? dynamicTextAction.MaximumAccess : (hasWildCardCard ? dynamicTextAction.MinimumAccess : TypeAuth_View.AccessValue(dynamicTextAction, ActionTreeItem.TypeName) ))"
+              Disabled="@(hasWildCardCard || Disabled)"
+              TextChanged="@((e) => TextChanged(e))"
+              Variant="Variant.Outlined" Class="type-auth-tree-text"
+              ReadOnly="ReadOnly" />
+
+              @ActionTreeItem.TypeName
+}
+
+@code {
+    [Parameter]
+    public TypeAuthContext TypeAuth_LoggedInUser { get; set; } = default!;
+
+    [Parameter]
+    public TypeAuthContext TypeAuth_View { get; set; } = default!;
+
+    [Parameter]
+    public ActionTreeItem ActionTreeItem { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback AfterBind { get; set; }
+
+    [Parameter]
+    public bool ReadOnly { get; set; }
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    private TextAction? textAction;
+    private DynamicTextAction? dynamicTextAction;
+
+    private bool wildCardChecked;
+
+    private bool hasWildCardCard;
+
+    protected override void OnInitialized()
+    {
+        this.textAction = (ActionTreeItem!.Action as TextAction)!;
+        this.dynamicTextAction = (ActionTreeItem!.Action as DynamicTextAction)!;
+
+        base.OnInitialized();
+    }
+
+    async Task TextChanged(string value)
+    {
+        if (hasWildCardCard || string.IsNullOrWhiteSpace(value))
+            return;
+
+        try
+        {
+            if (textAction != null)
+                TypeAuth_View.SetAccessValue(textAction, value, TypeAuth_LoggedInUser.AccessValue(textAction));
+            if (dynamicTextAction != null)
+                TypeAuth_View.SetAccessValue(dynamicTextAction, ActionTreeItem.TypeName, value, TypeAuth_LoggedInUser.AccessValue(dynamicTextAction, ActionTreeItem.TypeName));
+        }
+        catch
+        {
+
+        }
+
+        await AfterBind.InvokeAsync();
+    }
+
+    protected override void OnParametersSet()
+    {
+        this.wildCardChecked = ActionTreeItem.AdditionalData?.Parent?.WildCardAccess?.Contains(Access.Maximum);
+
+        this.hasWildCardCard = ActionTreeItem.AdditionalData?.Parent?.WildCardAccess?.Count > 0;
+
+        base.OnParametersSet();
+    }
+}

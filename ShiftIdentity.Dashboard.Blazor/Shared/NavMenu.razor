@@ -1,0 +1,13 @@
+﻿@using Pages.User
+@using Pages.App
+@using Pages.AccessTree
+
+<MudNavMenu>
+    <MudNavLink Href="@($"/{nameof(AppList)}")" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.Apps">Apps</MudNavLink>
+    <MudNavLink Href="@($"/{nameof(AccessTreeList)}")" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.AccountTree">Access Trees</MudNavLink>
+    <MudNavLink Href="@($"/{nameof(UserList)}")" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.People">Users</MudNavLink>
+</MudNavMenu>
+
+@code {
+    [Parameter] public bool isDrawerOpen { get; set; }
+}

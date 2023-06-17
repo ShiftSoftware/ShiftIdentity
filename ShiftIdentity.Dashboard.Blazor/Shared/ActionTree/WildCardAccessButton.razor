@@ -1,0 +1,93 @@
+﻿@using ShiftSoftware.TypeAuth.Core
+
+<MudButton Style="padding: 1px 8px; font-size: 12px;" Size="Size.Small" Color="@color"
+           Disabled="ActionTreeItem.AdditionalData?.Parent?.WildCardAccess?.Count > 0 || !LoggedInUserTreeItems.Any(x => x.Type == ActionTreeItem.Type && x.WildCardAccess.Contains(Access)) || Disabled"
+           OnClick="Bind"
+           Variant="@(ActionTreeItem.WildCardAccess.Contains(Access) ? Variant.Filled : Variant.Text)"
+           StartIcon="@(ActionTreeItem.WildCardAccess.Contains( Access) ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckBoxOutlineBlank)">
+    @ChildContent
+</MudButton>
+
+@code {
+
+    [Parameter]
+    public List<ActionTreeItem> LoggedInUserTreeItems { get; set; } = default!;
+
+    [Parameter]
+    public ActionTreeItem ActionTreeItem { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<ActionTreeItem> ActionTreeItemChanged { get; set; }
+
+    [Parameter]
+    public Access Access { get; set; } = default!;
+
+    [Parameter]
+    public RenderFragment ChildContent { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback AfterBind { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    private Color color;
+
+    protected override void OnInitialized()
+    {
+        this.color = Access == Access.Delete ? Color.Error : Access == Access.Write ? Color.Warning : Access == Access.Read ? Color.Success : Access == Access.Maximum ? Color.Primary : Color.Default;
+
+        base.OnInitialized();
+    }
+
+    private async Task Bind()
+    {
+        await ToggleWildCardAccess(ActionTreeItem, Access);
+        await AfterBind.InvokeAsync();
+    }
+
+    async Task ToggleWildCardAccess(ActionTreeItem actionTreeItem, Access access)
+    {
+        if (actionTreeItem.WildCardAccess.Contains(access))
+        {
+            actionTreeItem.WildCardAccess.Remove(access);
+        }
+        else
+        {
+            actionTreeItem.WildCardAccess.Add(access);
+        }
+
+        //foreach (var item in actionTreeItem.ActionTreeItems)
+        {
+            AssignWildCard(actionTreeItem, actionTreeItem.WildCardAccess);
+        }
+
+        await ActionTreeItemChanged.InvokeAsync();
+    }
+
+    void AssignWildCard(ActionTreeItem actionTreeItem, List<Access> wildCardAccess)
+    {
+        foreach (var item in actionTreeItem.ActionTreeItems)
+        {
+            AssignWildCard(item, wildCardAccess);
+        }
+
+        if (actionTreeItem.ActionTreeItems.Count > 0)
+        {
+            if (actionTreeItem.AdditionalData!.OldWildCardAccess == null)
+                actionTreeItem.AdditionalData!.OldWildCardAccess = actionTreeItem.WildCardAccess.ToList();
+
+            actionTreeItem.WildCardAccess.Clear();
+            actionTreeItem.WildCardAccess.AddRange(wildCardAccess);
+
+            if (wildCardAccess.Count == 0)
+            {
+                actionTreeItem.WildCardAccess.Clear();
+                actionTreeItem.WildCardAccess.AddRange(actionTreeItem.AdditionalData!.OldWildCardAccess);
+                actionTreeItem.AdditionalData!.OldWildCardAccess = null;
+            }
+        }
+    }
+}
+
+

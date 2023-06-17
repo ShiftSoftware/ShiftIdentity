@@ -1,15 +1,15 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.UserManager;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
+using ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
-namespace ShiftIdentity.Dashboard.AspNetCore.Controllers
+namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
@@ -65,7 +65,7 @@ namespace ShiftIdentity.Dashboard.AspNetCore.Controllers
 
             await userRepo.SaveChangesAsync();
 
-            return Ok(new ShiftEntityResponse<UserDataDTO>((UserDataDTO) user));
+            return Ok(new ShiftEntityResponse<UserDataDTO>((UserDataDTO)user));
         }
 
         //// POST api/<UserManagerController>
