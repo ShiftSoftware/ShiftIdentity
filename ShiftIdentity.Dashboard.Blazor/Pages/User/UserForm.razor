@@ -16,26 +16,24 @@
                  Settings="@FormSetting"
                  @bind-Key="@Key"
                  OnTaskFinished="@(()=> ready=true)"
+                 OnValidSubmit="()=> { TheItem.AccessTree =  actionTree!.GenerateAccessTree(); }"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.User.UserDTO">
 
-    <MudTextField Immediate="true"
-                  ReadOnly="@ReadOnly"
+    <MudTextField ReadOnly="@ReadOnly"
                   Disabled="@Disabled"
                   OnlyValidateIfDirty="true"
                   Label="Full Name"
                   @bind-Value="TheItem.FullName"
                   For="@(() => TheItem.FullName)" />
 
-    <MudTextField Immediate="true"
-                  ReadOnly="@ReadOnly"
+    <MudTextField ReadOnly="@ReadOnly"
                   Disabled="@Disabled"
                   OnlyValidateIfDirty="true"
                   Label="Username"
                   @bind-Value="TheItem.Username"
                   For="@(() => TheItem.Username)" />
 
-    <MudTextField Immediate="true"
-                  InputType="InputType.Password"
+    <MudTextField InputType="InputType.Password"
                   ReadOnly="@ReadOnly"
                   Disabled="@Disabled"
                   OnlyValidateIfDirty="true"
@@ -44,16 +42,14 @@
                   For="@(() => TheItem.Password)"
                   HelperText="Choose a strong password" />
 
-    <MudTextField Immediate="true"
-                  ReadOnly="@ReadOnly"
+    <MudTextField ReadOnly="@ReadOnly"
                   Disabled="@Disabled"
                   OnlyValidateIfDirty="true"
                   Label="Phone"
                   @bind-Value="TheItem.Phone"
                   For="@(() => TheItem.Phone)" />
 
-    <MudTextField Immediate="true"
-                  ReadOnly="@ReadOnly"
+    <MudTextField ReadOnly="@ReadOnly"
                   Disabled="@Disabled"
                   OnlyValidateIfDirty="true"
                   Label="Email"

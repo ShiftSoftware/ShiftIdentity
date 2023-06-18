@@ -74,12 +74,18 @@ public class AuthService
         var authCode = await authCodeService.VerifyCodeByAppIdOnly(dto.AppId, dto.AuthCode, dto.CodeVerifier);
 
         if (authCode is null)
+        {
+            Console.WriteLine("VerifyCodeByAppIdOnly returnd null");
             return null;
+        }
 
         var user = await userRepo.FindAsync(authCode.UserID);
 
         if (user is null)
+        {
+            Console.WriteLine("userRepo returnd null");
             return null;
+        }
 
         var token = tokenService.GenerateExternalJwtToken(user, authCode);
 

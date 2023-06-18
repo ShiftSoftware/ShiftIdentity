@@ -1,0 +1,128 @@
+﻿@page "/Auth/AuthCode"
+@attribute [Authorize]
+@inject Services.AuthService AuthService
+@inject NavigationManager NavManager
+@layout Shared.EmptyLayout
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.Auth
+@using ShiftSoftware.ShiftIdentity.Core.Models
+@using System.Net;
+
+<style>
+    body {
+        background: #fafafa;
+    }
+</style>
+
+@if (authCode is null)
+{
+    <MudGrid Justify="Justify.Center">
+        <MudItem xs="12" sm="10" md="8" lg="6" xl="6">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Shift Identity</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+
+                <MudCardContent>
+                    <MudSkeleton Width="500px" Height="2em" />
+
+                    <br />
+                    <br />
+                    <MudList Dense="true">
+                        <MudListItem IconSize="Size.Small" Icon="@Icons.Material.Filled.ArrowForwardIos"><MudSkeleton Width="100px" /></MudListItem>
+                        <MudListItem IconSize="Size.Small" Icon="@Icons.Material.Filled.ArrowForwardIos"><MudSkeleton Width="100px" /></MudListItem>
+                        <MudListItem IconSize="Size.Small" Icon="@Icons.Material.Filled.ArrowForwardIos"><MudSkeleton Width="100px" /></MudListItem>
+                    </MudList>
+
+                </MudCardContent>
+                <MudCardActions>
+                    <MudSkeleton Width="70px" Height="40px" Class="ml-2" />
+                    <MudSkeleton Width="70px" Height="40px" Class="ml-3" />
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+}
+else
+{
+    <MudGrid Justify="Justify.Center">
+        <MudItem xs="12" sm="10" md="8" lg="6" xl="6">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Shift Identity</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+
+                <MudCardContent>
+                    <MudText>The app <b>'@authCode.AppDisplayName'</b> is trying to access your account</MudText>
+
+                    <br />
+                    <br />
+
+                   @* <MudList Dense="true">
+                        @foreach (var item in authCode.Scopes)
+                        {
+                            <MudListItem IconSize="Size.Small" Icon="@Icons.Material.Filled.ArrowForwardIos" Text="@item.DisplayName" />
+                        }
+                    </MudList>*@
+
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton Variant="Variant.Text" Color="Color.Success" OnClick="Allow">Allow</MudButton>
+                    <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="Deny">Deny</MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string AppId { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string CodeChallenge { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
+    private AuthCodeModel authCode;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        //await Task.Delay(1500);
+
+        var result = await AuthService.GenerateAuthCodeAsync(new GenerateAuthCodeDTO
+            {
+                AppId = AppId,
+                CodeChallenge = CodeChallenge,
+                ReturnUrl = ReturnUrl
+            });
+
+        if (result.IsSuccess)
+            authCode = result?.Data?.Entity!;
+        else
+            errorMessage = result?.Data?.Message?.Body;
+    }
+
+    private void Allow()
+    {
+        var queryStrings = new Dictionary<string, object?>();
+        queryStrings.Add("AuthCode", authCode.Code);
+        queryStrings.Add("ReturnUrl", ReturnUrl);
+
+        var uri = NavManager.GetUriWithQueryParameters(authCode.RedirectUri, queryStrings);
+        NavManager.NavigateTo(uri);
+    }
+
+    private void Deny()
+    {
+        NavManager.NavigateTo("/");
+    }
+}

@@ -5,6 +5,7 @@ using System.Net.Http.Headers;
 using System.Net;
 using Microsoft.AspNetCore.Components.Authorization;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
+using ShiftSoftware.ShiftIdentity.Core.Models;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services
 {
@@ -92,10 +93,10 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services
         //    //    typeAuth.AuthStateHasChanged();
         //}
 
-        //public async Task<HttpResponse<ShiftEntityResponse<AuthCodeDTO>>> GenerateAuthCodeAsync(GenerateAuthCodeDTO dto)
-        //{
-        //    return await httpService.PostAsync<ShiftEntityResponse<AuthCodeDTO>, GenerateAuthCodeDTO>(url + "AuthCode", dto);
-        //}
+        public async Task<HttpResponse<ShiftEntityResponse<AuthCodeModel>>> GenerateAuthCodeAsync(GenerateAuthCodeDTO dto)
+        {
+            return await httpService.PostAsync<ShiftEntityResponse<AuthCodeModel>, GenerateAuthCodeDTO>(url + "AuthCode", dto);
+        }
 
         //public async Task LogOutAsync()
         //{

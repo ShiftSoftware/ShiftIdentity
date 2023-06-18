@@ -60,21 +60,36 @@ public class AuthCodeService
         var authCode = authCodeStoreService.GetCode(code);
 
         if (authCode == null)
+        {
+            Console.WriteLine("authCodeStoreService.GetCode returnd null");
             return null;
+        }
 
         if (authCode.AppId.Trim().ToString() != appId)
+        {
+            Console.WriteLine("appId not equal");
             return null;
+        }
 
         var app = await appRepo.GetAppAsync(authCode.AppId);
         if (app is null)
+        {
+            Console.WriteLine("appRepo.GetAppAsync returnd null");
             return null;
+        }
 
         if (app.AppSecret is not null)
+        {
+            Console.WriteLine("appSecrete is not null");
             return null;
+        }
 
         var hash = HashService.SHA512GenerateHash(codeVerifier);
         if (hash.ToLower() != authCode.CodeChallenge.ToLower())
+        {
+            Console.WriteLine("challange code verification failed");
             return null;
+        }
 
         authCodeStoreService.RemoveCode(authCode);
 

@@ -1,0 +1,28 @@
+﻿@using System.Collections.ObjectModel;
+@using Microsoft.AspNetCore.Components.Authorization;
+@inject NavigationManager NavManager
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        const string url = "login";
+        var authenticationState = await AuthenticationStateTask;
+
+        if (authenticationState?.User?.Identity is null || !authenticationState.User.Identity.IsAuthenticated)
+        {
+            var returnUrl = NavManager.ToBaseRelativePath(NavManager.Uri);
+
+            var queryStrings = new Dictionary<string, object?>();
+
+            //Add return-url to login page
+            if (!string.IsNullOrWhiteSpace(returnUrl))
+                queryStrings.Add("ReturnUrl", returnUrl);
+
+            var uri = NavManager.GetUriWithQueryParameters(url, queryStrings);
+            NavManager.NavigateTo(uri);
+        }
+    }
+}
