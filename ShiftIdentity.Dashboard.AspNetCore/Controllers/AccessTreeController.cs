@@ -10,7 +10,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
     [Route("api/[controller]")]
     public class AccessTreeController : ShiftEntitySecureControllerAsync<AccessTreeRepository, AccessTree, AccessTreeDTO, AccessTreeDTO>
     {
-        public AccessTreeController(AccessTreeRepository repository) : base(repository, ShiftIdentityActions.AccessTrees)
+        public AccessTreeController(AccessTreeRepository repository) : base(ShiftIdentityActions.AccessTrees)
         { }
     }
 }

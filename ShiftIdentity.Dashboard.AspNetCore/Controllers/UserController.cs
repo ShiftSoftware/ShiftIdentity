@@ -10,7 +10,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
     [Route("api/[controller]")]
     public class UserController : ShiftEntitySecureControllerAsync<UserRepository, User, UserListDTO, UserDTO>
     {
-        public UserController(UserRepository repository) : base(repository, ShiftIdentityActions.Users)
+        public UserController(UserRepository repository) : base(ShiftIdentityActions.Users)
         { }
     }
 }

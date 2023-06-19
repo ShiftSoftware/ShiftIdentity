@@ -108,7 +108,7 @@
 
         var q = ODataQuery.CreateQuery<AccessTreeDTO>("AccessTree");
 
-        accessTress = (await Http.GetFromJsonAsync<ODataDTO<List<AccessTreeDTO>>>(q.ToString()))!.Value.ToList();
+        accessTress = (await Http.GetFromJsonAsync<ODataDTO<AccessTreeDTO>>(q.ToString()))!.Value.ToList();
     }
 
     void SelectedChanged(IEnumerable<AccessTreeDTO> newSelected)
