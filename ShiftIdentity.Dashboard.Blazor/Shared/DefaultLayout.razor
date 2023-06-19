@@ -5,7 +5,7 @@
 @inject SettingManager SettingManager
 @inject ShiftIdentityDashboardBlazorOptions ShiftIdentityDashboardBlazorOptions
 
-<MudRTLProvider RightToLeft="SettingManager.Settings.CurrentLanguage?.RTL ?? false">
+<MudRTLProvider RightToLeft="SettingManager.GetLanguage().RTL">
 
     <AddMudProviders />
 

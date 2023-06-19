@@ -14,7 +14,6 @@
                  @ref="FormContainer"
                  Action="User"
                  Title="User"
-                 Settings="@FormSetting"
                  @bind-Key="@Key"
                  OnTaskFinished="@(()=> ready=true)"
                  OnSubmit="()=> { TheItem.AccessTree =  actionTree!.GenerateAccessTree(); }"

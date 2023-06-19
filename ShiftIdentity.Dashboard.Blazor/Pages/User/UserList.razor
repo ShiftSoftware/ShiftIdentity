@@ -10,33 +10,6 @@
            Title="User List"
            T="UserListDTO"
            ComponentType="typeof(UserForm)"
-           EnablePdfExport
-@ref="shiftList"
-           AutoGenerateColumns="false"
+           ShowIDColumn
            EnableCsvExcelExport>
-    <GridColumns>
-        <GridColumn HeaderText="ID" Field="@nameof(UserListDTO.ID)" />
-        <GridColumn HeaderText="Full Name" Field="@nameof(UserListDTO.FullName)" />
-        <GridColumn HeaderText="Username" Field="@nameof(UserListDTO.Username)" />
-        <GridColumn HeaderText="Phone" Field="@nameof(UserListDTO.Phone)" />
-        <GridColumn HeaderText="Email" Field="@nameof(UserListDTO.Email)" />
-        <GridColumn HeaderText="Is Active" Field="@nameof(UserListDTO.IsActive)" />
-
-        <GridColumn>
-            <Template>
-                <MudButton OnClick="() => shiftList!.OpenDialog(typeof(UserForm), (context as UserListDTO)!.ID, ModalOpenMode.Popup)"
-                           Variant="Variant.Outlined"
-                           EndIcon="@Icons.Material.Filled.OpenInNew"
-                           Color="Color.Primary"
-                           Size="Size.Small">
-                    Show
-                </MudButton>
-            </Template>
-        </GridColumn>
-
-    </GridColumns>
 </ShiftList>
-
-@code {
-    ShiftList<UserListDTO>? shiftList { get; set; } = default!;
-}
