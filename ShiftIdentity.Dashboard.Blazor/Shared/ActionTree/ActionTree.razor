@@ -152,7 +152,7 @@
     [Parameter]
     public bool Disabled { get; set; }
 
-    protected override void OnParametersSet()
+    protected override void OnInitialized()
     {
         this.tAuth_LoggedInUser = tAuth;
 
@@ -177,6 +177,8 @@
 
         this.TreeItems = tree;
         this.initialized = true;
+
+        base.OnInitialized();
     }
 
     void TraverseTree(ActionTreeItem tree, ActionTreeItem? parent, List<ActionTreeItem>? flattenedList = null)

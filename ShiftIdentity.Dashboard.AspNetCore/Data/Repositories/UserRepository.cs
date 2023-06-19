@@ -138,6 +138,11 @@ public class UserRepository :
 
         var trees = await db.AccessTrees.Where(x => accessTreeIds.Contains(x.ID)).ToDictionaryAsync(x => x.ID, x => x);
 
+        foreach (var item in entity.AccessTrees)
+        {
+            db.UserAccessTrees.Remove(item);
+        }
+
         entity.AccessTrees = dto.AccessTrees.Select(x => new UserAccessTree
         {
             AccessTree = trees[x.ID.ToLong()]

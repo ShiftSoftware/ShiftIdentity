@@ -4,9 +4,10 @@
 @attribute [Route($"/{nameof(UserForm)}/{{Key?}}")]
 @inherits ShiftForm<UserForm, ShiftSoftware.ShiftIdentity.Core.DTOs.User.UserDTO>
 @inject HttpClient Http
+@inject ODataQuery ODataQuery
 
+@using ShiftSoftware.ShiftEntity.Model.Dtos
 @using ShiftSoftware.ShiftBlazor.Enums
-@using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.User.AccessTreeTree
 
 <ShiftEntityForm @bind-Mode="Mode"
                  @bind-Value="TheItem"
@@ -16,7 +17,7 @@
                  Settings="@FormSetting"
                  @bind-Key="@Key"
                  OnTaskFinished="@(()=> ready=true)"
-                 OnValidSubmit="()=> { TheItem.AccessTree =  actionTree!.GenerateAccessTree(); }"
+                 OnSubmit="()=> { TheItem.AccessTree =  actionTree!.GenerateAccessTree(); }"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.User.UserDTO">
 
     <MudTextField ReadOnly="@ReadOnly"
@@ -70,9 +71,12 @@
                      @bind-Checked="@TheItem.IsActive"></MudCheckBox>
     </MudItem>
 
-    <AccessTreeTree @bind-Value="TheItem.AccessTrees"
-                    ReadOnly="@ReadOnly"
-                    Disabled="@Disabled" />
+    <MudSelect Disabled="@Disabled" ReadOnly="@ReadOnly" T="AccessTreeDTO" Label="Access Trees" MultiSelection="true" SelectedValues="TheItem.AccessTrees" SelectedValuesChanged="SelectedChanged" Comparer="Comparer" ToStringFunc="@(x=> x.Name)">
+        @foreach (var accessTree in accessTress)
+        {
+            <MudSelectItem T="AccessTreeDTO" Value="@accessTree">@accessTree.Name</MudSelectItem>
+        }
+    </MudSelect>
 
     <br />
 
@@ -83,15 +87,33 @@
 </ShiftEntityForm>
 
 @code {
+
+    class AccessTreeListDTOComparer : IEqualityComparer<AccessTreeDTO>
+    {
+        public bool Equals(AccessTreeDTO a, AccessTreeDTO b) => a.ID == b.ID;
+        public int GetHashCode(AccessTreeDTO x) => HashCode.Combine(x.ID);
+    }
+
+    static AccessTreeListDTOComparer Comparer { get; } = new();
+
     private bool ready = false;
     Shared.ActionTree.ActionTree? actionTree;
 
-    protected override void OnInitialized()
+    List<AccessTreeDTO> accessTress = new List<AccessTreeDTO>();
+
+    protected async override Task OnInitializedAsync()
     {
         if (TheItem.ID == default)
             TheItem.AccessTree = "{}";
 
-        base.OnInitialized();
+        var q = ODataQuery.CreateQuery<AccessTreeDTO>("AccessTree");
+
+        accessTress = (await Http.GetFromJsonAsync<ODataDTO<List<AccessTreeDTO>>>(q.ToString()))!.Value.ToList();
+    }
+
+    void SelectedChanged(IEnumerable<AccessTreeDTO> newSelected)
+    {
+        TheItem.AccessTrees = newSelected;
     }
 }
 
