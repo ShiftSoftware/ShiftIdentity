@@ -8,6 +8,7 @@
 		<RootNamespace>ShiftSoftware.ShiftIdentity.Blazor</RootNamespace>
 		<PackageId>ShiftSoftware.ShiftIdentity.Blazor</PackageId>
 		<Version>1.5.1.0</Version>
+		<Authors>aza.asim,Shift Software,Nahro</Authors>
 		<PackageProjectUrl>https://github.com/ShiftSoftware/ShiftIdentity</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/ShiftSoftware/ShiftIdentity</RepositoryUrl>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
@@ -28,6 +29,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\ShiftIdentity.Core\ShiftIdentity.Core.csproj" />
+		<ProjectReference Include="..\ShiftIdentity.Core\ShiftIdentity.Core.csproj" />
 	</ItemGroup>
 </Project>

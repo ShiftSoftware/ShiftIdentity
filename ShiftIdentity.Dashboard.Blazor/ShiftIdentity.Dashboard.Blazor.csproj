@@ -9,6 +9,12 @@
 		<Product>Shift Identity Dashboard Blazor</Product>
 		<AssemblyName>ShiftSoftware.ShiftIdentity.Dashboard.Blazor</AssemblyName>
 		<RootNamespace>ShiftSoftware.ShiftIdentity.Dashboard.Blazor</RootNamespace>
+
+		<Version>1.5.1.0</Version>
+		<Authors>aza.asim,Shift Software,Nahro</Authors>
+		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+		<IsPackable>True</IsPackable>
+		<PackageIcon>icon.png</PackageIcon>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -28,8 +34,13 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Pages\AccessTree\" />
-	  <Folder Include="Pages\App\" />
+		<None Include="Images\icon.png" Pack="true" PackagePath="\" />
+		<Folder Include="Images\" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Folder Include="Pages\AccessTree\" />
+		<Folder Include="Pages\App\" />
 	</ItemGroup>
 
 </Project>

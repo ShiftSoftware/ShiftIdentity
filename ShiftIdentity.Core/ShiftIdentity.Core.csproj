@@ -7,6 +7,11 @@
 		<RootNamespace>ShiftSoftware.ShiftIdentity.Core</RootNamespace>
 		<AssemblyName>ShiftSoftware.ShiftIdentity.Core</AssemblyName>
 		<PackageId>ShiftSoftware.ShiftIdentity.Core</PackageId>
+		<Version>1.5.1.0</Version>
+		<Authors>aza.asim,Shift Software,Nahro</Authors>
+		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+		<IsPackable>True</IsPackable>
+		<PackageIcon>icon.png</PackageIcon>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -16,6 +21,11 @@
 
 		<InternalsVisibleTo Include="ShiftSoftware.ShiftIdentity.AspNetCore" />
 		<InternalsVisibleTo Include="ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="Images\icon.png" Pack="true" PackagePath="\" />
+		<Folder Include="Images\" />
 	</ItemGroup>
 
 	<ItemGroup>

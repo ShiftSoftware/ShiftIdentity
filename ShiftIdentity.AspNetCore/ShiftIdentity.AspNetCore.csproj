@@ -17,9 +17,9 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <Compile Remove="AppModel.cs" />
-	  <Compile Remove="Controllers\MVC\AuthController.cs" />
-	  <Compile Remove="Extensions\ControllerBaseExtensions.cs" />
+		<Compile Remove="AppModel.cs" />
+		<Compile Remove="Controllers\MVC\AuthController.cs" />
+		<Compile Remove="Extensions\ControllerBaseExtensions.cs" />
 	</ItemGroup>
 
 	<ItemGroup>
