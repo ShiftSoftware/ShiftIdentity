@@ -15,8 +15,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<!--Shift Framework References will be removed by pre-commit-->
 		<ProjectReference Include="..\ShiftIdentity.AspNetCore\ShiftIdentity.AspNetCore.csproj" />
+		<ProjectReference Include="..\..\ShiftEntity\ShiftEntity.EFCore.SqlServer\ShiftEntity.EFCore.SqlServer.csproj" Condition="Exists('..\..\ShiftEntity\ShiftEntity.EFCore.SqlServer\ShiftEntity.EFCore.SqlServer.csproj')" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -26,7 +26,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="libphonenumber-csharp" Version="8.13.11" />
-		<PackageReference Include="ShiftSoftware.ShiftEntity.EFCore.SqlServer" Version="1.6.0.11" />
+		<PackageReference Include="ShiftSoftware.ShiftEntity.EFCore.SqlServer" Version="1.6.0.11" Condition="!Exists('..\..\ShiftEntity\ShiftEntity.EFCore.SqlServer\ShiftEntity.EFCore.SqlServer.csproj')" />
 	</ItemGroup>
 
 </Project>

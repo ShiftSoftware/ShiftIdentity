@@ -15,8 +15,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="ShiftSoftware.ShiftEntity" Version="1.6.0.11" />
-		<PackageReference Include="ShiftSoftware.TypeAuth.Core" Version="1.4.1.4" />
+		<PackageReference Include="ShiftSoftware.ShiftEntity" Version="1.6.0.11" Condition="!Exists('..\..\ShiftEntity\ShiftEntity.Core\ShiftEntity.Core.csproj')"/>
+		<PackageReference Include="ShiftSoftware.TypeAuth.Core" Version="1.4.1.4" Condition="!Exists('..\..\TypeAuth\TypeAuth.Core\TypeAuth.Core.csproj')" />
 		<PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
 
 		<InternalsVisibleTo Include="ShiftSoftware.ShiftIdentity.AspNetCore" />
@@ -29,11 +29,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<!--Shift Framework References will be removed by pre-commit-->
+	
+	  <ProjectReference Include="..\..\ShiftEntity\ShiftEntity.Core\ShiftEntity.Core.csproj" Condition="Exists('..\..\ShiftEntity\ShiftEntity.Core\ShiftEntity.Core.csproj')" />
+	  <ProjectReference Include="..\..\TypeAuth\TypeAuth.Core\TypeAuth.Core.csproj" Condition="Exists('..\..\TypeAuth\TypeAuth.Core\TypeAuth.Core.csproj')" />
 	</ItemGroup>
-
-	<Target Name="CopyPreCommitHook" BeforeTargets="Build" Condition="'$(IsCrossTargetingBuild)' != 'true' And '$(OS)' != 'Unix'">
-		<Exec Command="xcopy /Y /I pre-commit ..\.git\hooks\" />
-	</Target>
 
 </Project>
