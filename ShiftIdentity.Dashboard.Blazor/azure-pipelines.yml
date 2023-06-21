@@ -9,7 +9,7 @@ steps:
  - script: dotnet build ShiftIdentity.Dashboard.Blazor --configuration release
    displayName: 'dotnet build ShiftIdentity.Dashboard.Blazor'
 
- - script: dotnet pack ShiftSoftware.ShiftIdentity.Dashboard.Blazor --configuration release --output $(Build.ArtifactStagingDirectory)
+ - script: dotnet pack ShiftIdentity.Dashboard.Blazor --configuration release --output $(Build.ArtifactStagingDirectory)
    displayName: 'dotnet pack'
 
  - task: NuGetCommand@2
