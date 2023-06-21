@@ -30,6 +30,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<!--Shift Framework References will be removed by pre-commit-->
 		<ProjectReference Include="..\ShiftIdentity.Core\ShiftIdentity.Core.csproj" />
 	</ItemGroup>
 
