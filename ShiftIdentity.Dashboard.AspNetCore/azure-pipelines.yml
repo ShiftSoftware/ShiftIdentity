@@ -5,10 +5,6 @@ pool:
   vmImage: ubuntu-latest
 
 steps:
-
- - script: dotnet remove ShiftIdentity.Dashboard.AspNetCore/ShiftIdentity.Dashboard.AspNetCore.csproj reference ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Launcher/ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Launcher.csproj
-   displayName: 'Remove Launcher Reference'
-
  - script: dotnet build ShiftIdentity.Dashboard.AspNetCore --configuration release
    displayName: 'dotnet build ShiftIdentity.Dashboard.AspNetCore'
 

@@ -6,8 +6,8 @@ pool:
 
 steps:
 
- - script: dotnet build ShiftSoftware.ShiftIdentity.Core --configuration release
-   displayName: 'dotnet build ShiftSoftware.ShiftIdentity.Core'
+ - script: dotnet build ShiftIdentity.Core --configuration release
+   displayName: 'dotnet build ShiftIdentity.Core'
 
  - script: dotnet pack ShiftSoftware.ShiftIdentity.Core --configuration release --output $(Build.ArtifactStagingDirectory)
    displayName: 'dotnet pack'

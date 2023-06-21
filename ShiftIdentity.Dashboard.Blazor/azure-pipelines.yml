@@ -6,8 +6,8 @@ pool:
 
 steps:
 
- - script: dotnet build ShiftSoftware.ShiftIdentity.Dashboard.Blazor --configuration release
-   displayName: 'dotnet build ShiftSoftware.ShiftIdentity.Dashboard.Blazor'
+ - script: dotnet build ShiftIdentity.Dashboard.Blazor --configuration release
+   displayName: 'dotnet build ShiftIdentity.Dashboard.Blazor'
 
  - script: dotnet pack ShiftSoftware.ShiftIdentity.Dashboard.Blazor --configuration release --output $(Build.ArtifactStagingDirectory)
    displayName: 'dotnet pack'
