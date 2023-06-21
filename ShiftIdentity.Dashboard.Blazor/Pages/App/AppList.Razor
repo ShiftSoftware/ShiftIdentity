@@ -1,11 +1,11 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
-@attribute [Route($"/{nameof(AppList)}")]
+@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(AppList)}")]
 @using Syncfusion.Blazor.Grids
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.App;
 @using ShiftSoftware.ShiftBlazor.Enums
 
-<ShiftList Action="App"
+<ShiftList Action="@($"{Constants.IdentityRoutePreifix}App")"
            Title="App List"
            T="AppDTO"
            ComponentType="typeof(AppForm)"

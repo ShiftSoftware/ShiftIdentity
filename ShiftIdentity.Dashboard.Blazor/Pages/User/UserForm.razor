@@ -1,7 +1,7 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
 
-@attribute [Route($"/{nameof(UserForm)}/{{Key?}}")]
+@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(UserForm)}/{{Key?}}")]
 @inherits ShiftForm<UserForm, ShiftSoftware.ShiftIdentity.Core.DTOs.User.UserDTO>
 @inject HttpClient Http
 @inject ODataQuery ODataQuery
@@ -12,7 +12,7 @@
 <ShiftEntityForm @bind-Mode="Mode"
                  @bind-Value="TheItem"
                  @ref="FormContainer"
-                 Action="User"
+                 Action="@($"{Constants.IdentityRoutePreifix}User")"
                  Title="User"
                  @bind-Key="@Key"
                  OnTaskFinished="@(()=> ready=true)"
@@ -105,7 +105,7 @@
         if (TheItem.ID == default)
             TheItem.AccessTree = "{}";
 
-        var q = ODataQuery.CreateQuery<AccessTreeDTO>("AccessTree");
+        var q = ODataQuery.CreateQuery<AccessTreeDTO>($"{Constants.IdentityRoutePreifix}AccessTree");
 
         accessTress = (await Http.GetFromJsonAsync<ODataDTO<AccessTreeDTO>>(q.ToString()))!.Value.ToList();
     }

@@ -3,9 +3,9 @@
 @using Pages.AccessTree
 
 <MudNavMenu>
-    <MudNavLink Href="@($"/{nameof(AppList)}")" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.Apps">Apps</MudNavLink>
-    <MudNavLink Href="@($"/{nameof(AccessTreeList)}")" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.AccountTree">Access Trees</MudNavLink>
-    <MudNavLink Href="@($"/{nameof(UserList)}")" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.People">Users</MudNavLink>
+    <MudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(AppList)}")" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.Apps">Apps</MudNavLink>
+    <MudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(AccessTreeList)}")" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.AccountTree">Access Trees</MudNavLink>
+    <MudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(UserList)}")" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.People">Users</MudNavLink>
 </MudNavMenu>
 
 @code {

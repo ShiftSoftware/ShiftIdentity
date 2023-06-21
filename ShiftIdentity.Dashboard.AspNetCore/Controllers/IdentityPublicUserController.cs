@@ -7,10 +7,10 @@ using ShiftSoftware.ShiftIdentity.Core.Repositories;
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
 {
     [Authorize]
-    public class PublicUserController : ControllerBase
+    public class IdentityPublicUserController : ControllerBase
     {
         IUserRepository userRepository;
-        public PublicUserController(IUserRepository userRepository)
+        public IdentityPublicUserController(IUserRepository userRepository)
         {
             this.userRepository = userRepository;
         }

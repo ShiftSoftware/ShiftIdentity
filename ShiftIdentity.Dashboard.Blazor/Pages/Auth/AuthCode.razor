@@ -1,4 +1,4 @@
-﻿@page "/Auth/AuthCode"
+﻿@attribute [Route($"{Constants.IdentityRoutePreifix}/Auth/AuthCode")]
 @attribute [Authorize]
 @inject Services.AuthService AuthService
 @inject NavigationManager NavManager

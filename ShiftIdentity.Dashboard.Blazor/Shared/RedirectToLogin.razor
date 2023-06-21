@@ -8,7 +8,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        const string url = "login";
+        const string url = $"{Core.Constants.IdentityRoutePreifix}/login";
         var authenticationState = await AuthenticationStateTask;
 
         if (authenticationState?.User?.Identity is null || !authenticationState.User.Identity.IsAuthenticated)

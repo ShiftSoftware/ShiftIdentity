@@ -9,10 +9,10 @@ public static class ShiftEntityODataOptionsExtensions
 {
     public static ShiftEntityODataOptions RegisterShiftIdentityDashboardEntitySets(this ShiftEntityODataOptions shiftEntityODataOptions)
     {
-        shiftEntityODataOptions.OdataEntitySet<AppDTO>("App");
-        shiftEntityODataOptions.OdataEntitySet<AccessTreeDTO>("AccessTree");
-        shiftEntityODataOptions.OdataEntitySet<UserListDTO>("User");
-        shiftEntityODataOptions.OdataEntitySet<PublicUserListDTO>("PublicUser");
+        shiftEntityODataOptions.OdataEntitySet<AppDTO>($"{Core.Constants.IdentityRoutePreifix}App");
+        shiftEntityODataOptions.OdataEntitySet<AccessTreeDTO>($"{Core.Constants.IdentityRoutePreifix}AccessTree");
+        shiftEntityODataOptions.OdataEntitySet<UserListDTO>($"{Core.Constants.IdentityRoutePreifix}User");
+        shiftEntityODataOptions.OdataEntitySet<PublicUserListDTO>($"{Core.Constants.IdentityRoutePreifix}PublicUser");
 
         return shiftEntityODataOptions;
     }

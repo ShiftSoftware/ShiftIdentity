@@ -31,7 +31,7 @@ namespace ShiftSoftware.ShiftIdentity.AspNetCore.Extensions
                 };
             });
 
-            app.MapGet("Auth/AuthCode", async (ShiftIdentityConfiguration shiftIdentityConfiguration, HttpRequest request) =>
+            app.MapGet($"{Core.Constants.IdentityRoutePreifix}/Auth/AuthCode", async (ShiftIdentityConfiguration shiftIdentityConfiguration, HttpRequest request) =>
             {
                 var generateAuthCodeDto = new GenerateAuthCodeDTO
                 {

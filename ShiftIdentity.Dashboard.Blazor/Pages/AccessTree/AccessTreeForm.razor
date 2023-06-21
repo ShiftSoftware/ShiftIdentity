@@ -1,6 +1,6 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
-@attribute [Route($"/{nameof(AccessTreeForm)}/{{Key?}}")]
+@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(AccessTreeForm)}/{{Key?}}")]
 @inherits ShiftForm<AccessTreeForm, ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree.AccessTreeDTO>
 @using System.Text.Json
 @using Microsoft.CSharp
@@ -8,7 +8,7 @@
 <ShiftEntityForm @bind-Mode="Mode"
                  @bind-Value="TheItem"
                  @ref="FormContainer"
-                 Action="AccessTree"
+                 Action="@($"{Constants.IdentityRoutePreifix}AccessTree")"
                  Title="Access Tree"
                  @bind-Key="@Key"
                  OnSubmit="()=> { TheItem.Tree =  actionTree!.GenerateAccessTree(); }">

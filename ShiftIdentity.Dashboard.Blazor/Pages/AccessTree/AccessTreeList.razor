@@ -1,12 +1,12 @@
 @layout Shared.DefaultLayout
 @attribute [Authorize]
-@attribute [Route($"/{nameof(AccessTreeList)}")]
+@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(AccessTreeList)}")]
 @using Syncfusion.Blazor.Grids
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
 @using Syncfusion.Blazor.Data
 @using ShiftSoftware.ShiftBlazor.Enums
 
-<ShiftList Action="AccessTree"
+<ShiftList Action="@($"{Constants.IdentityRoutePreifix}AccessTree")"
            Title="Access Tree List"
            T="AccessTreeDTO"
            ComponentType="typeof(AccessTreeForm)"

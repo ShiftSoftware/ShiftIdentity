@@ -36,7 +36,7 @@ public class ShiftIdentityService
         //Add return-url to login page
         if (!string.IsNullOrWhiteSpace(returnUrl))
             queryStrings.Add("ReturnUrl", returnUrl);
-        var url = $"{(options.FrontEndBaseUrl.EndsWith('/') ? options.FrontEndBaseUrl : options.FrontEndBaseUrl + "/")}Auth/AuthCode";
+        var url = $"{(options.FrontEndBaseUrl.EndsWith('/') ? options.FrontEndBaseUrl : options.FrontEndBaseUrl + "/")}{Core.Constants.IdentityRoutePreifix}/Auth/AuthCode";
         var uri = navManager.GetUriWithQueryParameters(url, queryStrings);
         navManager.NavigateTo(uri, true);
     }

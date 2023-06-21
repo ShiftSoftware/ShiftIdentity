@@ -1,6 +1,6 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
-@attribute [Route($"/{nameof(AppForm)}/{{Key?}}")]
+@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(AppForm)}/{{Key?}}")]
 @inherits ShiftForm<AppForm, ShiftSoftware.ShiftIdentity.Core.DTOs.App.AppDTO>
 @inject HttpClient Http
 
@@ -8,7 +8,7 @@
 <ShiftEntityForm @bind-Mode="Mode"
                  @bind-Value="TheItem"
                  @ref="FormContainer"
-                 Action="App"
+                 Action="@($"{Constants.IdentityRoutePreifix}App")"
                  Title="App"
                  @bind-Key="@Key"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.App.AppDTO">

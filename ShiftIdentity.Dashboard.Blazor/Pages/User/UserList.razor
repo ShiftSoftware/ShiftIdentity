@@ -1,12 +1,12 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
 
-@attribute [Route($"/{nameof(UserList)}")]
+@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(UserList)}")]
 @using Syncfusion.Blazor.Grids
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 @using ShiftSoftware.ShiftBlazor.Enums
 
-<ShiftList Action="User"
+<ShiftList Action="@($"{Constants.IdentityRoutePreifix}User")"
            Title="User List"
            T="UserListDTO"
            ComponentType="typeof(UserForm)"
