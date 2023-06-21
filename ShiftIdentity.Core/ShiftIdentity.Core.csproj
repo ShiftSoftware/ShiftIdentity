@@ -18,4 +18,11 @@
 		<InternalsVisibleTo Include="ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore" />
 	</ItemGroup>
 
+	<ItemGroup>
+	</ItemGroup>
+
+	<Target Name="CopyPreCommitHook" BeforeTargets="Build" Condition=" '$(IsCrossTargetingBuild)' != 'true' ">
+		<Exec Command="xcopy /Y /I pre-commit ..\.git\hooks\" />
+	</Target>
+
 </Project>
