@@ -7,7 +7,7 @@
 		<RootNamespace>ShiftSoftware.ShiftIdentity.Core</RootNamespace>
 		<AssemblyName>ShiftSoftware.ShiftIdentity.Core</AssemblyName>
 		<PackageId>ShiftSoftware.ShiftIdentity.Core</PackageId>
-		<Version>1.5.1.0</Version>
+		<Version>1.6.0</Version>
 		<Authors>aza.asim,Shift Software,Nahro</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<IsPackable>True</IsPackable>
@@ -31,7 +31,7 @@
 	<ItemGroup>
 	</ItemGroup>
 
-	<Target Name="CopyPreCommitHook" BeforeTargets="Build" Condition=" '$(IsCrossTargetingBuild)' != 'true' ">
+	<Target Name="CopyPreCommitHook" BeforeTargets="Build" Condition="'$(IsCrossTargetingBuild)' != 'true' And '$(OS)' != 'Unix'">
 		<Exec Command="xcopy /Y /I pre-commit ..\.git\hooks\" />
 	</Target>
 
