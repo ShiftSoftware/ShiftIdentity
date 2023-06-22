@@ -38,69 +38,14 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services
             return await httpService.PostAsync<ShiftEntityResponse<TokenDTO>, LoginDTO>(url + "login", loginDto);
         }
 
-        //public async Task<HttpResponse<ShiftEntityResponse<TokenDTO>>> RefreshAsync(RefreshDTO refreshDto)
-        //{
-        //    return await httpService.PostAsync<ShiftEntityResponse<TokenDTO>, RefreshDTO>(url + "Refresh", refreshDto);
-        //}
-
-        //public async Task RefreshAsync()
-        //{
-        //    var storedToken = await storageService.GetTokenAsync();
-
-        //    var headerToken = http.DefaultRequestHeaders?.Authorization?.Parameter;
-
-        //    if (headerToken is not null && headerToken != storedToken.Token)
-        //    {
-        //        //Set authorize header of http-client for prevent refresh on multiple tabs or windows
-        //        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", storedToken?.Token);
-
-        //        await NofityChanges();
-        //        return;
-        //    }
-
-        //    var refreshToken = storedToken?.RefreshToken;
-
-
-
-        //    var result = await RefreshAsync(new RefreshDTO { RefreshToken = refreshToken });
-
-        //    if (result.IsSuccess)
-        //    {
-        //        //Store new token
-        //        await storageService.StoreTokenAsync(result?.Data?.Entity!);
-
-        //        //Set authorize header of http-client for prevent refresh on multiple tabs or windows
-        //        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", result?.Data?.Entity?.Token!);
-
-        //        await NofityChanges();
-        //    }
-        //    else if (result.StatusCode == HttpStatusCode.Unauthorized || result.StatusCode == HttpStatusCode.Forbidden)
-        //    {
-        //        await storageService.RemoveTokenAsync();
-
-        //        navManager.NavigateTo("/", true);
-        //    }
-        //}
-
-        //private async Task NofityChanges()
-        //{
-        //    //Notify AuthenticationStateProvider that state has changed
-        //    if (authStateProvider is not null)
-        //        await authStateProvider.GetAuthenticationStateAsync();
-
-        //    ////Notify TypeAuth that state has changed
-        //    //if (typeAuth is not null)
-        //    //    typeAuth.AuthStateHasChanged();
-        //}
-
         public async Task<HttpResponse<ShiftEntityResponse<AuthCodeModel>>> GenerateAuthCodeAsync(GenerateAuthCodeDTO dto)
         {
             return await httpService.PostAsync<ShiftEntityResponse<AuthCodeModel>, GenerateAuthCodeDTO>(url + "AuthCode", dto);
         }
 
-        //public async Task LogOutAsync()
-        //{
-        //    await storageService.RemoveTokenAsync();
-        //}
+        public async Task LogOutAsync()
+        {
+            await storageService.RemoveTokenAsync();
+        }
     }
 }

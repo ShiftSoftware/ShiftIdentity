@@ -23,6 +23,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<AuthService>();
         services.AddScoped<HttpService>();
         services.AddScoped<StorageService>();
+        services.AddScoped<UserManagerService>();
 
         return services;
     }

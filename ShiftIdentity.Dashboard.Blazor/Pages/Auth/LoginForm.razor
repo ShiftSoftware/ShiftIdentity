@@ -5,6 +5,7 @@
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Components.Authorization;
 @using ShiftSoftware.ShiftIdentity.Core.DTOs
+@using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.UserManager;
 
 @inject ShiftIdentityDashboardBlazorOptions ShiftIdentityDashboardBlazorOptions
 @inject Services.AuthService AuthService
@@ -90,16 +91,16 @@
 
         if (loginResult?.Data?.Entity?.RequirePasswordChange ?? false)
         {
-            //var url = nameof(ChangePasswordForm);
+            var url = $"{Constants.IdentityRoutePreifix}/{nameof(ChangePasswordForm)}";
 
-            //var queryStrings = new Dictionary<string, object?>();
-            //queryStrings.Add("ReturnUrl", ReturnUrl ?? "/");
-            //queryStrings.Add("Enforce", true);
+            var queryStrings = new Dictionary<string, object?>();
+            queryStrings.Add("ReturnUrl", ReturnUrl ?? "/");
+            queryStrings.Add("Enforce", true);
 
-            //var uri = NavManager.GetUriWithQueryParameters(url, queryStrings);
+            var uri = NavManager.GetUriWithQueryParameters(url, queryStrings);
 
-            //NavManager.NavigateTo(uri);
-            //return;
+            NavManager.NavigateTo(uri);
+            return;
         }
 
         if (!String.IsNullOrWhiteSpace(ReturnUrl))
