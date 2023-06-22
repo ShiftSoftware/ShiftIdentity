@@ -1,8 +1,9 @@
 ﻿@inherits ShiftMainLayout
-@inject NavigationManager navigationManager
+@inject NavigationManager NavManager
 @inject SettingManager SettingManager
 @inject ShiftIdentityDashboardBlazorOptions ShiftIdentityDashboardBlazorOptions
 @inject StorageService StorageService;
+@inject AuthService AuthService
 
 <MudRTLProvider RightToLeft="SettingManager.GetLanguage().RTL">
 
@@ -27,7 +28,7 @@
                      TransformOrigin="Origin.TopCenter">
 
                 <MudMenuItem Href="@($"{Constants.IdentityRoutePreifix}/{nameof(UserDataForm)}")"><MudIcon Icon="@Icons.Material.Filled.PersonOutline" Title="Profile" /> Profile</MudMenuItem>
-                <MudMenuItem><MudIcon Icon="@Icons.Material.Filled.Logout" Title="Log Out" /> Log Out</MudMenuItem>
+                <MudMenuItem OnClick="LogOut"><MudIcon Icon="@Icons.Material.Filled.Logout" Title="Log Out" /> Log Out</MudMenuItem>
             </MudMenu>
         </MudAppBar>
 
@@ -60,5 +61,13 @@
         userdata = (await StorageService.GetTokenAsync()).UserData;
 
         await base.OnInitializedAsync();
+    }
+
+    private async Task LogOut()
+    {
+        await this.AuthService.LogOutAsync();
+
+        //Force reload the page
+        NavManager.NavigateTo(NavManager.Uri, true);
     }
 }
