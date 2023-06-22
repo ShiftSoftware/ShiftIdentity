@@ -1,0 +1,78 @@
+﻿@attribute [Authorize]
+@layout Shared.DefaultLayout
+@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(UserDataForm)}")]
+@inherits ShiftForm<UserDataForm, ShiftIdentity.Core.DTOs.User.UserDataDTO>
+@inject ShiftModal ShiftModal
+@using ShiftSoftware.ShiftBlazor.Enums
+
+<ShiftEntityForm @bind-Mode="Mode"
+                 @bind-Value="TheItem"
+                 @ref="FormContainer"
+                 Action="UserManager/UserData"
+                 Title="Profile"
+                 HideDelete="true"
+                 HideRevisions="true"
+                 Key="@("")"
+                 T=" ShiftIdentity.Core.DTOs.User.UserDataDTO">
+    <ToolbarStartTemplate>
+        @if (this.Mode == FormModes.View)
+        {
+            <MudButton OnClick="()=> ShiftModal.Open<ChangePasswordForm>(null, ModalOpenMode.Popup, null)" Size="Size.Small" Color="Color.Warning" StartIcon="@Icons.Material.Filled.Edit" Variant="Variant.Filled">Change Password</MudButton>
+        }
+    </ToolbarStartTemplate>
+
+    <ChildContent>
+        <h2>Security</h2>
+        <MudDivider />
+
+        <MudTextField Immediate="true"
+                      ReadOnly="@ReadOnly"
+                      Disabled="@Disabled"
+                      OnlyValidateIfDirty="true"
+                      Label="Username"
+        @bind-Value="TheItem.Username"
+                      For="@(() => TheItem.Username)" />
+
+        <br />
+        <br />
+
+        <h2>Contacts</h2>
+        <MudDivider />
+        <MudTextField Immediate="true"
+                      ReadOnly="@ReadOnly"
+                      Disabled="@Disabled"
+                      OnlyValidateIfDirty="true"
+                      Label="Phone"
+        @bind-Value="TheItem.Phone"
+                      For="@(() => TheItem.Phone)" />
+
+        <MudTextField Immediate="true"
+                      ReadOnly="@ReadOnly"
+                      Disabled="@Disabled"
+                      OnlyValidateIfDirty="true"
+                      Label="Email"
+        @bind-Value="TheItem.Email"
+                      For="@(() => TheItem.Email)" />
+
+
+        <br />
+        <br />
+
+        <h2>Profile</h2>
+        <MudDivider />
+        <MudTextField Immediate="true"
+                      ReadOnly="@ReadOnly"
+                      Disabled="@Disabled"
+                      OnlyValidateIfDirty="true"
+                      Label="Full Name"
+        @bind-Value="TheItem.FullName"
+                      For="@(() => TheItem.FullName)" />
+
+        <MudDatePicker ReadOnly="@ReadOnly"
+                       Disabled="@Disabled"
+        @bind-Date="TheItem.BirthDate"
+                       Label="Birth Date"
+                       For="@(() => TheItem.BirthDate)" />
+
+    </ChildContent>
+</ShiftEntityForm>

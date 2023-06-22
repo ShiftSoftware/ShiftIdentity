@@ -1,9 +1,8 @@
-﻿@using ShiftSoftware.ShiftBlazor.Services
-
-@inherits ShiftMainLayout
+﻿@inherits ShiftMainLayout
 @inject NavigationManager navigationManager
 @inject SettingManager SettingManager
 @inject ShiftIdentityDashboardBlazorOptions ShiftIdentityDashboardBlazorOptions
+@inject StorageService StorageService;
 
 <MudRTLProvider RightToLeft="SettingManager.GetLanguage().RTL">
 
@@ -18,6 +17,18 @@
             <MudSpacer />
 
             <LanguageSwitcher />
+
+            <MudMenu EndIcon="@Icons.Material.Filled.KeyboardArrowDown"
+                     Label="@userdata?.FullName"
+                     Color="Color.Primary"
+                     Variant="Variant.Filled"
+                     ActivationEvent="@MouseEvent.MouseOver"
+                     AnchorOrigin="Origin.BottomCenter"
+                     TransformOrigin="Origin.TopCenter">
+
+                <MudMenuItem Href="@($"{Constants.IdentityRoutePreifix}/{nameof(UserDataForm)}")"><MudIcon Icon="@Icons.Material.Filled.PersonOutline" Title="Profile" /> Profile</MudMenuItem>
+                <MudMenuItem><MudIcon Icon="@Icons.Material.Filled.Logout" Title="Log Out" /> Log Out</MudMenuItem>
+            </MudMenu>
         </MudAppBar>
 
         <MudDrawer @bind-Open="@_drawerOpen" ClipMode="DrawerClipMode.Docked" Elevation="1" Variant="@DrawerVariant.Mini" Breakpoint="Breakpoint.Lg" OpenMiniOnHover="true">
@@ -40,5 +51,14 @@
     void DrawerToggle()
     {
         _drawerOpen = !_drawerOpen;
+    }
+
+    TokenUserDataDTO userdata;
+
+    protected override async Task OnInitializedAsync()
+    {
+        userdata = (await StorageService.GetTokenAsync()).UserData;
+
+        await base.OnInitializedAsync();
     }
 }

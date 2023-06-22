@@ -15,11 +15,11 @@ namespace ShiftSoftware.ShiftIdentity.Core.DTOs.User
 
         [MaxLength(255)]
         [EmailAddress]
-        public string Email { get; set; } = default!;
+        public string? Email { get; set; } = default!;
 
         [MaxLength(30)]
         [Phone]
-        public string Phone { get; set; } = default!;
+        public string? Phone { get; set; } = default!;
 
         [Required]
         [MaxLength(255)]
