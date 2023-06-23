@@ -7,7 +7,7 @@
 		<AssemblyName>ShiftSoftware.ShiftIdentity.Blazor</AssemblyName>
 		<RootNamespace>ShiftSoftware.ShiftIdentity.Blazor</RootNamespace>
 		<PackageId>ShiftSoftware.ShiftIdentity.Blazor</PackageId>
-		<Version>1.6.0</Version>
+		<Version>1.6.1</Version>
 		<Authors>aza.asim,Shift Software,Nahro</Authors>
 		<PackageProjectUrl>https://github.com/ShiftSoftware/ShiftIdentity</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/ShiftSoftware/ShiftIdentity</RepositoryUrl>
