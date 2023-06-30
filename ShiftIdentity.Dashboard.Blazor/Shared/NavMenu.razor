@@ -3,16 +3,27 @@
 @using Pages.AccessTree
 
 @inject ShiftIdentityDashboardBlazorOptions ShiftIdentityDashboardBlazorOptions
+@inject TypeAuthService TypeAuthService
 
 <MudNavMenu>
 
     @if (ShiftIdentityDashboardBlazorOptions.ShiftIdentityHostingType == ShiftIdentityHostingTypes.External)
     {
-        <MudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(AppList)}")" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.Apps">Apps</MudNavLink>
+        if (TypeAuthService.CanRead(ShiftIdentityActions.Apps))
+        {
+            <MudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(AppList)}")" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.Apps">Apps</MudNavLink>
+        }
     }
 
-    <MudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(AccessTreeList)}")" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.AccountTree">Access Trees</MudNavLink>
-    <MudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(UserList)}")" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.People">Users</MudNavLink>
+    @if (TypeAuthService.CanRead(ShiftIdentityActions.AccessTrees))
+    {
+        <MudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(AccessTreeList)}")" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.AccountTree">Access Trees</MudNavLink>
+    }
+
+    @if (TypeAuthService.CanRead(ShiftIdentityActions.Users))
+    {
+        <MudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(UserList)}")" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.People">Users</MudNavLink>
+    }
 </MudNavMenu>
 
 @code {

@@ -11,6 +11,7 @@
                  Action="@($"{Constants.IdentityRoutePreifix}App")"
                  Title="App"
                  @bind-Key="@Key"
+                 TypeAuthAction="ShiftIdentityActions.Apps"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.App.AppDTO">
 
     <MudTextField ReadOnly="@ReadOnly"

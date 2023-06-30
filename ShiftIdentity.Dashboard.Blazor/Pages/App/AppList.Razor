@@ -11,6 +11,7 @@
            ComponentType="typeof(AppForm)"
            AutoGenerateColumns="false"
            ShowIDColumn
+           TypeAuthAction="ShiftIdentityActions.Apps"
            EnableCsvExcelExport>
     <ColumnTemplate>
         <GridColumn HeaderText="Display Name" Field="@nameof(AppDTO.DisplayName)" />

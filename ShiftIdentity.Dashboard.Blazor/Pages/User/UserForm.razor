@@ -15,6 +15,7 @@
                  Action="@($"{Constants.IdentityRoutePreifix}User")"
                  Title="User"
                  @bind-Key="@Key"
+                 TypeAuthAction="ShiftIdentityActions.Users"
                  OnTaskFinished="@(()=> ready=true)"
                  OnSubmit="()=> { TheItem.AccessTree =  actionTree!.GenerateAccessTree(); }"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.User.UserDTO">
