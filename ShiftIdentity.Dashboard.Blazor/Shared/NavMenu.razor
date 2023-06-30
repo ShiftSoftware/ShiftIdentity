@@ -2,8 +2,15 @@
 @using Pages.App
 @using Pages.AccessTree
 
+@inject ShiftIdentityDashboardBlazorOptions ShiftIdentityDashboardBlazorOptions
+
 <MudNavMenu>
-    <MudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(AppList)}")" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.Apps">Apps</MudNavLink>
+
+    @if (ShiftIdentityDashboardBlazorOptions.ShiftIdentityHostingType == ShiftIdentityHostingTypes.External)
+    {
+        <MudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(AppList)}")" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.Apps">Apps</MudNavLink>
+    }
+
     <MudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(AccessTreeList)}")" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.AccountTree">Access Trees</MudNavLink>
     <MudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(UserList)}")" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.People">Users</MudNavLink>
 </MudNavMenu>

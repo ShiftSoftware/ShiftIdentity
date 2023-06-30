@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Models;
+using ShiftSoftware.ShiftIdentity.Core;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore;
 
@@ -17,4 +18,5 @@ public class ShiftIdentityConfiguration
     public List<Type> ActionTrees { get; set; } = default!;
 
     internal bool IsFakeIdentity { get; set; }
+    public ShiftIdentityHostingTypes ShiftIdentityHostingType { get; set; }
 }

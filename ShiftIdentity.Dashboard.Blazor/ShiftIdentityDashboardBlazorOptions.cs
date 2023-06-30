@@ -1,10 +1,12 @@
-﻿namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor;
+﻿using ShiftSoftware.ShiftIdentity.Core;
+
+namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor;
 
 public class ShiftIdentityDashboardBlazorOptions
 {
     public string Title { get; set; } = default!;
     public string LogoPath { get; set; } = default!;
-    //public bool StandAlone { get; set; }
+    public ShiftIdentityHostingTypes ShiftIdentityHostingType { get; set; }
 
 
     public string BaseAssress { get; set; } = default!;
