@@ -25,9 +25,9 @@ public class App : ShiftEntity<App>
     [MaxLength(4000)]
     public string RedirectUri { get; set; } = default!;
 
-    [Required]
-    [MaxLength(4000)]
-    public string PostLogoutRedirectUri { get; set; } = default!;
+    //[Required]
+    //[MaxLength(4000)]
+    //public string PostLogoutRedirectUri { get; set; } = default!;
 
     public static implicit operator AppDTO(App entity)
     {
@@ -48,7 +48,7 @@ public class App : ShiftEntity<App>
             AppSecret = entity.AppSecret,
             Description = entity.Description,
             RedirectUri = entity.RedirectUri,
-            PostLogoutRedirectUri = entity.PostLogoutRedirectUri,
+            //PostLogoutRedirectUri = entity.PostLogoutRedirectUri,
         };
     }
 }

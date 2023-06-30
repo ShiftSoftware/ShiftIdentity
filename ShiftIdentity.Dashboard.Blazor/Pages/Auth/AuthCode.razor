@@ -117,7 +117,7 @@ else
         queryStrings.Add("AuthCode", authCode.Code);
         queryStrings.Add("ReturnUrl", ReturnUrl);
 
-        var uri = NavManager.GetUriWithQueryParameters(authCode.RedirectUri, queryStrings);
+        var uri = NavManager.GetUriWithQueryParameters($"{authCode.RedirectUri}/Auth/Token", queryStrings);
         NavManager.NavigateTo(uri);
     }
 

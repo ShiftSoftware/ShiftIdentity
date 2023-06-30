@@ -80,7 +80,7 @@ public class AppRepository :
         entity.AppSecret = dto.AppSecret;
         entity.Description = dto.Description;
         entity.RedirectUri = dto.RedirectUri;
-        entity.PostLogoutRedirectUri = dto.PostLogoutRedirectUri;
+        //entity.PostLogoutRedirectUri = dto.PostLogoutRedirectUri;
     }
 
     public async Task<App?> GetAppAsync(string appId)

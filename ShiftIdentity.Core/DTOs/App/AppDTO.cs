@@ -26,7 +26,7 @@ public class AppDTO : ShiftEntityMixedDTO
     [MaxLength(4000)]
     public string RedirectUri { get; set; } = default!;
 
-    [Required]
-    [MaxLength(4000)]
-    public string PostLogoutRedirectUri { get; set; } = default!;
+    //[Required]
+    //[MaxLength(4000)]
+    //public string PostLogoutRedirectUri { get; set; } = default!;
 }

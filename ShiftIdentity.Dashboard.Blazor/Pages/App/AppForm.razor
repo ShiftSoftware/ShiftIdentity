@@ -42,12 +42,18 @@
                   @bind-Value="TheItem.RedirectUri"
                   For="@(() => TheItem.RedirectUri)" />
 
-    <MudTextField ReadOnly="@ReadOnly"
-                  Disabled="@Disabled"
-                  OnlyValidateIfDirty="true"
-                  Label="Post Logout Redirect Uri"
-                  @bind-Value="TheItem.PostLogoutRedirectUri"
-                  For="@(() => TheItem.PostLogoutRedirectUri)" />
+                  <br/>
+    @if (!string.IsNullOrWhiteSpace(TheItem.RedirectUri))
+    {
+        <MudAlert Severity="Severity.Warning">The user will be redirected to @($"{TheItem.RedirectUri}/Auth/Token")</MudAlert>
+    }
+
+    @*    <MudTextField ReadOnly="@ReadOnly"
+    Disabled="@Disabled"
+    OnlyValidateIfDirty="true"
+    Label="Post Logout Redirect Uri"
+    @bind-Value="TheItem.PostLogoutRedirectUri"
+    For="@(() => TheItem.PostLogoutRedirectUri)" />*@
 </ShiftEntityForm>
 
 @code {
