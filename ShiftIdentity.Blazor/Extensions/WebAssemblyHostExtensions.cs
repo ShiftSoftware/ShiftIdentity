@@ -52,7 +52,7 @@ public static class WebAssemblyHostExtensions
         if (headerToken is not null && headerToken != storedToken.Token)
         {
             //Set authorize header of http-client for prevent refresh on multiple tabs or windows
-            //http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", storedToken?.Token);
+            http.DefaultRequestHeaders!.Authorization = new AuthenticationHeaderValue("Bearer", storedToken?.Token);
 
             await NofityChanges(authStateProvider);
             return;
@@ -70,13 +70,13 @@ public static class WebAssemblyHostExtensions
                 await tokenStore.StoreTokenAsync(result?.Data?.Entity!);
 
                 //Set authorize header of http-client for prevent refresh on multiple tabs or windows
-                //http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", result?.Data?.Entity?.Token);
+                http.DefaultRequestHeaders!.Authorization = new AuthenticationHeaderValue("Bearer", result?.Data?.Entity?.Token);
 
                 await NofityChanges( authStateProvider);
             }
             else if (result.StatusCode == HttpStatusCode.Unauthorized)
             {
-                shiftIdentityService.LoginAsync();
+                await shiftIdentityService.LoginAsync();
             }
         }
         catch (Exception){}
