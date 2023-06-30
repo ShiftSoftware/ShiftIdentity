@@ -1,5 +1,5 @@
-﻿using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
-using ShiftSoftware.ShiftIdentity.Core.Entities;
+﻿using ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
+using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 using ShiftSoftware.TypeAuth.Core;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data

@@ -1,18 +1,11 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.App;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
-using ShiftSoftware.ShiftEntity.Web;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
-using ShiftSoftware.ShiftIdentity.Core.Models;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
-using ShiftSoftware.ShiftIdentity.Core.Repositories;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
-using Microsoft.EntityFrameworkCore;
 using ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data;
-using Microsoft.AspNetCore.Mvc.ApplicationParts;
-using Microsoft.AspNetCore.Mvc;
+using ShiftSoftware.ShiftIdentity.AspNetCore.IRepositories;
+using ShiftSoftware.ShiftIdentity.AspNetCore;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Extentsions;
 

@@ -2,8 +2,8 @@
 using ShiftSoftware.EFCore.SqlServer;
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Model;
+using ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
-using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.TypeAuth.AspNetCore.Services;
 using ShiftSoftware.TypeAuth.Core;
 using System.Net;

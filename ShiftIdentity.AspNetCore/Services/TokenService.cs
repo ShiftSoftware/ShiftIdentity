@@ -1,8 +1,8 @@
 ﻿using Microsoft.IdentityModel.Tokens;
+using ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
+using ShiftSoftware.ShiftIdentity.AspNetCore.IRepositories;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
-using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.ShiftIdentity.Core.Models;
-using ShiftSoftware.ShiftIdentity.Core.Repositories;
 using ShiftSoftware.TypeAuth.Core;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;

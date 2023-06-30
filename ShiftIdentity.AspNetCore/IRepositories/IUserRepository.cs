@@ -1,10 +1,10 @@
-﻿using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
-using ShiftSoftware.ShiftIdentity.Core.Entities;
+﻿using ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
+using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace ShiftSoftware.ShiftIdentity.Core.Repositories;
+namespace ShiftSoftware.ShiftIdentity.AspNetCore.IRepositories;
 
 public interface IUserRepository
 {

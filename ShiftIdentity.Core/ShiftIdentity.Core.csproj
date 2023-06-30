@@ -15,7 +15,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="ShiftSoftware.ShiftEntity" Version="1.6.0.11" Condition="!Exists('..\..\ShiftEntity\ShiftEntity.Core\ShiftEntity.Core.csproj')"/>
+		<PackageReference Include="ShiftSoftware.ShiftEntity" Version="1.6.0.11" Condition="!Exists('..\..\ShiftEntity\ShiftEntity.Core\ShiftEntity.Core.csproj')" />
 		<PackageReference Include="ShiftSoftware.TypeAuth.Core" Version="1.4.1.4" Condition="!Exists('..\..\TypeAuth\TypeAuth.Core\TypeAuth.Core.csproj')" />
 		<PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
 

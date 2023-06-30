@@ -1,5 +1,4 @@
-﻿using ShiftSoftware.ShiftIdentity.Core.Models;
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 
 namespace ShiftSoftware.ShiftIdentity.Blazor.Handlers;
 

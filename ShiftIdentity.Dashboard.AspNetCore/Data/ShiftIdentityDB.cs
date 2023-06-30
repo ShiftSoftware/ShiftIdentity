@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using ShiftSoftware.EFCore.SqlServer;
-using ShiftSoftware.ShiftIdentity.Core.Entities;
+using ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data
 {

@@ -1,6 +1,5 @@
 ﻿using Blazored.LocalStorage;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
-using ShiftSoftware.ShiftIdentity.Core.Models;
 namespace ShiftSoftware.ShiftIdentity.Blazor.Services;
 
 internal class IdentityLocalStorageService : IIdentityStore

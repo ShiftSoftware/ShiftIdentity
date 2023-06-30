@@ -1,4 +1,4 @@
-﻿using ShiftSoftware.ShiftIdentity.Core.Models;
+﻿using ShiftSoftware.ShiftIdentity.AspNetCore.Models;
 using System.Security.Cryptography;
 using System.Text;
 

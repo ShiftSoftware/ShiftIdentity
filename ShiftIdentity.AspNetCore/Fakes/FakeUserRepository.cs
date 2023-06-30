@@ -1,7 +1,7 @@
-﻿using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
+﻿using ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
+using ShiftSoftware.ShiftIdentity.AspNetCore.IRepositories;
+using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
-using ShiftSoftware.ShiftIdentity.Core.Entities;
-using ShiftSoftware.ShiftIdentity.Core.Repositories;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Fakes;
 

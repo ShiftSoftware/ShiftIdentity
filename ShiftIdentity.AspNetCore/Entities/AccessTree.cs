@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
 
-namespace ShiftSoftware.ShiftIdentity.Core.Entities;
+namespace ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
 
 [TemporalShiftEntity]
 public class AccessTree : ShiftEntity<AccessTree>

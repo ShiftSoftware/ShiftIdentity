@@ -1,7 +1,8 @@
 ﻿using System.Collections.Generic;
 using System;
+using ShiftSoftware.ShiftIdentity.AspNetCore.Models;
 
-namespace ShiftSoftware.ShiftIdentity.Core.Models;
+namespace ShiftSoftware.ShiftIdentity.AspNetCore;
 
 public class ShiftIdentityConfiguration
 {

@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
+using ShiftSoftware.ShiftIdentity.Blazor.Providers;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
-using ShiftSoftware.ShiftIdentity.Core.Models;
 
 namespace ShiftSoftware.ShiftIdentity.Blazor.Services;
 

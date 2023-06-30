@@ -1,7 +1,6 @@
 ﻿using Polly;
 using Polly.Retry;
 using ShiftSoftware.ShiftIdentity.Blazor.Services;
-using ShiftSoftware.ShiftIdentity.Core.Models;
 using System.Net;
 using System.Net.Http.Headers;
 

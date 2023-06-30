@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Components.Authorization;
-using ShiftSoftware.ShiftIdentity.Core.Models;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 

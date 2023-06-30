@@ -1,4 +1,4 @@
-﻿namespace ShiftSoftware.ShiftIdentity.Core.Models;
+﻿namespace ShiftSoftware.ShiftIdentity.AspNetCore;
 
 public static class ShiftIdentityClaims
 {

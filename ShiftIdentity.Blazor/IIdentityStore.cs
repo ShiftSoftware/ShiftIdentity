@@ -1,7 +1,7 @@
 ﻿using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using System.Threading.Tasks;
 
-namespace ShiftSoftware.ShiftIdentity.Core.Models;
+namespace ShiftSoftware.ShiftIdentity.Blazor;
 
 public interface IIdentityStore
 {

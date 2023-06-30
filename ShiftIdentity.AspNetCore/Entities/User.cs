@@ -6,7 +6,7 @@ using System.Linq;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 
-namespace ShiftSoftware.ShiftIdentity.Core.Entities;
+namespace ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
 
 [TemporalShiftEntity]
 public class User : ShiftEntity<User>
@@ -56,7 +56,7 @@ public class User : ShiftEntity<User>
 
     public IEnumerable<UserAccessTree> AccessTrees { get; set; }
 
-    public User(long id) : base (id)
+    public User(long id) : base(id)
     {
         AccessTrees = new List<UserAccessTree>();
     }

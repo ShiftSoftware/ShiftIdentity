@@ -1,7 +1,6 @@
 ﻿using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
-using ShiftSoftware.ShiftIdentity.Core.Models;
 using System.Net.Http.Json;
 
 namespace ShiftSoftware.ShiftIdentity.Blazor.Providers;

@@ -1,4 +1,4 @@
-﻿namespace ShiftSoftware.ShiftIdentity.Core.Entities;
+﻿namespace ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
 
 public class UserAccessTree
 {

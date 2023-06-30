@@ -6,7 +6,6 @@ using ShiftSoftware.ShiftIdentity.Blazor.Handlers;
 //using ShiftSoftware.ShiftIdentity.Blazor.Handlers;
 using ShiftSoftware.ShiftIdentity.Blazor.Providers;
 using ShiftSoftware.ShiftIdentity.Blazor.Services;
-using ShiftSoftware.ShiftIdentity.Core.Models;
 
 namespace ShiftSoftware.ShiftIdentity.Blazor.Extensions;
 
