@@ -2,23 +2,34 @@
 using Microsoft.Extensions.DependencyInjection;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data;
+using ShiftSoftware.TypeAuth.AspNetCore.Services;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Extentsions;
 
 public static class WebApplicationExtensions
 {
-    public static async Task<WebApplication> SeedDBAsync(this WebApplication app, List<Type>? actionTrees, string superUserPassword)
+    public static async Task<WebApplication> SeedDBAsync(this WebApplication app, string superUserPassword)
     {
-        if (actionTrees is null)
-            actionTrees = new List<Type>();
-
-        actionTrees.Add(typeof(ShiftIdentityActions));
-
         using var scope = app.Services.CreateScope();
 
         var scopedServices = scope.ServiceProvider;
 
         var db = scopedServices.GetRequiredService<ShiftIdentityDB>();
+
+        var actionTrees = new List<Type>();
+
+        var typeAuthService = scopedServices.GetService<TypeAuthService>();
+
+        if (typeAuthService is not null)
+        {
+            foreach (var actionTree in typeAuthService.GetRegisteredActionTrees())
+            {
+                actionTrees.Add(actionTree);
+            }
+        }
+
+        if (!actionTrees.Contains(typeof(ShiftIdentityActions)))
+            actionTrees.Add(typeof(ShiftIdentityActions));
 
         await new DBSeed(db, actionTrees, superUserPassword).SeedAsync();
 

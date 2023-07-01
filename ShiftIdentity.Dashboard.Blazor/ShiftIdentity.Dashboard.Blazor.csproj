@@ -10,7 +10,7 @@
 		<AssemblyName>ShiftSoftware.ShiftIdentity.Dashboard.Blazor</AssemblyName>
 		<RootNamespace>ShiftSoftware.ShiftIdentity.Dashboard.Blazor</RootNamespace>
 
-		<Version>1.6.3</Version>
+		<Version>1.6.4</Version>
 		<Authors>aza.asim,Shift Software,Nahro</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<IsPackable>True</IsPackable>
@@ -26,7 +26,7 @@
 		<PackageReference Include="Microsoft.Extensions.Http" Version="7.0.0" />
 		<PackageReference Include="ShiftSoftware.ShiftBlazor" Version="1.5.3" Condition="!Exists('..\..\ShiftBlazor\ShiftBlazor\ShiftBlazor.csproj')" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="7.0.3" />
-		<PackageReference Include="ShiftSoftware.TypeAuth.Blazor" Version="1.4.1.4" Condition="!Exists('..\..\TypeAuth\TypeAuth.Blazor\TypeAuth.Blazor.csproj')" />
+		<PackageReference Include="ShiftSoftware.TypeAuth.Blazor" Version="1.4.2" Condition="!Exists('..\..\TypeAuth\TypeAuth.Blazor\TypeAuth.Blazor.csproj')" />
 	</ItemGroup>
 
 	<ItemGroup>
