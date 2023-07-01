@@ -7,7 +7,7 @@
 		<RootNamespace>ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore</RootNamespace>
 		<AssemblyName>ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore</AssemblyName>
 		<PackageId>ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore</PackageId>
-		<Version>1.6.4</Version>
+		<Version>1.6.5</Version>
 		<Authors>aza.asim,Shift Software,Nahro</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<IsPackable>True</IsPackable>

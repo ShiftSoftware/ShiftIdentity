@@ -8,7 +8,7 @@
 		<PackageId>ShiftSoftware.ShiftIdentity.AspNetCore</PackageId>
 		<Product>Shift Identity AspNetCore</Product>
 		<AssemblyName>ShiftSoftware.ShiftIdentity.AspNetCore</AssemblyName>
-		<Version>1.6.4</Version>
+		<Version>1.6.5</Version>
 		<Authors>aza.asim,Shift Software,Nahro</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<IsPackable>True</IsPackable>
@@ -26,7 +26,7 @@
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="7.0.4" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0" />
 		<PackageReference Include="Moq" Version="4.18.4" />
-		<PackageReference Include="ShiftSoftware.ShiftEntity.Web" Version="1.6.0.12" Condition="!Exists('..\..\ShiftEntity\ShiftEntity.Web\ShiftEntity.Web.csproj')" />
+		<PackageReference Include="ShiftSoftware.ShiftEntity.Web" Version="1.6.1" Condition="!Exists('..\..\ShiftEntity\ShiftEntity.Web\ShiftEntity.Web.csproj')" />
 		<PackageReference Include="ShiftSoftware.TypeAuth.Core" Version="1.4.2" Condition="!Exists('..\..\TypeAuth\TypeAuth.Core\TypeAuth.Core.csproj')" />
 	</ItemGroup>
 
