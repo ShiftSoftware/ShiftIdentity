@@ -49,10 +49,11 @@ public class UserDTO : ShiftEntityDTO
 
     #endregion
 
-    public IEnumerable<AccessTreeDTO> AccessTrees { get; set; }
+    [JsonHashIdConverter<AccessTreeDTO>(5)]
+    public IEnumerable<ShiftEntitySelectDTO> AccessTrees { get; set; }
 
     public UserDTO()
     {
-        AccessTrees = new List<AccessTreeDTO>();
+        AccessTrees = new List<ShiftEntitySelectDTO>();
     }
 }

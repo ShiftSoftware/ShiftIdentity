@@ -1,5 +1,10 @@
-﻿namespace ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
+﻿using ShiftSoftware.ShiftEntity.Core;
+using System.ComponentModel.DataAnnotations.Schema;
 
+namespace ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
+
+[TemporalShiftEntity]
+[Table("UserAccessTrees", Schema = "ShiftIdentity")]
 public class UserAccessTree
 {
     public long ID { get; set; }

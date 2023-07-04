@@ -21,6 +21,14 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data
         public DbSet<User> Users { get; set; }
         public DbSet<UserAccessTree> UserAccessTrees { get; set; }
 
+        public DbSet<Company> Companies { get; set; }
+        public DbSet<Region> Regions { get; set; }
+        public DbSet<Service> Services { get; set; }
+        public DbSet<CompanyBranch> CompanyBranches { get; set; }
+        public DbSet<Department> Departments { get; set; }
+        public DbSet<CompanyBranchDepartment> CompanyBranchDepartments { get; set; }
+        public DbSet<CompanyBranchService> CompanyBranchServices { get; set; }
+
         protected override void OnModelCreating(ModelBuilder b)
         {
             base.OnModelCreating(b);

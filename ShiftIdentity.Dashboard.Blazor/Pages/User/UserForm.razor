@@ -71,13 +71,24 @@
                      @bind-Checked="@TheItem.IsActive"></MudCheckBox>
     </MudItem>
 
-    <MudSelect Disabled="@Disabled" ReadOnly="@ReadOnly" T="AccessTreeDTO" Label="Access Trees" MultiSelection="true" SelectedValues="TheItem.AccessTrees" SelectedValuesChanged="SelectedChanged" Comparer="Comparer" ToStringFunc="@(x=> x.Name)">
-        @foreach (var accessTree in accessTress)
-        {
-            <MudSelectItem T="AccessTreeDTO" Value="@accessTree">@accessTree.Name</MudSelectItem>
-        }
-    </MudSelect>
+    <ShiftAutocomplete Label="Access Trees"
+                       T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
+                       @bind-Value="LastSelectedAccessTree"
+                       ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
+                       EntitySet="IdentityAccessTree"
+                       TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree.AccessTreeDTO"
+                       Where="@(q => x => x.Name!.Contains(q))"
+                       DataValueField="@nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree.AccessTreeDTO.ID)"
+                       DataTextField="@nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree.AccessTreeDTO.Name)" />
 
+    <br />
+
+    @foreach (var item in TheItem.AccessTrees)
+    {
+        <MudChip Color="Color.Primary" OnClose="() => RemoveAccessTreetItem(item)">@item.Text</MudChip>
+    }
+
+    <br />
     <br />
 
     @if (ready || Mode == FormModes.View || Mode == FormModes.Create)
@@ -87,15 +98,6 @@
 </ShiftEntityForm>
 
 @code {
-
-    class AccessTreeListDTOComparer : IEqualityComparer<AccessTreeDTO>
-    {
-        public bool Equals(AccessTreeDTO a, AccessTreeDTO b) => a.ID == b.ID;
-        public int GetHashCode(AccessTreeDTO x) => HashCode.Combine(x.ID);
-    }
-
-    static AccessTreeListDTOComparer Comparer { get; } = new();
-
     private bool ready = false;
     Shared.ActionTree.ActionTree? actionTree;
 
@@ -105,15 +107,30 @@
     {
         if (TheItem.ID == default)
             TheItem.AccessTree = "{}";
-
-        var q = ODataQuery.CreateQuery<AccessTreeDTO>($"{Constants.IdentityRoutePreifix}AccessTree");
-
-        accessTress = (await Http.GetFromJsonAsync<ODataDTO<AccessTreeDTO>>(q.ToString()))!.Value.ToList();
     }
 
-    void SelectedChanged(IEnumerable<AccessTreeDTO> newSelected)
+    public ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO? LastSelectedAccessTree
     {
-        TheItem.AccessTrees = newSelected;
+        get { return null; }
+        set
+        {
+            var currentList = TheItem.AccessTrees.ToList();
+
+            if (!currentList.Any(x => x.Value.Equals(value!.Value)))
+            {
+                currentList.Add(value!);
+            }
+
+            TheItem.AccessTrees = currentList;
+        }
+    }
+
+    public void RemoveAccessTreetItem(ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO item)
+    {
+        if (Mode <= ShiftBlazor.Enums.FormModes.Archive)
+            return;
+
+        TheItem.AccessTrees = TheItem.AccessTrees.Where(x => !x.Value.Equals(item.Value)).ToList();
     }
 }
 

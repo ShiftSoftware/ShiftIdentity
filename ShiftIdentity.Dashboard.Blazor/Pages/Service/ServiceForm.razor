@@ -1,0 +1,23 @@
+@attribute [Authorize]
+@layout Shared.DefaultLayout
+@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(ServiceForm)}/{{Key?}}")]
+@inherits ShiftForm<ServiceForm, ShiftSoftware.ShiftIdentity.Core.DTOs.Service.ServiceDTO>
+@inject HttpClient Http
+
+
+<ShiftEntityForm @bind-Mode="Mode"
+                 @bind-Value="TheItem"
+                 @ref="FormContainer"
+                 Action="@($"{Constants.IdentityRoutePreifix}Service")"
+                 Title="Service"
+                 @bind-Key="@Key"
+                 TypeAuthAction="ShiftIdentityActions.Services"
+                 T="ShiftSoftware.ShiftIdentity.Core.DTOs.Service.ServiceDTO">
+
+    <MudTextField ReadOnly="@ReadOnly"
+                  Disabled="@Disabled"
+                  OnlyValidateIfDirty="true"
+                  Label="Name"
+                  @bind-Value="TheItem.Name"
+                  For="@(() => TheItem.Name)" />
+</ShiftEntityForm>

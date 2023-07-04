@@ -1,10 +1,12 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
 using System.ComponentModel.DataAnnotations;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.App;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
 
 [TemporalShiftEntity]
+[Table("Apps", Schema = "ShiftIdentity")]
 public class App : ShiftEntity<App>
 {
     [Required]

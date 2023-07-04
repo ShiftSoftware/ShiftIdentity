@@ -1,10 +1,12 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
 using System.ComponentModel.DataAnnotations;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
 
 [TemporalShiftEntity]
+[Table("AccessTrees", Schema = "ShiftIdentity")]
 public class AccessTree : ShiftEntity<AccessTree>
 {
     [Required]

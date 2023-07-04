@@ -1,0 +1,37 @@
+@attribute [Authorize]
+@layout Shared.DefaultLayout
+@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(RegionForm)}/{{Key?}}")]
+@inherits ShiftForm<RegionForm, ShiftSoftware.ShiftIdentity.Core.DTOs.Region.RegionDTO>
+@inject HttpClient Http
+
+
+<ShiftEntityForm @bind-Mode="Mode"
+                 @bind-Value="TheItem"
+                 @ref="FormContainer"
+                 Action="@($"{Constants.IdentityRoutePreifix}Region")"
+                 Title="Region"
+                 @bind-Key="@Key"
+                 TypeAuthAction="ShiftIdentityActions.Regions"
+                 T="ShiftSoftware.ShiftIdentity.Core.DTOs.Region.RegionDTO">
+
+    <MudTextField ReadOnly="@ReadOnly"
+                  Disabled="@Disabled"
+                  OnlyValidateIfDirty="true"
+                  Label="Name"
+                  @bind-Value="TheItem.Name"
+                  For="@(() => TheItem.Name)" />
+
+                  <MudTextField ReadOnly="@ReadOnly"
+                  Disabled="@Disabled"
+                  OnlyValidateIfDirty="true"
+                  Label="Short Code"
+                  @bind-Value="TheItem.ShortCode"
+                  For="@(() => TheItem.ShortCode)" />
+
+    <MudTextField ReadOnly="@ReadOnly"
+                  Disabled="@Disabled"
+                  OnlyValidateIfDirty="true"
+                  Label="External Id"
+                  @bind-Value="TheItem.ExternalId"
+                  For="@(() => TheItem.ExternalId)" />
+</ShiftEntityForm>

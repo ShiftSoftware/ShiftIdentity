@@ -1,0 +1,19 @@
+@attribute [Authorize]
+@layout Shared.DefaultLayout
+@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(DepartmentList)}")]
+@using Syncfusion.Blazor.Grids
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.Department;
+@using ShiftSoftware.ShiftBlazor.Enums
+
+<ShiftList Action="@($"{Constants.IdentityRoutePreifix}Department")"
+           Title="Department List"
+           T="DepartmentListDTO"
+           ComponentType="typeof(DepartmentForm)"
+           AutoGenerateColumns="false"
+           ShowIDColumn
+           TypeAuthAction="ShiftIdentityActions.Departments"
+           EnableCsvExcelExport>
+    <ColumnTemplate>
+        <GridColumn HeaderText="Name" Field="@nameof(DepartmentListDTO.Name)" />
+    </ColumnTemplate>
+</ShiftList>

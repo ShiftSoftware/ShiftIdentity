@@ -1,0 +1,116 @@
+@attribute [Authorize]
+@layout Shared.DefaultLayout
+@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CompanyForm)}/{{Key?}}")]
+@inherits ShiftForm<CompanyForm, ShiftSoftware.ShiftIdentity.Core.DTOs.Company.CompanyDTO>
+@inject HttpClient Http
+
+@using ShiftSoftware.ShiftIdentity.Core.Enums
+
+
+<ShiftEntityForm @bind-Mode="Mode"
+                 @bind-Value="TheItem"
+                 @ref="FormContainer"
+                 Action="@($"{Constants.IdentityRoutePreifix}Company")"
+                 Title="Company"
+                 @bind-Key="@Key"
+                 TypeAuthAction="ShiftIdentityActions.Companies"
+                 T="ShiftSoftware.ShiftIdentity.Core.DTOs.Company.CompanyDTO">
+
+
+    <MudGrid>
+
+        <MudItem xs="12" sm="6" lg="4" xl="3">
+            <MudTextField ReadOnly="@ReadOnly"
+                          Disabled="@Disabled"
+                          OnlyValidateIfDirty="true"
+                          Label="Name"
+                          @bind-Value="TheItem.Name"
+                          For="@(() => TheItem.Name)" />
+        </MudItem>
+
+        <MudItem xs="12" sm="6" lg="4" xl="3">
+            <MudTextField ReadOnly="@ReadOnly"
+                          Disabled="@Disabled"
+                          OnlyValidateIfDirty="true"
+                          Label="Legal Name"
+                          @bind-Value="TheItem.LegalName"
+                          For="@(() => TheItem.LegalName)" />
+        </MudItem>
+
+        <MudItem xs="12" sm="6" lg="4" xl="3">
+            <MudTextField ReadOnly="@ReadOnly"
+                          Disabled="@Disabled"
+                          OnlyValidateIfDirty="true"
+                          Label="Short Code"
+                          @bind-Value="TheItem.ShortCode"
+                          For="@(() => TheItem.ShortCode)" />
+        </MudItem>
+
+        <MudItem xs="12" sm="6" lg="4" xl="3">
+            <MudTextField ReadOnly="@ReadOnly"
+                          Disabled="@Disabled"
+                          OnlyValidateIfDirty="true"
+                          Label="Externa lId"
+                          @bind-Value="TheItem.ExternalId"
+                          For="@(() => TheItem.ExternalId)" />
+        </MudItem>
+
+        <MudItem xs="12" sm="6" lg="4" xl="3">
+            <MudTextField ReadOnly="@ReadOnly"
+                          Disabled="@Disabled"
+                          OnlyValidateIfDirty="true"
+                          Label="Alternative Externa lId"
+                          @bind-Value="TheItem.AlternativeExternalId"
+                          For="@(() => TheItem.AlternativeExternalId)" />
+        </MudItem>
+
+        <MudItem xs="12" sm="6" lg="4" xl="3">
+            <MudSelect ReadOnly="@ReadOnly"
+                       Disabled="@Disabled"
+                       OnlyValidateIfDirty="true"
+                       T="CompanyTypes"
+                       Label="Company Type"
+                       @bind-Value="TheItem.CompanyType"
+                       ToStringFunc="@(x=> x.Describe())"
+                       For="@(() => TheItem.CompanyType)">
+                <MudSelectItem Value="@(CompanyTypes.NotSpecified)" />
+                <MudSelectItem Value="@(CompanyTypes.DistributorOrFranchisee)" />
+                <MudSelectItem Value="@(CompanyTypes.RetailerOrDealer)" />
+                <MudSelectItem Value="@(CompanyTypes.SupplierOrServiceProvider)" />
+                <MudSelectItem Value="@(CompanyTypes.ThirdPartyOrExternal)" />
+                <MudSelectItem Value="@(CompanyTypes.ParentCompanyOrFranchisor)" />
+            </MudSelect>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" lg="4" xl="3">
+            <MudTextField ReadOnly="@ReadOnly"
+                          Disabled="@Disabled"
+                          OnlyValidateIfDirty="true"
+                          Label="HQ Phone"
+                          @bind-Value="TheItem.HQPhone"
+                          For="@(() => TheItem.HQPhone)" />
+        </MudItem>
+
+        <MudItem xs="12" sm="6" lg="4" xl="3">
+            <MudTextField ReadOnly="@ReadOnly"
+                          Disabled="@Disabled"
+                          OnlyValidateIfDirty="true"
+                          Label="HQ Email"
+                          @bind-Value="TheItem.HQEmail"
+                          For="@(() => TheItem.HQEmail)" />
+        </MudItem>
+
+        <MudItem xs="12" sm="6" lg="4" xl="3">
+            <MudTextField ReadOnly="@ReadOnly"
+                          Disabled="@Disabled"
+                          OnlyValidateIfDirty="true"
+                          Label="HQ Address"
+                          @bind-Value="TheItem.HQAddress"
+                          For="@(() => TheItem.HQAddress)" />
+        </MudItem>
+    </MudGrid>
+</ShiftEntityForm>
+
+@code {
+
+}

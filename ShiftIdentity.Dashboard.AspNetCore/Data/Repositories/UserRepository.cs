@@ -134,7 +134,7 @@ public class UserRepository :
             entity.RequireChangePassword = true;
         }
 
-        var accessTreeIds = dto.AccessTrees.Select(x => x.ID.ToLong());
+        var accessTreeIds = dto.AccessTrees.Select(x => x.Value.ToLong());
 
         var trees = await db.AccessTrees.Where(x => accessTreeIds.Contains(x.ID)).ToDictionaryAsync(x => x.ID, x => x);
 
@@ -145,14 +145,14 @@ public class UserRepository :
 
         entity.AccessTrees = dto.AccessTrees.Select(x => new UserAccessTree
         {
-            AccessTree = trees[x.ID.ToLong()]
+            AccessTree = trees[x.Value.ToLong()]
         }).ToList();
 
         if (entity.BuiltIn)
             throw new ShiftEntityException(new Message("Error", "Built-In Data can't be modified."), (int)HttpStatusCode.Forbidden);
     }
 
-    public string GetFormattedPhone(string phone)
+    public static string GetFormattedPhone(string phone)
     {
         var phoneNumberUtil = PhoneNumbers.PhoneNumberUtil.GetInstance();
 
@@ -161,7 +161,7 @@ public class UserRepository :
         return phoneNumberUtil.Format(phoneNumber, PhoneNumbers.PhoneNumberFormat.INTERNATIONAL);
     }
 
-    public bool PhoneIsValid(string phone)
+    public static bool PhoneIsValid(string phone)
     {
         var phoneNumberUtil = PhoneNumbers.PhoneNumberUtil.GetInstance();
 

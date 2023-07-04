@@ -1,0 +1,31 @@
+@attribute [Authorize]
+@layout Shared.DefaultLayout
+@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CompanyList)}")]
+@using Syncfusion.Blazor.Grids
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
+@using ShiftSoftware.ShiftBlazor.Enums
+
+<ShiftList Action="@($"{Constants.IdentityRoutePreifix}Company")"
+           Title="Company List"
+           T="CompanyListDTO"
+           ComponentType="typeof(CompanyForm)"
+           AutoGenerateColumns="false"
+           ShowIDColumn
+           TypeAuthAction="ShiftIdentityActions.Companies"
+           EnableCsvExcelExport>
+    <ColumnTemplate>
+        <GridColumn HeaderText="Name" Field="@nameof(CompanyListDTO.Name)" />
+        <GridColumn HeaderText="Legal Name" Field="@nameof(CompanyListDTO.LegalName)" />
+        <GridColumn HeaderText="Short Code" Field="@nameof(CompanyListDTO.ShortCode)" />
+        <GridColumn HeaderText="External ID" Field="@nameof(CompanyListDTO.ExternalId)" />
+        <GridColumn HeaderText="Company Type">
+            <Template>
+                @{
+                    var item = context as CompanyListDTO;
+                }
+
+                <span>@item!.CompanyType!.Describe()</span>
+            </Template>
+        </GridColumn>
+    </ColumnTemplate>
+</ShiftList>

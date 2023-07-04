@@ -30,6 +30,12 @@ public static class IMvcBuilderExtensions
         
         builder.Services.AddScoped<IClaimService, ClaimService>();
 
+        builder.Services.AddScoped<DepartmentRepository>();
+        builder.Services.AddScoped<RegionRepository>();
+        builder.Services.AddScoped<ServiceRepository>();
+        builder.Services.AddScoped<CompanyRepository>();
+        builder.Services.AddScoped<CompanyBranchRepository>();
+
         builder.Services.AddScoped<ShiftIdentityDB, TDbContext>();
 
         return builder;

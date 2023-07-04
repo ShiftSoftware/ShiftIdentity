@@ -1,0 +1,190 @@
+@attribute [Authorize]
+@layout Shared.DefaultLayout
+@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CompanyBranchForm)}/{{Key?}}")]
+@inherits ShiftForm<CompanyBranchForm, ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchDTO>
+@inject HttpClient Http
+
+@using ShiftSoftware.ShiftIdentity.Core.Enums
+
+
+<ShiftEntityForm @bind-Mode="Mode"
+                 @bind-Value="TheItem"
+                 @ref="FormContainer"
+                 Action="@($"{Constants.IdentityRoutePreifix}CompanyBranch")"
+                 Title="Company Branch"
+                 @bind-Key="@Key"
+                 TypeAuthAction="ShiftIdentityActions.Companies"
+                 T="ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchDTO">
+
+
+    <MudGrid>
+
+        <MudItem xs="12" sm="6" lg="4" xl="3">
+            <MudTextField ReadOnly="@ReadOnly"
+                          Disabled="@Disabled"
+                          OnlyValidateIfDirty="true"
+                          Label="Name"
+                          @bind-Value="TheItem.Name"
+                          For="@(() => TheItem.Name)" />
+        </MudItem>
+
+        <MudItem xs="12" sm="6" lg="4" xl="3">
+            <MudTextField ReadOnly="@ReadOnly"
+                          Disabled="@Disabled"
+                          OnlyValidateIfDirty="true"
+                          Label="Short Code"
+                          @bind-Value="TheItem.ShortCode"
+                          For="@(() => TheItem.ShortCode)" />
+        </MudItem>
+
+        <MudItem xs="12" sm="6" lg="4" xl="3">
+            <MudTextField ReadOnly="@ReadOnly"
+                          Disabled="@Disabled"
+                          OnlyValidateIfDirty="true"
+                          Label="Externa lId"
+                          @bind-Value="TheItem.ExternalId"
+                          For="@(() => TheItem.ExternalId)" />
+        </MudItem>
+
+        <MudItem xs="12" sm="6" lg="4" xl="3">
+            <ShiftAutocomplete Label="Company"
+                               For="@(() => TheItem.Company)"
+                               T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
+                               @bind-Value="TheItem.Company"
+                               ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
+                               EntitySet="IdentityCompany"
+                               TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Company.CompanyListDTO"
+                               Where="@(q => x => x.Name!.Contains(q))"
+                               DataValueField="@nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.Company.CompanyListDTO.ID)"
+                               DataTextField="@nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.Company.CompanyListDTO.Name)" />
+        </MudItem>
+
+        <MudItem xs="12" sm="6" lg="4" xl="3">
+            <ShiftAutocomplete Label="Region"
+                               For="@(() => TheItem.Region)"
+                               T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
+                               @bind-Value="TheItem.Region"
+                               ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
+                               EntitySet="IdentityRegion"
+                               TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Region.RegionListDTO"
+                               Where="@(q => x => x.Name!.Contains(q))"
+                               DataValueField="@nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.Region.RegionListDTO.ID)"
+                               DataTextField="@nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.Region.RegionListDTO.Name)" />
+        </MudItem>
+
+        <MudItem xs="12" sm="12" lg="12" xl="12">
+            <ShiftAutocomplete Label="Departments"
+                               T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
+                               @bind-Value="LastSelectedDepartment"
+                               ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
+                               EntitySet="IdentityDepartment"
+                               TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentListDTO"
+                               Where="@(q => x => x.Name!.Contains(q))"
+                               DataValueField="@nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentListDTO.ID)"
+                               DataTextField="@nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentListDTO.Name)" />
+
+            <br />
+
+            @foreach (var item in TheItem.Departments)
+            {
+                <MudChip Color="Color.Primary" OnClose="() => RemoveDepartmentItem(item)">@item.Text</MudChip>
+            }
+        </MudItem>
+
+        <MudItem xs="12" sm="12" lg="12" xl="12">
+            <ShiftAutocomplete Label="Services"
+                               T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
+            @bind-Value="LastSelectedService"
+                               ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
+                               EntitySet="IdentityService"
+                               TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Service.ServiceListDTO"
+                               Where="@(q => x => x.Name!.Contains(q))"
+                               DataValueField="@nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.Service.ServiceListDTO.ID)"
+                               DataTextField="@nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.Service.ServiceListDTO.Name)" />
+
+            <br />
+
+            @foreach (var item in TheItem.Services)
+            {
+                <MudChip Color="Color.Secondary" OnClose="() => RemoveServiceItem(item)">@item.Text</MudChip>
+            }
+        </MudItem>
+
+        <MudItem xs="12" sm="6" lg="4" xl="4">
+            <MudTextField ReadOnly="@ReadOnly"
+                          Disabled="@Disabled"
+                          OnlyValidateIfDirty="true"
+                          Label="HQ Phone"
+                          @bind-Value="TheItem.Phone"
+                          For="@(() => TheItem.Phone)" />
+        </MudItem>
+
+        <MudItem xs="12" sm="6" lg="4" xl="4">
+            <MudTextField ReadOnly="@ReadOnly"
+                          Disabled="@Disabled"
+                          OnlyValidateIfDirty="true"
+                          Label="HQ Email"
+                          @bind-Value="TheItem.Email"
+                          For="@(() => TheItem.Email)" />
+        </MudItem>
+
+        <MudItem xs="12" sm="6" lg="4" xl="4">
+            <MudTextField ReadOnly="@ReadOnly"
+                          Disabled="@Disabled"
+                          OnlyValidateIfDirty="true"
+                          Label="HQ Address"
+                          @bind-Value="TheItem.Address"
+                          For="@(() => TheItem.Address)" />
+        </MudItem>
+    </MudGrid>
+</ShiftEntityForm>
+
+@code {
+    public ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO? LastSelectedDepartment
+    {
+        get { return null; }
+        set
+        {
+            var currentList = TheItem.Departments.ToList();
+
+            if (!currentList.Any(x => x.Value.Equals(value!.Value)))
+            {
+                currentList.Add(value!);
+            }
+
+            TheItem.Departments = currentList;
+        }
+    }
+
+    public void RemoveDepartmentItem(ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO item)
+    {
+        if (Mode <= ShiftBlazor.Enums.FormModes.Archive)
+            return;
+
+        TheItem.Departments = TheItem.Departments.Where(x => !x.Value.Equals(item.Value)).ToList();
+    }
+
+    public ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO? LastSelectedService
+    {
+        get { return null; }
+        set
+        {
+            var currentList = TheItem.Services.ToList();
+
+            if (!currentList.Any(x => x.Value.Equals(value!.Value)))
+            {
+                currentList.Add(value!);
+            }
+
+            TheItem.Services = currentList;
+        }
+    }
+
+    public void RemoveServiceItem(ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO item)
+    {
+        if (Mode <= ShiftBlazor.Enums.FormModes.Archive)
+            return;
+
+        TheItem.Services = TheItem.Services.Where(x => !x.Value.Equals(item.Value)).ToList();
+    }
+}

@@ -1,11 +1,41 @@
 ﻿@using Pages.User
 @using Pages.App
 @using Pages.AccessTree
+@using Pages.Department
+@using Pages.Service
+@using Pages.Company
+@using Pages.CompanyBranch
+@using Pages.Region
 
 @inject ShiftIdentityDashboardBlazorOptions ShiftIdentityDashboardBlazorOptions
 @inject TypeAuthService TypeAuthService
 
 <MudNavMenu>
+    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(RegionList)}")"
+                          Match="NavLinkMatch.All"
+                          Icon="@Icons.Material.Outlined.Map"
+                          TypeAuthAction="ShiftIdentityActions.Regions">Regions</AuthorizedMudNavLink>
+
+    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(DepartmentList)}")"
+                          Match="NavLinkMatch.All"
+                          Icon="@Icons.Material.Outlined.Dashboard"
+                          TypeAuthAction="ShiftIdentityActions.Departments">Departments</AuthorizedMudNavLink>
+
+    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(ServiceList)}")"
+                          Match="NavLinkMatch.All"
+                          Icon="@Icons.Material.Outlined.Checklist"
+                          TypeAuthAction="ShiftIdentityActions.Services">Services</AuthorizedMudNavLink>
+
+    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(CompanyList)}")"
+                          Match="NavLinkMatch.All"
+                          Icon="@Icons.Material.Outlined.Business"
+                          TypeAuthAction="ShiftIdentityActions.Companies">Companies</AuthorizedMudNavLink>
+
+    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(CompanyBranchList)}")"
+                          Match="NavLinkMatch.All"
+                          Icon="@Icons.Material.Outlined.AddBusiness"
+                          TypeAuthAction="ShiftIdentityActions.CompanyBranches">Branches</AuthorizedMudNavLink>
+
     @if (ShiftIdentityDashboardBlazorOptions.ShiftIdentityHostingType == ShiftIdentityHostingTypes.External)
     {
         <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(AppList)}")"

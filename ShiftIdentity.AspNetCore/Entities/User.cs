@@ -5,10 +5,13 @@ using System.Collections.Generic;
 using System.Linq;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
+using System.ComponentModel.DataAnnotations.Schema;
+using ShiftSoftware.ShiftEntity.Model.Dtos;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
 
 [TemporalShiftEntity]
+[Table("Users", Schema = "ShiftIdentity")]
 public class User : ShiftEntity<User>
 {
     #region Security
@@ -96,7 +99,10 @@ public class User : ShiftEntity<User>
             LastSaveDate = entity.LastSaveDate,
             LastSavedByUserID = entity.LastSavedByUserID.ToString(),
 
-            AccessTrees = entity.AccessTrees.Select(x => (AccessTreeDTO)x.AccessTree),
+            AccessTrees = entity.AccessTrees.Select(x => new ShiftEntitySelectDTO { 
+                Value = x.AccessTreeID.ToString(),
+                Text = x.AccessTree.Name,
+            }),
             BirthDate = entity.BirthDate,
             Username = entity.Username,
             Email = entity.Email,
