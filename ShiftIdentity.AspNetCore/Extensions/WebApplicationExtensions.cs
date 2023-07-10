@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Web;
@@ -21,7 +20,7 @@ namespace ShiftSoftware.ShiftIdentity.AspNetCore.Extensions
 
             var odataPrefix = shiftEntityOptions.RoutePrefix;
 
-            app.MapGet($"{odataPrefix}/PublicUser", () =>
+            app.MapGet($"{odataPrefix}/{Core.Constants.IdentityRoutePreifix}PublicUser", () =>
             {
                 return new Dictionary<string, object> {
                     { "@odata.count", 1 },
