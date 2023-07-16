@@ -31,26 +31,4 @@ public class App : ShiftEntity<App>
     //[MaxLength(4000)]
     //public string PostLogoutRedirectUri { get; set; } = default!;
 
-    public static implicit operator AppDTO(App entity)
-    {
-        if (entity == null)
-            return default!;
-
-        return new AppDTO
-        {
-            CreateDate = entity.CreateDate,
-            CreatedByUserID = entity.CreatedByUserID.ToString(),
-            ID = entity.ID.ToString(),
-            IsDeleted = entity.IsDeleted,
-            LastSaveDate = entity.LastSaveDate,
-            LastSavedByUserID = entity.LastSavedByUserID.ToString(),
-
-            DisplayName = entity.DisplayName,
-            AppId = entity.AppId,
-            AppSecret = entity.AppSecret,
-            Description = entity.Description,
-            RedirectUri = entity.RedirectUri,
-            //PostLogoutRedirectUri = entity.PostLogoutRedirectUri,
-        };
-    }
 }

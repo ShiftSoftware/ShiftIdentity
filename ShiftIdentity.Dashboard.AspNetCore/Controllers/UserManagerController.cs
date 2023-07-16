@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
@@ -18,11 +19,13 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
     {
         private readonly UserRepository userRepo;
         private readonly IClaimService claimService;
+        private readonly IMapper mapper;
 
-        public UserManagerController(UserRepository userRepo, IClaimService claimService)
+        public UserManagerController(UserRepository userRepo, IClaimService claimService, IMapper mapper)
         {
             this.userRepo = userRepo;
             this.claimService = claimService;
+            this.mapper = mapper;
         }
 
         // GET: api/<UserManagerController>
@@ -33,7 +36,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
 
             var user = await userRepo.FindAsync(loginUser.ID);
 
-            return new ShiftEntityResponse<UserDataDTO>((UserDataDTO)user);
+            return new ShiftEntityResponse<UserDataDTO>(mapper.Map<UserDataDTO>(user));
         }
 
         [HttpPut("UserData")]
@@ -65,7 +68,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
 
             await userRepo.SaveChangesAsync();
 
-            return Ok(new ShiftEntityResponse<UserDataDTO>((UserDataDTO)user));
+            return Ok(new ShiftEntityResponse<UserDataDTO>(mapper.Map<UserDataDTO>(user)));
         }
 
         //// POST api/<UserManagerController>
@@ -88,7 +91,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
 
             await userRepo.SaveChangesAsync();
 
-            return Ok(new ShiftEntityResponse<UserDataDTO>((UserDataDTO)user));
+            return Ok(new ShiftEntityResponse<UserDataDTO>(mapper.Map<UserDataDTO>(user)));
         }
 
     }

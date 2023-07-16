@@ -27,46 +27,4 @@ public class Company : ShiftEntity<Company>
         this.CompanyBranches = new HashSet<CompanyBranch>();
     }
 
-    public static implicit operator CompanyListDTO(Company entity)
-    {
-        if (entity == null)
-            return default!;
-
-        return new CompanyListDTO
-        {
-            ID = entity.ID.ToString(),
-            Name = entity.Name,
-            CompanyType = entity.CompanyType,
-            ExternalId = entity.ExternalId,
-            LegalName = entity.LegalName,
-            ShortCode = entity.ShortCode,
-        };
-    }
-
-    public static implicit operator CompanyDTO(Company entity)
-    {
-        if (entity == null)
-            return default!;
-
-        return new CompanyDTO
-        {
-            ID = entity.ID.ToString(),
-            CreateDate = entity.CreateDate,
-            CreatedByUserID = entity.CreatedByUserID.ToString(),
-            IsDeleted = entity.IsDeleted,
-            LastSaveDate = entity.LastSaveDate,
-            LastSavedByUserID = entity.LastSavedByUserID.ToString(),
-
-            Name = entity.Name,
-            CompanyType = entity.CompanyType,
-            ShortCode = entity.ShortCode,
-            LegalName = entity.LegalName,
-            ExternalId = entity.ExternalId,
-            AlternativeExternalId = entity.AlternativeExternalId,
-            HQAddress = entity.HQAddress,
-            HQEmail = entity.HQEmail,
-            HQPhone = entity.HQPhone,
-            Logo = entity.Logo,
-        };
-    }
 }

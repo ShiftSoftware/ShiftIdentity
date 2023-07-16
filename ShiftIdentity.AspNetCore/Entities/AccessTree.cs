@@ -25,22 +25,4 @@ public class AccessTree : ShiftEntity<AccessTree>
         //Users = new List<UserAccessTree>();
     }
 
-    public static implicit operator AccessTreeDTO(AccessTree entity)
-    {
-        if (entity == null)
-            return default!;
-
-        return new AccessTreeDTO
-        {
-            CreateDate = entity.CreateDate,
-            CreatedByUserID = entity.CreatedByUserID.ToString(),
-            ID = entity.ID.ToString(),
-            IsDeleted = entity.IsDeleted,
-            LastSaveDate = entity.LastSaveDate,
-            LastSavedByUserID = entity.LastSavedByUserID.ToString(),
-
-            Name = entity.Name,
-            Tree = entity.Tree
-        };
-    }
 }

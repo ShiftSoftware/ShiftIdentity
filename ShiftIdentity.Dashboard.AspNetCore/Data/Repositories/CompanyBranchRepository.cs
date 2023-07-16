@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using ShiftSoftware.EFCore.SqlServer;
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Model;
@@ -8,12 +9,12 @@ using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories
 {
     public class CompanyBranchRepository :
-        ShiftRepository<CompanyBranch>,
+        ShiftRepository<ShiftIdentityDB, CompanyBranch>,
         IShiftRepositoryAsync<CompanyBranch, CompanyBranchListDTO, CompanyBranchDTO>
     {
         private readonly ShiftIdentityDB db;
 
-        public CompanyBranchRepository(ShiftIdentityDB db) : base(db, db.CompanyBranches)
+        public CompanyBranchRepository(ShiftIdentityDB db, IMapper mapper) : base(db, db.CompanyBranches, mapper)
         {
             this.db = db;
         }
@@ -52,7 +53,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories
             if (ignoreGlobalFilters)
                 data = data.IgnoreQueryFilters();
 
-            return data.Select(x => (CompanyBranchListDTO)x);
+            return mapper.ProjectTo<CompanyBranchListDTO>(data);
         }
 
         public ValueTask<CompanyBranch> UpdateAsync(CompanyBranch entity, CompanyBranchDTO dto, long? userId = null)
@@ -66,7 +67,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories
 
         public ValueTask<CompanyBranchDTO> ViewAsync(CompanyBranch entity)
         {
-            return new ValueTask<CompanyBranchDTO>(entity);
+            return new ValueTask<CompanyBranchDTO>(mapper.Map<CompanyBranchDTO>(entity));
         }
 
         private void AssignValues(CompanyBranchDTO dto, CompanyBranch entity)

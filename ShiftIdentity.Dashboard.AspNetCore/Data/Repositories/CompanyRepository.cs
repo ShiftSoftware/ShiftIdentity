@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using ShiftSoftware.EFCore.SqlServer;
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Model;
@@ -8,11 +9,11 @@ using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
 
 public class CompanyRepository :
-    ShiftRepository<Company>,
+    ShiftRepository<ShiftIdentityDB, Company>,
     IShiftRepositoryAsync<Company, CompanyListDTO, CompanyDTO>
 {
     private readonly ShiftIdentityDB db;
-    public CompanyRepository(ShiftIdentityDB db) : base(db, db.Companies)
+    public CompanyRepository(ShiftIdentityDB db, IMapper mapper) : base(db, db.Companies, mapper)
     {
         this.db = db;
     }
@@ -44,7 +45,7 @@ public class CompanyRepository :
         if (ignoreGlobalFilters)
             data = data.IgnoreQueryFilters();
 
-        return data.Select(x => (CompanyListDTO)x);
+        return mapper.ProjectTo<CompanyListDTO>(data);
     }
 
     public ValueTask<Company> UpdateAsync(Company entity, CompanyDTO dto, long? userId = null)
@@ -58,7 +59,7 @@ public class CompanyRepository :
 
     public ValueTask<CompanyDTO> ViewAsync(Company entity)
     {
-        return new ValueTask<CompanyDTO>(entity);
+        return new ValueTask<CompanyDTO>(mapper.Map<CompanyDTO>(entity));
     }
 
     private void AssignValues(CompanyDTO dto, Company entity)

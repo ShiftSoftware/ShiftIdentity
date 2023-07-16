@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using ShiftSoftware.EFCore.SqlServer;
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
@@ -7,12 +8,12 @@ using ShiftSoftware.ShiftIdentity.Core.DTOs.Department;
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
 
 public class DepartmentRepository :
-     ShiftRepository<Department>,
+     ShiftRepository<ShiftIdentityDB, Department>,
      IShiftRepositoryAsync<Department, DepartmentListDTO, DepartmentDTO>
 {
     private readonly ShiftIdentityDB db;
 
-    public DepartmentRepository(ShiftIdentityDB db) : base(db, db.Departments)
+    public DepartmentRepository(ShiftIdentityDB db, IMapper mapper) : base(db, db.Departments, mapper)
     {
         this.db = db;
     }
@@ -44,7 +45,7 @@ public class DepartmentRepository :
         if (ignoreGlobalFilters)
             data = data.IgnoreQueryFilters();
 
-        return data.Select(x => (DepartmentListDTO)x);
+        return mapper.ProjectTo<DepartmentListDTO>(data);
     }
 
     public ValueTask<Department> UpdateAsync(Department entity, DepartmentDTO dto, long? userId = null)
@@ -58,7 +59,7 @@ public class DepartmentRepository :
 
     public ValueTask<DepartmentDTO> ViewAsync(Department entity)
     {
-        return new ValueTask<DepartmentDTO>(entity);
+        return new ValueTask<DepartmentDTO>(mapper.Map<DepartmentDTO>(entity));
     }
 
     private void AssignValues(DepartmentDTO dto, Department entity)

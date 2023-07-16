@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using ShiftSoftware.EFCore.SqlServer;
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Model;
@@ -10,13 +11,13 @@ using System.Net;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
 
-public class AccessTreeRepository : ShiftRepository<AccessTree>,
+public class AccessTreeRepository : ShiftRepository<ShiftIdentityDB, AccessTree>,
     IShiftRepositoryAsync<AccessTree, AccessTreeDTO, AccessTreeDTO>
 {
 
     private readonly ShiftIdentityDB db;
     private readonly TypeAuthService typeAuthService;
-    public AccessTreeRepository(ShiftIdentityDB db, TypeAuthService typeAuthService) : base(db, db.AccessTrees)
+    public AccessTreeRepository(ShiftIdentityDB db, TypeAuthService typeAuthService, IMapper mapper) : base(db, db.AccessTrees, mapper)
     {
         this.db = db;
         this.typeAuthService = typeAuthService;
@@ -53,7 +54,7 @@ public class AccessTreeRepository : ShiftRepository<AccessTree>,
         if (ignoreGlobalFilters)
             trees = trees.IgnoreQueryFilters();
 
-        return trees.Select(x => (AccessTreeDTO)x);
+        return mapper.ProjectTo<AccessTreeDTO>(trees);
     }
 
     public async ValueTask<AccessTree> UpdateAsync(AccessTree entity, AccessTreeDTO dto, long? userId = null)
@@ -72,7 +73,7 @@ public class AccessTreeRepository : ShiftRepository<AccessTree>,
 
     public ValueTask<AccessTreeDTO> ViewAsync(AccessTree entity)
     {
-        return new ValueTask<AccessTreeDTO>(entity);
+        return new ValueTask<AccessTreeDTO>(mapper.Map<AccessTreeDTO>(entity));
     }
 
     private void AssignValues(AccessTreeDTO dto, AccessTree entity)

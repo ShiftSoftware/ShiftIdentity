@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using ShiftSoftware.EFCore.SqlServer;
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Model;
@@ -15,14 +16,14 @@ using System.Net;
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
 
 public class UserRepository :
-    ShiftRepository<User>,
+    ShiftRepository<ShiftIdentityDB, User>,
     IShiftRepositoryAsync<User, UserListDTO, UserDTO>,
     IUserRepository
 {
 
     private readonly ShiftIdentityDB db;
     private readonly TypeAuthService typeAuthService;
-    public UserRepository(ShiftIdentityDB db, TypeAuthService typeAuthService) : base(db, db.Users)
+    public UserRepository(ShiftIdentityDB db, TypeAuthService typeAuthService, IMapper mapper) : base(db, db.Users, mapper)
     {
         this.db = db;
         this.typeAuthService = typeAuthService;
@@ -61,7 +62,7 @@ public class UserRepository :
         if (ignoreGlobalFilters)
             users = users.IgnoreQueryFilters();
 
-        return users.Select(x => (UserListDTO)x);
+        return mapper.ProjectTo<UserListDTO>(users);
     }
 
     public async ValueTask<User> UpdateAsync(User entity, UserDTO dto, long? userId = null)
@@ -80,7 +81,7 @@ public class UserRepository :
 
     public ValueTask<UserDTO> ViewAsync(User entity)
     {
-        return new ValueTask<UserDTO>(entity);
+        return new ValueTask<UserDTO>(mapper.Map<UserDTO>(entity));
     }
 
     private async Task AssignValues(UserDTO dto, User entity)

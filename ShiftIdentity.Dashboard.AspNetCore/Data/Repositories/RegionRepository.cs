@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using ShiftSoftware.EFCore.SqlServer;
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
@@ -8,11 +9,11 @@ using ShiftSoftware.ShiftIdentity.Core.DTOs.Region;
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
 
 public class RegionRepository :
-    ShiftRepository<Region>,
+    ShiftRepository<ShiftIdentityDB, Region>,
      IShiftRepositoryAsync<Region, RegionListDTO, RegionDTO>
 {
     private readonly ShiftIdentityDB db;
-    public RegionRepository(ShiftIdentityDB db) : base(db, db.Regions)
+    public RegionRepository(ShiftIdentityDB db, IMapper mapper) : base(db, db.Regions, mapper)
     {
         this.db = db;
     }
@@ -44,7 +45,7 @@ public class RegionRepository :
         if (ignoreGlobalFilters)
             data = data.IgnoreQueryFilters();
 
-        return data.Select(x => (RegionListDTO)x);
+        return mapper.ProjectTo<RegionListDTO>(data);
     }
 
     public ValueTask<Region> UpdateAsync(Region entity, RegionDTO dto, long? userId = null)
@@ -58,7 +59,7 @@ public class RegionRepository :
 
     public ValueTask<RegionDTO> ViewAsync(Region entity)
     {
-        return new ValueTask<RegionDTO>(entity);
+        return new ValueTask<RegionDTO>(mapper.Map<RegionDTO>(entity));
     }
 
     private void AssignValues(RegionDTO dto, Region entity)

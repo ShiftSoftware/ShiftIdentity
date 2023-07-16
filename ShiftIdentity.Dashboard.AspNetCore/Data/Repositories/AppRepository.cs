@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using ShiftSoftware.EFCore.SqlServer;
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Model;
@@ -10,13 +11,13 @@ using ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data;
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
 
 public class AppRepository :
-    ShiftRepository<App>,
+    ShiftRepository<ShiftIdentityDB, App>,
     IShiftRepositoryAsync<App, AppDTO, AppDTO>,
     IAppRepository
 {
 
     private readonly ShiftIdentityDB db;
-    public AppRepository(ShiftIdentityDB db) : base(db, db.Apps)
+    public AppRepository(ShiftIdentityDB db, IMapper mapper) : base(db, db.Apps, mapper)
     {
         this.db = db;
     }
@@ -51,7 +52,7 @@ public class AppRepository :
         if (ignoreGlobalFilters)
             apps = apps.IgnoreQueryFilters();
 
-        return apps.Select(x => (AppDTO)x);
+        return mapper.ProjectTo<AppDTO>(apps);
     }
 
     public async ValueTask<App> UpdateAsync(App entity, AppDTO dto, long? userId = null)
@@ -70,7 +71,7 @@ public class AppRepository :
 
     public ValueTask<AppDTO> ViewAsync(App entity)
     {
-        return new ValueTask<AppDTO>(entity);
+        return new ValueTask<AppDTO>(mapper.Map<AppDTO>(entity));
     }
 
     private void AssignValues(AppDTO dto, App entity)
