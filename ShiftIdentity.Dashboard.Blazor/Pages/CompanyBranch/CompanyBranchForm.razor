@@ -5,7 +5,7 @@
 @inject HttpClient Http
 
 @using ShiftSoftware.ShiftIdentity.Core.Enums
-
+@using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.Service;
 
 <ShiftEntityForm @bind-Mode="Mode"
                  @bind-Value="TheItem"
@@ -15,8 +15,6 @@
                  @bind-Key="@Key"
                  TypeAuthAction="ShiftIdentityActions.Companies"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchDTO">
-
-
     <MudGrid>
 
         <MudItem xs="12" sm="6" lg="4" xl="3">
@@ -92,16 +90,18 @@
         </MudItem>
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
-            <ShiftAutocomplete Label="Services"
-                               T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
-            @bind-Value="LastSelectedService"
-                               ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
-                               EntitySet="IdentityService"
-                               TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Service.ServiceListDTO"
-                               Where="@(q => x => x.Name!.Contains(q))"
-                               DataValueField="@nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.Service.ServiceListDTO.ID)"
-                               DataTextField="@nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.Service.ServiceListDTO.Name)" />
-
+            <ShiftAutocompleteWithQuickAdd Label="Services"
+                                           T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
+                                           TQuickAdd="ShiftSoftware.ShiftIdentity.Core.DTOs.Service.ServiceDTO"
+                                           QuickAddComponentType="@typeof(ServiceForm)"
+                                           @bind-Value="LastSelectedService"
+                                           ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
+                                           EntitySet="IdentityService"
+                                           TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Service.ServiceListDTO"
+                                           Where="@(q => x => x.Name!.Contains(q))"
+                                           DataValueField="@nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.Service.ServiceListDTO.ID)"
+                                           DataTextField="@nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.Service.ServiceListDTO.Name)"
+                                           QuickAddParameterName="@nameof(ServiceForm.ServiceName)"/>
             <br />
 
             @foreach (var item in TheItem.Services)
