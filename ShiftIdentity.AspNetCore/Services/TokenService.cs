@@ -60,20 +60,27 @@ public class TokenService
     {
         var tokenValidationParameters = new TokenValidationParameters
         {
-            ValidateAudience = false,
+            ValidateAudience = true,
+            ValidAudience = shiftIdentityConfiguration.RefreshToken.Audience,
             ValidateIssuer = true,
             ValidateLifetime = true,
+            RequireExpirationTime = true,
             ValidateIssuerSigningKey = true,
             ValidIssuer = shiftIdentityConfiguration.RefreshToken.Issuer,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(shiftIdentityConfiguration.RefreshToken.Key)),
             ClockSkew = TimeSpan.Zero,
-            LifetimeValidator = (notBefore, expires, securityToken,
-validationParameters) =>
+            LifetimeValidator = (DateTime? notBefore, DateTime? expires, SecurityToken securityToken,
+                                     TokenValidationParameters validationParameters) =>
             {
-                if (expires != null)
-                    return expires > DateTime.UtcNow;
+                var now = DateTime.UtcNow;
 
-                return false;
+                if (notBefore != null && now < notBefore)
+                    return false;
+
+                if (expires != null)
+                    return expires > now;
+
+                return true;
             }
         };
 
