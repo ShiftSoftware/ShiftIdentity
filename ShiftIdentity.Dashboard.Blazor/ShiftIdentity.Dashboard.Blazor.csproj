@@ -10,7 +10,7 @@
 		<AssemblyName>ShiftSoftware.ShiftIdentity.Dashboard.Blazor</AssemblyName>
 		<RootNamespace>ShiftSoftware.ShiftIdentity.Dashboard.Blazor</RootNamespace>
 
-		<Version>1.6.9</Version>
+		<Version>1.6.10</Version>
 		<Authors>aza.asim,Shift Software,Nahro</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<IsPackable>True</IsPackable>
