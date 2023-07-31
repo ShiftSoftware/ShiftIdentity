@@ -7,7 +7,7 @@
 		<RootNamespace>ShiftSoftware.ShiftIdentity.Core</RootNamespace>
 		<AssemblyName>ShiftSoftware.ShiftIdentity.Core</AssemblyName>
 		<PackageId>ShiftSoftware.ShiftIdentity.Core</PackageId>
-		<Version>1.6.12</Version>
+		<Version>1.6.13</Version>
 		<Authors>aza.asim,Shift Software,Nahro</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<IsPackable>True</IsPackable>
