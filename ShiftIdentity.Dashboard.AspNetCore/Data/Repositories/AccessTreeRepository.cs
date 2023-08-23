@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 using Microsoft.EntityFrameworkCore;
-using ShiftSoftware.EFCore.SqlServer;
+using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
@@ -14,7 +14,6 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
 public class AccessTreeRepository : ShiftRepository<ShiftIdentityDB, AccessTree>,
     IShiftRepositoryAsync<AccessTree, AccessTreeDTO, AccessTreeDTO>
 {
-
     private readonly ShiftIdentityDB db;
     private readonly TypeAuthService typeAuthService;
     public AccessTreeRepository(ShiftIdentityDB db, TypeAuthService typeAuthService, IMapper mapper) : base(db, db.AccessTrees, mapper)
@@ -34,7 +33,7 @@ public class AccessTreeRepository : ShiftRepository<ShiftIdentityDB, AccessTree>
 
         return entity;
     }
-
+    
     public ValueTask<AccessTree> DeleteAsync(AccessTree entity, long? userId = null)
     {
         entity.DeleteShiftEntity(userId);

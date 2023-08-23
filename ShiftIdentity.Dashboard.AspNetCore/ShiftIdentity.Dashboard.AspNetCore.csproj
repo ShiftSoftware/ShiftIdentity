@@ -16,7 +16,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\ShiftIdentity.AspNetCore\ShiftIdentity.AspNetCore.csproj" />
-		<ProjectReference Include="..\..\ShiftEntity\ShiftEntity.EFCore.SqlServer\ShiftEntity.EFCore.SqlServer.csproj" Condition="Exists('..\..\ShiftEntity\ShiftEntity.EFCore.SqlServer\ShiftEntity.EFCore.SqlServer.csproj')" />
+		<ProjectReference Include="..\..\ShiftEntity\ShiftEntity.EFCore.SqlServer\ShiftEntity.EFCore.csproj" Condition="Exists('..\..\ShiftEntity\ShiftEntity.EFCore.SqlServer\ShiftEntity.EFCore.SqlServer.csproj')" />
 	</ItemGroup>
 
 	<ItemGroup>

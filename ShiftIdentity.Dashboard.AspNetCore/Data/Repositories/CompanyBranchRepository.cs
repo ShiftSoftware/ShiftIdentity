@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using Microsoft.EntityFrameworkCore;
-using ShiftSoftware.EFCore.SqlServer;
 using ShiftSoftware.ShiftEntity.Core;
+using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
