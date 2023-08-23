@@ -33,17 +33,14 @@ public class CompanyRepository :
         return new ValueTask<Company>(entity);
     }
 
-    public async Task<Company> FindAsync(long id, DateTime? asOf = null, bool ignoreGlobalFilters = false)
+    public async Task<Company> FindAsync(long id, DateTime? asOf = null)
     {
-        return await base.FindAsync(id, asOf, ignoreGlobalFilters: ignoreGlobalFilters);
+        return await base.FindAsync(id, asOf);
     }
 
-    public IQueryable<CompanyListDTO> OdataList(bool ignoreGlobalFilters = false)
+    public IQueryable<CompanyListDTO> OdataList(bool showDeletedRows = false)
     {
-        var data = db.Companies.AsNoTracking();
-
-        if (ignoreGlobalFilters)
-            data = data.IgnoreQueryFilters();
+        var data = GetIQueryable(showDeletedRows).AsNoTracking();
 
         return mapper.ProjectTo<CompanyListDTO>(data);
     }

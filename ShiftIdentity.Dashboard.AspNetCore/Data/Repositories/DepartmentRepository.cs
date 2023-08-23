@@ -33,17 +33,14 @@ public class DepartmentRepository :
         return new ValueTask<Department>(entity);
     }
 
-    public async Task<Department> FindAsync(long id, DateTime? asOf = null, bool ignoreGlobalFilters = false)
+    public async Task<Department> FindAsync(long id, DateTime? asOf = null)
     {
-        return await base.FindAsync(id, asOf, ignoreGlobalFilters: ignoreGlobalFilters);
+        return await base.FindAsync(id, asOf);
     }
 
-    public IQueryable<DepartmentListDTO> OdataList(bool ignoreGlobalFilters = false)
+    public IQueryable<DepartmentListDTO> OdataList(bool showDeletedRows = false)
     {
-        var data = db.Departments.AsNoTracking();
-
-        if (ignoreGlobalFilters)
-            data = data.IgnoreQueryFilters();
+        var data = GetIQueryable(showDeletedRows).AsNoTracking();
 
         return mapper.ProjectTo<DepartmentListDTO>(data);
     }

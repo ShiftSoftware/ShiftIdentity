@@ -50,17 +50,14 @@ public class UserRepository :
         return new ValueTask<User>(entity);
     }
 
-    public async Task<User> FindAsync(long id, DateTime? asOf = null, bool ignoreGlobalFilters = false)
+    public async Task<User> FindAsync(long id, DateTime? asOf = null)
     {
-        return await base.FindAsync(id, asOf, ignoreGlobalFilters: ignoreGlobalFilters, x => x.Include(y => y.AccessTrees).ThenInclude(y => y.AccessTree));
+        return await base.FindAsync(id, asOf, x => x.Include(y => y.AccessTrees).ThenInclude(y => y.AccessTree));
     }
 
-    public IQueryable<UserListDTO> OdataList(bool ignoreGlobalFilters = false)
+    public IQueryable<UserListDTO> OdataList(bool showDeletedRows = false)
     {
-        var users = db.Users.AsNoTracking();
-
-        if (ignoreGlobalFilters)
-            users = users.IgnoreQueryFilters();
+        IQueryable<User> users = GetIQueryable(showDeletedRows).AsNoTracking();
 
         return mapper.ProjectTo<UserListDTO>(users);
     }

@@ -8,8 +8,8 @@ namespace ShiftSoftware.ShiftIdentity.AspNetCore.IRepositories;
 
 public interface IUserRepository
 {
-    Task<User> FindAsync(long id, DateTime? asOf = null, bool ignoreGlobalFilters = false);
+    Task<User> FindAsync(long id, DateTime? asOf = null);
     Task<User?> GetUserByUsernameAsync(string username);
     Task SaveChangesAsync();
-    IQueryable<UserListDTO> OdataList(bool ignoreGlobalFilters = false);
+    IQueryable<UserListDTO> OdataList(bool showDeletedRows = false);
 }

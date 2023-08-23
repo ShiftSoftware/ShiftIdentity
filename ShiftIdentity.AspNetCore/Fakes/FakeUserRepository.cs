@@ -12,7 +12,7 @@ public class FakeUserRepository : IUserRepository
     {
         this.shiftIdentityOptions = shiftIdentityOptions;
     }
-    public async Task<User> FindAsync(long id, DateTime? asOf = null, bool ignoreGlobalFilters = false)
+    public async Task<User> FindAsync(long id, DateTime? asOf = null)
     {
         return new User(id)
         {
@@ -53,7 +53,7 @@ public class FakeUserRepository : IUserRepository
 
     }
 
-    public IQueryable<UserListDTO> OdataList(bool ignoreGlobalFilters = false)
+    public IQueryable<UserListDTO> OdataList(bool showDeletedRows = false)
     {
         return new List<UserListDTO> {
             new UserListDTO {

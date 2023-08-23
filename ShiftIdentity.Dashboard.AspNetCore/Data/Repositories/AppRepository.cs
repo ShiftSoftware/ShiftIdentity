@@ -40,17 +40,14 @@ public class AppRepository :
         return new ValueTask<App>(entity);
     }
 
-    public async Task<App> FindAsync(long id, DateTime? asOf = null, bool ignoreGlobalFilters = false)
+    public async Task<App> FindAsync(long id, DateTime? asOf = null)
     {
-        return await base.FindAsync(id, asOf, ignoreGlobalFilters: ignoreGlobalFilters);
+        return await base.FindAsync(id, asOf);
     }
 
-    public IQueryable<AppDTO> OdataList(bool ignoreGlobalFilters = false)
+    public IQueryable<AppDTO> OdataList(bool showDeletedRows = false)
     {
-        var apps = db.Apps.AsNoTracking();
-
-        if (ignoreGlobalFilters)
-            apps = apps.IgnoreQueryFilters();
+        var apps= GetIQueryable(showDeletedRows).AsNoTracking();
 
         return mapper.ProjectTo<AppDTO>(apps);
     }

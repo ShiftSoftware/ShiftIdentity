@@ -33,17 +33,14 @@ public class RegionRepository :
         return new ValueTask<Region>(entity);
     }
 
-    public async Task<Region> FindAsync(long id, DateTime? asOf = null, bool ignoreGlobalFilters = false)
+    public async Task<Region> FindAsync(long id, DateTime? asOf = null)
     {
-        return await base.FindAsync(id, asOf, ignoreGlobalFilters: ignoreGlobalFilters);
+        return await base.FindAsync(id, asOf);
     }
 
-    public IQueryable<RegionListDTO> OdataList(bool ignoreGlobalFilters = false)
+    public IQueryable<RegionListDTO> OdataList(bool showDeletedRows = false)
     {
-        var data = db.Regions.AsNoTracking();
-
-        if (ignoreGlobalFilters)
-            data = data.IgnoreQueryFilters();
+        var data = GetIQueryable(showDeletedRows).AsNoTracking();
 
         return mapper.ProjectTo<RegionListDTO>(data);
     }

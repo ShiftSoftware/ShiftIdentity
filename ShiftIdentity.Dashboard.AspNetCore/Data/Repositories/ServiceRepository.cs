@@ -33,17 +33,14 @@ public class ServiceRepository :
         return new ValueTask<Service>(entity);
     }
 
-    public async Task<Service> FindAsync(long id, DateTime? asOf = null, bool ignoreGlobalFilters = false)
+    public async Task<Service> FindAsync(long id, DateTime? asOf = null)
     {
-        return await base.FindAsync(id, asOf, ignoreGlobalFilters: ignoreGlobalFilters);
+        return await base.FindAsync(id, asOf);
     }
 
-    public IQueryable<ServiceListDTO> OdataList(bool ignoreGlobalFilters = false)
+    public IQueryable<ServiceListDTO> OdataList(bool showDeletedRows = false)
     {
-        var data = db.Services.AsNoTracking();
-
-        if (ignoreGlobalFilters)
-            data = data.IgnoreQueryFilters();
+        var data = GetIQueryable(showDeletedRows).AsNoTracking();
 
         return mapper.ProjectTo<ServiceListDTO>(data);
     }

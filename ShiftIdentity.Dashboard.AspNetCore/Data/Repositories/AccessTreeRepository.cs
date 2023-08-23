@@ -41,18 +41,15 @@ public class AccessTreeRepository : ShiftRepository<ShiftIdentityDB, AccessTree>
         return new ValueTask<AccessTree>(entity);
     }
 
-    public async Task<AccessTree> FindAsync(long id, DateTime? asOf = null, bool ignoreGlobalFilters = false)
+    public async Task<AccessTree> FindAsync(long id, DateTime? asOf = null)
     {
         return await base.FindAsync
-            (id, asOf, ignoreGlobalFilters: ignoreGlobalFilters);
+            (id, asOf);
     }
 
-    public IQueryable<AccessTreeDTO> OdataList(bool ignoreGlobalFilters = false)
+    public IQueryable<AccessTreeDTO> OdataList(bool showDeletedRows = false)
     {
-        var trees = db.AccessTrees.AsNoTracking();
-
-        if (ignoreGlobalFilters)
-            trees = trees.IgnoreQueryFilters();
+        IQueryable<AccessTree> trees= GetIQueryable(showDeletedRows).AsNoTracking();
 
         return mapper.ProjectTo<AccessTreeDTO>(trees);
     }

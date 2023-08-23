@@ -34,11 +34,10 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories
             return new ValueTask<CompanyBranch>(entity);
         }
 
-        public async Task<CompanyBranch> FindAsync(long id, DateTime? asOf = null, bool ignoreGlobalFilters = false)
+        public async Task<CompanyBranch> FindAsync(long id, DateTime? asOf = null)
         {
             return await base.FindAsync(id,
                 asOf,
-                ignoreGlobalFilters: ignoreGlobalFilters,
                 x => x.Include(y => y.Company),
                 x => x.Include(y => y.Region),
                 x => x.Include(y => y.CompanyBranchDepartments).ThenInclude(y => y.Department),
@@ -46,12 +45,9 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories
             );
         }
 
-        public IQueryable<CompanyBranchListDTO> OdataList(bool ignoreGlobalFilters = false)
+        public IQueryable<CompanyBranchListDTO> OdataList(bool showDeletedRows = false)
         {
-            var data = db.CompanyBranches.AsNoTracking();
-
-            if (ignoreGlobalFilters)
-                data = data.IgnoreQueryFilters();
+            var data = GetIQueryable(showDeletedRows).AsNoTracking();
 
             return mapper.ProjectTo<CompanyBranchListDTO>(data);
         }
