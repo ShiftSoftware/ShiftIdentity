@@ -136,6 +136,38 @@ public class UserRepository :
 
         var trees = await db.AccessTrees.Where(x => accessTreeIds.Contains(x.ID)).ToDictionaryAsync(x => x.ID, x => x);
 
+        var inaccessibleAccessTress = new Dictionary<AccessTree, Dictionary<TypeAuth.Core.Actions.ActionBase, string>>();
+
+        foreach (var tree in trees.Values)
+        {
+            var tAuthBuilderForThisTree = new TypeAuthContextBuilder();
+
+            foreach (var type in typeAuthService.GetRegisteredActionTrees())
+            {
+                tAuthBuilderForThisTree.AddActionTree(type);
+            }
+
+            tAuthBuilderForThisTree.AddAccessTree(tree.Tree);
+
+            var tAuthForThisTree = tAuthBuilderForThisTree.Build();
+
+            var inAccessibleActions = this.typeAuthService.FindInAccessibleActionsOn(tAuthForThisTree);
+
+            if (inAccessibleActions.Count > 0)
+            {
+                inaccessibleAccessTress[tree] = inAccessibleActions;
+            }
+        }
+
+        if (inaccessibleAccessTress.Count > 0)
+        {
+            throw new ShiftEntityException(new Message(
+                "Error",
+                "Below Access Trees contain accesses that you can not grant",
+                inaccessibleAccessTress.Select(x => new Message(x.Key.Name, null!, x.Value.Select(y => new Message(y.Key.Name!, y.Value.ToString()!)).ToList())).ToList()
+            ));
+        }
+
         foreach (var item in entity.AccessTrees)
         {
             db.UserAccessTrees.Remove(item);
