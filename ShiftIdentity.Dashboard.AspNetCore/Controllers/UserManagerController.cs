@@ -34,7 +34,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
         {
             var loginUser = claimService.GetUser();
 
-            var user = await userRepo.FindAsync(loginUser.ID);
+            var user = await userRepo.FindAsync(loginUser.ID.ToLong());
 
             return new ShiftEntityResponse<UserDataDTO>(mapper.Map<UserDataDTO>(user));
         }
@@ -47,7 +47,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
 
             try
             {
-                user = await userRepo.UpdateUserDataAsync(dto, loginUser.ID);
+                user = await userRepo.UpdateUserDataAsync(dto, loginUser.ID.ToLong());
             }
             catch (ShiftEntityException ex)
             {
@@ -78,7 +78,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
         {
             var loginUser = claimService.GetUser();
 
-            var user = await userRepo.ChangePasswordAsync(dto, loginUser.ID);
+            var user = await userRepo.ChangePasswordAsync(dto, loginUser.ID.ToLong());
 
             if (user is null)
                 return BadRequest(new ShiftEntityResponse<UserDataDTO>

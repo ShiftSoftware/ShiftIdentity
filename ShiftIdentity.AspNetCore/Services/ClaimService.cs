@@ -19,7 +19,7 @@ public class ClaimService : IClaimService
         var dto = new TokenUserDataDTO
         {
             FullName = httpContextAccessor.HttpContext?.User?.Claims?.SingleOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value!,
-            ID = long.Parse(httpContextAccessor.HttpContext?.User?.Claims?.SingleOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value!),
+            ID = ShiftEntity.Web.Services.ShiftEntityHashIds.Decode<TokenUserDataDTO>(httpContextAccessor.HttpContext?.User?.Claims?.SingleOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value!).ToString(),
             Username = httpContextAccessor.HttpContext?.User?.Claims?.SingleOrDefault(c => c.Type == ClaimTypes.Name)?.Value!
         };
 

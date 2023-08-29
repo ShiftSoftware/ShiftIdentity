@@ -87,7 +87,7 @@ public class AuthController : ControllerBase
 
         var loginUser = claimService.GetUser();
 
-        var authCode = await authCodeService.GenerateCodeAsync(generateAuthCodeDto, loginUser.ID);
+        var authCode = await authCodeService.GenerateCodeAsync(generateAuthCodeDto, loginUser.ID.ToLong());
 
         if (authCode is null)
             return BadRequest(new ShiftEntityResponse<AuthCodeModel>

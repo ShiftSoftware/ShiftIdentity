@@ -32,7 +32,7 @@ public class FakeUserRepository : IUserRepository
     {
         var hash = HashService.GenerateHash(shiftIdentityOptions.UserPassword!);
 
-        return new User(this.shiftIdentityOptions.UserData.ID)
+        return new User(this.shiftIdentityOptions.UserData.ID.ToLong())
         {
             Email = shiftIdentityOptions.UserData?.Emails?.FirstOrDefault()?.Email ?? "",
             Phone = shiftIdentityOptions.UserData?.Phones?.FirstOrDefault()?.Phone ?? "",

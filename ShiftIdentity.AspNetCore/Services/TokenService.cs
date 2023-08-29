@@ -100,7 +100,7 @@ public class TokenService
 
         var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.NameIdentifier, user.ID.ToString()),
+                new Claim(ClaimTypes.NameIdentifier, ShiftEntity.Web.Services.ShiftEntityHashIds.Encode<Core.DTOs.User.UserDTO>(user.ID)),
                 new Claim(ClaimTypes.Name, user.Username),
                 new Claim(ClaimTypes.GivenName, user.FullName),
             };
@@ -150,7 +150,7 @@ public class TokenService
             UserData = new TokenUserDataDTO
             {
                 FullName = user.FullName,
-                ID = user.ID,
+                ID = user.ID.ToString(),
                 Username = user.Username,
             }
         };
