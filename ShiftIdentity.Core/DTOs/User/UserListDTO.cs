@@ -7,6 +7,7 @@ public class UserListDTO : ShiftEntityListDTO
 {
     [UserHashIdConverter]
     public override string? ID { get; set; }
+    public string? CompanyBranch { get; set; }
     public string FullName { get; set; } = default!;
     public string Username { get; set; } = default!;
     public string? Phone { get; set; }

@@ -12,5 +12,13 @@
            ComponentType="typeof(UserForm)"
            ShowIDColumn
            TypeAuthAction="ShiftIdentityActions.Users"
+           AutoGenerateColumns="false"
            EnableCsvExcelExport>
+    <ColumnTemplate>
+        <GridColumn HeaderText="Name" Field="@nameof(UserListDTO.FullName)" />
+        <GridColumn HeaderText="Username" Field="@nameof(UserListDTO.Username)" />
+        <GridColumn HeaderText="Phone" Field="@nameof(UserListDTO.Phone)" />
+        <GridColumn HeaderText="Email" Field="@nameof(UserListDTO.Email)" />
+        <GridColumn HeaderText="Branch" Field="@nameof(UserListDTO.CompanyBranch)" />
+    </ColumnTemplate>
 </ShiftList>

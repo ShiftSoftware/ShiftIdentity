@@ -57,6 +57,8 @@ public class User : ShiftEntity<User>
     public DateTime? BirthDate { get; set; }
     #endregion
 
+    public virtual CompanyBranch? CompanyBranch { get; set; }
+
     public IEnumerable<UserAccessTree> AccessTrees { get; set; }
 
     public User(long id) : base(id)

@@ -71,6 +71,16 @@
                      @bind-Checked="@TheItem.IsActive"></MudCheckBox>
     </MudItem>
 
+    <ShiftAutocomplete Label="Company Branch"
+                       T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
+                       @bind-Value="TheItem.CompanyBranchID"
+                       ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
+                       EntitySet="IdentityCompanyBranch"
+                       TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO"
+                       Where="@(q => x => x.Name!.Contains(q))"
+                       DataValueField="@nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO.ID)"
+                       DataTextField="@nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO.Name)" />
+
     <ShiftAutocomplete Label="Access Trees"
                        T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
                        @bind-Value="LastSelectedAccessTree"

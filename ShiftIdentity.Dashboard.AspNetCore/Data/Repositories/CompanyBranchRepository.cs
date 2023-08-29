@@ -56,7 +56,15 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories
         {
             entity.UpdateShiftEntity(userId);
 
+            var oldRegion = entity.RegionID;
+            var oldCompany = entity.CompanyID;
+
             AssignValues(dto, entity);
+
+            if (entity.RegionID != oldRegion || entity.CompanyID != oldCompany)
+            {
+                throw new ShiftEntityException(new Message("Error", $"Company and Region can not be changed after creation."));
+            }
 
             return new ValueTask<CompanyBranch>(entity);
         }

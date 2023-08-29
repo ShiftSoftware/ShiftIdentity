@@ -89,6 +89,17 @@ public class UserRepository :
         entity.FullName = dto.FullName;
         entity.BirthDate = dto.BirthDate;
 
+        if (dto.CompanyBranchID != null)
+        {
+            entity.CompanyBranchID = dto.CompanyBranchID.Value.ToLong();
+
+            var companyBranch = await db.CompanyBranches.FindAsync(entity.CompanyBranchID.Value);
+
+            entity.RegionID = companyBranch!.RegionID;
+
+            entity.CompanyID = companyBranch.CompanyID;
+        }
+
         var typeAuthContextBuilder_Producer = new TypeAuthContextBuilder();
         var typeAuthContextBuilder_Preserver = new TypeAuthContextBuilder();
 

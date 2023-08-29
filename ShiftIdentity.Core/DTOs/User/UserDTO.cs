@@ -11,6 +11,10 @@ public class UserDTO : ShiftEntityDTO
 {
     [UserHashIdConverter]
     public override string? ID { get; set; }
+
+    [CompanyBranchHashIdConverter]
+    public ShiftEntitySelectDTO? CompanyBranchID { get; set; }
+
     #region Security
     [Required]
     [MaxLength(255)]
