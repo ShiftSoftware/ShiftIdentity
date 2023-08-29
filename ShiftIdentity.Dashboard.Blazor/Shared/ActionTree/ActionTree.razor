@@ -1,6 +1,7 @@
 ﻿@using ShiftSoftware.TypeAuth.Core;
 @inject ShiftSoftware.TypeAuth.Blazor.Services.TypeAuthService tAuth
-
+@inject ShiftIdentityDashboardBlazorOptions shiftIdentityDashboardBlazorOptions
+@inject HttpService httpService
 
 <style>
     .mud-treeview-item-content {
@@ -152,11 +153,30 @@
     [Parameter]
     public bool Disabled { get; set; }
 
-    protected override void OnInitialized()
+    private async Task ExpandIdentityActions()
+    {
+        var companies = await this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO>>("/odata/IdentityCompanyBranch?$orderby=Company");
+
+        var companyList = new List<KeyValuePair<string, string>>();
+
+        foreach (var comapny in companies.Data!.Value)
+        {
+            companyList.Add(new KeyValuePair<string, string>(comapny.ID!, $"{comapny.Company} ↔ {comapny.Name}"));
+        }
+
+        Core.ShiftIdentityActions.DataLevelAccess.CompanyBranches.Expand(companyList);
+    }
+
+    protected override async Task OnInitializedAsync()
     {
         this.tAuth_LoggedInUser = tAuth;
 
         var typeAuthBuilder = new TypeAuthContextBuilder();
+
+        await ExpandIdentityActions();
+
+        if (shiftIdentityDashboardBlazorOptions.DynamicTypeAuthActionExpander != null)
+            await shiftIdentityDashboardBlazorOptions.DynamicTypeAuthActionExpander.Invoke();
 
         foreach (var item in this.tAuth_LoggedInUser.ActionTree.ActionTreeItems)
         {
@@ -177,8 +197,6 @@
 
         this.TreeItems = tree;
         this.initialized = true;
-
-        base.OnInitialized();
     }
 
     void TraverseTree(ActionTreeItem tree, ActionTreeItem? parent, List<ActionTreeItem>? flattenedList = null)

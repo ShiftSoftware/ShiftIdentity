@@ -12,4 +12,6 @@ public class ShiftIdentityDashboardBlazorOptions
     public string BaseAssress { get; set; } = default!;
 
     public ShiftIdentityDashboardRoutes DashboardRoutes { get; set; } = new ShiftIdentityDashboardRoutes();
+
+    public Func<Task>? DynamicTypeAuthActionExpander { get; set; }
 }

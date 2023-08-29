@@ -15,4 +15,10 @@ public class ShiftIdentityActions
     public readonly static ReadWriteDeleteAction Services = new ReadWriteDeleteAction("Services");
     public readonly static ReadWriteDeleteAction Companies = new ReadWriteDeleteAction("Companies");
     public readonly static ReadWriteDeleteAction CompanyBranches = new ReadWriteDeleteAction("Company Branches");
+
+    [ActionTree("Data Level Access", "Data Level or Row-Level Access")]
+    public class DataLevelAccess
+    {
+        public readonly static DynamicReadWriteDeleteAction CompanyBranches = new DynamicReadWriteDeleteAction("Company Branches");
+    }
 }
