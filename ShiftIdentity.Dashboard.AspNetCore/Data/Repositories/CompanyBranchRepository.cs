@@ -9,32 +9,14 @@ using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories
 {
     public class CompanyBranchRepository :
-        ShiftRepository<ShiftIdentityDB, CompanyBranch>,
+        ShiftRepository<ShiftIdentityDB, CompanyBranch, CompanyBranchListDTO, CompanyBranchDTO, CompanyBranchDTO>,
         IShiftRepositoryAsync<CompanyBranch, CompanyBranchListDTO, CompanyBranchDTO>
     {
-        private readonly ShiftIdentityDB db;
-
         public CompanyBranchRepository(ShiftIdentityDB db, IMapper mapper) : base(db, db.CompanyBranches, mapper)
         {
-            this.db = db;
         }
 
-        public ValueTask<CompanyBranch> CreateAsync(CompanyBranchDTO dto, long? userId = null)
-        {
-            var entity = new CompanyBranch().CreateShiftEntity(userId);
-
-            AssignValues(dto, entity);
-
-            return new ValueTask<CompanyBranch>(entity);
-        }
-
-        public ValueTask<CompanyBranch> DeleteAsync(CompanyBranch entity, long? userId = null)
-        {
-            entity.DeleteShiftEntity(userId);
-            return new ValueTask<CompanyBranch>(entity);
-        }
-
-        public async Task<CompanyBranch> FindAsync(long id, DateTime? asOf = null)
+        public async override Task<CompanyBranch> FindAsync(long id, DateTime? asOf = null)
         {
             return await base.FindAsync(id,
                 asOf,
@@ -44,38 +26,14 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories
                 x => x.Include(y => y.CompanyBranchServices).ThenInclude(y => y.Service)
             );
         }
-
-        public IQueryable<CompanyBranchListDTO> OdataList(bool showDeletedRows = false)
+        public override ValueTask<CompanyBranch> UpsertAsync(CompanyBranch entity, CompanyBranchDTO dto, ActionTypes actionType, long? userId = null)
         {
-            var data = GetIQueryable(showDeletedRows).AsNoTracking();
-
-            return mapper.ProjectTo<CompanyBranchListDTO>(data);
-        }
-
-        public ValueTask<CompanyBranch> UpdateAsync(CompanyBranch entity, CompanyBranchDTO dto, long? userId = null)
-        {
-            entity.UpdateShiftEntity(userId);
-
-            var oldRegion = entity.RegionID;
-            var oldCompany = entity.CompanyID;
-
-            AssignValues(dto, entity);
-
-            if (entity.RegionID != oldRegion || entity.CompanyID != oldCompany)
+            if (actionType == ActionTypes.Update)
             {
-                throw new ShiftEntityException(new Message("Error", $"Company and Region can not be changed after creation."));
+                if (entity.RegionID != dto.Region.Value.ToLong() || entity.CompanyID != dto.Company.Value.ToLong())
+                    throw new ShiftEntityException(new Message("Error", $"Company and Region can not be changed after creation."));
             }
 
-            return new ValueTask<CompanyBranch>(entity);
-        }
-
-        public ValueTask<CompanyBranchDTO> ViewAsync(CompanyBranch entity)
-        {
-            return new ValueTask<CompanyBranchDTO>(mapper.Map<CompanyBranchDTO>(entity));
-        }
-
-        private void AssignValues(CompanyBranchDTO dto, CompanyBranch entity)
-        {
             entity.Name = dto.Name;
             entity.ShortCode = dto.ShortCode;
             entity.ExternalId = dto.ExternalId;
@@ -110,6 +68,8 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories
             }
 
             entity.ReloadAfterSave = true;
+
+            return new ValueTask<CompanyBranch>(entity);
         }
     }
 }
