@@ -19,6 +19,8 @@ public class ShiftIdentityActions
     [ActionTree("Data Level Access", "Data Level or Row-Level Access")]
     public class DataLevelAccess
     {
-        public readonly static DynamicReadWriteDeleteAction CompanyBranches = new DynamicReadWriteDeleteAction("Company Branches");
+        public readonly static DynamicReadWriteDeleteAction Regions = new DynamicReadWriteDeleteAction("Regions");
+        public readonly static DynamicReadWriteDeleteAction Companies = new DynamicReadWriteDeleteAction("Companies");
+        public readonly static DynamicReadWriteDeleteAction Branches = new DynamicReadWriteDeleteAction("Branches");
     }
 }

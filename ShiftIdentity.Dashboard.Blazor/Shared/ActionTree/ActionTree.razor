@@ -155,16 +155,24 @@
 
     private async Task ExpandIdentityActions()
     {
-        var companies = await this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO>>("/odata/IdentityCompanyBranch?$orderby=Company");
+        var regionRequest = this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Region.RegionListDTO>>("/odata/IdentityRegion?$orderby=Name");
+        var companyRequest = this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Company.CompanyListDTO>>("/odata/IdentityCompany?$orderby=Name");
+        var branchRequest = this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO>>("/odata/IdentityCompanyBranch?$orderby=Company");
 
-        var companyList = new List<KeyValuePair<string, string>>();
-
-        foreach (var comapny in companies.Data!.Value)
+        await Task.WhenAll(new List<Task>
         {
-            companyList.Add(new KeyValuePair<string, string>(comapny.ID!, $"{comapny.Company} ↔ {comapny.Name}"));
-        }
+            regionRequest, companyRequest, branchRequest
+        });
 
-        Core.ShiftIdentityActions.DataLevelAccess.CompanyBranches.Expand(companyList);
+        var regions = await regionRequest;
+        var companies = await companyRequest;
+        var branches = await branchRequest;
+
+        Core.ShiftIdentityActions.DataLevelAccess.Regions.Expand(regions.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), true);
+        
+        Core.ShiftIdentityActions.DataLevelAccess.Companies.Expand(companies.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), true);
+
+        Core.ShiftIdentityActions.DataLevelAccess.Branches.Expand(branches.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, $"{x.Company} ↔ {x.Name}"); }).ToList(), true);
     }
 
     protected override async Task OnInitializedAsync()
