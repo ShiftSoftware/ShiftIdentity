@@ -8,7 +8,7 @@ public class Region : Profile
 {
 	public Region()
 	{
-        CreateMap<ShiftIdentity.AspNetCore.Entities.Region, RegionDTO>();
+        CreateMap<ShiftIdentity.AspNetCore.Entities.Region, RegionDTO>().ReverseMap();
         CreateMap<ShiftIdentity.AspNetCore.Entities.Region, RegionListDTO>();
     }
 }
