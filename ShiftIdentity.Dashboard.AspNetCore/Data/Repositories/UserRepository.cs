@@ -8,7 +8,6 @@ using ShiftSoftware.ShiftIdentity.AspNetCore.IRepositories;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.UserManager;
-using ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data;
 using ShiftSoftware.TypeAuth.AspNetCore.Services;
 using ShiftSoftware.TypeAuth.Core;
 using System.Net;
@@ -16,73 +15,37 @@ using System.Net;
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
 
 public class UserRepository :
-    ShiftRepository<ShiftIdentityDB, User>,
+    ShiftRepository<ShiftIdentityDB, User, UserListDTO, UserDTO, UserDTO>,
     IShiftRepositoryAsync<User, UserListDTO, UserDTO>,
     IUserRepository
 {
 
-    private readonly ShiftIdentityDB db;
     private readonly TypeAuthService typeAuthService;
     public UserRepository(ShiftIdentityDB db, TypeAuthService typeAuthService, IMapper mapper) : base(db, db.Users, mapper)
     {
-        this.db = db;
         this.typeAuthService = typeAuthService;
     }
-    public async ValueTask<User> CreateAsync(UserDTO dto, long? userId = null)
+
+    public override async ValueTask<User> UpsertAsync(User entity, UserDTO dto, ActionTypes actionType, long? userId = null)
     {
+        if (entity.BuiltIn)
+            throw new ShiftEntityException(new Message("Error", "Built-In Data can't be modified."), (int)HttpStatusCode.Forbidden);
+
+        long id = 0;
+
+        if (actionType == ActionTypes.Update)
+            id = dto.ID!.ToLong();
+
         //Check if the username is duplicate
-        if (await db.Users.AnyAsync(x => x.Username.ToLower() == dto.Username.ToLower()))
+        if (await db.Users.AnyAsync(x => x.Username.ToLower() == dto.Username.ToLower() && x.ID != id))
             throw new ShiftEntityException(new Message("Duplicate", $"the username {dto.Username} is exists"));
 
-        var entity = new User().CreateShiftEntity(userId);
+        if (actionType == ActionTypes.Insert)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Password))
+                throw new ShiftEntityException(new Message("Validation Error", "Password can not be empty."));
+        }
 
-        if (string.IsNullOrWhiteSpace(dto.Password))
-            throw new ShiftEntityException(new Message("Validation Error", "Password can not be empty."));
-
-        await AssignValues(dto, entity);
-
-        return entity;
-    }
-
-    public ValueTask<User> DeleteAsync(User entity, long? userId = null)
-    {
-        entity.DeleteShiftEntity(userId);
-        return new ValueTask<User>(entity);
-    }
-
-    public async Task<User> FindAsync(long id, DateTime? asOf = null)
-    {
-        return await base.FindAsync(id, asOf, x => x.Include(y => y.AccessTrees).ThenInclude(y => y.AccessTree));
-    }
-
-    public IQueryable<UserListDTO> OdataList(bool showDeletedRows = false)
-    {
-        IQueryable<User> users = GetIQueryable(showDeletedRows).AsNoTracking();
-
-        return mapper.ProjectTo<UserListDTO>(users);
-    }
-
-    public async ValueTask<User> UpdateAsync(User entity, UserDTO dto, long? userId = null)
-    {
-        //Check if the username is duplicate
-        if (dto.Username.ToLower() != entity.Username.ToLower())
-            if (await db.Users.AnyAsync(x => x.Username.ToLower() == dto.Username.ToLower()))
-                throw new ShiftEntityException(new Message("Duplicate", $"the username {dto.Username} is exists"));
-
-        entity.UpdateShiftEntity(userId);
-
-        await AssignValues(dto, entity);
-
-        return entity;
-    }
-
-    public ValueTask<UserDTO> ViewAsync(User entity)
-    {
-        return new ValueTask<UserDTO>(mapper.Map<UserDTO>(entity));
-    }
-
-    private async Task AssignValues(UserDTO dto, User entity)
-    {
         entity.Username = dto.Username;
         entity.IsActive = dto.IsActive;
         entity.Email = dto.Email;
@@ -189,11 +152,16 @@ public class UserRepository :
             AccessTree = trees[x.Value.ToLong()]
         }).ToList();
 
-        if (entity.BuiltIn)
-            throw new ShiftEntityException(new Message("Error", "Built-In Data can't be modified."), (int)HttpStatusCode.Forbidden);
+        return entity;
     }
 
-    
+    public override ValueTask<User> DeleteAsync(User entity, bool isHardDelete = false, long? userId = null)
+    {
+        if (entity.BuiltIn)
+            throw new ShiftEntityException(new Message("Error", "Built-In Data can't be modified."), (int)HttpStatusCode.Forbidden);
+
+        return base.DeleteAsync(entity, isHardDelete, userId);
+    }
 
     public async Task<User?> GetUserByUsernameAsync(string username)
     {
@@ -202,7 +170,7 @@ public class UserRepository :
 
     public async Task<User?> ChangePasswordAsync(ChangePasswordDTO dto, long userId)
     {
-        var user = await FindAsync(userId);
+        var user = await FindAsync(userId, null);
         if (user is null)
             return null;
 
@@ -222,7 +190,7 @@ public class UserRepository :
 
     public async Task<User?> UpdateUserDataAsync(UserDataDTO dto, long userId)
     {
-        var user = await FindAsync(userId);
+        var user = await FindAsync(userId, null);
 
         if (user is null)
             return null;

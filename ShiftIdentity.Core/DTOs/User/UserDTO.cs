@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
 using ShiftSoftware.ShiftEntity.Model.HashId;
+using FluentValidation;
 
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 
@@ -59,5 +60,18 @@ public class UserDTO : ShiftEntityDTO
     public UserDTO()
     {
         AccessTrees = new List<ShiftEntitySelectDTO>();
+    }
+}
+
+public class UserValidator : AbstractValidator<UserDTO>
+{
+    public UserValidator()
+    {
+        RuleFor(x => x.Phone)
+            .Custom((x, context) =>
+            {
+                if (x is not null && !ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(x))
+                    context.AddFailure("Invalid Phone Number.");
+            });
     }
 }

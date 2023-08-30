@@ -34,7 +34,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
         {
             var loginUser = claimService.GetUser();
 
-            var user = await userRepo.FindAsync(loginUser.ID.ToLong());
+            var user = await userRepo.FindAsync(loginUser.ID.ToLong(), null);
 
             return new ShiftEntityResponse<UserDataDTO>(mapper.Map<UserDataDTO>(user));
         }
