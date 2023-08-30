@@ -177,7 +177,7 @@ public class UserRepository :
         if (!HashService.VerifyPassword(dto.CurrentPassword, user.Salt, user.PasswordHash))
             return null;
 
-        user.UpdateShiftEntity(userId);
+        
         var hash = HashService.GenerateHash(dto.NewPassword);
         user.PasswordHash = hash.PasswordHash;
         user.Salt = hash.Salt;
@@ -195,7 +195,6 @@ public class UserRepository :
         if (user is null)
             return null;
 
-        user.UpdateShiftEntity(userId);
 
         //Assign values
         user.Username = dto.Username;

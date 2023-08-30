@@ -42,7 +42,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data
 
             if (user == null)
             {
-                user = new User().CreateShiftEntity();
+                user = new User(builtInUserId);
 
                 db.Users.Add(user);
             }
