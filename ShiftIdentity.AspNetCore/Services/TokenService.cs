@@ -2,6 +2,9 @@
 using ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
 using ShiftSoftware.ShiftIdentity.AspNetCore.IRepositories;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
+using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
+using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
+using ShiftSoftware.ShiftIdentity.Core.DTOs.Region;
 using ShiftSoftware.ShiftIdentity.Core.Models;
 using ShiftSoftware.TypeAuth.Core;
 using System.IdentityModel.Tokens.Jwt;
@@ -104,6 +107,15 @@ public class TokenService
                 new Claim(ClaimTypes.Name, user.Username),
                 new Claim(ClaimTypes.GivenName, user.FullName),
             };
+
+        if (user.RegionID.HasValue)
+            claims.Add(new Claim(ShiftEntity.Core.Constants.RegionIdClaim, ShiftEntity.Web.Services.ShiftEntityHashIds.Encode<RegionDTO>(user.RegionID.Value)));
+
+        if (user.CompanyID.HasValue)
+            claims.Add(new Claim(ShiftEntity.Core.Constants.CompanyIdClaim, ShiftEntity.Web.Services.ShiftEntityHashIds.Encode<CompanyDTO>(user.CompanyID.Value)));
+
+        if (user.CompanyBranchID.HasValue)
+            claims.Add(new Claim(ShiftEntity.Core.Constants.CompanyBranchIdClaim, ShiftEntity.Web.Services.ShiftEntityHashIds.Encode<CompanyBranchDTO>(user.CompanyBranchID.Value)));
 
         claims.Add(new Claim(ShiftIdentityClaims.ExternalToken, external.ToString().ToLower()));
 
