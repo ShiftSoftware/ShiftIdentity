@@ -8,7 +8,6 @@ public class App : Profile
 {
 	public App()
 	{
-        CreateMap<ShiftIdentity.AspNetCore.Entities.App, AppDTO>();
-        CreateMap<ShiftIdentity.AspNetCore.Entities.App, AppDTO>();
+        CreateMap<ShiftIdentity.AspNetCore.Entities.App, AppDTO>().ReverseMap();
     }
 }
