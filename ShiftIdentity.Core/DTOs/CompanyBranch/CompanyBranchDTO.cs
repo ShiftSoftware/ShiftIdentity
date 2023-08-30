@@ -1,5 +1,7 @@
-﻿using ShiftSoftware.ShiftEntity.Model.Dtos;
+﻿using FluentValidation;
+using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.HashId;
+using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
@@ -31,4 +33,18 @@ public class CompanyBranchDTO : ShiftEntityDTO
 
     [ServiceHashIdConverter]
     public IEnumerable<ShiftEntitySelectDTO> Services { get; set; } = new List<ShiftEntitySelectDTO>();
+}
+
+
+public class CompanyBranchValidator : AbstractValidator<CompanyBranchDTO>
+{
+    public CompanyBranchValidator()
+    {
+        RuleFor(x => x.Phone)
+            .Custom((x, context) =>
+            {
+                if (x is not null && !ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(x))
+                    context.AddFailure("Invalid Phone Number.");
+            });
+    }
 }

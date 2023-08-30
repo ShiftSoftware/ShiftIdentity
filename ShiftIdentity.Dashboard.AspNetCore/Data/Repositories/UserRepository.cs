@@ -126,10 +126,10 @@ public class UserRepository :
 
         if (dto.Phone != null)
         {
-            if (!PhoneIsValid(dto.Phone))
+            if (!Core.ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(dto.Phone))
                 throw new ShiftEntityException(new Message("Validation Error", "Invalid Phone Number"));
 
-            entity.Phone = GetFormattedPhone(dto.Phone);
+            entity.Phone = Core.ValidatorsAndFormatters.PhoneNumber.GetFormattedPhone(dto.Phone);
         }
 
         if (!string.IsNullOrEmpty(dto.Password))
@@ -193,23 +193,7 @@ public class UserRepository :
             throw new ShiftEntityException(new Message("Error", "Built-In Data can't be modified."), (int)HttpStatusCode.Forbidden);
     }
 
-    public static string GetFormattedPhone(string phone)
-    {
-        var phoneNumberUtil = PhoneNumbers.PhoneNumberUtil.GetInstance();
-
-        var phoneNumber = phoneNumberUtil.Parse(phone, "IQ");
-
-        return phoneNumberUtil.Format(phoneNumber, PhoneNumbers.PhoneNumberFormat.INTERNATIONAL);
-    }
-
-    public static bool PhoneIsValid(string phone)
-    {
-        var phoneNumberUtil = PhoneNumbers.PhoneNumberUtil.GetInstance();
-
-        var phoneNumber = phoneNumberUtil.Parse(phone, "IQ");
-
-        return phoneNumberUtil.IsValidNumber(phoneNumber);
-    }
+    
 
     public async Task<User?> GetUserByUsernameAsync(string username)
     {
@@ -254,10 +238,10 @@ public class UserRepository :
         //Assign phone
         if (dto.Phone != null)
         {
-            if (!PhoneIsValid(dto.Phone))
+            if (!Core.ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(dto.Phone))
                 throw new ShiftEntityException(new Message("Validation Error", "Invalid Phone Number"));
 
-            user.Phone = GetFormattedPhone(dto.Phone);
+            user.Phone = Core.ValidatorsAndFormatters.PhoneNumber.GetFormattedPhone(dto.Phone);
         }
 
         return user;

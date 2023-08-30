@@ -61,10 +61,10 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories
 
             if (!string.IsNullOrWhiteSpace(dto.Phone))
             {
-                if (!UserRepository.PhoneIsValid(dto.Phone))
+                if (!Core.ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(dto.Phone))
                     throw new ShiftEntityException(new Message("Validation Error", "Invalid Phone Number"));
 
-                entity.Phone = UserRepository.GetFormattedPhone(dto.Phone);
+                entity.Phone = Core.ValidatorsAndFormatters.PhoneNumber.GetFormattedPhone(dto.Phone);
             }
 
             entity.ReloadAfterSave = true;
