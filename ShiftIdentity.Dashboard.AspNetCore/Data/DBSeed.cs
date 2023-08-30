@@ -42,17 +42,16 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data
 
             if (user == null)
             {
-                user = new User
-                {
-                    FullName = "Super User",
-                    IsActive = true,
-                    Username = "SuperUser",
-                    BuiltIn = true,
-                    RequireChangePassword = false
-                }.CreateShiftEntity();
+                user = new User().CreateShiftEntity();
 
                 db.Users.Add(user);
             }
+
+            user.FullName = "Super User";
+            user.IsActive = true;
+            user.Username = "SuperUser";
+            user.BuiltIn = true;
+            user.RequireChangePassword = false;
 
             user.AccessTree = jsonTree;
 
