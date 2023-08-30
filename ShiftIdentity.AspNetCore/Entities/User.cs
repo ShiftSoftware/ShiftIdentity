@@ -7,11 +7,13 @@ using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 using System.ComponentModel.DataAnnotations.Schema;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
+using ShiftSoftware.ShiftIdentity.Core;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
 
 [TemporalShiftEntity]
 [Table("Users", Schema = "ShiftIdentity")]
+[DontSetCompanyInfoOnThisEntityWithAutoTrigger]
 public class User : ShiftEntity<User>
 {
     #region Security

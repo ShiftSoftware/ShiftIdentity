@@ -1,12 +1,13 @@
 ﻿
 using ShiftSoftware.ShiftEntity.Core;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.Region;
+using ShiftSoftware.ShiftIdentity.Core;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
 
 [TemporalShiftEntity]
 [Table("Regions", Schema = "ShiftIdentity")]
+[DontSetCompanyInfoOnThisEntityWithAutoTrigger]
 public class Region : ShiftEntity<Region>
 {
     public string Name { get; set; } = default!;

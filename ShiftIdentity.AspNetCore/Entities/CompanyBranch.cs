@@ -1,4 +1,5 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
+using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -6,6 +7,7 @@ namespace ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
 
 [TemporalShiftEntity]
 [Table("CompanyBranches", Schema = "ShiftIdentity")]
+[DontSetCompanyInfoOnThisEntityWithAutoTrigger]
 public class CompanyBranch : ShiftEntity<CompanyBranch>
 {
     public string Name { get; set; } = default!;
