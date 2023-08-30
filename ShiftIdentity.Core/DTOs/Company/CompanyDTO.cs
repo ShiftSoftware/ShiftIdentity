@@ -1,4 +1,5 @@
-﻿using ShiftSoftware.ShiftEntity.Model.Dtos;
+﻿using FluentValidation;
+using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.HashId;
 using ShiftSoftware.ShiftIdentity.Core.Enums;
 using System.ComponentModel.DataAnnotations;
@@ -26,4 +27,17 @@ public class CompanyDTO : ShiftEntityDTO
     public string? HQPhone { get; set; }
     public string? HQEmail { get; set; }
     public string? HQAddress { get; set; }
+}
+
+public class CompanyValidator : AbstractValidator<CompanyDTO>
+{
+    public CompanyValidator()
+    {
+        RuleFor(x => x.HQPhone)
+            .Custom((x, context) =>
+            {
+                if (x is not null && !ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(x))
+                    context.AddFailure("Invalid Phone Number.");
+            });
+    }
 }
