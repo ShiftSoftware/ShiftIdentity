@@ -53,7 +53,7 @@ public class FakeUserRepository : IUserRepository
 
     }
 
-    public IQueryable<UserListDTO> OdataList(bool showDeletedRows = false)
+    public IQueryable<UserListDTO> OdataList(bool showDeletedRows = false, IQueryable<User>? queryable = null)
     {
         return new List<UserListDTO> {
             new UserListDTO {

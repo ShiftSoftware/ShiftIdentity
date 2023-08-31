@@ -11,8 +11,6 @@ namespace ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
 public class CompanyBranch : ShiftEntity<CompanyBranch>
 {
     public string Name { get; set; } = default!;
-    public long CompanyID { get; set; }
-    public long RegionID { get; set; }
     public string? Phone { get; set; }
     public string? Email { get; set; }
     public string? Address { get; set; }
