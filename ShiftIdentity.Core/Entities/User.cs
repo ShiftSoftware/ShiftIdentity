@@ -2,14 +2,9 @@
 using System.ComponentModel.DataAnnotations;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 using System.ComponentModel.DataAnnotations.Schema;
-using ShiftSoftware.ShiftEntity.Model.Dtos;
-using ShiftSoftware.ShiftIdentity.Core;
 
-namespace ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
+namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
 [Table("Users", Schema = "ShiftIdentity")]

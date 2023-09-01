@@ -8,7 +8,7 @@ public class Department : Profile
 {
     public Department()
     {
-        CreateMap<ShiftIdentity.AspNetCore.Entities.Department, DepartmentDTO>().ReverseMap();
-        CreateMap<ShiftIdentity.AspNetCore.Entities.Department, DepartmentListDTO>();
+        CreateMap<Core.Entities.Department, DepartmentDTO>().ReverseMap();
+        CreateMap<Core.Entities.Department, DepartmentListDTO>();
     }
 }

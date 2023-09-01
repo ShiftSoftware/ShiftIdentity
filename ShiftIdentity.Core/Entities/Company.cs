@@ -1,10 +1,9 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
-using ShiftSoftware.ShiftIdentity.Core;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
 using ShiftSoftware.ShiftIdentity.Core.Enums;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
+namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
 [Table("Companies", Schema = "ShiftIdentity")]
@@ -26,7 +25,7 @@ public class Company : ShiftEntity<Company>
 
     public Company()
     {
-        this.CompanyBranches = new HashSet<CompanyBranch>();
+        CompanyBranches = new HashSet<CompanyBranch>();
     }
 
 }

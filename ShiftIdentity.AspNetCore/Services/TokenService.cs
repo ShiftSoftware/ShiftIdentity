@@ -1,10 +1,10 @@
 ﻿using Microsoft.IdentityModel.Tokens;
-using ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
 using ShiftSoftware.ShiftIdentity.AspNetCore.IRepositories;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Region;
+using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.ShiftIdentity.Core.Models;
 using ShiftSoftware.TypeAuth.Core;
 using System.IdentityModel.Tokens.Jwt;

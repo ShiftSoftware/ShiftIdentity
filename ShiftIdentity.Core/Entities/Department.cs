@@ -1,9 +1,8 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.Department;
 using System.ComponentModel.DataAnnotations.Schema;
 
 
-namespace ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
+namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
 [Table("Departments", Schema = "ShiftIdentity")]

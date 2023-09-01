@@ -1,4 +1,4 @@
-﻿using ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
+﻿using ShiftSoftware.ShiftIdentity.Core.Entities;
 using System.Threading.Tasks;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.IRepositories

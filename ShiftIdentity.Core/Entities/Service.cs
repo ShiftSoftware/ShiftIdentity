@@ -1,9 +1,7 @@
-﻿
-using ShiftSoftware.ShiftEntity.Core;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.Service;
+﻿using ShiftSoftware.ShiftEntity.Core;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
+namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
 [Table("Services", Schema = "ShiftIdentity")]

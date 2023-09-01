@@ -1,5 +1,5 @@
-﻿using ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
+﻿using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
+using ShiftSoftware.ShiftIdentity.Core.Entities;
 using System;
 using System.Linq;
 using System.Threading.Tasks;

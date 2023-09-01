@@ -9,7 +9,7 @@ public class User : Profile
 {
 	public User()
 	{
-        CreateMap<ShiftIdentity.AspNetCore.Entities.User, UserDTO>()
+        CreateMap<Core.Entities.User, UserDTO>()
             .ForMember(
                     dest => dest.AccessTrees,
                     opt => opt.MapFrom(src => src.AccessTrees.Select(y => new ShiftEntitySelectDTO { Value = y.AccessTreeID.ToString(), Text = y.AccessTree.Name }))
@@ -19,12 +19,12 @@ public class User : Profile
                     opt => opt.MapFrom(src => !src.CompanyBranchID.HasValue ? null : new ShiftEntitySelectDTO { Value = src.CompanyBranchID.ToString()!, Text = null })
                 );
 
-        CreateMap<ShiftIdentity.AspNetCore.Entities.User, UserListDTO>()
+        CreateMap<Core.Entities.User, UserListDTO>()
             .ForMember(
                     dest => dest.CompanyBranch,
                     opt => opt.MapFrom(src => !src.CompanyBranchID.HasValue ? null : src.CompanyBranch!.Name)
                 );
 
-        CreateMap<ShiftIdentity.AspNetCore.Entities.User, UserDataDTO>();
+        CreateMap<Core.Entities.User, UserDataDTO>();
     }
 }

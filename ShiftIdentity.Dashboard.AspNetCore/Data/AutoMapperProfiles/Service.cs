@@ -8,7 +8,7 @@ public class Service : Profile
 {
 	public Service()
 	{
-        CreateMap<ShiftIdentity.AspNetCore.Entities.Service, ServiceDTO>().ReverseMap();
-        CreateMap<ShiftIdentity.AspNetCore.Entities.Service, ServiceListDTO>();
+        CreateMap<Core.Entities.Service, ServiceDTO>().ReverseMap();
+        CreateMap<Core.Entities.Service, ServiceListDTO>();
     }
 }

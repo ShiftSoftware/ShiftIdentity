@@ -2,8 +2,8 @@
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
-using ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
+using ShiftSoftware.ShiftIdentity.Core.Entities;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
 

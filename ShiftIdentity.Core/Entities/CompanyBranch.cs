@@ -1,9 +1,8 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
-using ShiftSoftware.ShiftIdentity.Core;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
+namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
 [Table("CompanyBranches", Schema = "ShiftIdentity")]
@@ -23,8 +22,8 @@ public class CompanyBranch : ShiftEntity<CompanyBranch>
 
     public CompanyBranch()
     {
-        this.CompanyBranchDepartments = new HashSet<CompanyBranchDepartment>();
-        this.CompanyBranchServices = new HashSet<CompanyBranchService>();
+        CompanyBranchDepartments = new HashSet<CompanyBranchDepartment>();
+        CompanyBranchServices = new HashSet<CompanyBranchService>();
     }
 
 }

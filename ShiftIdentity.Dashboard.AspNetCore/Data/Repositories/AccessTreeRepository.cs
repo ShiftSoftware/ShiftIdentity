@@ -1,13 +1,13 @@
 ﻿using AutoMapper;
 using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Core;
-using ShiftSoftware.ShiftIdentity.AspNetCore.Entities;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
 using ShiftSoftware.TypeAuth.AspNetCore.Services;
 using Microsoft.EntityFrameworkCore;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.TypeAuth.Core;
 using System.Net;
+using ShiftSoftware.ShiftIdentity.Core.Entities;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
 

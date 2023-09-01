@@ -9,7 +9,7 @@ public class CompanyBranch : Profile
 {
 	public CompanyBranch()
 	{
-        CreateMap<ShiftIdentity.AspNetCore.Entities.CompanyBranch, CompanyBranchDTO>()
+        CreateMap<Core.Entities.CompanyBranch, CompanyBranchDTO>()
             .ForMember(
                     dest => dest.Company,
                     opt => opt.MapFrom(src => new ShiftEntitySelectDTO { Value = src.CompanyID.ToString()!, Text = src.Company!.Name })
@@ -28,7 +28,7 @@ public class CompanyBranch : Profile
                 );
 
 
-        CreateMap<ShiftIdentity.AspNetCore.Entities.CompanyBranch, CompanyBranchListDTO>()
+        CreateMap<Core.Entities.CompanyBranch, CompanyBranchListDTO>()
             .ForMember(
                     dest => dest.Company,
                     opt => opt.MapFrom(src => src.Company.Name)
