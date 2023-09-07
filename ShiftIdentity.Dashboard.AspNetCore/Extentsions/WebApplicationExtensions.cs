@@ -8,7 +8,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Extentsions;
 
 public static class WebApplicationExtensions
 {
-    public static async Task<WebApplication> SeedDBAsync(this WebApplication app, string superUserPassword)
+    public static async Task<WebApplication> SeedDBAsync(this WebApplication app, string superUserPassword, DBSeedOptions? dBSeedOptions = null)
     {
         using var scope = app.Services.CreateScope();
 
@@ -31,7 +31,7 @@ public static class WebApplicationExtensions
         if (!actionTrees.Contains(typeof(ShiftIdentityActions)))
             actionTrees.Add(typeof(ShiftIdentityActions));
 
-        await new DBSeed(db, actionTrees, superUserPassword).SeedAsync();
+        await new DBSeed(db, actionTrees, superUserPassword, dBSeedOptions).SeedAsync();
 
         return app;
     }

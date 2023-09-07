@@ -32,9 +32,6 @@ public class AccessTreeRepository :
         if (await db.AccessTrees.AnyAsync(x => x.Name.ToLower() == dto.Name.ToLower() && x.ID != id))
             throw new ShiftEntityException(new Message("Duplicate", $"the access tree name ({dto.Name}) already exists."));
 
-        if (entity.BuiltIn)
-            throw new ShiftEntityException(new Message("Error", "Built-In Data can't be modified."), (int)HttpStatusCode.Forbidden);
-
         var typeAuthContextBuilder_Producer = new TypeAuthContextBuilder();
         var typeAuthContextBuilder_Preserver = new TypeAuthContextBuilder();
 

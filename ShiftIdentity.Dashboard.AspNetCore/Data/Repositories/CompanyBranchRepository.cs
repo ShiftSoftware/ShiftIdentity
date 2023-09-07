@@ -5,6 +5,7 @@ using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
+using System.Net;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories
 {
@@ -28,6 +29,9 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories
         }
         public override ValueTask<CompanyBranch> UpsertAsync(CompanyBranch entity, CompanyBranchDTO dto, ActionTypes actionType, long? userId = null)
         {
+            if (entity.BuiltIn)
+                throw new ShiftEntityException(new Message("Error", "Built-In Data can't be modified."), (int)HttpStatusCode.Forbidden);
+
             if (actionType == ActionTypes.Update)
             {
                 if (entity.RegionID != dto.Region.Value.ToLong() || entity.CompanyID != dto.Company.Value.ToLong())
@@ -70,6 +74,14 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories
             entity.ReloadAfterSave = true;
 
             return new ValueTask<CompanyBranch>(entity);
+        }
+
+        public override ValueTask<CompanyBranch> DeleteAsync(CompanyBranch entity, bool isHardDelete = false, long? userId = null)
+        {
+            if (entity.BuiltIn)
+                throw new ShiftEntityException(new Message("Error", "Built-In Data can't be modified."), (int)HttpStatusCode.Forbidden);
+
+            return base.DeleteAsync(entity, isHardDelete, userId);
         }
     }
 }

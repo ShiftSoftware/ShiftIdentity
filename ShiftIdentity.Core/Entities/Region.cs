@@ -12,6 +12,7 @@ public class Region : ShiftEntity<Region>
     public string Name { get; set; } = default!;
     public string? ExternalId { get; set; } = default!;
     public string? ShortCode { get; set; }
+    public bool BuiltIn { get; set; }
 
     public virtual ICollection<CompanyBranch> CompanyBranches { get; set; }
 

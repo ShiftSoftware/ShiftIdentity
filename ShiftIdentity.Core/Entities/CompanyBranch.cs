@@ -15,6 +15,7 @@ public class CompanyBranch : ShiftEntity<CompanyBranch>
     public string? Address { get; set; }
     public string? ExternalId { get; set; } = default!;
     public string? ShortCode { get; set; }
+    public bool BuiltIn { get; set; }
     public virtual Company Company { get; set; } = default!;
     public virtual Region Region { get; set; } = default!;
     public virtual ICollection<CompanyBranchDepartment> CompanyBranchDepartments { get; set; }

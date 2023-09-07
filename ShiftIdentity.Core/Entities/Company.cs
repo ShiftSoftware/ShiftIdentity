@@ -20,6 +20,7 @@ public class Company : ShiftEntity<Company>
     public string? HQPhone { get; set; }
     public string? HQEmail { get; set; }
     public string? HQAddress { get; set; }
+    public bool BuiltIn { get; set; }
 
     public virtual ICollection<CompanyBranch> CompanyBranches { get; set; }
 

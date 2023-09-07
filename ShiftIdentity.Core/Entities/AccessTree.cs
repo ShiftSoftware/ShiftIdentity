@@ -15,8 +15,6 @@ public class AccessTree : ShiftEntity<AccessTree>
     [Required]
     public string Tree { get; set; } = default!;
 
-    public bool BuiltIn { get; set; }
-
     //public IEnumerable<UserAccessTree> Users { get; set; }
 
     public AccessTree()

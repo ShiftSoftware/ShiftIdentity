@@ -56,7 +56,7 @@ public class UserRepository :
         {
             entity.CompanyBranchID = dto.CompanyBranchID.Value.ToLong();
 
-            var companyBranch = await db.CompanyBranches.FindAsync(entity.CompanyBranchID.Value);
+            var companyBranch = await db.CompanyBranches.FindAsync(entity.CompanyBranchID);
 
             entity.RegionID = companyBranch!.RegionID;
 
