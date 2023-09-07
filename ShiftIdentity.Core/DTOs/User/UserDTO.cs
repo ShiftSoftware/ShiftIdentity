@@ -13,6 +13,7 @@ public class UserDTO : ShiftEntityDTO
     [UserHashIdConverter]
     public override string? ID { get; set; }
 
+    [Required]
     [CompanyBranchHashIdConverter]
     public ShiftEntitySelectDTO? CompanyBranchID { get; set; }
 

@@ -108,14 +108,11 @@ public class TokenService
                 new Claim(ClaimTypes.GivenName, user.FullName),
             };
 
-        if (user.RegionID.HasValue)
-            claims.Add(new Claim(ShiftEntity.Core.Constants.RegionIdClaim, ShiftEntity.Web.Services.ShiftEntityHashIds.Encode<RegionDTO>(user.RegionID.Value)));
+        claims.Add(new Claim(ShiftEntity.Core.Constants.RegionIdClaim, ShiftEntity.Web.Services.ShiftEntityHashIds.Encode<RegionDTO>(user.RegionID)));
 
-        if (user.CompanyID.HasValue)
-            claims.Add(new Claim(ShiftEntity.Core.Constants.CompanyIdClaim, ShiftEntity.Web.Services.ShiftEntityHashIds.Encode<CompanyDTO>(user.CompanyID.Value)));
+        claims.Add(new Claim(ShiftEntity.Core.Constants.CompanyIdClaim, ShiftEntity.Web.Services.ShiftEntityHashIds.Encode<CompanyDTO>(user.CompanyID)));
 
-        if (user.CompanyBranchID.HasValue)
-            claims.Add(new Claim(ShiftEntity.Core.Constants.CompanyBranchIdClaim, ShiftEntity.Web.Services.ShiftEntityHashIds.Encode<CompanyBranchDTO>(user.CompanyBranchID.Value)));
+        claims.Add(new Claim(ShiftEntity.Core.Constants.CompanyBranchIdClaim, ShiftEntity.Web.Services.ShiftEntityHashIds.Encode<CompanyBranchDTO>(user.CompanyBranchID)));
 
         claims.Add(new Claim(ShiftIdentityClaims.ExternalToken, external.ToString().ToLower()));
 

@@ -16,13 +16,13 @@ public class User : Profile
                 )
             .ForMember(
                     dest => dest.CompanyBranchID,
-                    opt => opt.MapFrom(src => !src.CompanyBranchID.HasValue ? null : new ShiftEntitySelectDTO { Value = src.CompanyBranchID.ToString()!, Text = null })
+                    opt => opt.MapFrom(src => new ShiftEntitySelectDTO { Value = src.CompanyBranchID.ToString()!, Text = null })
                 );
 
         CreateMap<Core.Entities.User, UserListDTO>()
             .ForMember(
                     dest => dest.CompanyBranch,
-                    opt => opt.MapFrom(src => !src.CompanyBranchID.HasValue ? null : src.CompanyBranch!.Name)
+                    opt => opt.MapFrom(src => src.CompanyBranch!.Name)
                 );
 
         CreateMap<Core.Entities.User, UserDataDTO>();

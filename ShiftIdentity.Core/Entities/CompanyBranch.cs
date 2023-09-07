@@ -20,6 +20,9 @@ public class CompanyBranch : ShiftEntity<CompanyBranch>
     public virtual ICollection<CompanyBranchDepartment> CompanyBranchDepartments { get; set; }
     public virtual ICollection<CompanyBranchService> CompanyBranchServices { get; set; }
 
+    public new long RegionID { get; set; }
+    public new long CompanyID { get; set; }
+
     public CompanyBranch()
     {
         CompanyBranchDepartments = new HashSet<CompanyBranchDepartment>();
