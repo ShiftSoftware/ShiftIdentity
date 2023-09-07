@@ -26,6 +26,11 @@ public class UserRepository :
         this.typeAuthService = typeAuthService;
     }
 
+    public override async Task<User> FindAsync(long id, DateTime? asOf = null)
+    {
+        return await base.FindAsync(id, asOf, x => x.Include(y => y.AccessTrees).ThenInclude(y => y.AccessTree));
+    }
+
     public override async ValueTask<User> UpsertAsync(User entity, UserDTO dto, ActionTypes actionType, long? userId = null)
     {
         if (entity.BuiltIn)
@@ -151,6 +156,8 @@ public class UserRepository :
         {
             AccessTree = trees[x.Value.ToLong()]
         }).ToList();
+
+        entity.ReloadAfterSave = true;
 
         return entity;
     }
