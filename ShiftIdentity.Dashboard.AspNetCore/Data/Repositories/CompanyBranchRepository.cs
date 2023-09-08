@@ -5,6 +5,7 @@ using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
+using System.Linq.Expressions;
 using System.Net;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories
@@ -17,16 +18,18 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories
         {
         }
 
-        public async override Task<CompanyBranch> FindAsync(long id, DateTime? asOf = null)
+        public override async Task<CompanyBranch> FindAsync(long id, DateTime? asOf = null, Expression<Func<CompanyBranch, bool>>? where = null)
         {
             return await base.FindAsync(id,
-                asOf,
-                x => x.Include(y => y.Company),
-                x => x.Include(y => y.Region),
-                x => x.Include(y => y.CompanyBranchDepartments).ThenInclude(y => y.Department),
-                x => x.Include(y => y.CompanyBranchServices).ThenInclude(y => y.Service)
-            );
+               asOf,
+               where,
+               x => x.Include(y => y.Company),
+               x => x.Include(y => y.Region),
+               x => x.Include(y => y.CompanyBranchDepartments).ThenInclude(y => y.Department),
+               x => x.Include(y => y.CompanyBranchServices).ThenInclude(y => y.Service)
+           );
         }
+
         public override ValueTask<CompanyBranch> UpsertAsync(CompanyBranch entity, CompanyBranchDTO dto, ActionTypes actionType, long? userId = null)
         {
             if (entity.BuiltIn)
