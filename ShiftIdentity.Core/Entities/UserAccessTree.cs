@@ -12,7 +12,7 @@ public class UserAccessTree
 
     public long AccessTreeID { get; set; }
 
-    public User User { get; set; } = default!;
+    public virtual User User { get; set; } = default!;
 
-    public AccessTree AccessTree { get; set; } = default!;
+    public virtual AccessTree AccessTree { get; set; } = default!;
 }

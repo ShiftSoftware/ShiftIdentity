@@ -62,7 +62,7 @@ public class User : ShiftEntity<User>
     public virtual Company Company { get; set; }
     public virtual CompanyBranch CompanyBranch { get; set; }
 
-    public IEnumerable<UserAccessTree> AccessTrees { get; set; }
+    public virtual IEnumerable<UserAccessTree> AccessTrees { get; set; }
 
     public User(long id) : base(id)
     {
