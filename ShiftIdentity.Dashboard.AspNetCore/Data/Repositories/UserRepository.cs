@@ -222,8 +222,8 @@ public class UserRepository :
         return user;
     }
 
-    public override Task SaveChangesAsync(bool wrapInTransaction = false)
+    public override Task SaveChangesAsync(bool raiseBeforeCommitTriggers = false)
     {
-        return base.SaveChangesAsync(wrapInTransaction);
+        return base.SaveChangesAsync(raiseBeforeCommitTriggers);
     }
 }
