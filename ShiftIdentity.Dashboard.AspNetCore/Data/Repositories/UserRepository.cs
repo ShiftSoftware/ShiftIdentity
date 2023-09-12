@@ -10,7 +10,6 @@ using ShiftSoftware.ShiftIdentity.Core.DTOs.UserManager;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.TypeAuth.AspNetCore.Services;
 using ShiftSoftware.TypeAuth.Core;
-using System.Linq.Expressions;
 using System.Net;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
@@ -22,14 +21,11 @@ public class UserRepository :
 {
 
     private readonly TypeAuthService typeAuthService;
-    public UserRepository(ShiftIdentityDB db, TypeAuthService typeAuthService, IMapper mapper) : base(db, db.Users, mapper)
+    public UserRepository(ShiftIdentityDB db, TypeAuthService typeAuthService, IMapper mapper) : base(db, db.Users, mapper, r => 
+        r.IncludeRelatedEntitiesWithFindAsync(x => x.Include(y => y.AccessTrees).ThenInclude(y => y.AccessTree))
+    )
     {
         this.typeAuthService = typeAuthService;
-    }
-
-    public override async Task<User> FindAsync(long id, DateTime? asOf = null, Expression<Func<User, bool>>? where = null)
-    {
-        return await base.FindAsync(id, asOf, where, x => x.Include(y => y.AccessTrees).ThenInclude(y => y.AccessTree));
     }
 
     public override async ValueTask<User> UpsertAsync(User entity, UserDTO dto, ActionTypes actionType, long? userId = null)
@@ -157,8 +153,6 @@ public class UserRepository :
         {
             AccessTree = trees[x.Value.ToLong()]
         }).ToList();
-
-        entity.ReloadAfterSave = true;
 
         return entity;
     }
