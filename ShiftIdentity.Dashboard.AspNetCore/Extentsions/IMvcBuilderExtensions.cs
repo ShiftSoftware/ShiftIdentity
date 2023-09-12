@@ -34,17 +34,17 @@ public static class IMvcBuilderExtensions
         return builder;
     }
 
-    private static IMvcBuilder RegisterIShiftEntityPrepareForSync(this IMvcBuilder builder)
+    private static IMvcBuilder RegisterIShiftEntityPrepareForReplication(this IMvcBuilder builder)
     {
         Assembly repositoryAssembly = Assembly.GetExecutingAssembly(); // Adjust this as needed
 
         var repositoryTypes = repositoryAssembly.GetTypes()
-            .Where(t => t.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IShiftEntityPrepareForSyncAsync<>)));
+            .Where(t => t.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IShiftEntityPrepareForReplicationAsync<>)));
 
         // Register each IRepository<> implementation with its corresponding interface
         foreach (var repositoryType in repositoryTypes)
         {
-            var interfaceType = repositoryType.GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IShiftEntityPrepareForSyncAsync<>));
+            var interfaceType = repositoryType.GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IShiftEntityPrepareForReplicationAsync<>));
             if (interfaceType != null)
             {
                 builder.Services.AddScoped(interfaceType, repositoryType);
@@ -57,7 +57,7 @@ public static class IMvcBuilderExtensions
     public static IMvcBuilder AddShiftIdentityDashboard<TDbContext>(this IMvcBuilder builder, ShiftIdentityConfiguration shiftIdentityConfiguration) where TDbContext : ShiftIdentityDB
     {
         builder.RegisterIShiftEntityFind();
-        builder.RegisterIShiftEntityPrepareForSync();
+        builder.RegisterIShiftEntityPrepareForReplication();
 
         builder.Services.TryAddSingleton(shiftIdentityConfiguration);
 
