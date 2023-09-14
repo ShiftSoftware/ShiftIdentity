@@ -7,7 +7,7 @@
 		<RootNamespace>ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore</RootNamespace>
 		<AssemblyName>ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore</AssemblyName>
 		<PackageId>ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore</PackageId>
-		<Version>1.6.13</Version>
+		<Version>2023.09.14</Version>
 		<Authors>aza.asim,Shift Software,Nahro</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<IsPackable>True</IsPackable>
@@ -25,7 +25,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="ShiftSoftware.ShiftEntity.EFCore" Version="1.6.11" Condition="!Exists('..\..\ShiftEntity\ShiftEntity.EFCore\ShiftEntity.EFCore.SqlServer.csproj')" />
+		<PackageReference Include="ShiftSoftware.ShiftEntity.EFCore" Version="2023.09.14" Condition="!Exists('..\..\ShiftEntity\ShiftEntity.EFCore\ShiftEntity.EFCore.SqlServer.csproj')" />
 	</ItemGroup>
 
 </Project>
