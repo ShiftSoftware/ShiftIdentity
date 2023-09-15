@@ -1,4 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+	<Import Project="..\..\ShiftFrameworkGlobalSettings.props" Condition="Exists('..\..\ShiftFrameworkGlobalSettings.props')" />
 
 	<PropertyGroup>
 		<TargetFramework>netstandard2.1</TargetFramework>
@@ -7,7 +8,7 @@
 		<RootNamespace>ShiftSoftware.ShiftIdentity.Core</RootNamespace>
 		<AssemblyName>ShiftSoftware.ShiftIdentity.Core</AssemblyName>
 		<PackageId>ShiftSoftware.ShiftIdentity.Core</PackageId>
-		<Version>2023.09.14.20</Version>
+		<Version>$(ShiftFrameworkVersion)</Version>
 		<Authors>aza.asim,Shift Software,Nahro</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<IsPackable>True</IsPackable>
@@ -16,8 +17,8 @@
 
 	<ItemGroup>
 		<PackageReference Include="libphonenumber-csharp" Version="8.13.19" />
-		<PackageReference Include="ShiftSoftware.ShiftEntity" Version="2023.09.14.20" Condition="!Exists('..\..\ShiftEntity\ShiftEntity.Core\ShiftEntity.Core.csproj')" />
-		<PackageReference Include="ShiftSoftware.TypeAuth.Core" Version="2023.09.14.20" Condition="!Exists('..\..\TypeAuth\TypeAuth.Core\TypeAuth.Core.csproj')" />
+		<PackageReference Include="ShiftSoftware.ShiftEntity" Version="$(ShiftFrameworkVersion)" Condition="!Exists('..\..\ShiftEntity\ShiftEntity.Core\ShiftEntity.Core.csproj')" />
+		<PackageReference Include="ShiftSoftware.TypeAuth.Core" Version="$(ShiftFrameworkVersion)" Condition="!Exists('..\..\TypeAuth\TypeAuth.Core\TypeAuth.Core.csproj')" />
 		<PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
 
 		<InternalsVisibleTo Include="ShiftSoftware.ShiftIdentity.AspNetCore" />

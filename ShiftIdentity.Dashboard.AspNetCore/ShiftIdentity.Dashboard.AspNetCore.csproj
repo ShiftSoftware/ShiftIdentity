@@ -1,4 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+	<Import Project="..\..\ShiftFrameworkGlobalSettings.props" Condition="Exists('..\..\ShiftFrameworkGlobalSettings.props')" />
 
 	<PropertyGroup>
 		<TargetFramework>net7.0</TargetFramework>
@@ -7,7 +8,7 @@
 		<RootNamespace>ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore</RootNamespace>
 		<AssemblyName>ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore</AssemblyName>
 		<PackageId>ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore</PackageId>
-		<Version>2023.09.14.20</Version>
+		<Version>$(ShiftFrameworkVersion)</Version>
 		<Authors>aza.asim,Shift Software,Nahro</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<IsPackable>True</IsPackable>
@@ -25,7 +26,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="ShiftSoftware.ShiftEntity.EFCore" Version="2023.09.14.20" Condition="!Exists('..\..\ShiftEntity\ShiftEntity.EFCore\ShiftEntity.EFCore.csproj')" />
+		<PackageReference Include="ShiftSoftware.ShiftEntity.EFCore" Version="$(ShiftFrameworkVersion)" Condition="!Exists('..\..\ShiftEntity\ShiftEntity.EFCore\ShiftEntity.EFCore.csproj')" />
 	</ItemGroup>
 
 </Project>
