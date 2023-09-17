@@ -1,12 +1,14 @@
 ﻿using FluentValidation;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.HashId;
+using ShiftSoftware.ShiftEntity.Model.Replication;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
 
+[ReplicationPartitionKey(nameof(CompanyBranchDTO.CompanyID))]
 public class CompanyBranchDTO : ShiftEntityDTO
 {
     [CompanyBranchHashIdConverter]
@@ -18,6 +20,9 @@ public class CompanyBranchDTO : ShiftEntityDTO
     [Required]
     [CompanyHashIdConverter]
     public ShiftEntitySelectDTO Company { get; set; } = default!;
+
+    [CompanyHashIdConverter]
+    public string? CompanyID { get; set; }
 
     [Required]
     [RegionHashIdConverter]

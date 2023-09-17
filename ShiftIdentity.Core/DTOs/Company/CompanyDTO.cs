@@ -1,12 +1,14 @@
 ﻿using FluentValidation;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.HashId;
+using ShiftSoftware.ShiftEntity.Model.Replication;
 using ShiftSoftware.ShiftIdentity.Core.Enums;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
 
+[ReplicationPartitionKey(nameof(CompanyDTO.ID))]
 public class CompanyDTO : ShiftEntityDTO
 {
     [CompanyHashIdConverter]

@@ -1,10 +1,12 @@
 ﻿
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.HashId;
+using ShiftSoftware.ShiftEntity.Model.Replication;
 using System.ComponentModel.DataAnnotations;
 
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.Region;
 
+[ReplicationPartitionKey(nameof(RegionDTO.ID))]
 public class RegionDTO : ShiftEntityDTO
 {
     [RegionHashIdConverter]
