@@ -20,8 +20,8 @@ public class UserRepository :
     IUserRepository
 {
 
-    private readonly TypeAuthService typeAuthService;
-    public UserRepository(ShiftIdentityDB db, TypeAuthService typeAuthService, IMapper mapper) : base(db, db.Users, mapper, r => 
+    private readonly ITypeAuthService typeAuthService;
+    public UserRepository(ShiftIdentityDB db, ITypeAuthService typeAuthService, IMapper mapper) : base(db, db.Users, mapper, r => 
         r.IncludeRelatedEntitiesWithFindAsync(x => x.Include(y => y.AccessTrees).ThenInclude(y => y.AccessTree))
     )
     {
@@ -87,7 +87,7 @@ public class UserRepository :
 
         typeAuth_Producer = typeAuthContextBuilder_Producer.Build();
 
-        entity.AccessTree = typeAuth_Producer.GenerateAccessTree(typeAuthService, typeAuth_Preserver);
+        entity.AccessTree = typeAuth_Producer.GenerateAccessTree((typeAuthService as TypeAuthContext)!, typeAuth_Preserver);
 
         if (dto.Phone != null)
         {

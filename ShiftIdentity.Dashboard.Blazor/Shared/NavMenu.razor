@@ -8,7 +8,7 @@
 @using Pages.Region
 
 @inject ShiftIdentityDashboardBlazorOptions ShiftIdentityDashboardBlazorOptions
-@inject TypeAuthService TypeAuthService
+@inject ITypeAuthService TypeAuthService
 
 <MudNavMenu>
     <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(RegionList)}")"

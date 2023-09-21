@@ -2,7 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data;
-using ShiftSoftware.TypeAuth.AspNetCore.Services;
+using ShiftSoftware.TypeAuth.Core;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Extentsions;
 
@@ -18,7 +18,7 @@ public static class WebApplicationExtensions
 
         var actionTrees = new List<Type>();
 
-        var typeAuthService = scopedServices.GetService<TypeAuthService>();
+        var typeAuthService = scopedServices.GetService<ITypeAuthService>();
 
         if (typeAuthService is not null)
         {

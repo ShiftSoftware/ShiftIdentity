@@ -15,8 +15,8 @@ public class AccessTreeRepository :
     ShiftRepository<ShiftIdentityDB, AccessTree, AccessTreeDTO, AccessTreeDTO, AccessTreeDTO>,
     IShiftRepositoryAsync<AccessTree, AccessTreeDTO, AccessTreeDTO>
 {
-    private readonly TypeAuthService typeAuthService;
-    public AccessTreeRepository(ShiftIdentityDB db, TypeAuthService typeAuthService, IMapper mapper) : base(db, db.AccessTrees, mapper)
+    private readonly ITypeAuthService typeAuthService;
+    public AccessTreeRepository(ShiftIdentityDB db, ITypeAuthService typeAuthService, IMapper mapper) : base(db, db.AccessTrees, mapper)
     {
         this.typeAuthService = typeAuthService;
     }
@@ -54,7 +54,7 @@ public class AccessTreeRepository :
 
         typeAuth_Producer = typeAuthContextBuilder_Producer.Build();
 
-        entity.Tree = typeAuth_Producer.GenerateAccessTree(typeAuthService, typeAuth_Preserver);
+        entity.Tree = typeAuth_Producer.GenerateAccessTree((typeAuthService as TypeAuthContext)!, typeAuth_Preserver);
 
         entity.Name = dto.Name;
 

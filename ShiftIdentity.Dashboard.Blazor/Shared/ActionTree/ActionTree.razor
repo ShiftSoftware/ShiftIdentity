@@ -1,5 +1,5 @@
 ﻿@using ShiftSoftware.TypeAuth.Core;
-@inject ShiftSoftware.TypeAuth.Blazor.Services.TypeAuthService tAuth
+@inject ITypeAuthService tAuth
 @inject ShiftIdentityDashboardBlazorOptions shiftIdentityDashboardBlazorOptions
 @inject HttpService httpService
 
@@ -177,7 +177,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        this.tAuth_LoggedInUser = tAuth;
+        this.tAuth_LoggedInUser = tAuth as TypeAuthContext;
 
         var typeAuthBuilder = new TypeAuthContextBuilder();
 
