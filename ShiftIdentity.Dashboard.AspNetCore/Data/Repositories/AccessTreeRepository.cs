@@ -29,7 +29,7 @@ public class AccessTreeRepository :
             id = dto.ID!.ToLong();
 
         //Check if the access-tree-name in the same scope is duplicate
-        if (await db.AccessTrees.AnyAsync(x => x.Name.ToLower() == dto.Name.ToLower() && x.ID != id))
+        if (await db.AccessTrees.AnyAsync(x => !x.IsDeleted && x.Name.ToLower() == dto.Name.ToLower() && x.ID != id))
             throw new ShiftEntityException(new Message("Duplicate", $"the access tree name ({dto.Name}) already exists."));
 
         var typeAuthContextBuilder_Producer = new TypeAuthContextBuilder();

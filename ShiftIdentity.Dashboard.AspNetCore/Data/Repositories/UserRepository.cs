@@ -39,7 +39,7 @@ public class UserRepository :
             id = dto.ID!.ToLong();
 
         //Check if the username is duplicate
-        if (await db.Users.AnyAsync(x => x.Username.ToLower() == dto.Username.ToLower() && x.ID != id))
+        if (await db.Users.AnyAsync(x => !x.IsDeleted && x.Username.ToLower() == dto.Username.ToLower() && x.ID != id))
             throw new ShiftEntityException(new Message("Duplicate", $"the username {dto.Username} is exists"));
 
         if (actionType == ActionTypes.Insert)

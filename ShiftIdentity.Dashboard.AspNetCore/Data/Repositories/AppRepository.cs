@@ -27,7 +27,7 @@ public class AppRepository :
             id = dto.ID!.ToLong();
 
         //Check if the access-tree-name in the same scope is duplicate
-        if (await db.Apps.AnyAsync(x => x.AppId.ToLower() == dto.AppId.ToLower() && x.ID != id))
+        if (await db.Apps.AnyAsync(x => !x.IsDeleted && x.AppId.ToLower() == dto.AppId.ToLower() && x.ID != id))
             throw new ShiftEntityException(new Message("Duplicate", $"The App ID ({dto.AppId}) already exists."));
 
         return await base.UpsertAsync(entity, dto, actionType, userId);
