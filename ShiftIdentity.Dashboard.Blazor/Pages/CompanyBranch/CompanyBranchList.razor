@@ -1,37 +1,29 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CompanyBranchList)}")]
-@using Syncfusion.Blazor.Grids
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
-@using ShiftSoftware.ShiftBlazor.Enums
 
-<ShiftList Action="@($"{Constants.IdentityRoutePreifix}CompanyBranch")"
+<ShiftList EntitySet="@($"{Constants.IdentityRoutePreifix}CompanyBranch")"
            Title="Company Branch List"
            T="CompanyBranchListDTO"
            ComponentType="typeof(CompanyBranchForm)"
-           AutoGenerateColumns="false"
+           Dense
            ShowIDColumn
-           MultiLineCells
            TypeAuthAction="ShiftIdentityActions.CompanyBranches"
-           EnableCsvExcelExport>
-    <ColumnTemplate>
-        <GridColumn HeaderText="Name" Field="@nameof(CompanyBranchListDTO.Name)" />
-        <GridColumn HeaderText="Short Code" Field="@nameof(CompanyBranchListDTO.ShortCode)" />
-        <GridColumn HeaderText="Region" Field="@nameof(CompanyBranchListDTO.Region)" />
-        <GridColumn HeaderText="Company" Field="@nameof(CompanyBranchListDTO.Company)" />
-        <GridColumn HeaderText="External ID" Field="@nameof(CompanyBranchListDTO.ExternalId)" />
-        
-        <GridColumn HeaderText="Departments">
-            <Template>
-                @{
-                    var item = context as CompanyBranchListDTO;
-                }
+           EnableExport>
 
-                @foreach (var department in item!.Departments)
-                {
-                    <MudChip Size="Size.Small" Color="Color.Primary">@department.Text</MudChip>
-                }
-            </Template>
-        </GridColumn>
-    </ColumnTemplate>
+    <PropertyColumn Title="Name" Property="x => x.Name" />
+    <PropertyColumn Title="Short Code" Property="x => x.ShortCode" />
+    <PropertyColumn Title="Region" Property="x => x.Region" />
+    <PropertyColumn Title="Company" Property="x => x.Company" />
+    <PropertyColumn Title="External ID" Property="x => x.ExternalId" />
+
+    <TemplateColumn Title="Departments">
+        <CellTemplate>
+            @foreach (var department in context.Item.Departments)
+            {
+                <MudChip Size="Size.Small" Color="Color.Primary">@department.Text</MudChip>
+            }
+        </CellTemplate>
+    </TemplateColumn>
 </ShiftList>

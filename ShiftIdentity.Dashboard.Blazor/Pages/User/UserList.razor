@@ -2,23 +2,20 @@
 @layout Shared.DefaultLayout
 
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(UserList)}")]
-@using Syncfusion.Blazor.Grids
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
-@using ShiftSoftware.ShiftBlazor.Enums
 
-<ShiftList Action="@($"{Constants.IdentityRoutePreifix}User")"
+<ShiftList EntitySet="@($"{Constants.IdentityRoutePreifix}User")"
            Title="User List"
            T="UserListDTO"
            ComponentType="typeof(UserForm)"
            ShowIDColumn
+           Dense
            TypeAuthAction="ShiftIdentityActions.Users"
-           AutoGenerateColumns="false"
-           EnableCsvExcelExport>
-    <ColumnTemplate>
-        <GridColumn HeaderText="Name" Field="@nameof(UserListDTO.FullName)" />
-        <GridColumn HeaderText="Username" Field="@nameof(UserListDTO.Username)" />
-        <GridColumn HeaderText="Phone" Field="@nameof(UserListDTO.Phone)" />
-        <GridColumn HeaderText="Email" Field="@nameof(UserListDTO.Email)" />
-        <GridColumn HeaderText="Branch" Field="@nameof(UserListDTO.CompanyBranch)" />
-    </ColumnTemplate>
+           EnableExport>
+
+    <PropertyColumn Title="Name" Property="x => x.FullName" />
+    <PropertyColumn Title="Username" Property="x => x.Username" />
+    <PropertyColumn Title="Phone" Property="x => x.Phone" />
+    <PropertyColumn Title="Email" Property="x => x.Email" />
+    <PropertyColumn Title="Branch" Property="x => x.CompanyBranch" />
 </ShiftList>

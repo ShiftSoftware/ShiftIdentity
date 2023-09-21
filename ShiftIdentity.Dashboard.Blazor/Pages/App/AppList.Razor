@@ -1,21 +1,18 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(AppList)}")]
-@using Syncfusion.Blazor.Grids
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.App;
-@using ShiftSoftware.ShiftBlazor.Enums
 
-<ShiftList Action="@($"{Constants.IdentityRoutePreifix}App")"
+<ShiftList EntitySet="@($"{Constants.IdentityRoutePreifix}App")"
            Title="App List"
            T="AppDTO"
            ComponentType="typeof(AppForm)"
-           AutoGenerateColumns="false"
+           Dense
            ShowIDColumn
            TypeAuthAction="ShiftIdentityActions.Apps"
-           EnableCsvExcelExport>
-    <ColumnTemplate>
-        <GridColumn HeaderText="Display Name" Field="@nameof(AppDTO.DisplayName)" />
-        <GridColumn HeaderText="App Id" Field="@nameof(AppDTO.AppId)" />
-        <GridColumn HeaderText="Description" Field="@nameof(AppDTO.Description)" />
-    </ColumnTemplate>
+           EnableExport>
+
+    <PropertyColumn Property="x => x.DisplayName" Title="Display Name"/>
+    <PropertyColumn Property="x => x.AppId" Title="App Id" />
+    <PropertyColumn Property="x => x.Description" Title="Description" />
 </ShiftList>

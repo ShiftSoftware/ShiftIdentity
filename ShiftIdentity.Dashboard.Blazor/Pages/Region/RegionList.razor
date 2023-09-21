@@ -1,21 +1,18 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(RegionList)}")]
-@using Syncfusion.Blazor.Grids
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Region;
-@using ShiftSoftware.ShiftBlazor.Enums
 
-<ShiftList Action="@($"{Constants.IdentityRoutePreifix}Region")"
+<ShiftList EntitySet="@($"{Constants.IdentityRoutePreifix}Region")"
            Title="Region List"
            T="RegionListDTO"
            ComponentType="typeof(RegionForm)"
-           AutoGenerateColumns="false"
+           Dense
            ShowIDColumn
            TypeAuthAction="ShiftIdentityActions.Regions"
-           EnableCsvExcelExport>
-    <ColumnTemplate>
-        <GridColumn HeaderText="Name" Field="@nameof(RegionListDTO.Name)" />
-        <GridColumn HeaderText="Externa lId" Field="@nameof(RegionListDTO.ExternalId)" />
-        <GridColumn HeaderText="Short Code" Field="@nameof(RegionListDTO.ShortCode)" />
-    </ColumnTemplate>
+           EnableExport>
+    
+    <PropertyColumn Title="Name" Property="x => x.Name" />
+    <PropertyColumn Title="External Id" Property="x => x.ExternalId" />
+    <PropertyColumn Title="Short Code" Property="x => x.ShortCode" />
 </ShiftList>

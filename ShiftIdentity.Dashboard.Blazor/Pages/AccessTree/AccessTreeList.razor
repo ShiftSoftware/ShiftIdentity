@@ -1,20 +1,16 @@
 @layout Shared.DefaultLayout
 @attribute [Authorize]
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(AccessTreeList)}")]
-@using Syncfusion.Blazor.Grids
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
-@using Syncfusion.Blazor.Data
-@using ShiftSoftware.ShiftBlazor.Enums
 
-<ShiftList Action="@($"{Constants.IdentityRoutePreifix}AccessTree")"
+<ShiftList EntitySet="@($"{Constants.IdentityRoutePreifix}AccessTree")"
            Title="Access Tree List"
            T="AccessTreeDTO"
            ComponentType="typeof(AccessTreeForm)"
+           Dense
            ShowIDColumn
-           AutoGenerateColumns="false"
            TypeAuthAction="ShiftIdentityActions.AccessTrees"
-           EnableCsvExcelExport>
-    <ColumnTemplate>
-        <GridColumn HeaderText="Name" Field="@nameof(AccessTreeDTO.Name)" />
-    </ColumnTemplate>
+           EnableExport>
+
+    <PropertyColumn Property="x => x.Name"/>
 </ShiftList>
