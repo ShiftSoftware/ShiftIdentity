@@ -1,8 +1,11 @@
-﻿using ShiftSoftware.ShiftIdentity.AspNetCore.Models;
+﻿
+using ShiftSoftware.ShiftIdentity.Core.Models;
+using System;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace ShiftSoftware.ShiftIdentity.AspNetCore.Services;
+namespace ShiftSoftware.ShiftIdentity.Core;
 
 public class HashService
 {
@@ -31,12 +34,13 @@ public class HashService
 
     public static string SHA512GenerateHash(string text)
     {
-        var sha512 = SHA512.Create();
+        using (var sha512 = SHA512.Create())
+        {
+            var hash = sha512.ComputeHash(Encoding.UTF8.GetBytes(text));
+            var hashString = BitConverter.ToString(hash).Replace("-", "").ToLower(); // Convert to lowercase and remove dashes
 
-        var hash = sha512.ComputeHash(Encoding.UTF8.GetBytes(text));
-        var hashString = Convert.ToHexString(hash);
-
-        return hashString;
+            return hashString;
+        }
     }
 
     public static bool SHA512Verify(string text, string textHash)

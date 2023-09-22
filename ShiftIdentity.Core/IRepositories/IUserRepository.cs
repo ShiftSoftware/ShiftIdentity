@@ -4,7 +4,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace ShiftSoftware.ShiftIdentity.AspNetCore.IRepositories;
+namespace ShiftSoftware.ShiftIdentity.Core.IRepositories;
 
 public interface IUserRepository
 {

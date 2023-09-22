@@ -1,13 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<Import Project="..\..\ShiftFrameworkGlobalSettings.props" Condition="Exists('..\..\ShiftFrameworkGlobalSettings.props')" />
-
+	
 	<PropertyGroup>
-		<TargetFramework>net7.0</TargetFramework>
+		<TargetFramework>net6.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
-		<RootNamespace>ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore</RootNamespace>
-		<AssemblyName>ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore</AssemblyName>
-		<PackageId>ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore</PackageId>
+		<RootNamespace>ShiftSoftware.ShiftIdentity.Data</RootNamespace>
+		<AssemblyName>ShiftSoftware.ShiftIdentity.Data</AssemblyName>
+		<PackageId>ShiftSoftware.ShiftIdentity.Data</PackageId>
 		<Version>$(ShiftFrameworkVersion)</Version>
 		<Authors>aza.asim,Shift Software,Nahro</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
@@ -16,13 +16,12 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\ShiftIdentity.AspNetCore\ShiftIdentity.AspNetCore.csproj" />
-		<ProjectReference Include="..\ShiftIdentity.Data\ShiftIdentity.Data.csproj" />
+		<ProjectReference Include="..\ShiftIdentity.Core\ShiftIdentity.Core.csproj" />
 		<ProjectReference Include="..\..\ShiftEntity\ShiftEntity.EFCore\ShiftEntity.EFCore.csproj" Condition="Exists('..\..\ShiftEntity\ShiftEntity.EFCore\ShiftEntity.EFCore.csproj')" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Include="Images\icon.png" Pack="true" PackagePath="\" />
+		<None Include="Images\icon.png" />
 		<Folder Include="Images\" />
 	</ItemGroup>
 

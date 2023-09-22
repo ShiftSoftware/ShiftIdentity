@@ -1,6 +1,6 @@
 ﻿using ShiftSoftware.ShiftEntity.Web;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
-using ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
+using ShiftSoftware.ShiftIdentity.Data.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.Entities;

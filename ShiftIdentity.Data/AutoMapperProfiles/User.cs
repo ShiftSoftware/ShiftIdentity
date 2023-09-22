@@ -3,12 +3,12 @@ using AutoMapper;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 
-namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.AutoMapperProfiles;
+namespace ShiftSoftware.ShiftIdentity.Data.AutoMapperProfiles;
 
 public class User : Profile
 {
-	public User()
-	{
+    public User()
+    {
         CreateMap<Core.Entities.User, UserDTO>()
             .ForMember(
                     dest => dest.AccessTrees,

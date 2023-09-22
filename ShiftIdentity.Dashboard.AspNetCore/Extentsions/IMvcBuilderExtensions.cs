@@ -1,13 +1,13 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
+using ShiftSoftware.ShiftIdentity.Data.Repositories;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
-using ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data;
-using ShiftSoftware.ShiftIdentity.AspNetCore.IRepositories;
+using ShiftSoftware.ShiftIdentity.Data;
 using ShiftSoftware.ShiftIdentity.AspNetCore;
 using ShiftSoftware.ShiftEntity.Core;
 using System.Reflection;
+using ShiftSoftware.ShiftIdentity.Core.IRepositories;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Extentsions;
 
@@ -65,7 +65,7 @@ public static class IMvcBuilderExtensions
         builder.Services.AddScoped<AuthCodeService>();
         builder.Services.AddScoped<AuthService>();
         builder.Services.AddScoped<TokenService>();
-        builder.Services.AddScoped<HashService>();
+        builder.Services.AddScoped<Core.HashService>();
 
         builder.Services.AddScoped<IUserRepository, UserRepository>();
         builder.Services.AddScoped<IAppRepository, AppRepository>();

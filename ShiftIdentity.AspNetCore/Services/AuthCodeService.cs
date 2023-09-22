@@ -1,5 +1,6 @@
-﻿using ShiftSoftware.ShiftIdentity.AspNetCore.IRepositories;
+﻿using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Auth;
+using ShiftSoftware.ShiftIdentity.Core.IRepositories;
 using ShiftSoftware.ShiftIdentity.Core.Models;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Services;

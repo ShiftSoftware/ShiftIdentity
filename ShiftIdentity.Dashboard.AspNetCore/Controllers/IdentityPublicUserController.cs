@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ShiftSoftware.ShiftEntity.Web.Services;
-using ShiftSoftware.ShiftIdentity.AspNetCore.IRepositories;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
+using ShiftSoftware.ShiftIdentity.Core.IRepositories;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
 {

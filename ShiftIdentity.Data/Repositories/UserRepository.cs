@@ -3,16 +3,17 @@ using Microsoft.EntityFrameworkCore;
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
-using ShiftSoftware.ShiftIdentity.AspNetCore.IRepositories;
-using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
+using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.UserManager;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
-using ShiftSoftware.TypeAuth.AspNetCore.Services;
+using ShiftSoftware.ShiftIdentity.Core.IRepositories;
+using ShiftSoftware.ShiftIdentity.Data;
+using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.TypeAuth.Core;
 using System.Net;
 
-namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
+namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
 public class UserRepository :
     ShiftRepository<ShiftIdentityDB, User, UserListDTO, UserDTO, UserDTO>,
@@ -21,7 +22,7 @@ public class UserRepository :
 {
 
     private readonly ITypeAuthService typeAuthService;
-    public UserRepository(ShiftIdentityDB db, ITypeAuthService typeAuthService, IMapper mapper) : base(db, db.Users, mapper, r => 
+    public UserRepository(ShiftIdentityDB db, ITypeAuthService typeAuthService, IMapper mapper) : base(db, db.Users, mapper, r =>
         r.IncludeRelatedEntitiesWithFindAsync(x => x.Include(y => y.AccessTrees).ThenInclude(y => y.AccessTree))
     )
     {
@@ -127,7 +128,7 @@ public class UserRepository :
 
             var tAuthForThisTree = tAuthBuilderForThisTree.Build();
 
-            var inAccessibleActions = this.typeAuthService.FindInAccessibleActionsOn(tAuthForThisTree);
+            var inAccessibleActions = typeAuthService.FindInAccessibleActionsOn(tAuthForThisTree);
 
             if (inAccessibleActions.Count > 0)
             {
@@ -179,7 +180,7 @@ public class UserRepository :
         if (!HashService.VerifyPassword(dto.CurrentPassword, user.Salt, user.PasswordHash))
             return null;
 
-        
+
         var hash = HashService.GenerateHash(dto.NewPassword);
         user.PasswordHash = hash.PasswordHash;
         user.Salt = hash.Salt;

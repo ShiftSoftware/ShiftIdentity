@@ -4,7 +4,7 @@ using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Department;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 
-namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
+namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
 public class DepartmentRepository :
      ShiftRepository<ShiftIdentityDB, Department, DepartmentListDTO, DepartmentDTO, DepartmentDTO>,

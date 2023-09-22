@@ -6,7 +6,7 @@ using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using System.Net;
 
-namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
+namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
 public class CompanyRepository :
     ShiftRepository<ShiftIdentityDB, Company, CompanyListDTO, CompanyDTO, CompanyDTO>,

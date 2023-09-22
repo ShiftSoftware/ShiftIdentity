@@ -1,7 +1,7 @@
 ﻿using ShiftSoftware.ShiftIdentity.Core.Entities;
 using System.Threading.Tasks;
 
-namespace ShiftSoftware.ShiftIdentity.AspNetCore.IRepositories
+namespace ShiftSoftware.ShiftIdentity.Core.IRepositories
 {
     public interface IAppRepository
     {

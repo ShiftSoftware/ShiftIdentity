@@ -7,13 +7,13 @@ using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using System.Net;
 
-namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories
+namespace ShiftSoftware.ShiftIdentity.Data.Repositories
 {
     public class CompanyBranchRepository :
         ShiftRepository<ShiftIdentityDB, CompanyBranch, CompanyBranchListDTO, CompanyBranchDTO, CompanyBranchDTO>,
         IShiftRepositoryAsync<CompanyBranch, CompanyBranchListDTO, CompanyBranchDTO>
     {
-        public CompanyBranchRepository(ShiftIdentityDB db, IMapper mapper) : base(db, db.CompanyBranches, mapper, r => 
+        public CompanyBranchRepository(ShiftIdentityDB db, IMapper mapper) : base(db, db.CompanyBranches, mapper, r =>
             r.IncludeRelatedEntitiesWithFindAsync(
                 x => x.Include(y => y.Company),
                 x => x.Include(y => y.Region),

@@ -6,7 +6,7 @@ using ShiftSoftware.ShiftIdentity.Core.DTOs.Region;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using System.Net;
 
-namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
+namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
 public class RegionRepository :
     ShiftRepository<ShiftIdentityDB, Region, RegionListDTO, RegionDTO, RegionDTO>,

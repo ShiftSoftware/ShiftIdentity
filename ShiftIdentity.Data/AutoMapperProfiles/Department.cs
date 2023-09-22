@@ -2,7 +2,7 @@
 using AutoMapper;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Department;
 
-namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.AutoMapperProfiles;
+namespace ShiftSoftware.ShiftIdentity.Data.AutoMapperProfiles;
 
 public class Department : Profile
 {

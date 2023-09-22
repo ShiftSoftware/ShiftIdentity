@@ -3,11 +3,11 @@ using Microsoft.EntityFrameworkCore;
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
-using ShiftSoftware.ShiftIdentity.AspNetCore.IRepositories;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.App;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
+using ShiftSoftware.ShiftIdentity.Core.IRepositories;
 
-namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.Repositories;
+namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
 public class AppRepository :
     ShiftRepository<ShiftIdentityDB, App, AppDTO, AppDTO, AppDTO>,

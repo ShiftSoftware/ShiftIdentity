@@ -1,7 +1,6 @@
-﻿
-using ShiftSoftware.ShiftIdentity.Core.Enums;
+﻿using ShiftSoftware.ShiftIdentity.Core.Enums;
 
-namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data;
+namespace ShiftSoftware.ShiftIdentity.Data;
 
 public class DBSeedOptions
 {

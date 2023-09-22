@@ -3,12 +3,12 @@ using AutoMapper;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
 
-namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.AutoMapperProfiles;
+namespace ShiftSoftware.ShiftIdentity.Data.AutoMapperProfiles;
 
 public class CompanyBranch : Profile
 {
-	public CompanyBranch()
-	{
+    public CompanyBranch()
+    {
         CreateMap<Core.Entities.CompanyBranch, CompanyBranchDTO>()
             .ForMember(
                     dest => dest.Company,

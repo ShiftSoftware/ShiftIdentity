@@ -2,12 +2,12 @@
 using AutoMapper;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
 
-namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data.AutoMapperProfiles;
+namespace ShiftSoftware.ShiftIdentity.Data.AutoMapperProfiles;
 
 public class Company : Profile
 {
-	public Company()
-	{
+    public Company()
+    {
         CreateMap<Core.Entities.Company, CompanyDTO>();
 
         CreateMap<CompanyDTO, Core.Entities.Company>().ForMember(

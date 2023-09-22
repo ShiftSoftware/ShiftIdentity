@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using ShiftSoftware.ShiftIdentity.Core;
-using ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Data;
+using ShiftSoftware.ShiftIdentity.Data;
 using ShiftSoftware.TypeAuth.Core;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Extentsions;

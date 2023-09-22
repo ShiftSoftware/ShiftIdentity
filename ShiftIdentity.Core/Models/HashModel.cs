@@ -1,4 +1,4 @@
-﻿namespace ShiftSoftware.ShiftIdentity.AspNetCore.Models;
+﻿namespace ShiftSoftware.ShiftIdentity.Core.Models;
 
 public class HashModel
 {

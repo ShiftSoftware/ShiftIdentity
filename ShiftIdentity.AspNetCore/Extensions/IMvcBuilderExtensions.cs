@@ -3,13 +3,13 @@ using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Fakes;
-using ShiftSoftware.ShiftIdentity.AspNetCore.IRepositories;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Models;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
+using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.App;
-using ShiftSoftware.ShiftIdentity.Core.Models;
+using ShiftSoftware.ShiftIdentity.Core.IRepositories;
 using System.Text;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Extensions;
