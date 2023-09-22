@@ -37,7 +37,7 @@ public class HashService
         using (var sha512 = SHA512.Create())
         {
             var hash = sha512.ComputeHash(Encoding.UTF8.GetBytes(text));
-            var hashString = BitConverter.ToString(hash).Replace("-", "").ToLower(); // Convert to lowercase and remove dashes
+            var hashString = Convert.ToHexString(hash);
 
             return hashString;
         }
