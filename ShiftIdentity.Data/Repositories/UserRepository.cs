@@ -8,8 +8,6 @@ using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.UserManager;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.ShiftIdentity.Core.IRepositories;
-using ShiftSoftware.ShiftIdentity.Data;
-using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.TypeAuth.Core;
 using System.Net;
 
@@ -17,7 +15,6 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
 public class UserRepository :
     ShiftRepository<ShiftIdentityDB, User, UserListDTO, UserDTO, UserDTO>,
-    IShiftRepositoryAsync<User, UserListDTO, UserDTO>,
     IUserRepository
 {
 

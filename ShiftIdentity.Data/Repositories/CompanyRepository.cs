@@ -8,9 +8,7 @@ using System.Net;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
-public class CompanyRepository :
-    ShiftRepository<ShiftIdentityDB, Company, CompanyListDTO, CompanyDTO, CompanyDTO>,
-    IShiftRepositoryAsync<Company, CompanyListDTO, CompanyDTO>
+public class CompanyRepository : ShiftRepository<ShiftIdentityDB, Company, CompanyListDTO, CompanyDTO, CompanyDTO>
 {
     public CompanyRepository(ShiftIdentityDB db, IMapper mapper) : base(db, db.Companies, mapper)
     {

@@ -11,7 +11,6 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
 public class AppRepository :
     ShiftRepository<ShiftIdentityDB, App, AppDTO, AppDTO, AppDTO>,
-    IShiftRepositoryAsync<App, AppDTO, AppDTO>,
     IAppRepository
 {
 
