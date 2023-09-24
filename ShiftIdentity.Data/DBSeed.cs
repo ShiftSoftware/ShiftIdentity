@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 //using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 using ShiftSoftware.TypeAuth.Core;
@@ -118,10 +119,10 @@ public class DBSeed
 
         user.AccessTree = jsonTree;
 
-        //var hash = HashService.GenerateHash(superUserPassword);
+        var hash = HashService.GenerateHash(superUserPassword);
 
-        //user.PasswordHash = hash.PasswordHash;
+        user.PasswordHash = hash.PasswordHash;
 
-        //user.Salt = hash.Salt;
+        user.Salt = hash.Salt;
     }
 }
