@@ -36,7 +36,7 @@ public static class IMvcBuilderExtensions
 
     private static IMvcBuilder RegisterIShiftEntityPrepareForReplication(this IMvcBuilder builder)
     {
-        Assembly repositoryAssembly = Assembly.GetExecutingAssembly(); // Adjust this as needed
+        Assembly repositoryAssembly=typeof(Marker).Assembly;
 
         var repositoryTypes = repositoryAssembly.GetTypes()
             .Where(t => t.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IShiftEntityPrepareForReplicationAsync<>)));
