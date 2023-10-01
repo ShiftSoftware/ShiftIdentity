@@ -1,4 +1,4 @@
-﻿using ShiftSoftware.ShiftEntity.Web;
+﻿using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftIdentity.Data;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Extentsions;
