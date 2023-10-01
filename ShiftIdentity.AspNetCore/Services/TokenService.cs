@@ -154,7 +154,9 @@ public class TokenService
         var result = new TokenDTO
         {
             Token = tokenString,
+            TokenLifeTimeInSeconds = shiftIdentityConfiguration.Token.ExpireSeconds,
             RefreshToken = GenerateRefreshToken(user.ID),
+            RefreshTokenLifeTimeInSeconds = shiftIdentityConfiguration.RefreshToken.ExpireSeconds,
             RequirePasswordChange = requirePasswordChange,
             UserData = new TokenUserDataDTO
             {
