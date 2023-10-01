@@ -34,6 +34,6 @@ public class AppRepository :
 
     public async Task<App?> GetAppAsync(string appId)
     {
-        return await db.Apps.FirstOrDefaultAsync(x => x.AppId == appId);
+        return await db.Apps.FirstOrDefaultAsync(x => x.AppId == appId && !x.IsDeleted);
     }
 }
