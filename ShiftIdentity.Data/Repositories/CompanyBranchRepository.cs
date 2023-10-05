@@ -40,10 +40,10 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             entity.RegionID = dto.Region.Value.ToLong();
 
             foreach (var item in entity.CompanyBranchDepartments.ToList())
-                db.CompanyBranchDepartments.Remove(item);
+                db.CompanyBranchDepartments.Remove(item); //We use db.CompanyBranchDepartments instead of entity.CompanyBranchDepartments. Because if we use entity.CompanyBranchDepartments then the record in CompanyBranchDepartments table is not removed, only the CompanyBrancID is set to null
 
             foreach (var item in entity.CompanyBranchServices.ToList())
-                db.CompanyBranchServices.Remove(item);
+                db.CompanyBranchServices.Remove(item); //We use db.CompanyBranchServices instead of entity.CompanyBranchServices. Because if we use entity.CompanyBranchServices then the record in CompanyBranchServices table is not removed, only the CompanyBrancID is set to null
 
             entity.CompanyBranchDepartments = dto.Departments.Select(x => new CompanyBranchDepartment
             {
@@ -57,6 +57,10 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
 
             entity.Email = dto.Email;
             entity.Address = dto.Address;
+
+            //ef core may not set the entity state as Modified if the only the collections are changed (CompanyBranchDepartments, CompanyBranchServices)
+            if (actionType == ActionTypes.Update)
+                db.Entry(entity).State = EntityState.Modified;
 
             if (!string.IsNullOrWhiteSpace(dto.Phone))
             {
