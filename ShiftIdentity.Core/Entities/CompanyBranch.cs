@@ -1,6 +1,7 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Model.Replication;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
+using ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -9,7 +10,8 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 [TemporalShiftEntity]
 [Table("CompanyBranches", Schema = "ShiftIdentity")]
 [DontSetCompanyInfoOnThisEntityWithAutoTrigger]
-[ShiftEntityReplication<CompanyBranchDTO>(ContainerName = "CompanyBranches", DatabaseName = "Identity")]
+[ShiftEntityReplication<CompanyBranchModel>(ContainerName = "CompanyBranch", DatabaseName = "test")]
+[ReplicationPartitionKey(nameof(CompanyBranchModel.CompanyBranchID), nameof(CompanyBranchModel.Type))]
 public class CompanyBranch : ShiftEntity<CompanyBranch>
 {
     public string Name { get; set; } = default!;
@@ -21,8 +23,8 @@ public class CompanyBranch : ShiftEntity<CompanyBranch>
     public bool BuiltIn { get; set; }
     public virtual Company Company { get; set; } = default!;
     public virtual Region Region { get; set; } = default!;
-    public virtual ICollection<CompanyBranchDepartment> CompanyBranchDepartments { get; set; }
-    public virtual ICollection<CompanyBranchService> CompanyBranchServices { get; set; }
+    public virtual ICollection<CompanyBranchDepartment>? CompanyBranchDepartments { get; set; }
+    public virtual ICollection<CompanyBranchService>? CompanyBranchServices { get; set; }
 
     public new long RegionID { get; set; }
     public new long CompanyID { get; set; }

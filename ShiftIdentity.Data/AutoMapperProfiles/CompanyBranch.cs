@@ -2,6 +2,7 @@
 using AutoMapper;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
+using ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
 
 namespace ShiftSoftware.ShiftIdentity.Data.AutoMapperProfiles;
 
@@ -41,5 +42,9 @@ public class CompanyBranch : Profile
                     dest => dest.Departments,
                     opt => opt.MapFrom(src => src.CompanyBranchDepartments.Select(y => new ShiftEntitySelectDTO { Value = y.DepartmentID.ToString()!, Text = y.Department!.Name }))
                 );
+
+        CreateMap<Core.Entities.CompanyBranch, CompanyBranchModel>()
+            .ForMember(dest=> dest.CompanyBranchID, opt => opt.MapFrom(src => src.ID))
+            .ForMember(dest => dest.Type, opt => opt.MapFrom(src => "CompanyBranch"));
     }
 }
