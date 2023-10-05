@@ -12,6 +12,10 @@ public class Service : Profile
         CreateMap<Core.Entities.Service, ServiceDTO>().ReverseMap();
         CreateMap<Core.Entities.Service, ServiceListDTO>();
 
-        CreateMap<Core.Entities.Service, ServiceModel>();
+        CreateMap<Core.Entities.Service, ServiceModel>()
+            .ForMember(
+                dest => dest.id,
+                opt => opt.MapFrom(src => src.ID.ToString())
+            );
     }
 }

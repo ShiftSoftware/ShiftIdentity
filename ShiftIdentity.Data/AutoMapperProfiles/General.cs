@@ -1,11 +1,6 @@
 ﻿using AutoMapper;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ShiftSoftware.ShiftIdentity.Data.AutoMapperProfiles;
 
@@ -21,6 +16,10 @@ public class General : Profile
             .ForMember(dest => dest.CreateDate, opt => opt.MapFrom(src => src.Service.CreateDate))
             .ForMember(dest => dest.LastSaveDate, opt => opt.MapFrom(src => src.Service.LastSaveDate))
             .ForMember(dest => dest.CreatedByUserID, opt => opt.MapFrom(src => src.Service.CreatedByUserID))
-            .ForMember(dest => dest.LastSavedByUserID, opt => opt.MapFrom(src => src.Service.LastSavedByUserID));
+            .ForMember(dest => dest.LastSavedByUserID, opt => opt.MapFrom(src => src.Service.LastSavedByUserID))
+            .ForMember(
+                dest => dest.id,
+                opt => opt.MapFrom(src => src.ServiceID.ToString())
+            );
     }
 }

@@ -10,7 +10,7 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 [Table("CompanyBranchServices", Schema = "ShiftIdentity")]
 [ShiftEntityReplication<CompanyBranchServiceModel>(ContainerName = "CompanyBranch", DatabaseName = "test")]
 [ReplicationPartitionKey(nameof(CompanyBranchServiceModel.CompanyBranchID), nameof(CompanyBranchServiceModel.Type))]
-public class CompanyBranchService
+public class CompanyBranchService : ShiftEntityBase<CompanyBranchService>
 {
     public long ID { get; set; }
     public long CompanyBranchID { get; set; }
