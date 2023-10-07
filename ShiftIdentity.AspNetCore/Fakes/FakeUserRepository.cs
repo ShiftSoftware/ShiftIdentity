@@ -1,4 +1,5 @@
-﻿using ShiftSoftware.ShiftIdentity.Core;
+﻿using ShiftSoftware.ShiftEntity.Model.Extensions;
+using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.ShiftIdentity.Core.IRepositories;
