@@ -10,7 +10,6 @@ namespace ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
 
 public class CompanyBranchServiceModel : ReplicationBaseModel
 {
-    public override string? ID { get; set; }
     public long CompanyBranchID { get; set; }
     public string Type { get; set; }
     public string Name { get; set; } = default!;

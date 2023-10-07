@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
 
-public class ServiceModel : ReplicationBaseModel
+public class ServiceModel : ReplicationModel
 {
     public override string? ID { get; set; }
     public string Name { get; set; } = default!;

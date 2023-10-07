@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
 
-public class CompanyBranchModel : ReplicationBaseModel
+public class CompanyBranchModel : ReplicationModel
 {
     public override string? ID { get; set; }
     public long CompanyBranchID { get; set; }
