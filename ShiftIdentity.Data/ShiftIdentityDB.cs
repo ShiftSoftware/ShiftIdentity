@@ -4,7 +4,7 @@ using ShiftSoftware.ShiftIdentity.Core.Entities;
 
 namespace ShiftSoftware.ShiftIdentity.Data
 {
-    public class ShiftIdentityDB : ShiftDbContext
+    public abstract class ShiftIdentityDB : ShiftDbContext
     {
         public ShiftIdentityDB()
         {
