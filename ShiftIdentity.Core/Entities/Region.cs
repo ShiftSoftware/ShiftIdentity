@@ -1,6 +1,7 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Model.Replication;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Region;
+using ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -9,7 +10,8 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 [TemporalShiftEntity]
 [Table("Regions", Schema = "ShiftIdentity")]
 [DontSetCompanyInfoOnThisEntityWithAutoTrigger]
-[ShiftEntityReplication<RegionDTO>(ContainerName = "Regions", DatabaseName = "Identity")]
+[ShiftEntityReplication<RegionModel>(ContainerName = "Regions", DatabaseName = "test")]
+[ReplicationPartitionKey(nameof(RegionModel.id))]
 public class Region : ShiftEntity<Region>
 {
     public string Name { get; set; } = default!;

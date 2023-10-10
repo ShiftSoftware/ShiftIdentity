@@ -10,8 +10,9 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 [TemporalShiftEntity]
 [Table("CompanyBranches", Schema = "ShiftIdentity")]
 [DontSetCompanyInfoOnThisEntityWithAutoTrigger]
-[ShiftEntityReplication<CompanyBranchModel>(ContainerName = "CompanyBranch", DatabaseName = "test")]
-[ReplicationPartitionKey(nameof(CompanyBranchModel.CompanyBranchID), nameof(CompanyBranchModel.Type))]
+[ShiftEntityReplication<CompanyBranchModel>(ContainerName = "Companies", DatabaseName = "test")]
+[ReplicationPartitionKey(nameof(CompanyBranchModel.CompanyID), nameof(CompanyBranchModel.BranchID), 
+    nameof(CompanyBranchModel.Type))]
 public class CompanyBranch : ShiftEntity<CompanyBranch>
 {
     public string Name { get; set; } = default!;

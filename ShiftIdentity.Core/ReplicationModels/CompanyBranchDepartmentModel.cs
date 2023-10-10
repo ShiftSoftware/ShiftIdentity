@@ -1,5 +1,4 @@
-﻿using ShiftSoftware.ShiftEntity.Model.Dtos;
-using ShiftSoftware.ShiftEntity.Model.Replication;
+﻿using ShiftSoftware.ShiftEntity.Model.Replication;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
 
-public class CompanyBranchServiceModel : ReplicationBaseModel
+public class CompanyBranchDepartmentModel : ReplicationBaseModel
 {
     public string Name { get; set; } = default!;
 

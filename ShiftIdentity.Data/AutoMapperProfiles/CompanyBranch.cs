@@ -44,8 +44,8 @@ public class CompanyBranch : Profile
                 );
 
         CreateMap<Core.Entities.CompanyBranch, CompanyBranchModel>()
-            .ForMember(dest=> dest.CompanyBranchID, opt => opt.MapFrom(src => src.ID))
-            .ForMember(dest => dest.Type, opt => opt.MapFrom(src => "CompanyBranch"))
+            .ForMember(dest=> dest.BranchID, opt => opt.MapFrom(src => src.ID))
+            .ForMember(dest => dest.Type, opt => opt.MapFrom(src => CompanyItemTypes.Branch))
             .ForMember(
                 dest => dest.id,
                 opt => opt.MapFrom(src => src.ID.ToString())

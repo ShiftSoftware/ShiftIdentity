@@ -2,6 +2,7 @@
 using ShiftSoftware.ShiftEntity.Model.Replication;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
 using ShiftSoftware.ShiftIdentity.Core.Enums;
+using ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -10,7 +11,8 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 [TemporalShiftEntity]
 [Table("Companies", Schema = "ShiftIdentity")]
 [DontSetCompanyInfoOnThisEntityWithAutoTrigger]
-[ShiftEntityReplication<CompanyDTO>(ContainerName = "Companies", DatabaseName = "Identity")]
+[ShiftEntityReplication<CompanyModel>(ContainerName = "Companies", DatabaseName = "test")]
+[ReplicationPartitionKey(nameof(CompanyModel.CompanyID), nameof(CompanyModel.BranchID), nameof(CompanyModel.Type))]
 public class Company : ShiftEntity<Company>
 {
     public string Name { get; set; } = default!;

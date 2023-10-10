@@ -1,4 +1,6 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
+using ShiftSoftware.ShiftEntity.Model.Replication;
+using ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ShiftSoftware.ShiftIdentity.Core.Entities;
@@ -6,7 +8,10 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
 [Table("CompanyBranchDepartments", Schema = "ShiftIdentity")]
-public class CompanyBranchDepartment
+[ShiftEntityReplication<CompanyBranchDepartmentModel>(ContainerName = "Companies", DatabaseName = "test")]
+[ReplicationPartitionKey(nameof(CompanyBranchDepartmentModel.CompanyID), nameof(CompanyBranchDepartmentModel.BranchID),
+    nameof(CompanyBranchDepartmentModel.Type))]
+public class CompanyBranchDepartment : ShiftEntityBase<CompanyBranchDepartment>
 {
     public long ID { get; set; }
     public long CompanyBranchID { get; set; }
