@@ -7,10 +7,11 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
 [Table("Services", Schema = "ShiftIdentity")]
-[ShiftEntityReplication<ServiceModel>(ContainerName = "Services", DatabaseName = "test")]
+[ShiftEntityReplication<ServiceModel>(ContainerName = ReplicationConfiguration.ServiceContainerName, 
+    AccountName = ReplicationConfiguration.AccountName)]
 [ReplicationPartitionKey(nameof(ServiceModel.id))]
-[ReferenceReplication<CompanyBranchServiceModel>("Companies",nameof(CompanyBranchServiceModel.id), 
-    nameof(CompanyBranchServiceModel.Type))]
+[ReferenceReplication<CompanyBranchServiceModel>(ReplicationConfiguration.CompanyContainerName, 
+    nameof(CompanyBranchServiceModel.id), nameof(CompanyBranchServiceModel.Type))]
 public class Service : ShiftEntity<Service>
 {
     public string Name { get; set; } = default!;

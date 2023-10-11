@@ -10,7 +10,8 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 [TemporalShiftEntity]
 [Table("Regions", Schema = "ShiftIdentity")]
 [DontSetCompanyInfoOnThisEntityWithAutoTrigger]
-[ShiftEntityReplication<RegionModel>(ContainerName = "Regions", DatabaseName = "test")]
+[ShiftEntityReplication<RegionModel>(ContainerName = ReplicationConfiguration.RegionContainerName,
+    AccountName = ReplicationConfiguration.AccountName)]
 [ReplicationPartitionKey(nameof(RegionModel.id))]
 public class Region : ShiftEntity<Region>
 {
