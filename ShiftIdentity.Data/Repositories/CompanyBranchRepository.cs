@@ -23,7 +23,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
         {
         }
 
-        public override ValueTask<CompanyBranch> UpsertAsync(CompanyBranch entity, CompanyBranchDTO dto, ActionTypes actionType, long? userId = null)
+        public override async ValueTask<CompanyBranch> UpsertAsync(CompanyBranch entity, CompanyBranchDTO dto, ActionTypes actionType, long? userId = null)
         {
             if (entity.BuiltIn)
                 throw new ShiftEntityException(new Message("Error", "Built-In Data can't be modified."), (int)HttpStatusCode.Forbidden);
@@ -40,21 +40,33 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             entity.CompanyID = dto.Company.Value.ToLong();
             entity.RegionID = dto.Region.Value.ToLong();
 
-            foreach (var item in entity.CompanyBranchDepartments.ToList())
-                db.CompanyBranchDepartments.Remove(item); //We use db.CompanyBranchDepartments instead of entity.CompanyBranchDepartments. Because if we use entity.CompanyBranchDepartments then the record in CompanyBranchDepartments table is not removed, only the CompanyBrancID is set to null
+            //Remove deleted departments in dto
+            var deletedDepartments = entity.CompanyBranchDepartments.Where(x => !dto.Departments.Select(s => s.Value.ToLong())
+                .Any(s => s == x.DepartmentID));
+            db.CompanyBranchDepartments.RemoveRange(deletedDepartments);
 
-            foreach (var item in entity.CompanyBranchServices.ToList())
-                db.CompanyBranchServices.Remove(item); //We use db.CompanyBranchServices instead of entity.CompanyBranchServices. Because if we use entity.CompanyBranchServices then the record in CompanyBranchServices table is not removed, only the CompanyBrancID is set to null
-
-            entity.CompanyBranchDepartments = dto.Departments.Select(x => new CompanyBranchDepartment
+            //Insert added departments in dto
+            var addedDepartments = dto.Departments.Where(x => !entity.CompanyBranchDepartments.Select(s => s.DepartmentID)
+                .Any(s => s == x.Value.ToLong()));
+            await db.CompanyBranchDepartments.AddRangeAsync(addedDepartments.Select(x => new CompanyBranchDepartment
             {
-                DepartmentID = x.Value.ToLong()
-            }).ToList();
+                DepartmentID = x.Value.ToLong(),
+                CompanyBranch = entity
+            }).ToList());
 
-            entity.CompanyBranchServices = dto.Services.Select(x => new CompanyBranchService
+            //Remove deleted services in dto
+            var deletedServices = entity.CompanyBranchServices.Where(x => !dto.Services.Select(s => s.Value.ToLong())
+                .Any(s => s == x.ServiceID));
+            db.CompanyBranchServices.RemoveRange(deletedServices);
+
+            //Insert added services in dto
+            var addedServices = dto.Services.Where(x => !entity.CompanyBranchServices.Select(s => s.ServiceID)
+                .Any(s => s == x.Value.ToLong()));
+            await db.CompanyBranchServices.AddRangeAsync(addedServices.Select(x => new CompanyBranchService
             {
-                ServiceID = x.Value.ToLong()
-            }).ToList();
+                ServiceID = x.Value.ToLong(),
+                CompanyBranch = entity
+            }).ToList());
 
             entity.Email = dto.Email;
             entity.Address = dto.Address;
@@ -71,7 +83,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
                 entity.Phone = Core.ValidatorsAndFormatters.PhoneNumber.GetFormattedPhone(dto.Phone);
             }
 
-            return new ValueTask<CompanyBranch>(entity);
+            return entity;
         }
 
         public override ValueTask<CompanyBranch> DeleteAsync(CompanyBranch entity, bool isHardDelete = false, long? userId = null)
