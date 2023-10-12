@@ -9,7 +9,7 @@ public class General : Profile
     public General()
     {
         CreateMap<CompanyBranchService, CompanyBranchServiceModel>()
-            .ForMember(dest => dest.Type, opt => opt.MapFrom(src => CompanyItemTypes.Service))
+            .ForMember(dest => dest.ItemType, opt => opt.MapFrom(src => CompanyItemTypes.Service))
             .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Service.Name))
             .ForMember(dest => dest.BranchID, opt => opt.MapFrom(src => src.CompanyBranchID))
             .ForMember(dest => dest.CompanyID, opt => opt.MapFrom(src => src.CompanyBranch.CompanyID))
@@ -19,7 +19,7 @@ public class General : Profile
             );
 
         CreateMap<CompanyBranchDepartment, CompanyBranchDepartmentModel>()
-            .ForMember(dest => dest.Type, opt => opt.MapFrom(src => CompanyItemTypes.Department))
+            .ForMember(dest => dest.ItemType, opt => opt.MapFrom(src => CompanyItemTypes.Department))
             .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Department.Name))
             .ForMember(dest => dest.BranchID, opt => opt.MapFrom(src => src.CompanyBranchID))
             .ForMember(dest => dest.CompanyID, opt => opt.MapFrom(src => src.CompanyBranch.CompanyID))

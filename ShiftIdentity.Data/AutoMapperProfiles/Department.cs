@@ -17,7 +17,7 @@ public class Department : Profile
                 opt => opt.MapFrom(src => src.ID.ToString())
             );
         CreateMap<Core.Entities.Department, CompanyBranchDepartmentModel>()
-            .ForMember(dest => dest.Type, opt => opt.MapFrom(src => CompanyItemTypes.Department))
+            .ForMember(dest => dest.ItemType, opt => opt.MapFrom(src => CompanyItemTypes.Department))
             .ForMember(dest => dest.BranchID, opt => opt.Ignore())
             .ForMember(dest => dest.CompanyID, opt => opt.Ignore())
             .ForMember(

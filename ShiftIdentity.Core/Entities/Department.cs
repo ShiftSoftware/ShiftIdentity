@@ -12,7 +12,7 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
     AccountName = ReplicationConfiguration.AccountName)]
 [ReplicationPartitionKey(nameof(DepartmentModel.id))]
 [ReferenceReplication<CompanyBranchDepartmentModel>(ReplicationConfiguration.CompanyContainerName, 
-    nameof(CompanyBranchDepartmentModel.id), nameof(CompanyBranchDepartmentModel.Type))]
+    nameof(CompanyBranchDepartmentModel.id), nameof(CompanyBranchDepartmentModel.ItemType))]
 public class Department : ShiftEntity<Department>
 {
     public string Name { get; set; } = default!;

@@ -11,5 +11,5 @@ public class CompanyBranchServiceModel : ReplicationModel
     //Partition keys
     public string CompanyID { get; set; } = default!;
     public string BranchID { get; set; } = default!;
-    public string Type { get; set; } = default!;
+    public string ItemType { get; set; } = default!;
 }

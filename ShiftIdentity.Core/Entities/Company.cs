@@ -13,7 +13,7 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 [DontSetCompanyInfoOnThisEntityWithAutoTrigger]
 [ShiftEntityReplication<CompanyModel>(ContainerName = ReplicationConfiguration.CompanyContainerName, 
     AccountName = ReplicationConfiguration.AccountName)]
-[ReplicationPartitionKey(nameof(CompanyModel.CompanyID), nameof(CompanyModel.BranchID), nameof(CompanyModel.Type))]
+[ReplicationPartitionKey(nameof(CompanyModel.CompanyID), nameof(CompanyModel.BranchID), nameof(CompanyModel.ItemType))]
 public class Company : ShiftEntity<Company>
 {
     public string Name { get; set; } = default!;

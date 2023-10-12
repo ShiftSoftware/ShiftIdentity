@@ -13,7 +13,7 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 [ShiftEntityReplication<CompanyBranchModel>(ContainerName = ReplicationConfiguration.CompanyContainerName,
     AccountName = ReplicationConfiguration.AccountName)]
 [ReplicationPartitionKey(nameof(CompanyBranchModel.CompanyID), nameof(CompanyBranchModel.BranchID), 
-    nameof(CompanyBranchModel.Type))]
+    nameof(CompanyBranchModel.ItemType))]
 public class CompanyBranch : ShiftEntity<CompanyBranch>
 {
     public string Name { get; set; } = default!;

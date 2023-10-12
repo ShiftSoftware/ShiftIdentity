@@ -32,7 +32,7 @@ public class Company : Profile
                 opt => opt.MapFrom(src => "")
             )
             .ForMember(
-                dest => dest.Type,
+                dest => dest.ItemType,
                 opt => opt.MapFrom(src => CompanyItemTypes.Company)
             );
     }

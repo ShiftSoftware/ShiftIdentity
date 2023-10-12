@@ -11,7 +11,7 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 [ShiftEntityReplication<CompanyBranchDepartmentModel>(ContainerName = ReplicationConfiguration.CompanyContainerName,
     AccountName = ReplicationConfiguration.AccountName)]
 [ReplicationPartitionKey(nameof(CompanyBranchDepartmentModel.CompanyID), nameof(CompanyBranchDepartmentModel.BranchID),
-    nameof(CompanyBranchDepartmentModel.Type))]
+    nameof(CompanyBranchDepartmentModel.ItemType))]
 public class CompanyBranchDepartment : ShiftEntity<CompanyBranchDepartment>
 {
     public long ID { get; set; }

@@ -11,7 +11,7 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
     AccountName = ReplicationConfiguration.AccountName)]
 [ReplicationPartitionKey(nameof(ServiceModel.id))]
 [ReferenceReplication<CompanyBranchServiceModel>(ReplicationConfiguration.CompanyContainerName, 
-    nameof(CompanyBranchServiceModel.id), nameof(CompanyBranchServiceModel.Type))]
+    nameof(CompanyBranchServiceModel.id), nameof(CompanyBranchServiceModel.ItemType))]
 public class Service : ShiftEntity<Service>
 {
     public string Name { get; set; } = default!;
