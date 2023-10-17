@@ -8,10 +8,9 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
 [Table("CompanyBranchDepartments", Schema = "ShiftIdentity")]
-[ShiftEntityReplication<CompanyBranchDepartmentModel>(ContainerName = ReplicationConfiguration.CompanyContainerName,
+[ShiftEntityReplication<CompanyBranchDepartmentModel>(ContainerName = ReplicationConfiguration.CompanyBranchContainerName,
     AccountName = ReplicationConfiguration.AccountName)]
-[ReplicationPartitionKey(nameof(CompanyBranchDepartmentModel.CompanyID), nameof(CompanyBranchDepartmentModel.BranchID),
-    nameof(CompanyBranchDepartmentModel.ItemType))]
+[ReplicationPartitionKey(nameof(CompanyBranchDepartmentModel.BranchID), nameof(CompanyBranchDepartmentModel.ItemType))]
 public class CompanyBranchDepartment : ShiftEntity<CompanyBranchDepartment>
 {
     public long ID { get; set; }

@@ -22,18 +22,6 @@ public class Company : Profile
             .ForMember(
                 dest => dest.id,
                 opt => opt.MapFrom(src => src.ID.ToString())
-            )
-            .ForMember(
-                dest => dest.CompanyID,
-                opt => opt.MapFrom(src => src.ID.ToString())
-            )
-            .ForMember(
-                dest => dest.BranchID,
-                opt => opt.MapFrom(src => "")
-            )
-            .ForMember(
-                dest => dest.ItemType,
-                opt => opt.MapFrom(src => CompanyItemTypes.Company)
             );
     }
 }

@@ -20,9 +20,9 @@ public class CompanyBranchModel : ReplicationModel
     public bool BuiltIn { get; set; }
 
     public RegionModel Region { get; set; }
+    public CompanyModel Company { get; set; }
 
     //Partition keys
-    public string CompanyID { get; set; } = default!;
     public string BranchID { get; set; } = default!;
     public string ItemType { get; set; } = default!;
 }

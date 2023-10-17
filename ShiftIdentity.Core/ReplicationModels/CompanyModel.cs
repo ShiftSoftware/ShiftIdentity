@@ -25,9 +25,4 @@ public class CompanyModel : ReplicationModel
     public string? HQEmail { get; set; }
     public string? HQAddress { get; set; }
     public bool BuiltIn { get; set; }
-
-    //Partition keys
-    public string CompanyID { get; set; } = default!;
-    public string BranchID { get; set; } = default!;
-    public string ItemType { get; set; } = default!;
 }

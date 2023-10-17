@@ -10,7 +10,7 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 [ShiftEntityReplication<ServiceModel>(ContainerName = ReplicationConfiguration.ServiceContainerName, 
     AccountName = ReplicationConfiguration.AccountName)]
 [ReplicationPartitionKey(nameof(ServiceModel.id))]
-[ReferenceReplication<CompanyBranchServiceModel>(ReplicationConfiguration.CompanyContainerName, 
+[ReferenceReplication<CompanyBranchServiceModel>(ReplicationConfiguration.CompanyBranchContainerName, 
     nameof(CompanyBranchServiceModel.id), nameof(CompanyBranchServiceModel.ItemType))]
 public class Service : ShiftEntity<Service>
 {

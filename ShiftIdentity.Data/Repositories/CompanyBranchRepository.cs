@@ -39,28 +39,32 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             entity.CompanyID = dto.Company.Value.ToLong();
             entity.RegionID = dto.Region.Value.ToLong();
 
-            //Remove deleted departments in dto
+            //Update departments
             var deletedDepartments = entity.CompanyBranchDepartments.Where(x => !dto.Departments.Select(s => s.Value.ToLong())
                 .Any(s => s == x.DepartmentID));
-            db.CompanyBranchDepartments.RemoveRange(deletedDepartments);
-
-            //Insert added departments in dto
             var addedDepartments = dto.Departments.Where(x => !entity.CompanyBranchDepartments.Select(s => s.DepartmentID)
                 .Any(s => s == x.Value.ToLong()));
+            var updatedDepartments = entity.CompanyBranchDepartments.Where(x => dto.Departments.Select(s => s.Value.ToLong())
+                .Any(s => s == x.DepartmentID));
+
+            db.CompanyBranchDepartments.RemoveRange(deletedDepartments);
+            db.CompanyBranchDepartments.UpdateRange(updatedDepartments);
             await db.CompanyBranchDepartments.AddRangeAsync(addedDepartments.Select(x => new CompanyBranchDepartment
             {
                 DepartmentID = x.Value.ToLong(),
                 CompanyBranch = entity
             }).ToList());
 
-            //Remove deleted services in dto
+            //Update services
             var deletedServices = entity.CompanyBranchServices.Where(x => !dto.Services.Select(s => s.Value.ToLong())
                 .Any(s => s == x.ServiceID));
-            db.CompanyBranchServices.RemoveRange(deletedServices);
-
-            //Insert added services in dto
             var addedServices = dto.Services.Where(x => !entity.CompanyBranchServices.Select(s => s.ServiceID)
                 .Any(s => s == x.Value.ToLong()));
+            var updatedServices = entity.CompanyBranchServices.Where(x => dto.Services.Select(s => s.Value.ToLong())
+                .Any(s => s == x.ServiceID));
+
+            db.CompanyBranchServices.RemoveRange(deletedServices);
+            db.CompanyBranchServices.UpdateRange(updatedServices);
             await db.CompanyBranchServices.AddRangeAsync(addedServices.Select(x => new CompanyBranchService
             {
                 ServiceID = x.Value.ToLong(),
