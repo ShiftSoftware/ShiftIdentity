@@ -44,11 +44,8 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
                 .Any(s => s == x.DepartmentID));
             var addedDepartments = dto.Departments.Where(x => !entity.CompanyBranchDepartments.Select(s => s.DepartmentID)
                 .Any(s => s == x.Value.ToLong()));
-            var updatedDepartments = entity.CompanyBranchDepartments.Where(x => dto.Departments.Select(s => s.Value.ToLong())
-                .Any(s => s == x.DepartmentID));
 
             db.CompanyBranchDepartments.RemoveRange(deletedDepartments);
-            db.CompanyBranchDepartments.UpdateRange(updatedDepartments);
             await db.CompanyBranchDepartments.AddRangeAsync(addedDepartments.Select(x => new CompanyBranchDepartment
             {
                 DepartmentID = x.Value.ToLong(),
@@ -60,11 +57,8 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
                 .Any(s => s == x.ServiceID));
             var addedServices = dto.Services.Where(x => !entity.CompanyBranchServices.Select(s => s.ServiceID)
                 .Any(s => s == x.Value.ToLong()));
-            var updatedServices = entity.CompanyBranchServices.Where(x => dto.Services.Select(s => s.Value.ToLong())
-                .Any(s => s == x.ServiceID));
 
             db.CompanyBranchServices.RemoveRange(deletedServices);
-            db.CompanyBranchServices.UpdateRange(updatedServices);
             await db.CompanyBranchServices.AddRangeAsync(addedServices.Select(x => new CompanyBranchService
             {
                 ServiceID = x.Value.ToLong(),
