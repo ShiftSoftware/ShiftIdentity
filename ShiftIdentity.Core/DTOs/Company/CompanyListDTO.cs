@@ -1,5 +1,5 @@
 ﻿using ShiftSoftware.ShiftEntity.Model.Dtos;
-using ShiftSoftware.ShiftEntity.Model.HashId;
+using ShiftSoftware.ShiftEntity.Model.HashIds;
 using ShiftSoftware.ShiftIdentity.Core.Enums;
 using System.Text.Json.Serialization;
 

@@ -1,6 +1,6 @@
 ﻿
 using ShiftSoftware.ShiftEntity.Model.Dtos;
-using ShiftSoftware.ShiftEntity.Model.HashId;
+using ShiftSoftware.ShiftEntity.Model.HashIds;
 using ShiftSoftware.ShiftEntity.Model.Replication;
 using System.ComponentModel.DataAnnotations;
 

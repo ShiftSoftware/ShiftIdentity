@@ -5,7 +5,7 @@ namespace ShiftSoftware.ShiftIdentity.Core.DTOs
 
     public class TokenUserDataDTO
     {
-        [ShiftEntity.Model.HashId.UserHashIdConverter]
+        [ShiftEntity.Model.HashIds.UserHashIdConverter]
         public string ID { get; set; }
 
         public string Username { get; set; } = default!;

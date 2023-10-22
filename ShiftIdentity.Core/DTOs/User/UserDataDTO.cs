@@ -1,6 +1,6 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
-using ShiftSoftware.ShiftEntity.Model.HashId;
+using ShiftSoftware.ShiftEntity.Model.HashIds;
 
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.User
 {

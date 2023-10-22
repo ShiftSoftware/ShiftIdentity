@@ -1,4 +1,5 @@
 ﻿using Microsoft.IdentityModel.Tokens;
+using ShiftSoftware.ShiftEntity.Model.HashIds;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
@@ -103,16 +104,16 @@ public class TokenService
 
         var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.NameIdentifier, ShiftEntity.Web.Services.ShiftEntityHashIds.Encode<Core.DTOs.User.UserDTO>(user.ID)),
+                new Claim(ClaimTypes.NameIdentifier, ShiftEntityHashIdService.Encode<Core.DTOs.User.UserDTO>(user.ID)),
                 new Claim(ClaimTypes.Name, user.Username),
                 new Claim(ClaimTypes.GivenName, user.FullName),
             };
 
-        claims.Add(new Claim(ShiftEntity.Core.Constants.RegionIdClaim, ShiftEntity.Web.Services.ShiftEntityHashIds.Encode<RegionDTO>(user.RegionID)));
+        claims.Add(new Claim(ShiftEntity.Core.Constants.RegionIdClaim, ShiftEntityHashIdService.Encode<RegionDTO>(user.RegionID)));
 
-        claims.Add(new Claim(ShiftEntity.Core.Constants.CompanyIdClaim, ShiftEntity.Web.Services.ShiftEntityHashIds.Encode<CompanyDTO>(user.CompanyID)));
+        claims.Add(new Claim(ShiftEntity.Core.Constants.CompanyIdClaim, ShiftEntityHashIdService.Encode<CompanyDTO>(user.CompanyID)));
 
-        claims.Add(new Claim(ShiftEntity.Core.Constants.CompanyBranchIdClaim, ShiftEntity.Web.Services.ShiftEntityHashIds.Encode<CompanyBranchDTO>(user.CompanyBranchID)));
+        claims.Add(new Claim(ShiftEntity.Core.Constants.CompanyBranchIdClaim, ShiftEntityHashIdService.Encode<CompanyBranchDTO>(user.CompanyBranchID)));
 
         claims.Add(new Claim(ShiftIdentityClaims.ExternalToken, external.ToString().ToLower()));
 

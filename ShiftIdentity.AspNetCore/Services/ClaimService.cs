@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
+using ShiftSoftware.ShiftEntity.Model.HashIds;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using System.Security.Claims;
@@ -19,7 +20,7 @@ public class ClaimService : IClaimService
         var dto = new TokenUserDataDTO
         {
             FullName = httpContextAccessor.HttpContext?.User?.Claims?.SingleOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value!,
-            ID = ShiftEntity.Web.Services.ShiftEntityHashIds.Decode<TokenUserDataDTO>(httpContextAccessor.HttpContext?.User?.Claims?.SingleOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value!).ToString(),
+            ID = ShiftEntityHashIdService.Decode<TokenUserDataDTO>(httpContextAccessor.HttpContext?.User?.Claims?.SingleOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value!).ToString(),
             Username = httpContextAccessor.HttpContext?.User?.Claims?.SingleOrDefault(c => c.Type == ClaimTypes.Name)?.Value!
         };
 

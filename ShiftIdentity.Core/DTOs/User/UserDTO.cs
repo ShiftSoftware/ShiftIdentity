@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
-using ShiftSoftware.ShiftEntity.Model.HashId;
+using ShiftSoftware.ShiftEntity.Model.HashIds;
 using FluentValidation;
 
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.User;
