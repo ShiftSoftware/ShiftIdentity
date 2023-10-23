@@ -12,7 +12,7 @@ public class FakeUserRepository : IUserRepository
     {
         this.shiftIdentityOptions = shiftIdentityOptions;
     }
-    public async Task<User?> FindAsync(long id, DateTime? asOf = null)
+    public async Task<User?> FindAsync(long id, DateTimeOffset? asOf = null)
     {
         return new User(id)
         {
