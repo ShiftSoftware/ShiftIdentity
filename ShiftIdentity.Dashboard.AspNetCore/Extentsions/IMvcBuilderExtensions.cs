@@ -19,7 +19,8 @@ public static class IMvcBuilderExtensions
 
         // Find all types in the assembly that implement IRepository<>
         var repositoryTypes = repositoryAssembly.GetTypes()
-            .Where(t => t.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IShiftEntityFind<>)));
+            .Where(t => t.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IShiftEntityFind<>)) &&
+                !t.IsInterface);
 
         // Register each IRepository<> implementation with its corresponding interface
         foreach (var repositoryType in repositoryTypes)
@@ -39,7 +40,8 @@ public static class IMvcBuilderExtensions
         Assembly repositoryAssembly=typeof(Marker).Assembly;
 
         var repositoryTypes = repositoryAssembly.GetTypes()
-            .Where(t => t.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IShiftEntityPrepareForReplicationAsync<>)));
+            .Where(t => t.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IShiftEntityPrepareForReplicationAsync<>)) && 
+                !t.IsInterface);
 
         // Register each IRepository<> implementation with its corresponding interface
         foreach (var repositoryType in repositoryTypes)
