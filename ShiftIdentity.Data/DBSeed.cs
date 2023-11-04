@@ -8,13 +8,13 @@ namespace ShiftSoftware.ShiftIdentity.Data;
 
 public class DBSeed
 {
-    private ShiftIdentityDB db;
+    private ShiftIdentityDbContext db;
     private DBSeedOptions? dbSeedOptions;
 
     private List<Type> actionTrees;
     private readonly string superUserPassword;
 
-    public DBSeed(ShiftIdentityDB db, List<Type> actionTrees, string superUserPassword, DBSeedOptions? dBSeedOptions)
+    public DBSeed(ShiftIdentityDbContext db, List<Type> actionTrees, string superUserPassword, DBSeedOptions? dBSeedOptions)
     {
         this.db = db;
         this.actionTrees = actionTrees;

@@ -14,12 +14,12 @@ using System.Net;
 namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
 public class UserRepository :
-    ShiftRepository<ShiftIdentityDB, User, UserListDTO, UserDTO, UserDTO>,
+    ShiftRepository<ShiftIdentityDbContext, User, UserListDTO, UserDTO, UserDTO>,
     IUserRepository
 {
 
     private readonly ITypeAuthService typeAuthService;
-    public UserRepository(ShiftIdentityDB db, ITypeAuthService typeAuthService, IMapper mapper) : base(db, db.Users, mapper, r =>
+    public UserRepository(ShiftIdentityDbContext db, ITypeAuthService typeAuthService, IMapper mapper) : base(db, db.Users, mapper, r =>
         r.IncludeRelatedEntitiesWithFindAsync(x => x.Include(y => y.AccessTrees).ThenInclude(y => y.AccessTree))
     )
     {

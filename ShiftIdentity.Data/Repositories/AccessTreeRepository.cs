@@ -10,10 +10,10 @@ using ShiftSoftware.ShiftIdentity.Core.Entities;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
-public class AccessTreeRepository : ShiftRepository<ShiftIdentityDB, AccessTree, AccessTreeDTO, AccessTreeDTO, AccessTreeDTO>
+public class AccessTreeRepository : ShiftRepository<ShiftIdentityDbContext, AccessTree, AccessTreeDTO, AccessTreeDTO, AccessTreeDTO>
 {
     private readonly ITypeAuthService typeAuthService;
-    public AccessTreeRepository(ShiftIdentityDB db, ITypeAuthService typeAuthService, IMapper mapper) : base(db, db.AccessTrees, mapper)
+    public AccessTreeRepository(ShiftIdentityDbContext db, ITypeAuthService typeAuthService, IMapper mapper) : base(db, db.AccessTrees, mapper)
     {
         this.typeAuthService = typeAuthService;
     }

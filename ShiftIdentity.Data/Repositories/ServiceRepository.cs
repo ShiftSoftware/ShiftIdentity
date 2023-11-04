@@ -5,9 +5,9 @@ using ShiftSoftware.ShiftIdentity.Core.Entities;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
-public class ServiceRepository : ShiftRepository<ShiftIdentityDB, Service, ServiceListDTO, ServiceDTO, ServiceDTO>
+public class ServiceRepository : ShiftRepository<ShiftIdentityDbContext, Service, ServiceListDTO, ServiceDTO, ServiceDTO>
 {
-    public ServiceRepository(ShiftIdentityDB db, IMapper mapper) : base(db, db.Services, mapper)
+    public ServiceRepository(ShiftIdentityDbContext db, IMapper mapper) : base(db, db.Services, mapper)
     {
     }
 }

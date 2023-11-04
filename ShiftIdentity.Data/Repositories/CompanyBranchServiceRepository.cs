@@ -13,9 +13,9 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
 internal class CompanyBranchServiceRepository : IShiftEntityPrepareForReplicationAsync<CompanyBranchService>
 {
-    private readonly ShiftIdentityDB db;
+    private readonly ShiftIdentityDbContext db;
 
-    public CompanyBranchServiceRepository(ShiftIdentityDB db)
+    public CompanyBranchServiceRepository(ShiftIdentityDbContext db)
     {
         this.db = db;
     }

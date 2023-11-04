@@ -10,11 +10,11 @@ using ShiftSoftware.ShiftIdentity.Core.IRepositories;
 namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
 public class AppRepository :
-    ShiftRepository<ShiftIdentityDB, App, AppDTO, AppDTO, AppDTO>,
+    ShiftRepository<ShiftIdentityDbContext, App, AppDTO, AppDTO, AppDTO>,
     IAppRepository
 {
 
-    public AppRepository(ShiftIdentityDB db, IMapper mapper) : base(db, db.Apps, mapper)
+    public AppRepository(ShiftIdentityDbContext db, IMapper mapper) : base(db, db.Apps, mapper)
     {
     }
 

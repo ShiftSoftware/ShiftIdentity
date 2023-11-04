@@ -9,9 +9,9 @@ using System.Net;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Repositories
 {
-    public class CompanyBranchRepository : ShiftRepository<ShiftIdentityDB, CompanyBranch, CompanyBranchListDTO, CompanyBranchDTO, CompanyBranchDTO>
+    public class CompanyBranchRepository : ShiftRepository<ShiftIdentityDbContext, CompanyBranch, CompanyBranchListDTO, CompanyBranchDTO, CompanyBranchDTO>
     {
-        public CompanyBranchRepository(ShiftIdentityDB db, IMapper mapper) : base(db, db.CompanyBranches, mapper, r =>
+        public CompanyBranchRepository(ShiftIdentityDbContext db, IMapper mapper) : base(db, db.CompanyBranches, mapper, r =>
             r.IncludeRelatedEntitiesWithFindAsync(
                 x => x.Include(y => y.Company),
                 x => x.Include(y => y.Region),

@@ -14,7 +14,7 @@ public static class WebApplicationExtensions
 
         var scopedServices = scope.ServiceProvider;
 
-        var db = scopedServices.GetRequiredService<ShiftIdentityDB>();
+        var db = scopedServices.GetRequiredService<ShiftIdentityDbContext>();
 
         var actionTrees = new List<Type>();
 

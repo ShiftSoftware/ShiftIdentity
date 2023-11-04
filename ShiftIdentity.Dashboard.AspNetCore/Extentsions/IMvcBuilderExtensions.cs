@@ -56,7 +56,7 @@ public static class IMvcBuilderExtensions
         return builder;
     }
 
-    public static IMvcBuilder AddShiftIdentityDashboard<TDbContext>(this IMvcBuilder builder, ShiftIdentityConfiguration shiftIdentityConfiguration) where TDbContext : ShiftIdentityDB
+    public static IMvcBuilder AddShiftIdentityDashboard<TDbContext>(this IMvcBuilder builder, ShiftIdentityConfiguration shiftIdentityConfiguration) where TDbContext : ShiftIdentityDbContext
     {
         builder.RegisterIShiftEntityFind();
         builder.RegisterIShiftEntityPrepareForReplication();
@@ -84,7 +84,7 @@ public static class IMvcBuilderExtensions
         builder.Services.AddScoped<CompanyRepository>();
         builder.Services.AddScoped<CompanyBranchRepository>();
 
-        builder.Services.AddScoped<ShiftIdentityDB>(x=> x.GetRequiredService<TDbContext>());
+        builder.Services.AddScoped<ShiftIdentityDbContext>(x=> x.GetRequiredService<TDbContext>());
 
         return builder;
     }

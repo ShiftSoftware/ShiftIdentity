@@ -5,9 +5,9 @@ using ShiftSoftware.ShiftIdentity.Core.Entities;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
-public class DepartmentRepository : ShiftRepository<ShiftIdentityDB, Department, DepartmentListDTO, DepartmentDTO, DepartmentDTO>
+public class DepartmentRepository : ShiftRepository<ShiftIdentityDbContext, Department, DepartmentListDTO, DepartmentDTO, DepartmentDTO>
 {
-    public DepartmentRepository(ShiftIdentityDB db, IMapper mapper) : base(db, db.Departments, mapper)
+    public DepartmentRepository(ShiftIdentityDbContext db, IMapper mapper) : base(db, db.Departments, mapper)
     {
 
     }

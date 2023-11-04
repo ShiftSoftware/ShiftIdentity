@@ -4,14 +4,14 @@ using ShiftSoftware.ShiftIdentity.Core.Entities;
 
 namespace ShiftSoftware.ShiftIdentity.Data
 {
-    public abstract class ShiftIdentityDB : ShiftDbContext
+    public abstract class ShiftIdentityDbContext : ShiftDbContext
     {
-        public ShiftIdentityDB()
+        public ShiftIdentityDbContext()
         {
 
         }
 
-        public ShiftIdentityDB(DbContextOptions options)
+        public ShiftIdentityDbContext(DbContextOptions options)
             : base(options)
         {
         }
