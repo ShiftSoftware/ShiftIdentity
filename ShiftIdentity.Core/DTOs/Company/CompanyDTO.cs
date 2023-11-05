@@ -9,7 +9,7 @@ using System.Text.Json.Serialization;
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
 
 [ReplicationPartitionKey(nameof(CompanyDTO.ID))]
-public class CompanyDTO : ShiftEntityDTO
+public class CompanyDTO : ShiftEntityViewAndUpsertDTO
 {
     [CompanyHashIdConverter]
     public override string? ID { get; set; }

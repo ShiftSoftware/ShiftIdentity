@@ -9,7 +9,7 @@ using System.Net;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Repositories
 {
-    public class CompanyBranchRepository : ShiftRepository<ShiftIdentityDbContext, CompanyBranch, CompanyBranchListDTO, CompanyBranchDTO, CompanyBranchDTO>
+    public class CompanyBranchRepository : ShiftRepository<ShiftIdentityDbContext, CompanyBranch, CompanyBranchListDTO, CompanyBranchDTO>
     {
         public CompanyBranchRepository(ShiftIdentityDbContext db, IMapper mapper) : base(db, db.CompanyBranches, mapper, r =>
             r.IncludeRelatedEntitiesWithFindAsync(

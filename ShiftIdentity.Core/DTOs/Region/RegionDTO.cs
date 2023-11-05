@@ -7,7 +7,7 @@ using System.ComponentModel.DataAnnotations;
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.Region;
 
 [ReplicationPartitionKey(nameof(RegionDTO.ID))]
-public class RegionDTO : ShiftEntityDTO
+public class RegionDTO : ShiftEntityViewAndUpsertDTO
 {
     [RegionHashIdConverter]
     public override string? ID { get; set; }

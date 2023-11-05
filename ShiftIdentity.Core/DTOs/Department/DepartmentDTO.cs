@@ -5,7 +5,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.Department;
 
-public class DepartmentDTO : ShiftEntityDTO
+public class DepartmentDTO : ShiftEntityViewAndUpsertDTO
 {
     [DepartmentHashIdConverter]
     public override string? ID { get; set; }

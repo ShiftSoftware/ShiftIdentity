@@ -9,7 +9,7 @@ using System.ComponentModel.DataAnnotations;
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
 
 [ReplicationPartitionKey(nameof(CompanyBranchDTO.CompanyID))]
-public class CompanyBranchDTO : ShiftEntityDTO
+public class CompanyBranchDTO : ShiftEntityViewAndUpsertDTO
 {
     [CompanyBranchHashIdConverter]
     public override string? ID { get; set; }

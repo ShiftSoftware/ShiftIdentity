@@ -14,7 +14,7 @@ using System.Net;
 namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
 public class UserRepository :
-    ShiftRepository<ShiftIdentityDbContext, User, UserListDTO, UserDTO, UserDTO>,
+    ShiftRepository<ShiftIdentityDbContext, User, UserListDTO, UserDTO>,
     IUserRepository
 {
 

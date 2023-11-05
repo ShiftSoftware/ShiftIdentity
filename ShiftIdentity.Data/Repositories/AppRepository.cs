@@ -10,7 +10,7 @@ using ShiftSoftware.ShiftIdentity.Core.IRepositories;
 namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
 public class AppRepository :
-    ShiftRepository<ShiftIdentityDbContext, App, AppDTO, AppDTO, AppDTO>,
+    ShiftRepository<ShiftIdentityDbContext, App, AppDTO, AppDTO>,
     IAppRepository
 {
 

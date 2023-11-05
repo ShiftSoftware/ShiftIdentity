@@ -8,7 +8,7 @@ using System.Net;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
-public class RegionRepository : ShiftRepository<ShiftIdentityDbContext, Region, RegionListDTO, RegionDTO, RegionDTO>
+public class RegionRepository : ShiftRepository<ShiftIdentityDbContext, Region, RegionListDTO, RegionDTO>
 {
     public RegionRepository(ShiftIdentityDbContext db, IMapper mapper) : base(db, db.Regions, mapper)
     {

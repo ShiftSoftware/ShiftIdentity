@@ -8,7 +8,7 @@ using FluentValidation;
 
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 
-public class UserDTO : ShiftEntityDTO
+public class UserDTO : ShiftEntityViewAndUpsertDTO
 {
     [UserHashIdConverter]
     public override string? ID { get; set; }

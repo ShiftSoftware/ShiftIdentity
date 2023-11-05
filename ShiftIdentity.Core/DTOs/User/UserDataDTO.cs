@@ -5,7 +5,7 @@ using ShiftSoftware.ShiftEntity.Model.HashIds;
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.User
 {
 
-    public class UserDataDTO : ShiftEntity.Model.Dtos.ShiftEntityDTO
+    public class UserDataDTO : ShiftEntity.Model.Dtos.ShiftEntityViewAndUpsertDTO
     {
         [UserHashIdConverter]
         public override string? ID { get; set; }
