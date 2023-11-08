@@ -12,6 +12,7 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 [DontSetCompanyInfoOnThisEntityWithAutoTrigger]
 [ShiftEntityReplication<RegionModel>(ContainerName = ReplicationConfiguration.RegionContainerName,
     AccountName = ReplicationConfiguration.AccountName)]
+[PropertyReferenceReplication<RegionModel>(ReplicationConfiguration.CompanyBranchContainerName, nameof(CompanyBranchModel.Region))]
 [ReplicationPartitionKey(nameof(RegionModel.id))]
 public class Region : ShiftEntity<Region>
 {
