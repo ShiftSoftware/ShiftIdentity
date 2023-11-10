@@ -13,13 +13,13 @@
            EnableExport>
 
     <PropertyColumn Property="x => x.Name" Title="Name" />
-    <PropertyColumn Property="x => x.LegalName" Title="Legal Name"/>
+    <PropertyColumn Property="x => x.LegalName" Title="Legal Name" />
     <PropertyColumn Property="x => x.ShortCode" Title="Short Code" />
     <PropertyColumn Property="x => x.ExternalId" Title="External ID" />
 
-    <TemplateColumn Title="Company Type">
+    <PropertyColumn Title="Company Type" Property="x=> x.CompanyType">
         <CellTemplate>
-            <span>@context.Item.CompanyType!.Describe()</span>
+            <span>@context!.Item!.CompanyType!.Describe()</span>
         </CellTemplate>
-    </TemplateColumn>
+    </PropertyColumn>
 </ShiftList>

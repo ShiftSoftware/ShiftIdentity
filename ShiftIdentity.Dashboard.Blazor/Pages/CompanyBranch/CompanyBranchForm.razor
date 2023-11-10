@@ -4,8 +4,16 @@
 @inherits ShiftForm<CompanyBranchForm, ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchDTO>
 @inject HttpClient Http
 
+@inject ODataQuery odataQuery
+
 @using ShiftSoftware.ShiftIdentity.Core.Enums
-@using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.Service;
+@using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.Service
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.Company
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.Region
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.Department
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.Service
+
+
 
 <ShiftEntityForm @bind-Mode="Mode"
                  @bind-Value="TheItem"
@@ -49,12 +57,9 @@
                                For="@(() => TheItem.Company)"
                                T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
                                @bind-Value="TheItem.Company"
+                               ODataParameters="@(odataQuery.CreateODataParameterObject<CompanyListDTO>("IdentityCompany", "ID", "Name"))"
                                ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
-                               EntitySet="IdentityCompany"
-                               TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Company.CompanyListDTO"
-                               Where="@(q => x => x.Name!.Contains(q))"
-                               DataValueField="@nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.Company.CompanyListDTO.ID)"
-                               DataTextField="@nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.Company.CompanyListDTO.Name)" />
+                               TEntitySet="CompanyListDTO" />
         </MudItem>
 
         <MudItem xs="12" sm="6" lg="4" xl="3">
@@ -63,11 +68,8 @@
                                T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
                                @bind-Value="TheItem.Region"
                                ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
-                               EntitySet="IdentityRegion"
-                               TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Region.RegionListDTO"
-                               Where="@(q => x => x.Name!.Contains(q))"
-                               DataValueField="@nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.Region.RegionListDTO.ID)"
-                               DataTextField="@nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.Region.RegionListDTO.Name)" />
+                               ODataParameters="@(odataQuery.CreateODataParameterObject<RegionListDTO>("IdentityRegion", "ID", "Name"))"
+                               TEntitySet="RegionListDTO" />
         </MudItem>
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
@@ -75,11 +77,8 @@
                                T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
                                @bind-Value="LastSelectedDepartment"
                                ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
-                               EntitySet="IdentityDepartment"
-                               TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentListDTO"
-                               Where="@(q => x => x.Name!.Contains(q))"
-                               DataValueField="@nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentListDTO.ID)"
-                               DataTextField="@nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentListDTO.Name)" />
+                               TEntitySet="DepartmentListDTO"
+                               ODataParameters="@(odataQuery.CreateODataParameterObject<DepartmentListDTO>("IdentityDepartment", "ID", "Name"))" />
 
             <br />
 
@@ -94,14 +93,11 @@
                                            T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
                                            TQuickAdd="ShiftSoftware.ShiftIdentity.Core.DTOs.Service.ServiceDTO"
                                            QuickAddComponentType="@typeof(ServiceForm)"
-                                           @bind-Value="LastSelectedService"
+            @bind-Value="LastSelectedService"
                                            ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
-                                           EntitySet="IdentityService"
-                                           TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Service.ServiceListDTO"
-                                           Where="@(q => x => x.Name!.Contains(q))"
-                                           DataValueField="@nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.Service.ServiceListDTO.ID)"
-                                           DataTextField="@nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.Service.ServiceListDTO.Name)"
-                                           QuickAddParameterName="@nameof(ServiceForm.ServiceName)"/>
+                                           TEntitySet="ServiceListDTO"
+                                           ODataParameters="@(odataQuery.CreateODataParameterObject<ServiceListDTO>("IdentityService", "ID", "Name"))"
+                                           QuickAddParameterName="@nameof(ServiceForm.ServiceName)" />
             <br />
 
             @foreach (var item in TheItem.Services)
@@ -115,7 +111,7 @@
                           Disabled="@Disabled"
                           OnlyValidateIfDirty="true"
                           Label="HQ Phone"
-                          @bind-Value="TheItem.Phone"
+            @bind-Value="TheItem.Phone"
                           For="@(() => TheItem.Phone)" />
         </MudItem>
 
@@ -124,7 +120,7 @@
                           Disabled="@Disabled"
                           OnlyValidateIfDirty="true"
                           Label="HQ Email"
-                          @bind-Value="TheItem.Email"
+            @bind-Value="TheItem.Email"
                           For="@(() => TheItem.Email)" />
         </MudItem>
 
@@ -133,7 +129,7 @@
                           Disabled="@Disabled"
                           OnlyValidateIfDirty="true"
                           Label="HQ Address"
-                          @bind-Value="TheItem.Address"
+            @bind-Value="TheItem.Address"
                           For="@(() => TheItem.Address)" />
         </MudItem>
     </MudGrid>

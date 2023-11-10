@@ -18,12 +18,12 @@
     <PropertyColumn Title="Company" Property="x => x.Company" />
     <PropertyColumn Title="External ID" Property="x => x.ExternalId" />
 
-    <TemplateColumn Title="Departments">
+    <PropertyColumn Title="Departments" Property="x=> x.Departments">
         <CellTemplate>
-            @foreach (var department in context.Item.Departments)
+            @foreach (var department in context.Item!.Departments)
             {
                 <MudChip Size="Size.Small" Color="Color.Primary">@department.Text</MudChip>
             }
         </CellTemplate>
-    </TemplateColumn>
+    </PropertyColumn>
 </ShiftList>

@@ -4,10 +4,12 @@
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(UserForm)}/{{Key?}}")]
 @inherits ShiftForm<UserForm, ShiftSoftware.ShiftIdentity.Core.DTOs.User.UserDTO>
 @inject HttpClient Http
-@inject ODataQuery ODataQuery
+@inject ODataQuery odataQuery
 
 @using ShiftSoftware.ShiftEntity.Model.Dtos
 @using ShiftSoftware.ShiftBlazor.Enums
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch
 
 <ShiftEntityForm @bind-Mode="Mode"
                  @bind-Value="TheItem"
@@ -76,21 +78,15 @@
                        T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
                        @bind-Value="TheItem.CompanyBranchID"
                        ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
-                       EntitySet="IdentityCompanyBranch"
-                       TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO"
-                       Where="@(q => x => x.Name!.Contains(q))"
-                       DataValueField="@nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO.ID)"
-                       DataTextField="@nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO.Name)" />
+                       TEntitySet="CompanyBranchListDTO"
+                       ODataParameters="@(odataQuery.CreateODataParameterObject<CompanyBranchListDTO>("IdentityCompanyBranch", "ID", "Name"))" />
 
     <ShiftAutocomplete Label="Access Trees"
                        T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
                        @bind-Value="LastSelectedAccessTree"
                        ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
-                       EntitySet="IdentityAccessTree"
-                       TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree.AccessTreeDTO"
-                       Where="@(q => x => x.Name!.Contains(q))"
-                       DataValueField="@nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree.AccessTreeDTO.ID)"
-                       DataTextField="@nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree.AccessTreeDTO.Name)" />
+                       ODataParameters="@(odataQuery.CreateODataParameterObject<AccessTreeDTO>("IdentityAccessTree", "ID", "Name"))"
+                       TEntitySet="AccessTreeDTO" />
 
     <br />
 
