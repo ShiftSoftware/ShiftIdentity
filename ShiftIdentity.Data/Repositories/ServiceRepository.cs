@@ -7,7 +7,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
 public class ServiceRepository : ShiftRepository<ShiftIdentityDbContext, Service, ServiceListDTO, ServiceDTO>
 {
-    public ServiceRepository(ShiftIdentityDbContext db, IMapper mapper) : base(db, db.Services, mapper)
+    public ServiceRepository(ShiftIdentityDbContext db, IMapper mapper) : base(db, mapper)
     {
     }
 }

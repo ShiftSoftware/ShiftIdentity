@@ -10,7 +10,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
 public class CompanyRepository : ShiftRepository<ShiftIdentityDbContext, Company, CompanyListDTO, CompanyDTO>
 {
-    public CompanyRepository(ShiftIdentityDbContext db, IMapper mapper) : base(db, db.Companies, mapper)
+    public CompanyRepository(ShiftIdentityDbContext db, IMapper mapper) : base(db, mapper)
     {
 
     }
