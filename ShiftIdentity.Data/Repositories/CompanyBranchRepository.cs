@@ -11,7 +11,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
 {
     public class CompanyBranchRepository : ShiftRepository<ShiftIdentityDbContext, CompanyBranch, CompanyBranchListDTO, CompanyBranchDTO>
     {
-        public CompanyBranchRepository(ShiftIdentityDbContext db, IMapper mapper) : base(db, mapper, r =>
+        public CompanyBranchRepository(ShiftIdentityDbContext db, IMapper mapper) : base(db, r =>
             r.IncludeRelatedEntitiesWithFindAsync(
                 x => x.Include(y => y.Company),
                 x => x.Include(y => y.Region),

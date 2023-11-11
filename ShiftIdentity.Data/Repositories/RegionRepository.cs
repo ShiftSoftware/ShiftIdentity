@@ -10,7 +10,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
 public class RegionRepository : ShiftRepository<ShiftIdentityDbContext, Region, RegionListDTO, RegionDTO>
 {
-    public RegionRepository(ShiftIdentityDbContext db, IMapper mapper) : base(db, mapper)
+    public RegionRepository(ShiftIdentityDbContext db, IMapper mapper) : base(db)
     {
     }
 

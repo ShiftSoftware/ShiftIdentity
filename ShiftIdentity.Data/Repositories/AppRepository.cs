@@ -14,7 +14,7 @@ public class AppRepository :
     IAppRepository
 {
 
-    public AppRepository(ShiftIdentityDbContext db, IMapper mapper) : base(db, mapper)
+    public AppRepository(ShiftIdentityDbContext db, IMapper mapper) : base(db)
     {
     }
 

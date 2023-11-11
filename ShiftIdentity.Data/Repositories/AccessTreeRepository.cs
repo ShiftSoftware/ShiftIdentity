@@ -13,7 +13,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 public class AccessTreeRepository : ShiftRepository<ShiftIdentityDbContext, AccessTree, AccessTreeDTO, AccessTreeDTO>
 {
     private readonly ITypeAuthService typeAuthService;
-    public AccessTreeRepository(ShiftIdentityDbContext db, ITypeAuthService typeAuthService, IMapper mapper) : base(db, mapper)
+    public AccessTreeRepository(ShiftIdentityDbContext db, ITypeAuthService typeAuthService, IMapper mapper) : base(db)
     {
         this.typeAuthService = typeAuthService;
     }
