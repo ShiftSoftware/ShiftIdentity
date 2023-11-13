@@ -55,7 +55,6 @@
         <MudItem xs="12" sm="6" lg="4" xl="3">
             <ShiftAutocomplete Label="Company"
                                For="@(() => TheItem.Company)"
-                               T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
                                @bind-Value="TheItem.Company"
                                EntitySet="IdentityCompany"
                                TEntitySet="CompanyListDTO" />
@@ -74,7 +73,6 @@
         <MudItem xs="12" sm="6" lg="4" xl="4">
             <ShiftAutocomplete Label="City"
                                For="@(() => TheItem.City)"
-                               T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
                                @bind-Value="TheItem.City"
                                EntitySet="IdentityCity"
                                TEntitySet="CityListDTO" />
@@ -100,7 +98,6 @@
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
             <ShiftAutocomplete Label="Departments"
-                               T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
                                @bind-Value="LastSelectedDepartment"
                                TEntitySet="DepartmentListDTO"
                                EntitySet="IdentityDepartment" />
@@ -115,7 +112,6 @@
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
             <ShiftAutocompleteWithQuickAdd Label="Services"
-                                           T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
                                            TQuickAdd="ShiftSoftware.ShiftIdentity.Core.DTOs.Service.ServiceDTO"
                                            QuickAddComponentType="@typeof(ServiceForm)"
             @bind-Value="LastSelectedService"
