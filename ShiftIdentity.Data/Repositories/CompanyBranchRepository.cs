@@ -6,6 +6,7 @@ using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using System.Net;
+using System.Text.Json;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Repositories
 {
@@ -72,6 +73,10 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
 
             entity.Email = dto.Email;
             entity.Address = dto.Address;
+
+            entity.Longitude = dto.Longitude;
+            entity.Latitude = dto.Latitude;
+            entity.Photos = JsonSerializer.Serialize(dto.Photos);
 
             //ef core may not set the entity state as Modified if the only the collections are changed (CompanyBranchDepartments, CompanyBranchServices)
             if (actionType == ActionTypes.Update)
