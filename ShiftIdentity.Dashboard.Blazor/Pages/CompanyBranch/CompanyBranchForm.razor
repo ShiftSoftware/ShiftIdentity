@@ -57,19 +57,18 @@
                                For="@(() => TheItem.Company)"
                                T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
                                @bind-Value="TheItem.Company"
-                               ODataParameters="@(odataQuery.CreateODataParameterObject<CompanyListDTO>("IdentityCompany", "ID", "Name"))"
-                               ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
+                               EntitySet="IdentityCompany"
                                TEntitySet="CompanyListDTO" />
         </MudItem>
 
         @* <MudItem xs="12" sm="6" lg="4" xl="4">
-            <ShiftAutocomplete Label="Region"
-                               For="@(() => TheItem.Region)"
-                               T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
-                               @bind-Value="TheItem.Region"
-                               ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
-                               ODataParameters="@(odataQuery.CreateODataParameterObject<RegionListDTO>("IdentityRegion", "ID", "Name"))"
-                               TEntitySet="RegionListDTO" />
+        <ShiftAutocomplete Label="Region"
+        For="@(() => TheItem.Region)"
+        T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
+        @bind-Value="TheItem.Region"
+        ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
+        ODataParameters="@(odataQuery.CreateODataParameterObject<RegionListDTO>("IdentityRegion", "ID", "Name"))"
+        TEntitySet="RegionListDTO" />
         </MudItem> *@
 
         <MudItem xs="12" sm="6" lg="4" xl="4">
@@ -77,8 +76,7 @@
                                For="@(() => TheItem.City)"
                                T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
                                @bind-Value="TheItem.City"
-                               ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
-                               ODataParameters="@(odataQuery.CreateODataParameterObject<CityListDTO>("IdentityCity", "ID", "Name"))"
+                               EntitySet="IdentityCity"
                                TEntitySet="CityListDTO" />
         </MudItem>
 
@@ -104,9 +102,8 @@
             <ShiftAutocomplete Label="Departments"
                                T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
                                @bind-Value="LastSelectedDepartment"
-                               ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
                                TEntitySet="DepartmentListDTO"
-                               ODataParameters="@(odataQuery.CreateODataParameterObject<DepartmentListDTO>("IdentityDepartment", "ID", "Name"))" />
+                               EntitySet="IdentityDepartment" />
 
             <br />
 
@@ -122,9 +119,8 @@
                                            TQuickAdd="ShiftSoftware.ShiftIdentity.Core.DTOs.Service.ServiceDTO"
                                            QuickAddComponentType="@typeof(ServiceForm)"
             @bind-Value="LastSelectedService"
-                                           ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
                                            TEntitySet="ServiceListDTO"
-                                           ODataParameters="@(odataQuery.CreateODataParameterObject<ServiceListDTO>("IdentityService", "ID", "Name"))"
+                                           EntitySet="IdentityService"
                                            QuickAddParameterName="@nameof(ServiceForm.ServiceName)" />
             <br />
 

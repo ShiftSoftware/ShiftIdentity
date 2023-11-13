@@ -26,7 +26,6 @@
                        For="@(() => TheItem.Region)"
                        T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
                        @bind-Value="TheItem.Region"
-                       ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
-                       ODataParameters="@(odataQuery.CreateODataParameterObject<RegionListDTO>("IdentityRegion", "ID", "Name"))"
+                       EntitySet="IdentityRegion"
                        TEntitySet="RegionListDTO" />
 </ShiftEntityForm>

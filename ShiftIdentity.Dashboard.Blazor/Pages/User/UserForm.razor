@@ -79,13 +79,14 @@
                        @bind-Value="TheItem.CompanyBranchID"
                        ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
                        TEntitySet="CompanyBranchListDTO"
-                       ODataParameters="@(odataQuery.CreateODataParameterObject<CompanyBranchListDTO>("IdentityCompanyBranch", "ID", "Name"))" />
+                       EntitySet="IdentityCompanyBranch"
+                       />
 
     <ShiftAutocomplete Label="Access Trees"
                        T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
                        @bind-Value="LastSelectedAccessTree"
                        ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
-                       ODataParameters="@(odataQuery.CreateODataParameterObject<AccessTreeDTO>("IdentityAccessTree", "ID", "Name"))"
+                       EntitySet="IdentityAccessTree"
                        TEntitySet="AccessTreeDTO" />
 
     <br />

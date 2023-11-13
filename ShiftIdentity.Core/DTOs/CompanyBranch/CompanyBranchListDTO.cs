@@ -1,9 +1,11 @@
-﻿using ShiftSoftware.ShiftEntity.Model.Dtos;
+﻿using ShiftSoftware.ShiftEntity.Core;
+using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
 using System.Collections.Generic;
 
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
 
+[ShiftEntityKeyAndName(nameof(ID), nameof(Name))]
 public class CompanyBranchListDTO : ShiftEntityListDTO
 {
     [CompanyBranchHashIdConverter]

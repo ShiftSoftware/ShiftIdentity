@@ -1,10 +1,12 @@
-﻿using ShiftSoftware.ShiftEntity.Model.Dtos;
+﻿using ShiftSoftware.ShiftEntity.Core;
+using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
 using ShiftSoftware.ShiftIdentity.Core.Enums;
 using System.Text.Json.Serialization;
 
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
 
+[ShiftEntityKeyAndName(nameof(ID), nameof(Name))]
 public class CompanyListDTO : ShiftEntityListDTO
 {
     [CompanyHashIdConverter]
