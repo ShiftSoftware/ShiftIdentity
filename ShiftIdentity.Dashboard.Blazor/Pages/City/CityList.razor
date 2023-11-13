@@ -1,0 +1,17 @@
+@attribute [Authorize]
+@layout Shared.DefaultLayout
+@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CityList)}")]
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.City;
+
+<ShiftList EntitySet="@($"{Constants.IdentityRoutePreifix}City")"
+           Title="City List"
+           T="CityListDTO"
+           ComponentType="typeof(CityForm)"
+           Dense
+           ShowIDColumn
+            TypeAuthAction="ShiftIdentityActions.Cities"
+           EnableExport>
+
+    <PropertyColumn Title="Name" Property="x => x.Name" />
+    <PropertyColumn Title="Region" Property="x => x.Region" />
+</ShiftList>

@@ -6,6 +6,7 @@
 @using Pages.Company
 @using Pages.CompanyBranch
 @using Pages.Region
+@using Pages.City
 
 @inject ShiftIdentityDashboardBlazorOptions ShiftIdentityDashboardBlazorOptions
 @inject ITypeAuthService TypeAuthService
@@ -15,6 +16,11 @@
                           Match="NavLinkMatch.All"
                           Icon="@Icons.Material.Outlined.Map"
                           TypeAuthAction="ShiftIdentityActions.Regions">Regions</AuthorizedMudNavLink>
+
+    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(CityList)}")"
+                          Match="NavLinkMatch.All"
+                          Icon="@Icons.Material.Outlined.AccountBalance"
+                          TypeAuthAction="ShiftIdentityActions.Cities">Cities</AuthorizedMudNavLink>
 
     <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(DepartmentList)}")"
                           Match="NavLinkMatch.All"

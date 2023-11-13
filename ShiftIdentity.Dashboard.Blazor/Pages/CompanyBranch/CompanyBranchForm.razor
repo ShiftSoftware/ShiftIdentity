@@ -9,7 +9,7 @@
 @using ShiftSoftware.ShiftIdentity.Core.Enums
 @using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.Service
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Company
-@using ShiftSoftware.ShiftIdentity.Core.DTOs.Region
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.City
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Department
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Service
 
@@ -62,7 +62,7 @@
                                TEntitySet="CompanyListDTO" />
         </MudItem>
 
-        <MudItem xs="12" sm="6" lg="4" xl="3">
+        @* <MudItem xs="12" sm="6" lg="4" xl="4">
             <ShiftAutocomplete Label="Region"
                                For="@(() => TheItem.Region)"
                                T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
@@ -70,6 +70,34 @@
                                ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
                                ODataParameters="@(odataQuery.CreateODataParameterObject<RegionListDTO>("IdentityRegion", "ID", "Name"))"
                                TEntitySet="RegionListDTO" />
+        </MudItem> *@
+
+        <MudItem xs="12" sm="6" lg="4" xl="4">
+            <ShiftAutocomplete Label="City"
+                               For="@(() => TheItem.City)"
+                               T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
+                               @bind-Value="TheItem.City"
+                               ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
+                               ODataParameters="@(odataQuery.CreateODataParameterObject<CityListDTO>("IdentityCity", "ID", "Name"))"
+                               TEntitySet="CityListDTO" />
+        </MudItem>
+
+        <MudItem xs="12" sm="6" lg="4" xl="4">
+            <MudTextField ReadOnly="@ReadOnly"
+                          Disabled="@Disabled"
+                          OnlyValidateIfDirty="true"
+                          Label="HQ Phone"
+                          @bind-Value="TheItem.Phone"
+                          For="@(() => TheItem.Phone)" />
+        </MudItem>
+
+        <MudItem xs="12" sm="6" lg="4" xl="4">
+            <MudTextField ReadOnly="@ReadOnly"
+                          Disabled="@Disabled"
+                          OnlyValidateIfDirty="true"
+                          Label="HQ Email"
+                          @bind-Value="TheItem.Email"
+                          For="@(() => TheItem.Email)" />
         </MudItem>
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
@@ -110,27 +138,36 @@
             <MudTextField ReadOnly="@ReadOnly"
                           Disabled="@Disabled"
                           OnlyValidateIfDirty="true"
-                          Label="HQ Phone"
-            @bind-Value="TheItem.Phone"
-                          For="@(() => TheItem.Phone)" />
-        </MudItem>
-
-        <MudItem xs="12" sm="6" lg="4" xl="4">
-            <MudTextField ReadOnly="@ReadOnly"
-                          Disabled="@Disabled"
-                          OnlyValidateIfDirty="true"
-                          Label="HQ Email"
-            @bind-Value="TheItem.Email"
-                          For="@(() => TheItem.Email)" />
-        </MudItem>
-
-        <MudItem xs="12" sm="6" lg="4" xl="4">
-            <MudTextField ReadOnly="@ReadOnly"
-                          Disabled="@Disabled"
-                          OnlyValidateIfDirty="true"
-                          Label="HQ Address"
+                          Label="Address"
             @bind-Value="TheItem.Address"
                           For="@(() => TheItem.Address)" />
+        </MudItem>
+
+        <MudItem xs="12" sm="6" lg="4" xl="4">
+            <MudTextField ReadOnly="@ReadOnly"
+                          Disabled="@Disabled"
+                          OnlyValidateIfDirty="true"
+                          Label="Latitude"
+            @bind-Value="TheItem.Latitude"
+                          For="@(() => TheItem.Latitude)" />
+        </MudItem>
+
+        <MudItem xs="12" sm="6" lg="4" xl="4">
+            <MudTextField ReadOnly="@ReadOnly"
+                          Disabled="@Disabled"
+                          OnlyValidateIfDirty="true"
+                          Label="Longitude"
+            @bind-Value="TheItem.Longitude"
+                          For="@(() => TheItem.Longitude)" />
+        </MudItem>
+
+        <MudItem xs="12" sm="12" lg="12" xl="12">
+            <FileUploader Url="/file/upload"
+                          ShowThumbnail="true"
+                          Label="Photos"
+                          For="() => TheItem.Photos"
+                          AcceptImages="true"
+            @bind-Values="TheItem.Photos" />
         </MudItem>
     </MudGrid>
 </ShiftEntityForm>

@@ -11,15 +11,17 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
 {
     public class CompanyBranchRepository : ShiftRepository<ShiftIdentityDbContext, CompanyBranch, CompanyBranchListDTO, CompanyBranchDTO>
     {
-        public CompanyBranchRepository(ShiftIdentityDbContext db, IMapper mapper) : base(db, r =>
+        private readonly CityRepository cityRepository;
+        public CompanyBranchRepository(ShiftIdentityDbContext db, CityRepository cityRepository) : base(db, r =>
             r.IncludeRelatedEntitiesWithFindAsync(
                 x => x.Include(y => y.Company),
-                x => x.Include(y => y.Region),
+                x => x.Include(y => y.City),
                 x => x.Include(y => y.CompanyBranchDepartments).ThenInclude(y => y.Department),
                 x => x.Include(y => y.CompanyBranchServices).ThenInclude(y => y.Service)
             )
         )
         {
+            this.cityRepository = cityRepository;
         }
 
         public override async ValueTask<CompanyBranch> UpsertAsync(CompanyBranch entity, CompanyBranchDTO dto, ActionTypes actionType, long? userId = null)
@@ -27,17 +29,20 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             if (entity.BuiltIn)
                 throw new ShiftEntityException(new Message("Error", "Built-In Data can't be modified."), (int)HttpStatusCode.Forbidden);
 
-            if (actionType == ActionTypes.Update)
-            {
-                if (entity.RegionID != dto.Region.Value.ToLong() || entity.CompanyID != dto.Company.Value.ToLong())
-                    throw new ShiftEntityException(new Message("Error", $"Company and Region can not be changed after creation."));
-            }
+            var oldRegionId = entity.RegionID;
 
             entity.Name = dto.Name;
             entity.ShortCode = dto.ShortCode;
             entity.ExternalId = dto.ExternalId;
             entity.CompanyID = dto.Company.Value.ToLong();
-            entity.RegionID = dto.Region.Value.ToLong();
+            entity.CityID = dto.City.Value.ToLong();
+            entity.RegionID = (await this.cityRepository.FindAsync(entity.CityID.Value))!.RegionID;
+
+            if (actionType == ActionTypes.Update)
+            {
+                if (entity.RegionID != oldRegionId || entity.CompanyID != dto.Company.Value.ToLong())
+                    throw new ShiftEntityException(new Message("Error", $"Company and Region can not be changed after creation."));
+            }
 
             //Update departments
             var deletedDepartments = entity.CompanyBranchDepartments.Where(x => !dto.Departments.Select(s => s.Value.ToLong())

@@ -1,0 +1,32 @@
+@attribute [Authorize]
+@layout Shared.DefaultLayout
+@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CityForm)}/{{Key?}}")]
+@inherits ShiftForm<CityForm, ShiftSoftware.ShiftIdentity.Core.DTOs.City.CityDTO>
+@inject HttpClient Http
+@inject ODataQuery odataQuery
+
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.Region
+
+<ShiftEntityForm @bind-Mode="Mode"
+                 @bind-Value="TheItem"
+                 @ref="FormContainer"
+                 Action="@($"{Constants.IdentityRoutePreifix}City")"
+                 Title="City"
+                 @bind-Key="@Key"
+                 TypeAuthAction="ShiftIdentityActions.Cities"
+                 T="ShiftSoftware.ShiftIdentity.Core.DTOs.City.CityDTO">
+
+    <MudTextFieldExtended
+                  OnlyValidateIfDirty="true"
+                  Label="Name"
+                  @bind-Value="TheItem.Name"
+                  For="@(() => TheItem.Name)" />
+
+    <ShiftAutocomplete Label="Region"
+                       For="@(() => TheItem.Region)"
+                       T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
+                       @bind-Value="TheItem.Region"
+                       ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
+                       ODataParameters="@(odataQuery.CreateODataParameterObject<RegionListDTO>("IdentityRegion", "ID", "Name"))"
+                       TEntitySet="RegionListDTO" />
+</ShiftEntityForm>

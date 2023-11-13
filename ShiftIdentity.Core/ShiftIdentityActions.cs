@@ -11,6 +11,7 @@ public class ShiftIdentityActions
     public readonly static ReadWriteDeleteAction Users = new ReadWriteDeleteAction("Users");
 
     public readonly static ReadWriteDeleteAction Regions = new ReadWriteDeleteAction("Regions");
+    public readonly static ReadWriteDeleteAction Cities = new ReadWriteDeleteAction("Cities");
     public readonly static ReadWriteDeleteAction Departments = new ReadWriteDeleteAction("Departments");
     public readonly static ReadWriteDeleteAction Services = new ReadWriteDeleteAction("Services");
     public readonly static ReadWriteDeleteAction Companies = new ReadWriteDeleteAction("Companies");

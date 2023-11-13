@@ -12,6 +12,7 @@ public class CompanyBranchListDTO : ShiftEntityListDTO
     public string? Name { get; set; }
     public string? ShortCode { get; set; }
     public string? ExternalId { get; set; } = default!;
+    public string? City { get; set; }
     public string? Region { get; set; }
     public string? Company { get; set; }
 

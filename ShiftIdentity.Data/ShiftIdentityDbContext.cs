@@ -28,6 +28,7 @@ namespace ShiftSoftware.ShiftIdentity.Data
         public DbSet<Department> Departments { get; set; }
         public DbSet<CompanyBranchDepartment> CompanyBranchDepartments { get; set; }
         public DbSet<CompanyBranchService> CompanyBranchServices { get; set; }
+        public DbSet<City> Cities { get; set; }
 
         protected override void OnModelCreating(ModelBuilder b)
         {

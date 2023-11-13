@@ -20,15 +20,19 @@ public class CompanyBranch : ShiftEntity<CompanyBranch>
     public string? Phone { get; set; }
     public string? Email { get; set; }
     public string? Address { get; set; }
+    public string? Latitude { get; set; }
+    public string? Longitude { get; set; }
     public string? ExternalId { get; set; } = default!;
     public string? ShortCode { get; set; }
     public bool BuiltIn { get; set; }
     public virtual Company Company { get; set; } = default!;
     public virtual Region Region { get; set; } = default!;
+    public virtual City City { get; set; } = default!;
     public virtual ICollection<CompanyBranchDepartment>? CompanyBranchDepartments { get; set; }
     public virtual ICollection<CompanyBranchService>? CompanyBranchServices { get; set; }
 
     public new long RegionID { get; set; }
+    public long? CityID { get; set; }
     public new long CompanyID { get; set; }
 
     public CompanyBranch()

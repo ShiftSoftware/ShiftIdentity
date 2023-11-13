@@ -12,6 +12,7 @@ internal static class ReplicationConfiguration
     internal const string CompanyContainerName = "Companies";
     internal const string CompanyBranchContainerName = "CompanyBranches";
     internal const string RegionContainerName = "Regions";
+    internal const string CityContainerName = "Cities";
     internal const string ServiceContainerName = "Services";
     internal const string DepartmentContainerName = "Departments";
 }

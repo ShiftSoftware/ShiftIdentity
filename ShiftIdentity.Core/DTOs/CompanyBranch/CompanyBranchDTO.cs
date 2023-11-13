@@ -25,13 +25,18 @@ public class CompanyBranchDTO : ShiftEntityViewAndUpsertDTO
     public string? CompanyID { get; set; }
 
     [Required]
-    [RegionHashIdConverter]
-    public ShiftEntitySelectDTO Region { get; set; } = default!;
+    [CityHashIdConverter]
+    public ShiftEntitySelectDTO City { get; set; } = default!;
+
     public string? Phone { get; set; }
     public string? Email { get; set; }
     public string? Address { get; set; }
     public string? ExternalId { get; set; } = default!;
     public string? ShortCode { get; set; }
+
+    public string? Latitude { get; set; }
+    public string? Longitude { get; set; }
+    public List<ShiftFileDTO>? Photos { get; set; }
 
     [DepartmentHashIdConverter]
     public IEnumerable<ShiftEntitySelectDTO> Departments { get; set; } = new List<ShiftEntitySelectDTO>();

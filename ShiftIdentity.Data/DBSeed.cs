@@ -26,9 +26,11 @@ public class DBSeed
     {
         Region region = await SeedRegionAsync();
 
+        City city = await SeedCityAsync(region);
+
         Company company = await SeedCompanyAsync();
 
-        CompanyBranch companyBranch = await SeedCompanyBranchAsync(region, company);
+        CompanyBranch companyBranch = await SeedCompanyBranchAsync(city, company);
 
         await SeedUserAsync(region, company, companyBranch);
 
@@ -50,6 +52,20 @@ public class DBSeed
         return region;
     }
 
+    private async Task<City> SeedCityAsync(Region region)
+    {
+        var city = await db.Cities.FirstOrDefaultAsync(x => x.Name == Core.Constants.BuiltInCity);
+
+        if (city == null)
+            city = new();
+
+        city.Name = Core.Constants.BuiltInCity;
+        city.Region = region;
+        city.BuiltIn = true;
+
+        return city;
+    }
+
     private async Task<Company> SeedCompanyAsync()
     {
         var company = await db.Companies.FirstOrDefaultAsync(x => x.Name == Core.Constants.BuiltInCompany);
@@ -69,7 +85,7 @@ public class DBSeed
         return company;
     }
 
-    private async Task<CompanyBranch> SeedCompanyBranchAsync(Region region, Company company)
+    private async Task<CompanyBranch> SeedCompanyBranchAsync(City city, Company company)
     {
         var companyBranch = await db.CompanyBranches.FirstOrDefaultAsync(x => x.Name == Core.Constants.BuiltInBranch);
 
@@ -77,7 +93,8 @@ public class DBSeed
             companyBranch = new();
 
         companyBranch.Name = Core.Constants.BuiltInBranch;
-        companyBranch.Region = region;
+        companyBranch.City = city;
+        companyBranch.Region = city.Region;
         companyBranch.Company = company;
         companyBranch.BuiltIn = true;
 

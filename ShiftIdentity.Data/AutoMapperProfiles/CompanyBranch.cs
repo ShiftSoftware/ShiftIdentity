@@ -16,8 +16,8 @@ public class CompanyBranch : Profile
                     opt => opt.MapFrom(src => new ShiftEntitySelectDTO { Value = src.CompanyID.ToString()!, Text = src.Company!.Name })
                 )
             .ForMember(
-                    dest => dest.Region,
-                    opt => opt.MapFrom(src => new ShiftEntitySelectDTO { Value = src.RegionID.ToString()!, Text = src.Region!.Name })
+                    dest => dest.City,
+                    opt => opt.MapFrom(src => new ShiftEntitySelectDTO { Value = src.CityID.ToString()!, Text = src.City!.Name })
                 )
             .ForMember(
                     dest => dest.Services,
@@ -37,6 +37,10 @@ public class CompanyBranch : Profile
             .ForMember(
                     dest => dest.Region,
                     opt => opt.MapFrom(src => src.Region.Name)
+                )
+            .ForMember(
+                    dest => dest.City,
+                    opt => opt.MapFrom(src => src.City.Name)
                 )
             .ForMember(
                     dest => dest.Departments,
