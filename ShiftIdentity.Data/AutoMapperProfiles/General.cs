@@ -15,6 +15,10 @@ public class General : Profile
             .ForMember(
                 dest => dest.id,
                 opt => opt.MapFrom(src => src.ServiceID.ToString())
+            )
+            .ForMember(
+                dest => dest.ID,
+                opt => opt.MapFrom(src => src.ServiceID.ToString())
             );
 
         CreateMap<CompanyBranchDepartment, CompanyBranchDepartmentModel>()
@@ -23,6 +27,10 @@ public class General : Profile
             .ForMember(dest => dest.BranchID, opt => opt.MapFrom(src => src.CompanyBranchID))
             .ForMember(
                 dest => dest.id,
+                opt => opt.MapFrom(src => src.DepartmentID.ToString())
+            )
+            .ForMember(
+                dest => dest.ID,
                 opt => opt.MapFrom(src => src.DepartmentID.ToString())
             );
     }
