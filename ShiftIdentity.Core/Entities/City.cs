@@ -1,4 +1,6 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
+using ShiftSoftware.ShiftEntity.Model.Replication;
+using ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -8,6 +10,10 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 [TemporalShiftEntity]
 [Table("Cities", Schema = "ShiftIdentity")]
 [DontSetCompanyInfoOnThisEntityWithAutoTrigger]
+[ShiftEntityReplication<CityModel>(ContainerName = ReplicationConfiguration.RegionContainerName,
+    AccountName = ReplicationConfiguration.AccountName)]
+[ReplicationPartitionKey(nameof(CityModel.RegionID), nameof(CityModel.ItemType))]
+[PropertyReferenceReplication<CityModel>(ReplicationConfiguration.CompanyBranchContainerName, nameof(CompanyBranchModel.City))]
 public class City : ShiftEntity<City>
 {
     public string Name { get; set; } = default!;

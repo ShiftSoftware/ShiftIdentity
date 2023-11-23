@@ -49,7 +49,7 @@ public class CompanyBranch : Profile
 
         CreateMap<Core.Entities.CompanyBranch, CompanyBranchModel>()
             .ForMember(dest=> dest.BranchID, opt => opt.MapFrom(src => src.ID))
-            .ForMember(dest => dest.ItemType, opt => opt.MapFrom(src => CompanyBranchItemTypes.Branch))
+            .ForMember(dest => dest.ItemType, opt => opt.MapFrom(src => CompanyBranchContainerItemTypes.Branch))
             .ForMember(
                 dest => dest.id,
                 opt => opt.MapFrom(src => src.ID.ToString())

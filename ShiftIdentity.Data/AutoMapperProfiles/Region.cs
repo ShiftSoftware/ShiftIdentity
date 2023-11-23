@@ -13,6 +13,14 @@ public class Region : Profile
         CreateMap<Core.Entities.Region, RegionListDTO>();
         CreateMap<Core.Entities.Region, RegionModel>()
             .ForMember(
+                dest => dest.RegionID,
+                opt => opt.MapFrom(src => src.ID.ToString())
+            )
+            .ForMember(
+                dest => dest.ItemType,
+                opt => opt.MapFrom(src => RegionContainerItemTypes.Region)
+            )
+            .ForMember(
                 dest => dest.id,
                 opt => opt.MapFrom(src => src.ID.ToString())
             );

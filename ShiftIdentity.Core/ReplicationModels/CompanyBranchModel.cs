@@ -19,7 +19,7 @@ public class CompanyBranchModel : ReplicationModel
     public string? ShortCode { get; set; }
     public bool BuiltIn { get; set; }
 
-    public RegionModel Region { get; set; }
+    public CityModel City { get; set; }
     public CompanyModel Company { get; set; }
 
     //Partition keys
