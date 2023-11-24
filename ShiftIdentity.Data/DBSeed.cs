@@ -12,13 +12,15 @@ public class DBSeed
     private DBSeedOptions? dbSeedOptions;
 
     private List<Type> actionTrees;
-    private readonly string superUserPassword;
+    private readonly string adminUserName;
+    private readonly string adminPassword;
 
-    public DBSeed(ShiftIdentityDbContext db, List<Type> actionTrees, string superUserPassword, DBSeedOptions? dBSeedOptions)
+    public DBSeed(ShiftIdentityDbContext db, List<Type> actionTrees, string adminUserName, string adminPassword, DBSeedOptions? dBSeedOptions)
     {
         this.db = db;
         this.actionTrees = actionTrees;
-        this.superUserPassword = superUserPassword;
+        this.adminUserName = adminUserName;
+        this.adminPassword = adminPassword;
         dbSeedOptions = dBSeedOptions;
     }
 
@@ -126,7 +128,7 @@ public class DBSeed
 
         user.FullName = "Super User";
         user.IsActive = true;
-        user.Username = "SuperUser";
+        user.Username = this.adminUserName;
         user.BuiltIn = true;
         user.RequireChangePassword = false;
 
@@ -136,7 +138,7 @@ public class DBSeed
 
         user.AccessTree = jsonTree;
 
-        var hash = HashService.GenerateHash(superUserPassword);
+        var hash = HashService.GenerateHash(adminPassword);
 
         user.PasswordHash = hash.PasswordHash;
 
