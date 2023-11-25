@@ -3,6 +3,7 @@
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CompanyBranchForm)}/{{Key?}}")]
 @inherits ShiftForm<CompanyBranchForm, ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchDTO>
 @inject HttpClient Http
+@inject ShiftIdentityDashboardBlazorOptions Options
 
 @inject ODataQuery odataQuery
 
@@ -21,6 +22,7 @@
                  Action="@($"{Constants.IdentityRoutePreifix}CompanyBranch")"
                  Title="Company Branch"
                  @bind-Key="@Key"
+                 OnTaskFinished="OnTaskFinished"
                  TypeAuthAction="ShiftIdentityActions.Companies"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchDTO">
     <MudGrid>
@@ -153,10 +155,41 @@
                           AcceptImages="true"
             @bind-Values="TheItem.Photos" />
         </MudItem>
+
+        @if (this.TheItem.CustomFields is not null && this.TheItem.CustomFields?.Count > 0)
+        {
+            @foreach(var field in this.TheItem.CustomFields)
+            {
+                <MudItem xs="12" sm="6" lg="3" xl="3">
+                    <MudTextField ReadOnly="@ReadOnly"
+                                  Disabled="@Disabled"
+                                  Label="@field.Key"
+                                  @bind-Value="this.TheItem.CustomFields[field.Key].Value" />
+                </MudItem>
+            }
+        }
     </MudGrid>
 </ShiftEntityForm>
 
 @code {
+    protected override Task OnInitializedAsync()
+    {
+        this.SetCustomFiles();
+
+        return base.OnInitializedAsync();   
+    }
+
+    private void OnTaskFinished()
+    {
+        this.SetCustomFiles();
+    }
+
+    private void SetCustomFiles()
+    {
+        foreach (var field in this.Options.CompanyBranchCustomFields)
+            this.TheItem.CustomFields?.TryAdd(field.Key, new CustomField(field.Value.IsEncrypted));
+    }
+
     public ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO? LastSelectedDepartment
     {
         get { return null; }

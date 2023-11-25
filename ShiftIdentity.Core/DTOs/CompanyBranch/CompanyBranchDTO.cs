@@ -38,11 +38,18 @@ public class CompanyBranchDTO : ShiftEntityViewAndUpsertDTO
     public string? Longitude { get; set; }
     public List<ShiftFileDTO>? Photos { get; set; }
 
+    public Dictionary<string, CustomField>? CustomFields { get; set; }
+
     [DepartmentHashIdConverter]
     public IEnumerable<ShiftEntitySelectDTO> Departments { get; set; } = new List<ShiftEntitySelectDTO>();
 
     [ServiceHashIdConverter]
     public IEnumerable<ShiftEntitySelectDTO> Services { get; set; } = new List<ShiftEntitySelectDTO>();
+
+    public CompanyBranchDTO()
+    {
+        this.CustomFields = new();
+    }
 }
 
 

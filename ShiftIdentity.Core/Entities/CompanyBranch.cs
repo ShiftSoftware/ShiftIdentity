@@ -1,5 +1,6 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Model.Replication;
+using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
 using ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
 using System.Collections.Generic;
@@ -26,6 +27,9 @@ public class CompanyBranch : ShiftEntity<CompanyBranch>
     public string? ExternalId { get; set; } = default!;
     public string? ShortCode { get; set; }
     public bool BuiltIn { get; set; }
+
+    public Dictionary<string, CustomField>? CustomFields { get; set; }
+
     public virtual Company Company { get; set; } = default!;
     public virtual Region Region { get; set; } = default!;
     public virtual City City { get; set; } = default!;

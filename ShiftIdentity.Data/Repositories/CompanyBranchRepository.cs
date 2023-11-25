@@ -37,6 +37,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             entity.ExternalId = dto.ExternalId;
             entity.CompanyID = dto.Company.Value.ToLong();
             entity.CityID = dto.City.Value.ToLong();
+            entity.CustomFields = dto.CustomFields;
             entity.RegionID = (await this.cityRepository.FindAsync(entity.CityID.Value))!.RegionID;
 
             if (actionType == ActionTypes.Update)

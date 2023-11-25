@@ -1,6 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using ShiftSoftware.ShiftEntity.EFCore;
+using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
+using System.Text.Json;
 
 namespace ShiftSoftware.ShiftIdentity.Data
 {
@@ -37,6 +39,13 @@ namespace ShiftSoftware.ShiftIdentity.Data
             b.Entity<AccessTree>().HasIndex(x => x.Name).IsUnique().HasFilter($"{nameof(AccessTree.IsDeleted)} = 0");
             b.Entity<App>().HasIndex(x => x.AppId).IsUnique().HasFilter($"{nameof(App.IsDeleted)} = 0");
             b.Entity<User>().HasIndex(x => x.Username).IsUnique().HasFilter($"{nameof(User.IsDeleted)} = 0");
+            b.Entity<CompanyBranch>(x =>
+            {
+                x.Property(p => p.CustomFields).HasConversion(
+                    x => JsonSerializer.Serialize(x, new JsonSerializerOptions(JsonSerializerDefaults.Web)),
+                    x => JsonSerializer.Deserialize<Dictionary<string, CustomField>>(x, new JsonSerializerOptions(JsonSerializerDefaults.Web))
+                );
+            });
         }
     }
 }
