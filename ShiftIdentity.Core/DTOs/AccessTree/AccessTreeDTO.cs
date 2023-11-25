@@ -1,7 +1,7 @@
 ﻿using ShiftSoftware.ShiftEntity.Model.Dtos;
 using System.ComponentModel.DataAnnotations;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
-using ShiftSoftware.ShiftEntity.Core;
+using ShiftSoftware.ShiftEntity.Model;
 
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
 
