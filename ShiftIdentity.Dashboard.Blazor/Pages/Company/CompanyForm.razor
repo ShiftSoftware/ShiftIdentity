@@ -19,22 +19,14 @@
 
     <MudGrid>
 
-        <MudItem xs="12" sm="6" lg="4" xl="3">
-            <MudTextField ReadOnly="@ReadOnly"
-                          Disabled="@Disabled"
-                          OnlyValidateIfDirty="true"
-                          Label="Name"
-                          @bind-Value="TheItem.Name"
-                          For="@(() => TheItem.Name)" />
+        <MudItem xs="12" sm="12" lg="12" xl="12">
+            <LocalizedTextField @bind-Value="TheItem.Name"
+                                Label="Name" />
         </MudItem>
 
-        <MudItem xs="12" sm="6" lg="4" xl="3">
-            <MudTextField ReadOnly="@ReadOnly"
-                          Disabled="@Disabled"
-                          OnlyValidateIfDirty="true"
-                          Label="Legal Name"
-                          @bind-Value="TheItem.LegalName"
-                          For="@(() => TheItem.LegalName)" />
+        <MudItem xs="12" sm="12" lg="12" xl="12">
+            <LocalizedTextField @bind-Value="TheItem.LegalName"
+                                Label="Legal Name" />
         </MudItem>
 
         <MudItem xs="12" sm="6" lg="4" xl="3">

@@ -25,13 +25,9 @@
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchDTO">
     <MudGrid>
 
-        <MudItem xs="12" sm="6" lg="4" xl="3">
-            <MudTextField ReadOnly="@ReadOnly"
-                          Disabled="@Disabled"
-                          OnlyValidateIfDirty="true"
-                          Label="Name"
-                          @bind-Value="TheItem.Name"
-                          For="@(() => TheItem.Name)" />
+        <MudItem xs="12" sm="12" lg="12" xl="12">
+            <LocalizedTextField @bind-Value="TheItem.Name"
+                                Label="Name" />
         </MudItem>
 
         <MudItem xs="12" sm="6" lg="4" xl="3">
@@ -126,13 +122,9 @@
             }
         </MudItem>
 
-        <MudItem xs="12" sm="6" lg="4" xl="4">
-            <MudTextField ReadOnly="@ReadOnly"
-                          Disabled="@Disabled"
-                          OnlyValidateIfDirty="true"
-                          Label="Address"
-            @bind-Value="TheItem.Address"
-                          For="@(() => TheItem.Address)" />
+        <MudItem xs="12" sm="12" lg="12" xl="12">
+            <LocalizedTextField @bind-Value="TheItem.Address"
+                                Label="Address" />
         </MudItem>
 
         <MudItem xs="12" sm="6" lg="4" xl="4">

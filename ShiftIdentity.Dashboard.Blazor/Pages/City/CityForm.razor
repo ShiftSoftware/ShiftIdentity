@@ -16,11 +16,8 @@
                  TypeAuthAction="ShiftIdentityActions.Cities"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.City.CityDTO">
 
-    <MudTextFieldExtended
-                  OnlyValidateIfDirty="true"
-                  Label="Name"
-                  @bind-Value="TheItem.Name"
-                  For="@(() => TheItem.Name)" />
+    <LocalizedTextField @bind-Value="TheItem.Name"
+                        Label="Name" />
 
     <ShiftAutocomplete Label="Region"
                        For="@(() => TheItem.Region)"
