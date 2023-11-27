@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using ShiftSoftware.ShiftEntity.Model.Replication;
+using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.Enums;
 using System;
 using System.Collections.Generic;
@@ -25,4 +26,5 @@ public class CompanyModel : ReplicationModel
     public string? HQEmail { get; set; }
     public string? HQAddress { get; set; }
     public bool BuiltIn { get; set; }
+    public Dictionary<string, CustomField>? CustomFields { get; set; }
 }

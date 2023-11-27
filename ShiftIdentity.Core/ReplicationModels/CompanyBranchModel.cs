@@ -1,5 +1,6 @@
 ﻿using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.Replication;
+using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,4 +26,5 @@ public class CompanyBranchModel : ReplicationModel
     //Partition keys
     public string BranchID { get; set; } = default!;
     public string ItemType { get; set; } = default!;
+    public Dictionary<string, CustomField>? CustomFields { get; set; }
 }
