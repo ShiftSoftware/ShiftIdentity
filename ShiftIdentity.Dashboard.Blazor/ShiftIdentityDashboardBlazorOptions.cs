@@ -12,16 +12,23 @@ public class ShiftIdentityDashboardBlazorOptions
     public ShiftIdentityHostingTypes ShiftIdentityHostingType { get; set; }
 
 
-    public string BaseAssress { get; set; } = default!;
+    public string BaseAddress { get; set; } = default!;
 
     public ShiftIdentityDashboardRoutes DashboardRoutes { get; set; } = new ShiftIdentityDashboardRoutes();
 
     public Func<Task>? DynamicTypeAuthActionExpander { get; set; }
 
+    public ShiftIdentityDashboardBlazorOptions AddCompanyBranchCustomField(string fieldName, string displayName,
+        bool isPassword = false, bool isEncrypted = false)
+    {
+        this.CompanyBranchCustomFields.Add(fieldName, new CustomFieldBase(displayName ?? fieldName, isPassword, isEncrypted));
+        return this;
+    }
+
     public ShiftIdentityDashboardBlazorOptions AddCompanyBranchCustomField(string fieldName,
         bool isPassword = false, bool isEncrypted = false)
     {
-        this.CompanyBranchCustomFields.Add(fieldName, new CustomFieldBase(isPassword, isEncrypted));
+        this.CompanyBranchCustomFields.Add(fieldName, new CustomFieldBase(fieldName, isPassword, isEncrypted));
         return this;
     }
 }

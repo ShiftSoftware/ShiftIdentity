@@ -163,7 +163,7 @@
                 <MudItem xs="12" sm="6" lg="3" xl="3">
                     <MudTextField ReadOnly="@ReadOnly"
                                   Disabled="@Disabled"
-                                  Label="@field.Key"
+                                  Label="@field.Value.DisplayName"
                                   InputType="@(field.Value.IsPassword?InputType.Password:InputType.Text)"
                                   @bind-Value="this.TheItem.CustomFields[field.Key].Value" />
                 </MudItem>
@@ -189,7 +189,7 @@
     {
         foreach (var field in this.Options.CompanyBranchCustomFields)
         {
-            if (this.TheItem.CustomFields.ContainsKey(field.Key))
+            if (this.TheItem.CustomFields?.ContainsKey(field.Key)??false)
                 this.TheItem.CustomFields[field.Key]?.Set(field.Value);
             else
                 this.TheItem.CustomFields?.TryAdd(field.Key, new CustomField(field.Value));

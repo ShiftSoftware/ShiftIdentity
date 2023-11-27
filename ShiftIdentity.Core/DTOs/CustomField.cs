@@ -10,14 +10,16 @@ public class CustomFieldBase
 {
     public bool IsPassword { get; set; }
     public bool IsEncrypted { get; set; }
+    public string DisplayName { get; set; } = default!;
 
     public CustomFieldBase()
     {}
 
-    public CustomFieldBase(bool isPassword, bool isEncrypted)
+    public CustomFieldBase(string displayName, bool isPassword, bool isEncrypted)
     {
         this.IsPassword = isPassword;
         this.IsEncrypted = isEncrypted;
+        this.DisplayName = displayName;
     }
 }
 
@@ -28,7 +30,7 @@ public class CustomField: CustomFieldBase
     public CustomField()
     {}
 
-    public CustomField(bool isPassword, bool isEncrypted) : base(isPassword, isEncrypted)
+    public CustomField(string displayName, bool isPassword, bool isEncrypted) : base(displayName, isPassword, isEncrypted)
     {}
 
     public CustomField(CustomFieldBase customFieldBase)
@@ -36,7 +38,7 @@ public class CustomField: CustomFieldBase
         this.Set(customFieldBase);
     }
 
-    public CustomField(string value, bool isPassword = false, bool isEncrypted = false) : base(isPassword, isEncrypted)
+    public CustomField(string value, CustomFieldBase customFieldBase) : this(customFieldBase)
     {
         this.Value= value;
     }
@@ -45,6 +47,7 @@ public class CustomField: CustomFieldBase
     {
         this.IsPassword = customFieldBase.IsPassword;
         this.IsEncrypted = customFieldBase.IsEncrypted;
+        this.DisplayName = customFieldBase.DisplayName;
         return this;
     }
 }
