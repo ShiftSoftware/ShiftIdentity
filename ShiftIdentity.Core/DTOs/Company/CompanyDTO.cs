@@ -3,6 +3,7 @@ using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
 using ShiftSoftware.ShiftEntity.Model.Replication;
 using ShiftSoftware.ShiftIdentity.Core.Enums;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
@@ -29,6 +30,12 @@ public class CompanyDTO : ShiftEntityViewAndUpsertDTO
     public string? HQPhone { get; set; }
     public string? HQEmail { get; set; }
     public string? HQAddress { get; set; }
+    public Dictionary<string, CustomField>? CustomFields { get; set; }
+
+    public CompanyDTO()
+    {
+        this.CustomFields = new();
+    }
 }
 
 public class CompanyValidator : AbstractValidator<CompanyDTO>

@@ -3,6 +3,7 @@
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CompanyForm)}/{{Key?}}")]
 @inherits ShiftForm<CompanyForm, ShiftSoftware.ShiftIdentity.Core.DTOs.Company.CompanyDTO>
 @inject HttpClient Http
+@inject ShiftIdentityDashboardBlazorOptions Options
 
 @using ShiftSoftware.ShiftIdentity.Core.Enums
 
@@ -13,6 +14,7 @@
                  Action="@($"{Constants.IdentityRoutePreifix}Company")"
                  Title="Company"
                  @bind-Key="@Key"
+                 OnTaskFinished="OnTaskFinished"
                  TypeAuthAction="ShiftIdentityActions.Companies"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.Company.CompanyDTO">
 
@@ -100,9 +102,44 @@
                           @bind-Value="TheItem.HQAddress"
                           For="@(() => TheItem.HQAddress)" />
         </MudItem>
+
+        @if (this.TheItem.CustomFields is not null && this.TheItem.CustomFields?.Count > 0)
+        {
+            @foreach (var field in this.TheItem.CustomFields)
+            {
+                <MudItem xs="12" sm="6" lg="3" xl="3">
+                    <MudTextField ReadOnly="@ReadOnly"
+                                  Disabled="@Disabled"
+                                  Label="@field.Value.DisplayName"
+                                  InputType="@(field.Value.IsPassword?InputType.Password:InputType.Text)"
+                                  @bind-Value="this.TheItem.CustomFields[field.Key].Value" />
+                </MudItem>
+            }
+        }
     </MudGrid>
 </ShiftEntityForm>
 
 @code {
+    protected override Task OnInitializedAsync()
+    {
+        this.SetCustomFiles();
 
+        return base.OnInitializedAsync();
+    }
+
+    private void OnTaskFinished()
+    {
+        this.SetCustomFiles();
+    }
+
+    private void SetCustomFiles()
+    {
+        foreach (var field in this.Options.CompanyCustomFields)
+        {
+            if (this.TheItem.CustomFields?.ContainsKey(field.Key) ?? false)
+                this.TheItem.CustomFields[field.Key]?.Set(field.Value);
+            else
+                this.TheItem.CustomFields?.TryAdd(field.Key, new CustomField(field.Value));
+        }
+    }
 }

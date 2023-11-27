@@ -6,6 +6,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor;
 public class ShiftIdentityDashboardBlazorOptions
 {
     internal Dictionary<string, CustomFieldBase> CompanyBranchCustomFields = new();
+    internal Dictionary<string, CustomFieldBase> CompanyCustomFields = new();
 
     public string Title { get; set; } = default!;
     public string LogoPath { get; set; } = default!;
@@ -29,6 +30,20 @@ public class ShiftIdentityDashboardBlazorOptions
         bool isPassword = false, bool isEncrypted = false)
     {
         this.CompanyBranchCustomFields.Add(fieldName, new CustomFieldBase(fieldName, isPassword, isEncrypted));
+        return this;
+    }
+
+    public ShiftIdentityDashboardBlazorOptions AddCompanyCustomField(string fieldName, string displayName,
+        bool isPassword = false, bool isEncrypted = false)
+    {
+        this.CompanyCustomFields.Add(fieldName, new CustomFieldBase(displayName ?? fieldName, isPassword, isEncrypted));
+        return this;
+    }
+
+    public ShiftIdentityDashboardBlazorOptions AddCompanyCustomField(string fieldName,
+        bool isPassword = false, bool isEncrypted = false)
+    {
+        this.CompanyCustomFields.Add(fieldName, new CustomFieldBase(fieldName, isPassword, isEncrypted));
         return this;
     }
 }

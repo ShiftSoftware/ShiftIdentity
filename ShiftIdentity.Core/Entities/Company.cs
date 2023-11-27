@@ -1,5 +1,6 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Model.Replication;
+using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
 using ShiftSoftware.ShiftIdentity.Core.Enums;
 using ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
@@ -28,6 +29,7 @@ public class Company : ShiftEntity<Company>
     public string? HQEmail { get; set; }
     public string? HQAddress { get; set; }
     public bool BuiltIn { get; set; }
+    public Dictionary<string, CustomField>? CustomFields { get; set; }
 
     public virtual ICollection<CompanyBranch> CompanyBranches { get; set; }
 

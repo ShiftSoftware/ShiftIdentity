@@ -46,6 +46,13 @@ namespace ShiftSoftware.ShiftIdentity.Data
                     x => JsonSerializer.Deserialize<Dictionary<string, CustomField>>(x, new JsonSerializerOptions(JsonSerializerDefaults.Web))
                 );
             });
+            b.Entity<Company>(x =>
+            {
+                x.Property(p => p.CustomFields).HasConversion(
+                    x => JsonSerializer.Serialize(x, new JsonSerializerOptions(JsonSerializerDefaults.Web)),
+                    x => JsonSerializer.Deserialize<Dictionary<string, CustomField>>(x, new JsonSerializerOptions(JsonSerializerDefaults.Web))
+                );
+            });
         }
     }
 }
