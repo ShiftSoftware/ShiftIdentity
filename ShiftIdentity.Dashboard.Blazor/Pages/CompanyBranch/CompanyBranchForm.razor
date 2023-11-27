@@ -164,6 +164,7 @@
                     <MudTextField ReadOnly="@ReadOnly"
                                   Disabled="@Disabled"
                                   Label="@field.Key"
+                                  InputType="@(field.Value.IsPassword?InputType.Password:InputType.Text)"
                                   @bind-Value="this.TheItem.CustomFields[field.Key].Value" />
                 </MudItem>
             }
@@ -187,7 +188,12 @@
     private void SetCustomFiles()
     {
         foreach (var field in this.Options.CompanyBranchCustomFields)
-            this.TheItem.CustomFields?.TryAdd(field.Key, new CustomField(field.Value.IsEncrypted));
+        {
+            if (this.TheItem.CustomFields.ContainsKey(field.Key))
+                this.TheItem.CustomFields[field.Key]?.Set(field.Value);
+            else
+                this.TheItem.CustomFields?.TryAdd(field.Key, new CustomField(field.Value));
+        }
     }
 
     public ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO? LastSelectedDepartment

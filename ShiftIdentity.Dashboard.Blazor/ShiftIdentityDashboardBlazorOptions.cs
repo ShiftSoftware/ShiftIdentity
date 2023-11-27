@@ -18,9 +18,10 @@ public class ShiftIdentityDashboardBlazorOptions
 
     public Func<Task>? DynamicTypeAuthActionExpander { get; set; }
 
-    public ShiftIdentityDashboardBlazorOptions AddCompanyBranchCustomField(string fieldName, bool isEncrypted = false)
+    public ShiftIdentityDashboardBlazorOptions AddCompanyBranchCustomField(string fieldName,
+        bool isPassword = false, bool isEncrypted = false)
     {
-        this.CompanyBranchCustomFields.Add(fieldName, new CustomFieldBase(isEncrypted));
+        this.CompanyBranchCustomFields.Add(fieldName, new CustomFieldBase(isPassword, isEncrypted));
         return this;
     }
 }
