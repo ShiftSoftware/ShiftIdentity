@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace ShiftSoftware.ShiftIdentity.Core;
 
-internal static class ReplicationConfiguration
+public static class ReplicationConfiguration
 {
     internal const string AccountName = "Identity";
     internal const string CompanyContainerName = "Companies";
