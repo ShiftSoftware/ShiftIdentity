@@ -8,11 +8,11 @@ namespace ShiftSoftware.ShiftIdentity.Core;
 
 public static class ReplicationConfiguration
 {
-    internal const string AccountName = "Identity";
-    internal const string CompanyContainerName = "Companies";
-    internal const string CompanyBranchContainerName = "CompanyBranches";
-    internal const string RegionContainerName = "Regions";
-    internal const string CityContainerName = "Cities";
-    internal const string ServiceContainerName = "Services";
-    internal const string DepartmentContainerName = "Departments";
+    public const string AccountName = "Identity";
+    public const string CompanyContainerName = "Companies";
+    public const string CompanyBranchContainerName = "CompanyBranches";
+    public const string RegionContainerName = "Regions";
+    public const string CityContainerName = "Cities";
+    public const string ServiceContainerName = "Services";
+    public const string DepartmentContainerName = "Departments";
 }
