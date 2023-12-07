@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using ShiftSoftware.ShiftEntity.EFCore;
-using ShiftSoftware.ShiftIdentity.Core.DTOs;
+using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using System.Text.Json;
 

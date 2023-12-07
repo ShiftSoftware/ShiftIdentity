@@ -1,6 +1,6 @@
-﻿using ShiftSoftware.ShiftEntity.Model.Dtos;
+﻿using ShiftSoftware.ShiftEntity.Model;
+using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.Replication;
-using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using System;
 using System.Collections.Generic;
 using System.Linq;

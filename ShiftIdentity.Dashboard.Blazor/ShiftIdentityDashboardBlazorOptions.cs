@@ -1,5 +1,5 @@
-﻿using ShiftSoftware.ShiftIdentity.Core;
-using ShiftSoftware.ShiftIdentity.Core.DTOs;
+﻿using ShiftSoftware.ShiftEntity.Model;
+using ShiftSoftware.ShiftIdentity.Core;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor;
 
