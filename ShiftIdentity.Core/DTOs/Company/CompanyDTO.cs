@@ -1,8 +1,8 @@
 ﻿using FluentValidation;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
+using ShiftSoftware.ShiftEntity.Model.Enums;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
 using ShiftSoftware.ShiftEntity.Model.Replication;
-using ShiftSoftware.ShiftIdentity.Core.Enums;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;

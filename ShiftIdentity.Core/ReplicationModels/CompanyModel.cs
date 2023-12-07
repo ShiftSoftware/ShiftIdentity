@@ -1,8 +1,8 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using ShiftSoftware.ShiftEntity.Model.Enums;
 using ShiftSoftware.ShiftEntity.Model.Replication;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
-using ShiftSoftware.ShiftIdentity.Core.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;

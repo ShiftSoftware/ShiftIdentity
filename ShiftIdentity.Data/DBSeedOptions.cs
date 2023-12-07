@@ -1,4 +1,4 @@
-﻿using ShiftSoftware.ShiftIdentity.Core.Enums;
+﻿using ShiftSoftware.ShiftEntity.Model.Enums;
 
 namespace ShiftSoftware.ShiftIdentity.Data;
 

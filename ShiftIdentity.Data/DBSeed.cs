@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using ShiftSoftware.ShiftEntity.Model.Enums;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 //using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
@@ -76,13 +77,13 @@ public class DBSeed
             company = new();
 
         company.Name = Core.Constants.BuiltInCompany;
-        company.CompanyType = Core.Enums.CompanyTypes.SupplierOrServiceProvider;
+        company.CompanyType = CompanyTypes.SupplierOrServiceProvider;
         company.BuiltIn = true;
 
         company.ShortCode = dbSeedOptions?.CompanyShortCode;
         company.ExternalId = dbSeedOptions?.CompanyExternalId;
         company.AlternativeExternalId = dbSeedOptions?.CompanyAlternativeExternalId;
-        company.CompanyType = dbSeedOptions?.CompanyType ?? Core.Enums.CompanyTypes.NotSpecified;
+        company.CompanyType = dbSeedOptions?.CompanyType ?? CompanyTypes.NotSpecified;
 
         return company;
     }
