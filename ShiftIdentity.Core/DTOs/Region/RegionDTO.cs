@@ -6,7 +6,6 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.Region;
 
-[ReplicationPartitionKey(nameof(RegionDTO.ID))]
 public class RegionDTO : ShiftEntityViewAndUpsertDTO
 {
     [RegionHashIdConverter]

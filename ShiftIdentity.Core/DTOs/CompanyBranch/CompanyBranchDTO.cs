@@ -8,7 +8,6 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
 
-[ReplicationPartitionKey(nameof(CompanyBranchDTO.CompanyID))]
 public class CompanyBranchDTO : ShiftEntityViewAndUpsertDTO
 {
     [CompanyBranchHashIdConverter]

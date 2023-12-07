@@ -12,10 +12,6 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 [TemporalShiftEntity]
 [Table("Companies", Schema = "ShiftIdentity")]
 [DontSetCompanyInfoOnThisEntityWithAutoTrigger]
-[ShiftEntityReplication<CompanyModel>(ContainerName = ReplicationConfiguration.CompanyContainerName, 
-    AccountName = ReplicationConfiguration.AccountName)]
-[PropertyReferenceReplication<CompanyModel>(ReplicationConfiguration.CompanyBranchContainerName,nameof(CompanyBranchModel.Company))]
-[ReplicationPartitionKey(nameof(CompanyModel.id))]
 public class Company : ShiftEntity<Company>
 {
     public string Name { get; set; } = default!;
