@@ -2,7 +2,6 @@
 @layout Shared.DefaultLayout
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CompanyList)}")]
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
-@using ShiftSoftware.ShiftEntity.Model.Extensions;
 
 <ShiftList EntitySet="@($"{Constants.IdentityRoutePreifix}Company")"
            Title="Company List"

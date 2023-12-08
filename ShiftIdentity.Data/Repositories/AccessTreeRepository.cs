@@ -7,7 +7,6 @@ using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.TypeAuth.Core;
 using System.Net;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
-using ShiftSoftware.ShiftEntity.Model.Extensions;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
