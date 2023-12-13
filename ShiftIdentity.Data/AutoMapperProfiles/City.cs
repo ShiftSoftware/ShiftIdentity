@@ -41,5 +41,11 @@ public class City : Profile
                 dest => dest.id,
                 opt => opt.MapFrom(src => src.ID.ToString())
             );
+
+        CreateMap<Core.Entities.City, CityCompanyBranchModel>()
+            .ForMember(
+                dest => dest.id,
+                opt => opt.MapFrom(src => src.ID.ToString())
+            );
     }
 }
