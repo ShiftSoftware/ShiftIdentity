@@ -40,24 +40,31 @@ public class TokenService
 
     public async Task<TokenDTO?> RefreshAsync(string refreshToken)
     {
-        var claimPrincipal = GetPrincipalFromRefreshToken(refreshToken);
+        try
+        {
+            var claimPrincipal = GetPrincipalFromRefreshToken(refreshToken);
 
-        if (claimPrincipal is null)
+            if (claimPrincipal is null)
+                return null;
+
+            var userId = long.Parse(claimPrincipal?.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var user = await userRepository.FindAsync(userId);
+
+            if (user is null)
+                return null;
+
+            //Check if user is stil active
+            if (!user.IsActive)
+                return null;
+
+            var token = GenerateToken(user);
+
+            return token;
+        }
+        catch (Exception)
+        {
             return null;
-
-        var userId = long.Parse(claimPrincipal?.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var user = await userRepository.FindAsync(userId);
-
-        if (user is null)
-            return null;
-
-        //Check if user is stil active
-        if (!user.IsActive)
-            return null;
-
-        var token = GenerateToken(user);
-
-        return token;
+        }
     }
 
     private ClaimsPrincipal? GetPrincipalFromRefreshToken(string token)

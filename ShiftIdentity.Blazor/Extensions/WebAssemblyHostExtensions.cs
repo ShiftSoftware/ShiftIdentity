@@ -7,6 +7,7 @@ using ShiftSoftware.ShiftIdentity.Blazor.Services;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Runtime.CompilerServices;
 
 namespace ShiftSoftware.ShiftIdentity.Blazor.Extensions;
 
@@ -72,11 +73,12 @@ public static class WebAssemblyHostExtensions
                 //Set authorize header of http-client for prevent refresh on multiple tabs or windows
                 http.DefaultRequestHeaders!.Authorization = new AuthenticationHeaderValue("Bearer", result?.Data?.Entity?.Token);
 
-                await NofityChanges( authStateProvider);
+                await NofityChanges(authStateProvider);
             }
             else if (result.StatusCode == HttpStatusCode.Unauthorized)
             {
-                await shiftIdentityService.LoginAsync();
+                await tokenStore.RemoveTokenAsync();
+                navManager.NavigateTo(navManager.Uri, true);
             }
         }
         catch (Exception){}
