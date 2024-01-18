@@ -25,7 +25,7 @@ public static class WebAssemblyHostExtensions
         var authStateProvider = host.Services.GetService<AuthenticationStateProvider>();
 
         await RefreshAsync(shiftIdentityProvider, authStateProvider, navManager, http, tokenStore, 
-            shiftIdentityService, options);
+            shiftIdentityService, options, true);
 
         var timer = new System.Timers.Timer(TimeSpan.FromSeconds(everySeconds));
         timer.Enabled = true;
@@ -43,7 +43,8 @@ public static class WebAssemblyHostExtensions
         HttpClient http,
         IIdentityStore tokenStore,
         ShiftIdentityService shiftIdentityService,
-        ShiftIdentityBlazorOptions options)
+        ShiftIdentityBlazorOptions options,
+        bool firtTimeRun = false)
     {
 
         var storedToken = await tokenStore.GetTokenAsync();
@@ -77,8 +78,8 @@ public static class WebAssemblyHostExtensions
             }
             else if (result.StatusCode == HttpStatusCode.Unauthorized)
             {
-                await tokenStore.RemoveTokenAsync();
-                navManager.NavigateTo(navManager.Uri, true);
+                if(firtTimeRun)
+                    await tokenStore.RemoveTokenAsync();
             }
         }
         catch (Exception){}
