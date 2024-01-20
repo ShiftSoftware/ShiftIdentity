@@ -23,15 +23,16 @@ public static class WebAssemblyHostExtensions
         var shiftIdentityService = host.Services.GetRequiredService<ShiftIdentityService>();
         var options = host.Services.GetRequiredService<ShiftIdentityBlazorOptions>();
         var authStateProvider = host.Services.GetService<AuthenticationStateProvider>();
+        var messageService = host.Services.GetRequiredService<MessageService>();
 
         await RefreshAsync(shiftIdentityProvider, authStateProvider, navManager, http, tokenStore, 
-            shiftIdentityService, options, true);
+            shiftIdentityService, options, messageService, true);
 
         var timer = new System.Timers.Timer(TimeSpan.FromSeconds(everySeconds));
         timer.Enabled = true;
         timer.Elapsed += async (s, e) =>
-            await RefreshAsync(shiftIdentityProvider, authStateProvider, navManager, http, tokenStore, 
-            shiftIdentityService, options);
+            await RefreshAsync(shiftIdentityProvider, authStateProvider, navManager, http, tokenStore,
+            shiftIdentityService, options, messageService, false);
 
         return host;
     }
@@ -44,6 +45,7 @@ public static class WebAssemblyHostExtensions
         IIdentityStore tokenStore,
         ShiftIdentityService shiftIdentityService,
         ShiftIdentityBlazorOptions options,
+        MessageService messageService,
         bool firtTimeRun = false)
     {
 
@@ -51,12 +53,14 @@ public static class WebAssemblyHostExtensions
 
         var headerToken = http.DefaultRequestHeaders?.Authorization?.Parameter;
 
-        if (headerToken is not null && headerToken != storedToken.Token)
+        if (headerToken is not null && headerToken != storedToken?.Token)
         {
             //Set authorize header of http-client for prevent refresh on multiple tabs or windows
             http.DefaultRequestHeaders!.Authorization = new AuthenticationHeaderValue("Bearer", storedToken?.Token);
 
-            await NofityChanges(authStateProvider);
+            if(!string.IsNullOrWhiteSpace(storedToken?.Token))
+                await NofityChanges(authStateProvider);
+
             return;
         }
 
@@ -76,10 +80,12 @@ public static class WebAssemblyHostExtensions
 
                 await NofityChanges(authStateProvider);
             }
-            else if (result.StatusCode == HttpStatusCode.Unauthorized)
+            else
             {
-                if(firtTimeRun)
+                //if(firtTimeRun)
                     await tokenStore.RemoveTokenAsync();
+                if(!firtTimeRun)
+                    await messageService.ShowWarningMessageAsync("Your session has expired. Please login again in another tab or refresh.");
             }
         }
         catch (Exception){}

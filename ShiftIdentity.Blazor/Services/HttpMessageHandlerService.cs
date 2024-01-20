@@ -12,18 +12,21 @@ public class HttpMessageHandlerService
     private readonly NavigationManager navManager;
     private readonly ShiftIdentityBlazorOptions options;
     private readonly IIdentityStore tokenStore;
+    private readonly MessageService messageService;
     private HttpClient http;
 
     public HttpMessageHandlerService(
         NavigationManager navManager,
         ShiftIdentityBlazorOptions options,
         IIdentityStore tokenStore,
+        MessageService messageService,
         AuthenticationStateProvider? authStateProvider = null)
     {
         this.authStateProvider = authStateProvider;
         this.navManager = navManager;
         this.options = options;
         this.tokenStore = tokenStore;
+        this.messageService = messageService;
         http = new HttpClient() { BaseAddress = new Uri(options.BaseUrl) };
     }
 
@@ -51,6 +54,11 @@ public class HttpMessageHandlerService
             await tokenStore.StoreTokenAsync(result?.Entity!);
 
             await NofityChanges();
+        }
+        else
+        {
+            await tokenStore.RemoveTokenAsync();
+            await messageService.ShowWarningMessageAsync("Your session has expired. Please login again in another tab or refresh.");
         }
     }
 

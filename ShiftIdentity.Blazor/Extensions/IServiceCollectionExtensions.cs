@@ -27,6 +27,7 @@ public static class IServiceCollectionExtensions
         services.TryAddScoped<HttpMessageHandlerService>();
         services.AddTransient<TokenMessageHandlerWithAutoRefresh>();
         services.TryAddScoped<IIdentityStore, IdentityLocalStorageService>();
+        services.AddScoped<MessageService>();
 
         services.TryAddScoped<AuthenticationStateProvider, ShiftIdentityAuthStateProvider>();
         services.AddTransient<TokenMessageHandler>();
