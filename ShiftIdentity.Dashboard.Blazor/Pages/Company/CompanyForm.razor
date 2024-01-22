@@ -22,15 +22,11 @@
     <MudGrid>
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
-            <LocalizedTextField @bind-Value="TheItem.Name"
-                                Label="Name"
-                                T="ShiftSoftware.ShiftIdentity.Core.DTOs.Company.CompanyDTO" />
+            <LocalizedTextField @bind-Value="TheItem.Name" Label="Name" For="() => TheItem.Name" />
         </MudItem>
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
-            <LocalizedTextField @bind-Value="TheItem.LegalName"
-                                Label="Legal Name"
-                                T="ShiftSoftware.ShiftIdentity.Core.DTOs.Company.CompanyDTO" />
+            <LocalizedTextField @bind-Value="TheItem.LegalName" Label="Legal Name" For="() => TheItem.LegalName" />
         </MudItem>
 
         <MudItem xs="12" sm="6" lg="4" xl="3">
