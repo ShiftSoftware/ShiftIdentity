@@ -53,12 +53,15 @@ public class HttpMessageHandlerService
             //Store new token
             await tokenStore.StoreTokenAsync(result?.Entity!);
 
+            //Remove warning message if exists
+            await messageService.RemoveWarningMessageAsync();
+
             await NofityChanges();
         }
         else
         {
             await tokenStore.RemoveTokenAsync();
-            await messageService.ShowWarningMessageAsync("Your session has expired. Please login again in another tab or refresh.");
+            await messageService.ShowWarningMessageAsync("Your session has expired. Please log out and login again (in another tab).");
         }
     }
 

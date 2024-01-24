@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Polly;
 using ShiftSoftware.ShiftIdentity.Blazor.Providers;
 using ShiftSoftware.ShiftIdentity.Blazor.Services;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
@@ -15,39 +17,27 @@ public static class WebAssemblyHostExtensions
 {
     public static async Task<WebAssemblyHost> RefreshTokenAsync(this WebAssemblyHost host, int everySeconds)
     {
-        //Get injected services
-        var shiftIdentityProvider = host.Services.GetRequiredService<IShiftIdentityProvider>();
-        var navManager = host.Services.GetRequiredService<NavigationManager>();
-        var http = host.Services.GetRequiredService<HttpClient>();
-        var tokenStore = host.Services.GetRequiredService<IIdentityStore>();
-        var shiftIdentityService = host.Services.GetRequiredService<ShiftIdentityService>();
-        var options = host.Services.GetRequiredService<ShiftIdentityBlazorOptions>();
-        var authStateProvider = host.Services.GetService<AuthenticationStateProvider>();
-        var messageService = host.Services.GetRequiredService<MessageService>();
-
-        await RefreshAsync(shiftIdentityProvider, authStateProvider, navManager, http, tokenStore, 
-            shiftIdentityService, options, messageService, true);
+        await RefreshAsync(host.Services, true);
 
         var timer = new System.Timers.Timer(TimeSpan.FromSeconds(everySeconds));
         timer.Enabled = true;
         timer.Elapsed += async (s, e) =>
-            await RefreshAsync(shiftIdentityProvider, authStateProvider, navManager, http, tokenStore,
-            shiftIdentityService, options, messageService, false);
+            await RefreshAsync(host.Services, false);
 
         return host;
     }
 
     private static async Task RefreshAsync(
-        IShiftIdentityProvider shiftIdentityProvider,
-        AuthenticationStateProvider? authStateProvider,
-        NavigationManager navManager,
-        HttpClient http,
-        IIdentityStore tokenStore,
-        ShiftIdentityService shiftIdentityService,
-        ShiftIdentityBlazorOptions options,
-        MessageService messageService,
+        IServiceProvider services,
         bool firtTimeRun = false)
     {
+        //Get injected services
+        var shiftIdentityProvider = services.GetRequiredService<IShiftIdentityProvider>();
+        var http = services.GetRequiredService<HttpClient>();
+        var tokenStore = services.GetRequiredService<IIdentityStore>();
+        var options = services.GetRequiredService<ShiftIdentityBlazorOptions>();
+        var authStateProvider = services.GetService<AuthenticationStateProvider>();
+        var messageService = services.GetRequiredService<MessageService>();
 
         var storedToken = await tokenStore.GetTokenAsync();
 
@@ -64,6 +54,9 @@ public static class WebAssemblyHostExtensions
             return;
         }
 
+        if (storedToken is null)
+            return;
+
         var refreshToken = storedToken?.RefreshToken;
 
         try
@@ -75,6 +68,9 @@ public static class WebAssemblyHostExtensions
                 //Store new token
                 await tokenStore.StoreTokenAsync(result?.Data?.Entity!);
 
+                //Remove warning message if exists
+                await messageService.RemoveWarningMessageAsync();
+
                 //Set authorize header of http-client for prevent refresh on multiple tabs or windows
                 http.DefaultRequestHeaders!.Authorization = new AuthenticationHeaderValue("Bearer", result?.Data?.Entity?.Token);
 
@@ -82,7 +78,7 @@ public static class WebAssemblyHostExtensions
             }
             else
             {
-                //if(firtTimeRun)
+                if(firtTimeRun)
                     await tokenStore.RemoveTokenAsync();
                 if(!firtTimeRun)
                     await messageService.ShowWarningMessageAsync("Your session has expired. Please login again in another tab or refresh.");
