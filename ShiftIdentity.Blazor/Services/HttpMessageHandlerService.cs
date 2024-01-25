@@ -30,7 +30,7 @@ public class HttpMessageHandlerService
         http = new HttpClient() { BaseAddress = new Uri(options.BaseUrl) };
     }
 
-    public async Task RefreshAsync()
+    public async Task<bool?> RefreshAsync()
     {
         var storedToken = await tokenStore.GetTokenAsync();
 
@@ -39,7 +39,7 @@ public class HttpMessageHandlerService
         if (headerToken is not null && headerToken != storedToken.Token)
         {
             await NofityChanges();
-            return;
+            return null;
         }
 
         var refreshToken = storedToken?.RefreshToken;
@@ -57,11 +57,13 @@ public class HttpMessageHandlerService
             await messageService.RemoveWarningMessageAsync();
 
             await NofityChanges();
+            return true;
         }
         else
         {
             await tokenStore.RemoveTokenAsync();
-            await messageService.ShowWarningMessageAsync("Your session has expired. Please log out and login again (in another tab).");
+            await messageService.ShowWarningMessageAsync("Your session has expired. Please login again (in another tab). ", "Login another tab");
+            return false;
         }
     }
 
