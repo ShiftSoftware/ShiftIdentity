@@ -76,13 +76,13 @@ public static class WebAssemblyHostExtensions
 
                 await NofityChanges(authStateProvider);
             }
-            //else
-            //{
-            //    if(firtTimeRun)
-            //        await tokenStore.RemoveTokenAsync();
-            //    if(!firtTimeRun)
-            //        await messageService.ShowWarningMessageAsync("Your session has expired. Please login again in another tab or refresh.");
-            //}
+            else
+            {
+                if (firtTimeRun)
+                    await tokenStore.RemoveTokenAsync();
+                //if (!firtTimeRun)
+                //    await messageService.ShowWarningMessageAsync("Your session has expired. Please login again in another tab or refresh.");
+            }
         }
         catch (Exception){}
     }
