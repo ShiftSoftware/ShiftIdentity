@@ -18,6 +18,10 @@ public class CompanyBranchModel : ReplicationModel
     public string? Address { get; set; }
     public string? ExternalId { get; set; } = default!;
     public string? ShortCode { get; set; }
+
+    public string? Latitude { get; set; }
+    public string? Longitude { get; set; }
+
     public bool BuiltIn { get; set; }
 
     public CityCompanyBranchModel City { get; set; }
