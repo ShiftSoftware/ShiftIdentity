@@ -31,6 +31,7 @@ public class CompanyBranch : ShiftEntity<CompanyBranch>
     public virtual City City { get; set; } = default!;
     public virtual ICollection<CompanyBranchDepartment>? CompanyBranchDepartments { get; set; }
     public virtual ICollection<CompanyBranchService>? CompanyBranchServices { get; set; }
+    public virtual ICollection<User> Users { get; set; }
 
     public new long RegionID { get; set; }
     public long? CityID { get; set; }
@@ -40,6 +41,7 @@ public class CompanyBranch : ShiftEntity<CompanyBranch>
     {
         CompanyBranchDepartments = new HashSet<CompanyBranchDepartment>();
         CompanyBranchServices = new HashSet<CompanyBranchService>();
+        Users = new HashSet<User>();
     }
 
 }

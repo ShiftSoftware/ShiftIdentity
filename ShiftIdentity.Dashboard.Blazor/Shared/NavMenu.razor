@@ -7,6 +7,7 @@
 @using Pages.CompanyBranch
 @using Pages.Region
 @using Pages.City
+@using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.UserGroup
 
 @inject ShiftIdentityDashboardBlazorOptions ShiftIdentityDashboardBlazorOptions
 @inject ITypeAuthService TypeAuthService
@@ -60,6 +61,11 @@
                           Match="NavLinkMatch.All"
                           Icon="@Icons.Material.Outlined.People"
                           TypeAuthAction="ShiftIdentityActions.Users">Users</AuthorizedMudNavLink>
+
+    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(UserGroupList)}")"
+                          Match="NavLinkMatch.All"
+                          Icon="@Icons.Material.Outlined.Groups"
+                          TypeAuthAction="ShiftIdentityActions.UserGroups">User Groups</AuthorizedMudNavLink>
 </MudNavMenu>
 
 @code {

@@ -1,0 +1,17 @@
+﻿@attribute [Authorize]
+@layout Shared.DefaultLayout
+
+@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(UserGroupList)}")]
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.UserGroup;
+
+<ShiftList EntitySet="@($"{Constants.IdentityRoutePreifix}UserGroup")"
+           Title="User Group List"
+           T="UserGroupListDTO"
+           ComponentType="typeof(UserGroupForm)"
+           ShowIDColumn
+           Dense
+            TypeAuthAction="ShiftIdentityActions.UserGroups"
+           EnableExport>
+
+    <PropertyColumn Title="Name" Property="x => x.Name" />
+</ShiftList>

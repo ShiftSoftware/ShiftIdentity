@@ -1,0 +1,66 @@
+﻿@using ShiftSoftware.ShiftEntity.Model.Dtos
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.UserGroup
+@attribute [Authorize]
+@layout Shared.DefaultLayout
+
+
+@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(UserGroupForm)}/{{Key?}}")]
+@inherits ShiftForm<UserGroupForm, ShiftSoftware.ShiftIdentity.Core.DTOs.UserGroup.UserGroupDTO>
+@inject HttpClient Http
+@inject ODataQuery odataQuery
+
+<ShiftEntityForm @bind-Mode="Mode"
+                 @bind-Value="TheItem"
+                 @ref="FormContainer"
+                 Action="@($"{Constants.IdentityRoutePreifix}UserGroup")"
+                 Title="User Group"
+                 @bind-Key="@Key"
+                 TypeAuthAction="ShiftIdentityActions.UserGroups"
+                 T="ShiftSoftware.ShiftIdentity.Core.DTOs.UserGroup.UserGroupDTO">
+
+    <MudTextField ReadOnly="@ReadOnly"
+                  Disabled="@Disabled"
+                  OnlyValidateIfDirty="true"
+                  Label="Group Name"
+                  @bind-Value="TheItem.Name"
+                  For="@(() => TheItem.Name)" />
+
+    <ShiftAutocomplete Label="Users"
+                       @bind-Value="LastSelectedUsers"
+                       TEntitySet="UserListDTO"
+                       EntitySet="IdentityUser" />
+
+    <br />
+
+    @foreach (var item in TheItem.Users)
+    {
+        <MudChip Color="Color.Primary" OnClose="() => RemoveUserItem(item)">@item.Text</MudChip>
+    }
+</ShiftEntityForm>
+
+@code {
+    public ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO? LastSelectedUsers
+    {
+        get { return null; }
+        set
+        {
+            var currentList = TheItem.Users.ToList();
+
+            if (!currentList.Any(x => x.Value.Equals(value!.Value)))
+            {
+                currentList.Add(value!);
+            }
+
+            TheItem.Users = currentList;
+        }
+    }
+
+    public void RemoveUserItem(ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO item)
+    {
+        if (Mode <= ShiftBlazor.Enums.FormModes.Archive)
+            return;
+
+        TheItem.Users = TheItem.Users?.Where(x => !x.Value.Equals(item.Value)).ToList();
+    }
+}
+

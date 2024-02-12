@@ -63,15 +63,18 @@ public class User : ShiftEntity<User>
     public virtual CompanyBranch CompanyBranch { get; set; }
 
     public virtual IEnumerable<UserAccessTree> AccessTrees { get; set; }
+    public virtual ICollection<UserGroupUser> UserGroupUsers { get; set; } = new HashSet<UserGroupUser>();
 
     public User(long id) : base(id)
     {
         AccessTrees = new List<UserAccessTree>();
+        UserGroupUsers = new HashSet<UserGroupUser>();
     }
 
     public User()
     {
         AccessTrees = new List<UserAccessTree>();
+        UserGroupUsers = new HashSet<UserGroupUser>();
     }
 
 }
