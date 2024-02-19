@@ -2,7 +2,7 @@
 	<Import Project="..\..\ShiftFrameworkGlobalSettings.props" Condition="Exists('..\..\ShiftFrameworkGlobalSettings.props')" />
 
 	<PropertyGroup>
-		<TargetFramework>net6.0</TargetFramework>
+		<TargetFramework>net8.0</TargetFramework>
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
 		<RootNamespace>ShiftSoftware.ShiftIdentity.Core</RootNamespace>
@@ -16,7 +16,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="libphonenumber-csharp" Version="8.13.19" />
+		<PackageReference Include="libphonenumber-csharp" Version="8.13.30" />
 		<PackageReference Include="ShiftSoftware.ShiftEntity" Version="$(ShiftFrameworkVersion)" Condition="!Exists('..\..\ShiftEntity\ShiftEntity.Core\ShiftEntity.Core.csproj')" />
 		<PackageReference Include="ShiftSoftware.TypeAuth.Core" Version="$(ShiftFrameworkVersion)" Condition="!Exists('..\..\TypeAuth\TypeAuth.Core\TypeAuth.Core.csproj')" />
 		<PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />

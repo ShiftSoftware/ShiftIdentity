@@ -2,7 +2,7 @@
 	<Import Project="..\..\ShiftFrameworkGlobalSettings.props" Condition="Exists('..\..\ShiftFrameworkGlobalSettings.props')" />
 
 	<PropertyGroup>
-		<TargetFramework>net7.0</TargetFramework>
+		<TargetFramework>net8.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<AssemblyName>ShiftSoftware.ShiftIdentity.Blazor</AssemblyName>
@@ -17,11 +17,11 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Blazored.LocalStorage" Version="4.3.0" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="7.0.3" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="7.0.1" />
-		<PackageReference Include="Polly" Version="7.2.3" />
-		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="7.2.0" />
+		<PackageReference Include="Blazored.LocalStorage" Version="4.5.0" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="8.0.2" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.2" />
+		<PackageReference Include="Polly" Version="8.3.0" />
+		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="7.3.1" />
 	</ItemGroup>
 
 	<ItemGroup>
