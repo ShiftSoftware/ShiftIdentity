@@ -24,7 +24,7 @@
 		<PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
 		<PackageReference Include="ShiftSoftware.ShiftBlazor" Version="$(ShiftFrameworkVersion)" Condition="!Exists('..\..\ShiftBlazor\ShiftBlazor\ShiftBlazor.csproj')" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="8.0.2" />
-		<PackageReference Include="ShiftSoftware.TypeAuth.Blazor" Version="$(ShiftFrameworkVersion)" Condition="!Exists('..\..\TypeAuth\TypeAuth.Blazor\TypeAuth.Blazor.csproj')" />
+		<PackageReference Include="ShiftSoftware.TypeAuth.Blazor" Version="$(TypeAuthVersion)" Condition="!Exists('..\..\TypeAuth\TypeAuth.Blazor\TypeAuth.Blazor.csproj')" />
 	</ItemGroup>
 
 	<ItemGroup>
