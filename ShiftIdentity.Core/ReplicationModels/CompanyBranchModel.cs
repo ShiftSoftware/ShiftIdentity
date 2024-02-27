@@ -21,6 +21,8 @@ public class CompanyBranchModel : ReplicationModel
     public string? Latitude { get; set; }
     public string? Longitude { get; set; }
 
+    public string? Photos { get; set; }
+
     public bool BuiltIn { get; set; }
 
     public CityCompanyBranchModel City { get; set; }
