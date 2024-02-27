@@ -88,12 +88,16 @@ public class UserRepository :
 
         entity.AccessTree = typeAuth_Producer.GenerateAccessTree((typeAuthService as TypeAuthContext)!, typeAuth_Preserver);
 
-        if (dto.Phone != null)
+        if (!string.IsNullOrWhiteSpace(dto.Phone))
         {
             if (!Core.ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(dto.Phone))
                 throw new ShiftEntityException(new Message("Validation Error", "Invalid Phone Number"));
 
             entity.Phone = Core.ValidatorsAndFormatters.PhoneNumber.GetFormattedPhone(dto.Phone);
+        }
+        else
+        {
+            entity.Phone = null;
         }
 
         if (!string.IsNullOrEmpty(dto.Password))
