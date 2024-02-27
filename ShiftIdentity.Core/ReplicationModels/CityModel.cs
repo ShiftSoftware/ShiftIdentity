@@ -10,7 +10,6 @@ namespace ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
 
 public class CityModel : ReplicationModel
 {
-    public override string? ID { get; set; }
     public string Name { get; set; } = default!;
     public string RegionID { get; set; } = default!;
     public bool BuiltIn { get; set; }

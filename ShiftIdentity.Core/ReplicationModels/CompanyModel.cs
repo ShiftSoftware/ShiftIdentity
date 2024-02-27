@@ -13,8 +13,6 @@ namespace ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
 
 public class CompanyModel : ReplicationModel
 {
-    public override string? ID { get; set; }
-
     public string Name { get; set; } = default!;
     public string? LegalName { get; set; }
     public string? ExternalId { get; set; }

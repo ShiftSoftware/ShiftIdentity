@@ -9,7 +9,6 @@ namespace ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
 
 public class RegionModel : ReplicationModel
 {
-    public override string? ID { get; set; }
     public string RegionID { get; set; } = default!;
     public string Name { get; set; } = default!;
     public string? ExternalId { get; set; } = default!;

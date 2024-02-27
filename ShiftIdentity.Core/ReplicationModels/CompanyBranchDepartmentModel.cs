@@ -9,8 +9,6 @@ namespace ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
 
 public class CompanyBranchDepartmentModel : ReplicationModel
 {
-    public override string? ID { get; set; }
-
     public string Name { get; set; } = default!;
 
     //Partition keys
