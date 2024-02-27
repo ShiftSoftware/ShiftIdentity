@@ -48,11 +48,15 @@ public class CompanyBranch : Profile
                 );
 
         CreateMap<Core.Entities.CompanyBranch, CompanyBranchModel>()
-            .ForMember(dest=> dest.BranchID, opt => opt.MapFrom(src => src.ID))
+            .ForMember(dest => dest.BranchID, opt => opt.MapFrom(src => src.ID))
             .ForMember(dest => dest.ItemType, opt => opt.MapFrom(src => CompanyBranchContainerItemTypes.Branch))
             .ForMember(
                 dest => dest.id,
                 opt => opt.MapFrom(src => src.ID.ToString())
+            )
+            .ForMember(
+                dest => dest.Location,
+                opt => opt.MapFrom(src => (string.IsNullOrWhiteSpace(src.Longitude) || string.IsNullOrWhiteSpace(src.Latitude)) ? null : new Location(new decimal[] { decimal.Parse(src.Longitude), decimal.Parse(src.Latitude) }, "Point"))
             );
     }
 }
