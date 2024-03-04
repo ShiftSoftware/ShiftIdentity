@@ -11,18 +11,21 @@ public class ShiftIdentityService
     private readonly CodeVerifierService codeVerifierService;
     private readonly IIdentityStore tokenStore;
     private readonly IShiftIdentityProvider shiftIdentityProvider;
+    private readonly CodeVerifierStorageService codeVerifierStorage;
 
     public ShiftIdentityService(ShiftIdentityBlazorOptions options, 
         NavigationManager navManager,
         CodeVerifierService codeVerifierService,
         IIdentityStore tokenStore,
-        IShiftIdentityProvider shiftIdentityProvider)
+        IShiftIdentityProvider shiftIdentityProvider,
+        CodeVerifierStorageService codeVerifierStorage)
     {
         this.options = options;
         this.navManager = navManager;
         this.codeVerifierService = codeVerifierService;
         this.tokenStore = tokenStore;
         this.shiftIdentityProvider = shiftIdentityProvider;
+        this.codeVerifierStorage = codeVerifierStorage;
     }
 
     public async Task LoginAsync(string returnUrl="")
@@ -56,7 +59,7 @@ public class ShiftIdentityService
         if(response.IsSuccess)
         {
             await tokenStore.StoreTokenAsync(response?.Data.Entity!);
-            await tokenStore.RemoveCodeVerifierAsync();
+            await codeVerifierStorage.RemoveCodeVerifierAsync();
             navManager.NavigateTo("/" + returnUrl, true);
         }
         else

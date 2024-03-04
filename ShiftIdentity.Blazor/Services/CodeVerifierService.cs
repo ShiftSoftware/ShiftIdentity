@@ -6,11 +6,11 @@ namespace ShiftSoftware.ShiftIdentity.Blazor.Services;
 
 public class CodeVerifierService
 {
-    private readonly IIdentityStore tokenStore;
+    private readonly CodeVerifierStorageService tokenStore;
 
-    public CodeVerifierService(IIdentityStore tokenStore)
+    public CodeVerifierService(CodeVerifierStorageService storage)
     {
-        this.tokenStore = tokenStore;
+        this.tokenStore = storage;
     }
 
     public async Task<string> GenerateCodeChallengeAsync()
@@ -27,7 +27,7 @@ public class CodeVerifierService
         return hashString;
     }
 
-    public async Task<string> LoadCodeVerifierAsync()
+    public async Task<string?> LoadCodeVerifierAsync()
     {
         return await tokenStore.LoadCodeVerifierAsync();
     }

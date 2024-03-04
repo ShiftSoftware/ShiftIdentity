@@ -6,13 +6,14 @@ using System.Net;
 using Microsoft.AspNetCore.Components.Authorization;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.Models;
+using ShiftSoftware.ShiftIdentity.Blazor;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services
 {
     public class AuthService
     {
         private HttpService httpService;
-        private readonly StorageService storageService;
+        private readonly IIdentityStore storageService;
         private readonly AuthenticationStateProvider? authStateProvider;
         private readonly HttpClient http;
         private readonly NavigationManager navManager;
@@ -20,7 +21,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services
 
         public AuthService(
             HttpService httpService,
-            StorageService storageService,
+            IIdentityStore storageService,
             
             AuthenticationStateProvider? authStateProvider,
             NavigationManager navManager,

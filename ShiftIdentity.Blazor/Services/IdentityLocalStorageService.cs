@@ -7,10 +7,7 @@ internal class IdentityLocalStorageService : IIdentityStore
     private readonly ILocalStorageService localStorage;
     private readonly ISyncLocalStorageService syncLocalStorage;
 
-    //
     private const string tokenStorageKey = "token";
-    
-    
     private const string codeVerifierKey = "code-verifier";
 
     public IdentityLocalStorageService(ILocalStorageService localStorage, ISyncLocalStorageService syncLocalStorage)
@@ -24,16 +21,6 @@ internal class IdentityLocalStorageService : IIdentityStore
         await localStorage.SetItemAsync(tokenStorageKey, tokenDto);
     }
 
-    public async Task<TokenDTO> LoadTokenAsync()
-    {
-        return await localStorage.GetItemAsync<TokenDTO>(tokenStorageKey);
-    }
-
-    public TokenDTO LoadToken()
-    {
-        return syncLocalStorage.GetItem<TokenDTO>(tokenStorageKey);
-    }
-
     public async Task RemoveTokenAsync()
     {
         await localStorage.RemoveItemAsync(tokenStorageKey);
@@ -41,26 +28,11 @@ internal class IdentityLocalStorageService : IIdentityStore
 
     public string? GetToken()
     {
-        return LoadToken()?.Token;
+        return syncLocalStorage.GetItem<TokenDTO>(tokenStorageKey)?.Token;
     }
 
-    public async Task<TokenDTO> GetTokenAsync()
+    public async Task<TokenDTO?> GetTokenAsync()
     {
-        return await LoadTokenAsync();
-    }
-
-    public async Task StoreCodeVerifierAsync(string codeVerifier)
-    {
-        await localStorage.SetItemAsStringAsync(codeVerifierKey, codeVerifier);
-    }
-
-    public async Task<string> LoadCodeVerifierAsync()
-    {
-        return await localStorage.GetItemAsStringAsync(codeVerifierKey);
-    }
-
-    public async Task RemoveCodeVerifierAsync()
-    {
-        await localStorage.RemoveItemAsync(codeVerifierKey);
+        return await localStorage.GetItemAsync<TokenDTO>(tokenStorageKey);
     }
 }

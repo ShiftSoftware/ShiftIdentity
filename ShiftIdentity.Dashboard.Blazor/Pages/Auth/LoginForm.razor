@@ -4,13 +4,14 @@
 @using System.Text.RegularExpressions
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Components.Authorization;
+@using ShiftSoftware.ShiftIdentity.Blazor
 @using ShiftSoftware.ShiftIdentity.Core.DTOs
 @using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.UserManager;
 
 @inject ShiftIdentityDashboardBlazorOptions ShiftIdentityDashboardBlazorOptions
 @inject Services.AuthService AuthService
 @inject MessageService msgService
-@inject Services.StorageService storageService
+@inject IIdentityStore storageService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavManager
 
