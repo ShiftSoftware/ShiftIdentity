@@ -94,10 +94,8 @@ else
     private AuthCodeModel authCode;
     private string? errorMessage;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
-        //await Task.Delay(1500);
-
         var result = await AuthService.GenerateAuthCodeAsync(new GenerateAuthCodeDTO
             {
                 AppId = AppId,
