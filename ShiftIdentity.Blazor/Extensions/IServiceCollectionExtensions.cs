@@ -11,8 +11,8 @@ namespace ShiftSoftware.ShiftIdentity.Blazor.Extensions;
 
 public static class IServiceCollectionExtensions
 {
-    public static IServiceCollection AddShiftIdentity(this IServiceCollection services, 
-        string appId, string baseUrl, string frontEndBaseUrl)
+    public static IServiceCollection AddShiftIdentity(this IServiceCollection services,
+        string appId, string baseUrl, string frontEndBaseUrl, bool noNeedAuthCode = false)
     {
         if (services == null)
         {
@@ -20,7 +20,7 @@ public static class IServiceCollectionExtensions
         }
 
         services.AddBlazoredLocalStorage();
-        services.TryAddSingleton<ShiftIdentityBlazorOptions>(x => new ShiftIdentityBlazorOptions(appId, baseUrl, frontEndBaseUrl));
+        services.TryAddSingleton(x => new ShiftIdentityBlazorOptions(appId, baseUrl, frontEndBaseUrl, noNeedAuthCode));
         services.TryAddScoped<CodeVerifierService>();
         services.TryAddScoped<ShiftIdentityService>();
         services.TryAddScoped<IShiftIdentityProvider, ShiftIdentityProvider>();

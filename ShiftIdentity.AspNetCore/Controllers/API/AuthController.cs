@@ -12,7 +12,7 @@ namespace ShiftSoftware.ShiftIdentity.AspNetCore.Controllers.API;
 
 [Route("api/[controller]")]
 [ApiController]
-[AllowAnonymous]
+[Authorize]
 public class AuthController : ControllerBase
 {
     private readonly AuthService authService;

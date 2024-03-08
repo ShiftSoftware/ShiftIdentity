@@ -91,6 +91,10 @@ else
     [SupplyParameterFromQuery]
     public string? ReturnUrl { get; set; }
 
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public bool? NoNeedAuthCode { get; set; }
+
     private AuthCodeModel authCode;
     private string? errorMessage;
 
@@ -107,6 +111,18 @@ else
             authCode = result?.Data?.Entity!;
         else
             errorMessage = result?.Data?.Message?.Body;
+
+        if(NoNeedAuthCode.GetValueOrDefault())
+        {
+            string url = this.authCode.RedirectUri;
+            if (!string.IsNullOrEmpty(this.authCode.ReturnUrl))
+                if (url.EndsWith("/"))
+                    url += this.authCode.ReturnUrl;
+                else
+                    url += "/" + this.authCode.ReturnUrl;
+
+            NavManager.NavigateTo(url);
+        }
     }
 
     private void Allow()
