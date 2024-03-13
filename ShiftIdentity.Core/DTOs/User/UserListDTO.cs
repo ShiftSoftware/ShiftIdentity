@@ -1,6 +1,7 @@
 ﻿using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
+using System;
 using System.Text.Json.Serialization;
 
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.User;
@@ -18,4 +19,5 @@ public class UserListDTO : ShiftEntityListDTO
     public string? Phone { get; set; }
     public string? Email { get; set; }
     public bool IsActive { get; set; }
+    public DateTimeOffset? LastSeen { get; set; }
 }

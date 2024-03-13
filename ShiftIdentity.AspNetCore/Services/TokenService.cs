@@ -57,6 +57,10 @@ public class TokenService
             if (!user.IsActive)
                 return null;
 
+            //Update lastseen
+            user.LastSeen = DateTimeOffset.UtcNow;
+            await this.userRepository.SaveChangesAsync();
+
             var token = GenerateToken(user);
 
             return token;

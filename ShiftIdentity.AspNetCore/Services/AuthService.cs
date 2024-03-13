@@ -63,6 +63,9 @@ public class AuthService
         user.LoginAttempts = 0;
         user.LockDownUntil = null;
 
+        //Update lastseen
+        user.LastSeen = DateTimeOffset.UtcNow;
+
         await userRepo.SaveChangesAsync();
 
         var token = await tokenService.GenerateInternalJwtTokenAsync(user);

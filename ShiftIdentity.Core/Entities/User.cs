@@ -54,6 +54,8 @@ public class User : ShiftEntity<User>
     public DateTime? BirthDate { get; set; }
     #endregion
 
+    public DateTimeOffset? LastSeen { get; set; }
+
     public new long RegionID { get; set; }
     public new long CompanyID { get; set; }
     public new long CompanyBranchID { get; set; }
