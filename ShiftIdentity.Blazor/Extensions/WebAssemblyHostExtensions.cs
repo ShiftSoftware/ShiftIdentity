@@ -1,15 +1,11 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Authorization;
+﻿using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using Polly;
+using Microsoft.JSInterop;
 using ShiftSoftware.ShiftIdentity.Blazor.Providers;
 using ShiftSoftware.ShiftIdentity.Blazor.Services;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
-using System.Net;
 using System.Net.Http.Headers;
-using System.Runtime.CompilerServices;
 
 namespace ShiftSoftware.ShiftIdentity.Blazor.Extensions;
 
@@ -38,6 +34,11 @@ public static class WebAssemblyHostExtensions
         var options = services.GetRequiredService<ShiftIdentityBlazorOptions>();
         var authStateProvider = services.GetService<AuthenticationStateProvider>();
         var messageService = services.GetRequiredService<MessageService>();
+
+        //Skip the refresh if tab is not active
+        var isTabActive = await IsTabActive(services);
+        if (!isTabActive)
+            return;
 
         var storedToken = await tokenStore.GetTokenAsync();
 
@@ -92,5 +93,13 @@ public static class WebAssemblyHostExtensions
         //Notify AuthenticationStateProvider that state has changed
         if (authStateProvider is not null)
             await authStateProvider.GetAuthenticationStateAsync();
+    }
+
+    private static async Task<bool> IsTabActive(IServiceProvider services)
+    {
+        var js = services.GetRequiredService<IJSRuntime>();
+
+        var visiblity = await js.InvokeAsync<string>("eval", "document.visibilityState");
+        return visiblity.ToLower() == "visible";
     }
 }
