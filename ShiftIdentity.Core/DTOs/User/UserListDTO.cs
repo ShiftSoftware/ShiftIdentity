@@ -19,5 +19,5 @@ public class UserListDTO : ShiftEntityListDTO
     public string? Phone { get; set; }
     public string? Email { get; set; }
     public bool IsActive { get; set; }
-    public DateTimeOffset? LastSeen { get; set; }
+    public DateTimeOffset LastSeen { get; set; }
 }

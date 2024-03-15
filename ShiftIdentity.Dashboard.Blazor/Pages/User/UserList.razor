@@ -18,5 +18,12 @@
     <PropertyColumn Title="Phone" Property="x => x.Phone" />
     <PropertyColumn Title="Email" Property="x => x.Email" />
     <PropertyColumn Title="Branch" Property="x => x.CompanyBranch" />
-    <PropertyColumn Title="Last Seen" Format="yyyy/MM/dd HH:mm" Property="x => x.LastSeen" />
+    <PropertyColumn Format="F" Property="x => x.LastSeen.DateTime" Title="Last Seen">
+        <CellTemplate>
+            @if (context?.Item?.LastSeen.DateTime > DateTimeOffset.MinValue)
+            {
+                @context.Item.LastSeen.DateTime
+            }
+        </CellTemplate>
+    </PropertyColumn>
 </ShiftList>
