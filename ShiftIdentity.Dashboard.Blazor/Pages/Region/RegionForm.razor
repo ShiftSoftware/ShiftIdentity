@@ -14,14 +14,9 @@
                  TypeAuthAction="ShiftIdentityActions.Regions"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.Region.RegionDTO">
 
-    <MudTextField ReadOnly="@ReadOnly"
-                  Disabled="@Disabled"
-                  OnlyValidateIfDirty="true"
-                  Label="Name"
-                  @bind-Value="TheItem.Name"
-                  For="@(() => TheItem.Name)" />
+    <LocalizedTextField @bind-Value="TheItem.Name" Label="Name" For="() => TheItem.Name" />
 
-                  <MudTextField ReadOnly="@ReadOnly"
+    <MudTextField ReadOnly="@ReadOnly"
                   Disabled="@Disabled"
                   OnlyValidateIfDirty="true"
                   Label="Short Code"
