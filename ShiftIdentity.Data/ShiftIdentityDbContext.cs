@@ -34,6 +34,7 @@ namespace ShiftSoftware.ShiftIdentity.Data
         public DbSet<City> Cities { get; set; }
         public DbSet<UserGroup> UserGroups { get; set; }
         public DbSet<UserGroupUser> UserGroupUsers { get; set; }
+        public DbSet<Brand> Brands { get; set; }
 
         protected override void OnModelCreating(ModelBuilder b)
         {

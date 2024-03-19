@@ -1,0 +1,16 @@
+@attribute [Authorize]
+@layout Shared.DefaultLayout
+@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(BrandList)}")]
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.Brand
+
+<ShiftList EntitySet="@($"{Constants.IdentityRoutePreifix}Brand")"
+           Title="Brand List"
+           T="BrandListDTO"
+           ComponentType="typeof(BrandForm)"
+           Dense
+           ShowIDColumn
+           TypeAuthAction="ShiftIdentityActions.Brands"
+           EnableExport>
+
+    <PropertyColumn Title="Name" Property="x => x.Name" />
+</ShiftList>

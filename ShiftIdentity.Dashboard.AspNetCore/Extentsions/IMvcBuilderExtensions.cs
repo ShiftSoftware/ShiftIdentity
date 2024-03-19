@@ -82,6 +82,7 @@ public static class IMvcBuilderExtensions
         builder.Services.AddScoped<CityRepository>();
         builder.Services.AddScoped<RegionRepository>();
         builder.Services.AddScoped<ServiceRepository>();
+        builder.Services.AddScoped<BrandRepository>();
         builder.Services.AddScoped<CompanyRepository>();
         builder.Services.AddScoped<CompanyBranchRepository>();
         builder.Services.AddScoped<UserGroupRepository>();

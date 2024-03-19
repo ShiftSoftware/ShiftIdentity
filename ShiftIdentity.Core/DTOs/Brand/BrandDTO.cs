@@ -2,11 +2,11 @@
 using ShiftSoftware.ShiftEntity.Model.HashIds;
 using System.ComponentModel.DataAnnotations;
 
-namespace ShiftSoftware.ShiftIdentity.Core.DTOs.Service;
+namespace ShiftSoftware.ShiftIdentity.Core.DTOs.Brand;
 
-public class ServiceDTO : ShiftEntityViewAndUpsertDTO
+public class BrandDTO : ShiftEntityViewAndUpsertDTO
 {
-    [BrandHashIdConverter]
+    [ServiceHashIdConverter]
     public override string? ID { get; set; }
 
     [Required]

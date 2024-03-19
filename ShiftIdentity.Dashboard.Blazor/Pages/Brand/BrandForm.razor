@@ -1,0 +1,36 @@
+@attribute [Authorize]
+@layout Shared.DefaultLayout
+@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(BrandForm)}/{{Key?}}")]
+@inherits ShiftForm<BrandForm, ShiftSoftware.ShiftIdentity.Core.DTOs.Brand.BrandDTO>
+@inject HttpClient Http
+
+
+<ShiftEntityForm @bind-Mode="Mode"
+                 @bind-Value="TheItem"
+                 @ref="FormContainer"
+                 Action="@($"{Constants.IdentityRoutePreifix}Brand")"
+                 Title="Brand"
+                 @bind-Key="@Key"
+                 TypeAuthAction="ShiftIdentityActions.Brands"
+                 T="ShiftSoftware.ShiftIdentity.Core.DTOs.Brand.BrandDTO">
+
+    <MudTextField ReadOnly="@ReadOnly"
+                  Disabled="@Disabled"
+                  OnlyValidateIfDirty="true"
+                  Label="Name"
+                  @bind-Value="TheItem.Name"
+                  For="@(() => TheItem.Name)" />
+</ShiftEntityForm>
+
+@code {
+    [Parameter]
+    public string? BrandName { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (!string.IsNullOrWhiteSpace(BrandName))
+        {
+            TheItem.Name = BrandName;
+        }
+    }
+}

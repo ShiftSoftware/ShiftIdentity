@@ -2,12 +2,12 @@
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
 
-namespace ShiftSoftware.ShiftIdentity.Core.DTOs.Service;
+namespace ShiftSoftware.ShiftIdentity.Core.DTOs.Brand;
 
 [ShiftEntityKeyAndName(nameof(ID), nameof(Name))]
-public class ServiceListDTO : ShiftEntityListDTO
+public class BrandListDTO : ShiftEntityListDTO
 {
-    [BrandHashIdConverter]
+    [ServiceHashIdConverter]
     public override string? ID { get; set; }
     public string Name { get; set; } = default!;
 }
