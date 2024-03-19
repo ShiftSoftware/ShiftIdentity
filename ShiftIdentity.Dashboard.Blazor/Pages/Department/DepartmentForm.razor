@@ -21,3 +21,16 @@
                   @bind-Value="TheItem.Name"
                   For="@(() => TheItem.Name)" />
 </ShiftEntityForm>
+
+@code {
+    [Parameter]
+    public string? DepartmentName { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (!string.IsNullOrWhiteSpace(DepartmentName))
+        {
+            TheItem.Name = DepartmentName;
+        }
+    }
+}

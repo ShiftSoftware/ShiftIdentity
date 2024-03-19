@@ -46,6 +46,9 @@ public class CompanyBranchDTO : ShiftEntityViewAndUpsertDTO
     [ServiceHashIdConverter]
     public IEnumerable<ShiftEntitySelectDTO> Services { get; set; } = new List<ShiftEntitySelectDTO>();
 
+    [BrandHashIdConverter]
+    public IEnumerable<ShiftEntitySelectDTO> Brands { get; set; } = new List<ShiftEntitySelectDTO>();
+
     public CompanyBranchDTO()
     {
         this.CustomFields = new();

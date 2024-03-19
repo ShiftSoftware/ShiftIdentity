@@ -18,7 +18,8 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
                 x => x.Include(y => y.Company),
                 x => x.Include(y => y.City),
                 x => x.Include(y => y.CompanyBranchDepartments).ThenInclude(y => y.Department),
-                x => x.Include(y => y.CompanyBranchServices).ThenInclude(y => y.Service)
+                x => x.Include(y => y.CompanyBranchServices).ThenInclude(y => y.Service),
+                x => x.Include(y => y.CompanyBranchBrands).ThenInclude(y => y.Brand)
             )
         )
         {
@@ -69,6 +70,19 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             await db.CompanyBranchServices.AddRangeAsync(addedServices.Select(x => new CompanyBranchService
             {
                 ServiceID = x.Value.ToLong(),
+                CompanyBranch = entity
+            }).ToList());
+
+            //Update brands
+            var deletedBrands = entity.CompanyBranchBrands.Where(x => !dto.Brands.Select(s => s.Value.ToLong())
+                           .Any(s => s == x.BrandID));
+            var addedBrands = dto.Brands.Where(x => !entity.CompanyBranchBrands.Select(s => s.BrandID)
+                .Any(s => s == x.Value.ToLong()));
+
+            db.CompanyBranchBrands.RemoveRange(deletedBrands);
+            await db.CompanyBranchBrands.AddRangeAsync(addedBrands.Select(x => new CompanyBranchBrand
+            {
+                BrandID = x.Value.ToLong(),
                 CompanyBranch = entity
             }).ToList());
 

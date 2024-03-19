@@ -31,6 +31,7 @@ namespace ShiftSoftware.ShiftIdentity.Data
         public DbSet<Department> Departments { get; set; }
         public DbSet<CompanyBranchDepartment> CompanyBranchDepartments { get; set; }
         public DbSet<CompanyBranchService> CompanyBranchServices { get; set; }
+        public DbSet<CompanyBranchBrand> CompanyBranchBrands { get; set; }
         public DbSet<City> Cities { get; set; }
         public DbSet<UserGroup> UserGroups { get; set; }
         public DbSet<UserGroupUser> UserGroupUsers { get; set; }

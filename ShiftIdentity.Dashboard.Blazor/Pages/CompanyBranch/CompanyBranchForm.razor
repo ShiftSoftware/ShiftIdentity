@@ -8,6 +8,9 @@
 @inject ODataQuery odataQuery
 
 @using ShiftSoftware.ShiftEntity.Model.Enums
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.Brand
+@using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.Brand
+@using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.Department
 @using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.Service
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Company
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.City
@@ -94,10 +97,18 @@
         </MudItem>
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
-            <ShiftAutocomplete Label="Departments"
-                               @bind-Value="LastSelectedDepartment"
-                               TEntitySet="DepartmentListDTO"
-                               EntitySet="IdentityDepartment" />
+            @* <ShiftAutocomplete Label="Departments"
+            @bind-Value="LastSelectedDepartment"
+            TEntitySet="DepartmentListDTO"
+            EntitySet="IdentityDepartment" /> *@
+
+            <ShiftAutocompleteWithQuickAdd Label="Departments"
+                                           TQuickAdd="ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentDTO"
+                                           QuickAddComponentType="@typeof(DepartmentForm)"
+                                           @bind-Value="LastSelectedDepartment"
+                                           TEntitySet="DepartmentListDTO"
+                                           EntitySet="IdentityDepartment"
+                                           QuickAddParameterName="@nameof(DepartmentForm.DepartmentName)" />
 
             <br />
 
@@ -111,7 +122,7 @@
             <ShiftAutocompleteWithQuickAdd Label="Services"
                                            TQuickAdd="ShiftSoftware.ShiftIdentity.Core.DTOs.Service.ServiceDTO"
                                            QuickAddComponentType="@typeof(ServiceForm)"
-            @bind-Value="LastSelectedService"
+                                           @bind-Value="LastSelectedService"
                                            TEntitySet="ServiceListDTO"
                                            EntitySet="IdentityService"
                                            QuickAddParameterName="@nameof(ServiceForm.ServiceName)" />
@@ -124,6 +135,22 @@
         </MudItem>
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
+            <ShiftAutocompleteWithQuickAdd Label="Brands"
+                                           TQuickAdd="ShiftSoftware.ShiftIdentity.Core.DTOs.Brand.BrandDTO"
+                                           QuickAddComponentType="@typeof(BrandForm)"
+                                           @bind-Value="LastSelectedBrand"
+                                           TEntitySet="BrandListDTO"
+                                           EntitySet="IdentityBrand"
+                                           QuickAddParameterName="@nameof(BrandForm.BrandName)" />
+            <br />
+
+            @foreach (var item in TheItem.Brands)
+            {
+                <MudChip Color="Color.Secondary" OnClose="() => RemoveBrandItem(item)">@item.Text</MudChip>
+            }
+        </MudItem>
+
+        <MudItem xs="12" sm="12" lg="12" xl="12">
             <LocalizedTextField @bind-Value="TheItem.Address" Label="Address" For="() => TheItem.Address" />
         </MudItem>
 
@@ -132,7 +159,7 @@
                           Disabled="@Disabled"
                           OnlyValidateIfDirty="true"
                           Label="Latitude"
-            @bind-Value="TheItem.Latitude"
+                          @bind-Value="TheItem.Latitude"
                           For="@(() => TheItem.Latitude)" />
         </MudItem>
 
@@ -141,7 +168,7 @@
                           Disabled="@Disabled"
                           OnlyValidateIfDirty="true"
                           Label="Longitude"
-            @bind-Value="TheItem.Longitude"
+                          @bind-Value="TheItem.Longitude"
                           For="@(() => TheItem.Longitude)" />
         </MudItem>
 
@@ -151,12 +178,12 @@
                           Label="Photos"
                           For="() => TheItem.Photos"
                           AcceptImages="true"
-            @bind-Values="TheItem.Photos" />
+                          @bind-Values="TheItem.Photos" />
         </MudItem>
 
         @if (this.TheItem.CustomFields is not null && this.TheItem.CustomFields?.Count > 0)
         {
-            @foreach(var field in this.TheItem.CustomFields)
+            @foreach (var field in this.TheItem.CustomFields)
             {
                 <MudItem xs="12" sm="6" lg="3" xl="3">
                     <MudTextField ReadOnly="@ReadOnly"
@@ -175,7 +202,7 @@
     {
         this.SetCustomFiles();
 
-        return base.OnInitializedAsync();   
+        return base.OnInitializedAsync();
     }
 
     private void OnTaskFinished()
@@ -187,7 +214,7 @@
     {
         foreach (var field in this.Options.CompanyBranchCustomFields)
         {
-            if (this.TheItem.CustomFields?.ContainsKey(field.Key)??false)
+            if (this.TheItem.CustomFields?.ContainsKey(field.Key) ?? false)
                 this.TheItem.CustomFields[field.Key]?.Set(field.Value);
             else
                 this.TheItem.CustomFields?.TryAdd(field.Key, new CustomField(field.Value));
@@ -240,5 +267,29 @@
             return;
 
         TheItem.Services = TheItem.Services.Where(x => !x.Value.Equals(item.Value)).ToList();
+    }
+
+    public ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO? LastSelectedBrand
+    {
+        get { return null; }
+        set
+        {
+            var currentList = TheItem.Brands.ToList();
+
+            if (!currentList.Any(x => x.Value.Equals(value!.Value)))
+            {
+                currentList.Add(value!);
+            }
+
+            TheItem.Brands = currentList;
+        }
+    }
+
+    public void RemoveBrandItem(ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO item)
+    {
+        if (Mode <= ShiftBlazor.Enums.FormModes.Archive)
+            return;
+
+        TheItem.Brands = TheItem.Brands.Where(x => !x.Value.Equals(item.Value)).ToList();
     }
 }

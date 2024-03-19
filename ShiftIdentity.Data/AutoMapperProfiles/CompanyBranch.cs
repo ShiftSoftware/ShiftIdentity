@@ -26,6 +26,10 @@ public class CompanyBranch : Profile
             .ForMember(
                     dest => dest.Departments,
                     opt => opt.MapFrom(src => src.CompanyBranchDepartments.Select(y => new ShiftEntitySelectDTO { Value = y.DepartmentID.ToString()!, Text = y.Department!.Name }))
+                )
+            .ForMember(
+                    dest => dest.Brands,
+                    opt => opt.MapFrom(src => src.CompanyBranchBrands.Select(y => new ShiftEntitySelectDTO { Value = y.BrandID.ToString()!, Text = y.Brand!.Name }))
                 );
 
 
