@@ -114,7 +114,14 @@
 
             @foreach (var item in TheItem.Departments)
             {
-                <MudChip Color="Color.Primary" OnClose="() => RemoveDepartmentItem(item)">@item.Text</MudChip>
+                if (Mode == ShiftBlazor.Enums.FormModes.Edit || Mode == ShiftBlazor.Enums.FormModes.Create)
+                {
+                    <MudChip Color="Color.Secondary" OnClose="() => RemoveDepartmentItem(item)">@item.Text</MudChip>
+                }
+                else
+                {
+                    <MudChip Color="Color.Secondary">@item.Text</MudChip>
+                }
             }
         </MudItem>
 
@@ -130,7 +137,14 @@
 
             @foreach (var item in TheItem.Services)
             {
-                <MudChip Color="Color.Secondary" OnClose="() => RemoveServiceItem(item)">@item.Text</MudChip>
+                if(Mode == ShiftBlazor.Enums.FormModes.Edit || Mode == ShiftBlazor.Enums.FormModes.Create)
+                {
+                    <MudChip Color="Color.Secondary" OnClose="() => RemoveServiceItem(item)">@item.Text</MudChip>
+                }
+                else
+                {
+                    <MudChip Color="Color.Secondary">@item.Text</MudChip>
+                }
             }
         </MudItem>
 
@@ -146,7 +160,14 @@
 
             @foreach (var item in TheItem.Brands)
             {
-                <MudChip Color="Color.Secondary" OnClose="() => RemoveBrandItem(item)">@item.Text</MudChip>
+                if (Mode == ShiftBlazor.Enums.FormModes.Edit || Mode == ShiftBlazor.Enums.FormModes.Create)
+                {
+                    <MudChip Color="Color.Secondary" OnClose="() => RemoveBrandItem(item)">@item.Text</MudChip>
+                }
+                else
+                {
+                    <MudChip Color="Color.Secondary">@item.Text</MudChip>
+                }
             }
         </MudItem>
 

@@ -6,7 +6,7 @@ namespace ShiftSoftware.ShiftIdentity.Core.DTOs.Service;
 
 public class ServiceDTO : ShiftEntityViewAndUpsertDTO
 {
-    [BrandHashIdConverter]
+    [ServiceHashIdConverter]
     public override string? ID { get; set; }
 
     [Required]
