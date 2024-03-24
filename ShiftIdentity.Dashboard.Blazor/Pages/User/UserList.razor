@@ -3,27 +3,76 @@
 
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(UserList)}")]
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
+@inject IDialogService DialogService
+@inject HttpClient Http
+@inject MessageService MessageService
 
 <ShiftList EntitySet="@($"{Constants.IdentityRoutePreifix}User")"
            Title="User List"
            T="UserListDTO"
+           @ref="ShiftList"
            ComponentType="typeof(UserForm)"
            ShowIDColumn
            Dense
+           EnableSelection
            TypeAuthAction="ShiftIdentityActions.Users"
            EnableExport>
 
-    <PropertyColumn Title="Name" Property="x => x.FullName" />
-    <PropertyColumn Title="Username" Property="x => x.Username" />
-    <PropertyColumn Title="Phone" Property="x => x.Phone" />
-    <PropertyColumn Title="Email" Property="x => x.Email" />
-    <PropertyColumn Title="Branch" Property="x => x.CompanyBranch" />
-    <PropertyColumn Format="F" Property="x => x.LastSeen.DateTime" Title="Last Seen">
-        <CellTemplate>
-            @if (context?.Item?.LastSeen.DateTime > DateTimeOffset.MinValue)
-            {
-                @context.Item.LastSeen.DateTime
-            }
-        </CellTemplate>
-    </PropertyColumn>
+    <ToolbarStartTemplate>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Outlined"
+                   Size="Size.Small"
+                   Disabled="!(ShiftList!.SelectedItems?.Count > 0)"
+                   OnClick="ResetRandomPassword">
+            Reset Random Password
+        </MudButton>
+    </ToolbarStartTemplate>
+
+    <ChildContent>
+        <PropertyColumn Title="Name" Property="x => x.FullName" />
+        <PropertyColumn Title="Username" Property="x => x.Username" />
+        <PropertyColumn Title="Phone" Property="x => x.Phone" />
+        <PropertyColumn Title="Email" Property="x => x.Email" />
+        <PropertyColumn Title="Branch" Property="x => x.CompanyBranch" />
+        <PropertyColumn Format="F" Property="x => x.LastSeen.DateTime" Title="Last Seen">
+            <CellTemplate>
+                @if (context?.Item?.LastSeen.DateTime > DateTimeOffset.MinValue)
+                {
+                    @context.Item.LastSeen.DateTime
+                }
+            </CellTemplate>
+        </PropertyColumn>
+    </ChildContent>
 </ShiftList>
+
+@code {
+    public ShiftList<UserListDTO>? ShiftList { get; set; }
+
+    private async Task ResetRandomPassword()
+    {
+        var ids = ShiftList!.SelectedItems?.Select(x => x.ID);
+
+        if(ids?.Count() == 0)
+            return;
+
+        bool? result = await DialogService.ShowMessageBox(
+            "Warning",
+            $"Are you sure to reset {ids?.Count()} users password to random?",
+            yesText: "Yes", cancelText: "No");
+
+        if (result != true)
+            return;
+
+        using var response = await Http.PostAsJsonAsync<IEnumerable<string>>($"API/{Constants.IdentityRoutePreifix}User/ResetRandomPasswords", ids!);
+        var users = await response.Content.ReadFromJsonAsync<IEnumerable<UserInfoDTO>>();
+
+        if(response.IsSuccessStatusCode)
+        {
+            this.MessageService.Success($"{users.Count()} users password reseted to random successfully");
+        }
+        else
+        {
+            this.MessageService.Error("An error occurred while resetting the password.");
+        }
+    }
+}

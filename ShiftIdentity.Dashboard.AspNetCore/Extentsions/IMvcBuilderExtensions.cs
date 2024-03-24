@@ -1,13 +1,13 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using ShiftSoftware.ShiftIdentity.Data.Repositories;
-using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
-using ShiftSoftware.ShiftIdentity.Data;
-using ShiftSoftware.ShiftIdentity.AspNetCore;
 using ShiftSoftware.ShiftEntity.Core;
-using System.Reflection;
+using ShiftSoftware.ShiftIdentity.AspNetCore;
+using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
+using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
 using ShiftSoftware.ShiftIdentity.Core.IRepositories;
+using ShiftSoftware.ShiftIdentity.Data;
+using ShiftSoftware.ShiftIdentity.Data.Repositories;
+using System.Reflection;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Extentsions;
 

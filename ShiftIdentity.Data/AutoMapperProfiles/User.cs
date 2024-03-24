@@ -26,5 +26,6 @@ public class User : Profile
                 );
 
         CreateMap<Core.Entities.User, UserDataDTO>();
+        CreateMap<Core.Entities.User, UserInfoDTO>();
     }
 }

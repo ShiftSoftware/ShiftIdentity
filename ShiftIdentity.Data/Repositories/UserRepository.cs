@@ -223,4 +223,32 @@ public class UserRepository :
     {
         return base.SaveChangesAsync(raiseBeforeCommitTriggers);
     }
+
+    public async Task<IEnumerable<UserInfoDTO>> ResetRandomPasswordsAsync(IEnumerable<long> ids)
+    {
+        var users = await db.Users.Where(x => ids.Contains(x.ID)).ToListAsync();
+        var userInfos = new List<UserInfoDTO>();
+
+        foreach (var user in users)
+        {
+            if (user.BuiltIn)
+                continue;
+
+            var password = PasswordGenerator.GeneratePassword(20);
+
+            var hash = HashService.GenerateHash(password);
+
+            user.PasswordHash = hash.PasswordHash;
+            user.Salt = hash.Salt;
+
+            //Set flag to enforce password change
+            user.RequireChangePassword = true;
+
+            var userInfo = this.mapper.Map<UserInfoDTO>(user);
+            userInfo.PlainTextPassword = password;
+            userInfos.Add(userInfo);
+        }
+
+        return userInfos;
+    }
 }
