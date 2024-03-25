@@ -15,7 +15,7 @@
            ShowIDColumn
            Dense
            EnableSelection
-           TypeAuthAction="ShiftIdentityActions.Users"
+            TypeAuthAction="ShiftIdentityActions.Users"
            EnableExport>
 
     <ToolbarStartTemplate>
@@ -53,21 +53,33 @@
     {
         var ids = ShiftList!.SelectedItems?.Select(x => x.ID);
 
-        if(ids?.Count() == 0)
+        if (ids?.Count() == 0)
             return;
 
-        var confirmForm = await DialogService.ShowAsync<ResetPasswordConfirmationDialog>();
+        var confirmForm = await DialogService.ShowAsync<ResetPasswordConfirmationDialog>("Warning");
 
         var data = (await confirmForm.Result).Data as Tuple<bool, bool>;
 
         if (data is not null && data.Item1)
         {
             using var response = await Http.PostAsJsonAsync<IEnumerable<string>>($"API/{Constants.IdentityRoutePreifix}User/AssignRandomPasswords/{data.Item2}", ids!);
+
             var users = await response.Content.ReadFromJsonAsync<IEnumerable<UserInfoDTO>>();
 
-            if(response.IsSuccessStatusCode)
+            if (response.IsSuccessStatusCode)
             {
-                this.MessageService.Success($"The Password for ({users?.Count()}) users has been reseted.");
+                if (data.Item2)
+                {
+                    this.MessageService.Success($"The Password for ({users?.Count()}) users has been reseted.");
+                }
+                else
+                {
+                    var parameters = new DialogParameters<ResetPasswordResultDialog>();
+
+                    parameters.Add(x => x.Users, users);
+
+                    await this.DialogService.ShowAsync<ResetPasswordResultDialog>("Password Reset Results", parameters);
+                }
             }
             else
             {
