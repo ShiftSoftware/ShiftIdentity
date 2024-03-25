@@ -19,12 +19,13 @@
            EnableExport>
 
     <ToolbarStartTemplate>
-        <MudButton Color="Color.Primary"
+        <MudButton Color="Color.Error"
                    Variant="Variant.Outlined"
                    Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.LockReset"
                    Disabled="!(ShiftList!.SelectedItems?.Count > 0)"
-                   OnClick="ResetRandomPassword">
-            Reset Random Password
+                   OnClick="AssignRandomPasswords">
+            Assign Random Passwords
         </MudButton>
     </ToolbarStartTemplate>
 
@@ -48,31 +49,30 @@
 @code {
     public ShiftList<UserListDTO>? ShiftList { get; set; }
 
-    private async Task ResetRandomPassword()
+    private async Task AssignRandomPasswords()
     {
         var ids = ShiftList!.SelectedItems?.Select(x => x.ID);
 
         if(ids?.Count() == 0)
             return;
 
-        bool? result = await DialogService.ShowMessageBox(
-            "Warning",
-            $"Are you sure to reset {ids?.Count()} users password to random?",
-            yesText: "Yes", cancelText: "No");
+        var confirmForm = await DialogService.ShowAsync<ResetPasswordConfirmationDialog>();
 
-        if (result != true)
-            return;
+        var data = (await confirmForm.Result).Data as Tuple<bool, bool>;
 
-        using var response = await Http.PostAsJsonAsync<IEnumerable<string>>($"API/{Constants.IdentityRoutePreifix}User/ResetRandomPasswords", ids!);
-        var users = await response.Content.ReadFromJsonAsync<IEnumerable<UserInfoDTO>>();
-
-        if(response.IsSuccessStatusCode)
+        if (data is not null && data.Item1)
         {
-            this.MessageService.Success($"{users.Count()} users password reseted to random successfully");
-        }
-        else
-        {
-            this.MessageService.Error("An error occurred while resetting the password.");
+            using var response = await Http.PostAsJsonAsync<IEnumerable<string>>($"API/{Constants.IdentityRoutePreifix}User/AssignRandomPasswords/{data.Item2}", ids!);
+            var users = await response.Content.ReadFromJsonAsync<IEnumerable<UserInfoDTO>>();
+
+            if(response.IsSuccessStatusCode)
+            {
+                this.MessageService.Success($"The Password for ({users?.Count()}) users has been reseted.");
+            }
+            else
+            {
+                this.MessageService.Error("An error occurred while resetting the password.");
+            }
         }
     }
 }

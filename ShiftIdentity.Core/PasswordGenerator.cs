@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Security.Cryptography;
 
 namespace ShiftSoftware.ShiftIdentity.Core;
 
@@ -15,14 +11,9 @@ public class PasswordGenerator
 
     public static string GeneratePassword(int length)
     {
-        string allChars = Lowercase + Uppercase + Digits + SpecialChars;
-        Random random = new Random();
-        return new string(Enumerable.Repeat(allChars, length)
-          .Select(s => s[random.Next(s.Length)]).ToArray());
-    }
-
-    public static IEnumerable<string> GeneratePasswords(int count, int length)
-    {
-        return Enumerable.Range(0, count).Select(i => GeneratePassword(length));
+        return RandomNumberGenerator.GetString(
+            Lowercase + Uppercase + Digits + SpecialChars,
+            length
+        );
     }
 }

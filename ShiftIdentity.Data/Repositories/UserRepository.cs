@@ -224,7 +224,7 @@ public class UserRepository :
         return base.SaveChangesAsync(raiseBeforeCommitTriggers);
     }
 
-    public async Task<IEnumerable<UserInfoDTO>> ResetRandomPasswordsAsync(IEnumerable<long> ids)
+    public async Task<IEnumerable<UserInfoDTO>> AssignRandomPasswordsAsync(IEnumerable<long> ids)
     {
         var users = await db.Users.Where(x => ids.Contains(x.ID)).ToListAsync();
         var userInfos = new List<UserInfoDTO>();
