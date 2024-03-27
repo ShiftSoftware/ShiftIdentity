@@ -11,4 +11,6 @@ public class BrandDTO : ShiftEntityViewAndUpsertDTO
 
     [Required]
     public string Name { get; set; } = default!;
+
+    public string? ExternalId { get; set; } = default!;
 }

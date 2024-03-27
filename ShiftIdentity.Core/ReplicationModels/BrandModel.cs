@@ -10,4 +10,5 @@ namespace ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
 public class BrandModel : ReplicationModel
 {
     public string Name { get; set; } = default!;
+    public string? ExternalId { get; set; } = default!;
 }
