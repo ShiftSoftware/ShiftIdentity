@@ -14,12 +14,7 @@
                  TypeAuthAction="ShiftIdentityActions.Brands"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.Brand.BrandDTO">
 
-    <MudTextField ReadOnly="@ReadOnly"
-                  Disabled="@Disabled"
-                  OnlyValidateIfDirty="true"
-                  Label="Name"
-                  @bind-Value="TheItem.Name"
-                  For="@(() => TheItem.Name)" />
+    <LocalizedTextField @bind-Value="TheItem.Name" Label="Name" For="() => TheItem.Name" />
 </ShiftEntityForm>
 
 @code {
