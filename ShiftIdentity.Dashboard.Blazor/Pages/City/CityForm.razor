@@ -23,4 +23,6 @@
                        @bind-Value="TheItem.Region"
                        EntitySet="IdentityRegion"
                        TEntitySet="RegionListDTO" />
+
+    <MudTextFieldExtended @bind-Value="TheItem.ExternalId" For="() => TheItem.ExternalId" Label="External Id" />
 </ShiftEntityForm>

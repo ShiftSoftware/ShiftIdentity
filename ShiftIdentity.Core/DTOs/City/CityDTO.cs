@@ -12,6 +12,7 @@ public class CityDTO : ShiftEntityViewAndUpsertDTO
 
     [Required]
     public string Name { get; set; } = default!;
+    public string? ExternalId { get; set; }
 
     [Required]
     [RegionHashIdConverter]

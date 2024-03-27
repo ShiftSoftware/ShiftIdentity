@@ -11,6 +11,7 @@ namespace ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
 public class CityModel : ReplicationModel
 {
     public string Name { get; set; } = default!;
+    public string? ExternalId { get; set; }
     public string RegionID { get; set; } = default!;
     public bool BuiltIn { get; set; }
     public string ItemType { get; set; } = default!;

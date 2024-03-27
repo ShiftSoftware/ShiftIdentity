@@ -13,6 +13,7 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 public class City : ShiftEntity<City>
 {
     public string Name { get; set; } = default!;
+    public string? ExternalId { get; set; }
     public new long RegionID { get; set; }
     public virtual Region Region { get; set; } = default!;
     public bool BuiltIn { get; set; }
