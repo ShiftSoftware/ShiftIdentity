@@ -62,7 +62,7 @@
 
         if (data is not null && data.Item1)
         {
-            using var response = await Http.PostAsJsonAsync<IEnumerable<string>>($"API/{Constants.IdentityRoutePreifix}User/AssignRandomPasswords/{data.Item2}", ids!);
+            using var response = await Http.PostAsJsonAsync<IEnumerable<string>>($"API/{Constants.IdentityRoutePreifix}User/AssignRandomPasswords?shareWithUser={data.Item2}", ids!);
 
             var users = await response.Content.ReadFromJsonAsync<IEnumerable<UserInfoDTO>>();
 

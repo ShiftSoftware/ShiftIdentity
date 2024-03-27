@@ -25,9 +25,9 @@ public class IdentityUserController : ShiftEntitySecureControllerAsync<UserRepos
         this.sendUserInfos = sendUserInfos;
     }
 
-    [HttpPost("AssignRandomPasswords/{shareWithUser}")]
+    [HttpPost("AssignRandomPasswords")]
     [TypeAuth<ShiftIdentityActions>(nameof(ShiftIdentityActions.Users), TypeAuth.Core.Access.Write)]
-    public async Task<IActionResult> AssignRandomPasswords([FromBody] IEnumerable<string> ids, [FromQuery] bool shareWithUser)
+    public async Task<IActionResult> AssignRandomPasswords([FromBody] IEnumerable<string> ids, [FromQuery(Name = "shareWithUser")] bool shareWithUser)
     {
         var decodedIds = ids.ToList().Select(x => ShiftEntityHashIdService.Decode<UserDTO>(x));
 
