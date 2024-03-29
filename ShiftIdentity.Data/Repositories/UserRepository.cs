@@ -21,7 +21,7 @@ public class UserRepository :
 
     private readonly ITypeAuthService typeAuthService;
     public UserRepository(ShiftIdentityDbContext db, ITypeAuthService typeAuthService, IMapper mapper) : base(db, r =>
-        r.IncludeRelatedEntitiesWithFindAsync(x => x.Include(y => y.AccessTrees).ThenInclude(y => y.AccessTree))
+        r.IncludeRelatedEntitiesWithFindAsync(x => x.Include(y => y.AccessTrees).ThenInclude(y => y.AccessTree), x=> x.Include(y=> y.UserLog))
     )
     {
         this.typeAuthService = typeAuthService;
@@ -170,7 +170,8 @@ public class UserRepository :
 
     public async Task<User?> GetUserByUsernameAsync(string username)
     {
-        return await db.Users.Include(x => x.AccessTrees).ThenInclude(x => x.AccessTree).FirstOrDefaultAsync(x => x.Username == username);
+        return await db.Users.Include(x=> x.UserLog).Include(x => x.AccessTrees).ThenInclude(x => x.AccessTree)
+            .FirstOrDefaultAsync(x => x.Username == username);
     }
 
     public async Task<User?> ChangePasswordAsync(ChangePasswordDTO dto, long userId)

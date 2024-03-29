@@ -58,7 +58,11 @@ public class TokenService
                 return null;
 
             //Update lastseen
-            user.LastSeen = DateTimeOffset.UtcNow;
+            if (user.UserLog is null)
+                user.UserLog = new Core.Entities.UserLog { LastSeen = DateTimeOffset.UtcNow };
+            else
+                user.UserLog.LastSeen = DateTimeOffset.UtcNow;
+
             await this.userRepository.SaveChangesAsync();
 
             var token = GenerateToken(user);

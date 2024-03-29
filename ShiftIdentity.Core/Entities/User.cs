@@ -63,6 +63,7 @@ public class User : ShiftEntity<User>
     public virtual Region Region { get; set; }
     public virtual Company Company { get; set; }
     public virtual CompanyBranch CompanyBranch { get; set; }
+    public virtual UserLog UserLog { get; set; }
 
     public virtual IEnumerable<UserAccessTree> AccessTrees { get; set; }
     public virtual ICollection<UserGroupUser> UserGroupUsers { get; set; } = new HashSet<UserGroupUser>();

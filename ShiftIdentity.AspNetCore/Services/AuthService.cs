@@ -64,7 +64,10 @@ public class AuthService
         user.LockDownUntil = null;
 
         //Update lastseen
-        user.LastSeen = DateTimeOffset.UtcNow;
+        if(user.UserLog is null)
+            user.UserLog = new Core.Entities.UserLog { LastSeen = DateTimeOffset.UtcNow };
+        else
+            user.UserLog.LastSeen = DateTimeOffset.UtcNow;
 
         await userRepo.SaveChangesAsync();
 

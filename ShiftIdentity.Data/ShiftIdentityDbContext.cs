@@ -22,6 +22,7 @@ namespace ShiftSoftware.ShiftIdentity.Data
         public DbSet<App> Apps { get; set; }
         public DbSet<AccessTree> AccessTrees { get; set; }
         public DbSet<User> Users { get; set; }
+        public DbSet<UserLog> UserLogs { get; set; }
         public DbSet<UserAccessTree> UserAccessTrees { get; set; }
 
         public DbSet<Company> Companies { get; set; }

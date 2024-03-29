@@ -23,7 +23,11 @@ public class User : Profile
             .ForMember(
                     dest => dest.CompanyBranch,
                     opt => opt.MapFrom(src => src.CompanyBranch!.Name)
-                );
+                )
+            .ForMember(
+                dest => dest.LastSeen,
+                opt => opt.MapFrom(x => (x.UserLog == null || x.UserLog.LastSeen == null ? x.LastSeen : x.UserLog.LastSeen))
+            );
 
         CreateMap<Core.Entities.User, UserDataDTO>();
         CreateMap<Core.Entities.User, UserInfoDTO>();
