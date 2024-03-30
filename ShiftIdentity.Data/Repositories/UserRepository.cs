@@ -181,7 +181,10 @@ public class UserRepository :
             return null;
 
         if (!HashService.VerifyPassword(dto.CurrentPassword, user.Salt, user.PasswordHash))
-            return null;
+            throw new ShiftEntityException(new Message("Validation Error", "Current Password is incorrect"));
+
+        if (dto.CurrentPassword == dto.NewPassword)
+            throw new ShiftEntityException(new Message("Validation Error", "New Password can not be the same as the current password"));
 
 
         var hash = HashService.GenerateHash(dto.NewPassword);

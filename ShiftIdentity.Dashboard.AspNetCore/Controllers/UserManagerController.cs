@@ -77,15 +77,26 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDTO dto)
         {
             var loginUser = claimService.GetUser();
+            User? user;
 
-            var user = await userRepo.ChangePasswordAsync(dto, loginUser.ID.ToLong());
+            try
+            {
+                user = await userRepo.ChangePasswordAsync(dto, loginUser.ID.ToLong());
+            }
+            catch (ShiftEntityException ex)
+            {
+                return StatusCode(ex.HttpStatusCode, new ShiftEntityResponse<UserDataDTO>
+                {
+                    Message = ex.Message
+                });
+            }
 
             if (user is null)
                 return BadRequest(new ShiftEntityResponse<UserDataDTO>
                 {
                     Message = new Message
                     {
-                        Body = "The current password is incorrect!"
+                        Body = "Could not update user data!"
                     }
                 });
 

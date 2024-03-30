@@ -11,6 +11,7 @@ public class ChangePasswordDTO
         requiredLength: 6,
         requiredUniqueChars: 3,
         requireDigit: true)]
+    [NotEqualTo(nameof(CurrentPassword), ErrorMessage = $"{nameof(NewPassword)} can not be the same as {nameof(CurrentPassword)}")]
     public string NewPassword { get; set; } = default!;
 
     [Compare(nameof(NewPassword))]
