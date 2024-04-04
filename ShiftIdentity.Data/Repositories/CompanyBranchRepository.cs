@@ -16,7 +16,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
         public CompanyBranchRepository(ShiftIdentityDbContext db, CityRepository cityRepository) : base(db, r =>
             r.IncludeRelatedEntitiesWithFindAsync(
                 x => x.Include(y => y.Company),
-                x => x.Include(y => y.City),
+                x => x.Include(y => y.City).ThenInclude(x=> x.Region), //Region is Required for Replication Model
                 x => x.Include(y => y.CompanyBranchDepartments).ThenInclude(y => y.Department),
                 x => x.Include(y => y.CompanyBranchServices).ThenInclude(y => y.Service),
                 x => x.Include(y => y.CompanyBranchBrands).ThenInclude(y => y.Brand)
