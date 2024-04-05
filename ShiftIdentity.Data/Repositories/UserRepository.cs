@@ -39,8 +39,12 @@ public class UserRepository :
 
         //Check if the username is duplicate
         if (await db.Users.AnyAsync(x => !x.IsDeleted && x.Username.ToLower() == dto.Username.ToLower() && x.ID != id))
-            throw new ShiftEntityException(new Message("Duplicate", $"the username {dto.Username} is exists"));
+            throw new ShiftEntityException(new Message("Duplicate", $"The username {dto.Username} is exists"));
 
+        //Check if the email is duplicate
+        if (await db.Users.AnyAsync(x => !x.IsDeleted && x.Email.ToLower() == (dto.Email ?? "").ToLower() && x.ID != id))
+            throw new ShiftEntityException(new Message("Duplicate", $"The email {dto.Email} is exists"));
+        
         if (actionType == ActionTypes.Insert)
         {
             if (string.IsNullOrWhiteSpace(dto.Password))
