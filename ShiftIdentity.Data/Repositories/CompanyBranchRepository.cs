@@ -93,7 +93,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             entity.Latitude = dto.Latitude;
             entity.Photos = JsonSerializer.Serialize(dto.Photos);
 
-            //ef core may not set the entity state as Modified if the only the collections are changed (CompanyBranchDepartments, CompanyBranchServices)
+            //ef core may not set the entity state as Modified if only the collections are changed (CompanyBranchDepartments, CompanyBranchServices)
             if (actionType == ActionTypes.Update)
                 db.Entry(entity).State = EntityState.Modified;
 
