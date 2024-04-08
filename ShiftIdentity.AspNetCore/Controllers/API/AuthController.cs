@@ -78,6 +78,7 @@ public class AuthController : ControllerBase
     /// <param name="generateAuthCodeDto"></param>
     /// <returns></returns>
     [HttpPost("AuthCode")]
+    [AllowAnonymous]
     public async Task<IActionResult> GenerateAuthCode([FromBody] GenerateAuthCodeDTO generateAuthCodeDto)
     {
         if (!this.shiftIdentityConfiguration.IsFakeIdentity && !HttpContext!.User!.Identity!.IsAuthenticated)
