@@ -44,6 +44,19 @@ public class UserRepository :
         //Check if the email is duplicate
         if (await db.Users.AnyAsync(x => !x.IsDeleted && x.Email.ToLower() == (dto.Email ?? "").ToLower() && x.ID != id))
             throw new ShiftEntityException(new Message("Duplicate", $"The email {dto.Email} is exists"));
+
+        //Check if the phone is duplicate
+        string? formattedPhone = null;
+        if (!string.IsNullOrWhiteSpace(dto.Phone))
+        {
+            if (!Core.ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(dto.Phone))
+                throw new ShiftEntityException(new Message("Validation Error", "Invalid Phone Number"));
+
+            formattedPhone = Core.ValidatorsAndFormatters.PhoneNumber.GetFormattedPhone(dto.Phone);
+        }
+
+        if (await db.Users.AnyAsync(x => !x.IsDeleted && x.Phone.ToLower() == (formattedPhone ?? "").ToLower() && x.ID != id))
+            throw new ShiftEntityException(new Message("Duplicate", $"The phone {dto.Phone} is exists"));
         
         if (actionType == ActionTypes.Insert)
         {
@@ -56,6 +69,7 @@ public class UserRepository :
         entity.Email = dto.Email;
         entity.FullName = dto.FullName;
         entity.BirthDate = dto.BirthDate;
+        entity.Phone = formattedPhone;
 
         if (dto.CompanyBranchID != null)
         {
@@ -91,18 +105,6 @@ public class UserRepository :
         typeAuth_Producer = typeAuthContextBuilder_Producer.Build();
 
         entity.AccessTree = typeAuth_Producer.GenerateAccessTree((typeAuthService as TypeAuthContext)!, typeAuth_Preserver);
-
-        if (!string.IsNullOrWhiteSpace(dto.Phone))
-        {
-            if (!Core.ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(dto.Phone))
-                throw new ShiftEntityException(new Message("Validation Error", "Invalid Phone Number"));
-
-            entity.Phone = Core.ValidatorsAndFormatters.PhoneNumber.GetFormattedPhone(dto.Phone);
-        }
-        else
-        {
-            entity.Phone = null;
-        }
 
         if (!string.IsNullOrEmpty(dto.Password))
         {
@@ -258,5 +260,37 @@ public class UserRepository :
         }
 
         return userInfos;
+    }
+
+    public async Task<IEnumerable<User>> VerifyEmailsAsync(IEnumerable<long> ids)
+    {
+        var users = await db.Users.Where(x => ids.Contains(x.ID)).ToListAsync();
+
+        foreach (var user in users)
+        {
+            if (user.BuiltIn)
+                continue;
+
+            if(!string.IsNullOrWhiteSpace(user.Email))
+                user.EmailVerified = true;
+        }
+
+        return users;
+    }
+
+    public async Task<IEnumerable<User>> VerifyPhonesAsync(IEnumerable<long> ids)
+    {
+        var users = await db.Users.Where(x => ids.Contains(x.ID)).ToListAsync();
+
+        foreach (var user in users)
+        {
+            if (user.BuiltIn)
+                continue;
+
+            if (!string.IsNullOrWhiteSpace(user.Phone))
+                user.PhoneVerified = true;
+        }
+
+        return users;
     }
 }

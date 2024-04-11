@@ -27,13 +27,65 @@
                    OnClick="AssignRandomPasswords">
             Assign Random Passwords
         </MudButton>
+        
+        &nbsp;
+
+        <MudButton Color="Color.Error"
+                   Variant="Variant.Outlined"
+                   Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.Email"
+                   Disabled="!(ShiftList!.SelectedItems?.Count > 0)"
+                   OnClick="VerifyEmails">
+            Verify Emails
+        </MudButton>
+
+        &nbsp;
+
+        <MudButton Color="Color.Error"
+                   Variant="Variant.Outlined"
+                   Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.Phone"
+                   Disabled="!(ShiftList!.SelectedItems?.Count > 0)"
+                   OnClick="VerifyPhones">
+            Verify Phones
+        </MudButton>
     </ToolbarStartTemplate>
 
     <ChildContent>
         <PropertyColumn Title="Name" Property="x => x.FullName" />
         <PropertyColumn Title="Username" Property="x => x.Username" />
-        <PropertyColumn Title="Phone" Property="x => x.Phone" />
-        <PropertyColumn Title="Email" Property="x => x.Email" />
+        <PropertyColumn Title="Phone" Property="x => x.Phone">
+            <CellTemplate>
+                <MudPaper Elevation="0" Class="d-flex align-items-center p-2">
+                    <span class="align-middle">@context?.Item?.Phone</span>
+                    &nbsp;&nbsp;&nbsp;
+                    @if (context?.Item?.PhoneVerified == true)
+                    {
+                        <MudIcon Size="@Size.Small"
+                                 Icon="@Icons.Material.Filled.Verified"
+                                 Style="color:#3498DB"
+                                 Title="This phone number is verified"
+                                 Class="mr-2" />
+                    }
+                </MudPaper>
+            </CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn Title="Email" Property="x => x.Email">
+            <CellTemplate>
+                <MudPaper Elevation="0" Class="d-flex align-items-center p-2">
+                    <span class="align-middle">@context?.Item?.Email</span>
+                    &nbsp;&nbsp;&nbsp;
+                    @if (context?.Item?.EmailVerified == true)
+                    {
+                        <MudIcon Size="@Size.Small"
+                                 Icon="@Icons.Material.Filled.Verified"
+                                 Style="color:#3498DB"
+                                 Title="This email address is verified"
+                                 Class="mr-2" />
+                    }
+                </MudPaper>
+            </CellTemplate>
+        </PropertyColumn>
         <PropertyColumn Title="Branch" Property="x => x.CompanyBranch" />
         <PropertyColumn Format="F" Property="x => x.LastSeen.DateTime" Title="Last Seen">
             <CellTemplate>
@@ -85,6 +137,64 @@
             {
                 this.MessageService.Error("An error occurred while resetting the password.");
             }
+        }
+    }
+
+    private async Task VerifyEmails()
+    {
+        var ids = ShiftList!.SelectedItems?.Select(x => x.ID);
+
+        if (ids?.Count() == 0)
+            return;
+
+        bool? result = await DialogService.ShowMessageBox(
+        "Warning",
+        $"Are you sure to verify {ids?.Count()} user emails?",
+        yesText: "Yes", cancelText: "No");
+
+        if (result != true)
+            return;
+
+        using var response = await Http.PostAsJsonAsync<IEnumerable<string>>($"API/{Constants.IdentityRoutePreifix}User/VerifyEmails", ids!);
+
+        var users = await response.Content.ReadFromJsonAsync<IEnumerable<UserDTO>>();
+
+        if (response.IsSuccessStatusCode)
+        {
+            this.MessageService.Success($"The Email for ({users?.Count()}) users has been verified.");
+        }
+        else
+        {
+            this.MessageService.Error("An error occurred while verifying the email.");
+        }
+    }
+
+    private async Task VerifyPhones()
+    {
+        var ids = ShiftList!.SelectedItems?.Select(x => x.ID);
+
+        if (ids?.Count() == 0)
+            return;
+
+        bool? result = await DialogService.ShowMessageBox(
+        "Warning",
+        $"Are you sure to verify {ids?.Count()} user phones?",
+        yesText: "Yes", cancelText: "No");
+
+        if (result != true)
+            return;
+
+        using var response = await Http.PostAsJsonAsync<IEnumerable<string>>($"API/{Constants.IdentityRoutePreifix}User/VerifyPhones", ids!);
+
+        var users = await response.Content.ReadFromJsonAsync<IEnumerable<UserDTO>>();
+
+        if (response.IsSuccessStatusCode)
+        {
+            this.MessageService.Success($"The Phone for ({users?.Count()}) users has been verified.");
+        }
+        else
+        {
+            this.MessageService.Error("An error occurred while verifying the phone.");
         }
     }
 }

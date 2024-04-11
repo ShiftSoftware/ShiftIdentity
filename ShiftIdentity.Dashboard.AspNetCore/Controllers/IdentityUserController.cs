@@ -46,4 +46,34 @@ public class IdentityUserController : ShiftEntitySecureControllerAsync<UserRepos
 
         return Ok(userInfos);
     }
+
+    [HttpPost("VerifyEmails")]
+    [TypeAuth<ShiftIdentityActions>(nameof(ShiftIdentityActions.Users), TypeAuth.Core.Access.Write)]
+    public async Task<IActionResult> VerifyEmails([FromBody] IEnumerable<string> ids)
+    {
+        var decodedIds = ids.ToList().Select(x => ShiftEntityHashIdService.Decode<UserDTO>(x));
+
+        var users = await userRepo.VerifyEmailsAsync(decodedIds);
+
+        var userInfos = this.mapper.Map<IEnumerable<UserDTO>>(users);
+
+        await userRepo.SaveChangesAsync();
+
+        return Ok(userInfos);
+    }
+
+    [HttpPost("VerifyPhones")]
+    [TypeAuth<ShiftIdentityActions>(nameof(ShiftIdentityActions.Users), TypeAuth.Core.Access.Write)]
+    public async Task<IActionResult> VerifyPhones([FromBody] IEnumerable<string> ids)
+    {
+        var decodedIds = ids.ToList().Select(x => ShiftEntityHashIdService.Decode<UserDTO>(x));
+
+        var users = await userRepo.VerifyPhonesAsync(decodedIds);
+
+        var userInfos = this.mapper.Map<IEnumerable<UserDTO>>(users);
+
+        await userRepo.SaveChangesAsync();
+
+        return Ok(userInfos);
+    }
 }

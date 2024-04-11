@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
+using ShiftSoftware.ShiftIdentity.Data.Triggers;
 using System.Text.Json;
 
 namespace ShiftSoftware.ShiftIdentity.Data
@@ -48,6 +49,7 @@ namespace ShiftSoftware.ShiftIdentity.Data
             {
                 x.HasIndex(x => x.Username).IsUnique().HasFilter($"{nameof(User.IsDeleted)} = 0");
                 x.HasIndex(x => x.Email).IsUnique().HasFilter($"{nameof(User.IsDeleted)} = 0 AND {nameof(User.Email)} is not null");
+                x.HasIndex(x => x.Phone).IsUnique().HasFilter($"{nameof(User.IsDeleted)} = 0 AND {nameof(User.Phone)} is not null");
             });
             b.Entity<CompanyBranch>(x =>
             {
@@ -73,6 +75,13 @@ namespace ShiftSoftware.ShiftIdentity.Data
                     )
                 );
             });
+        }
+
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            optionsBuilder.UseTriggers(x=> x.AddTrigger<ResetUserTrigger>());
+
+            base.OnConfiguring(optionsBuilder);
         }
     }
 }

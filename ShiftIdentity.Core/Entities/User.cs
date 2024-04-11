@@ -40,9 +40,11 @@ public class User : ShiftEntity<User>
     #region Contacts
     [MaxLength(255)]
     public string? Email { get; set; }
+    public bool EmailVerified { get; set; }
 
     [MaxLength(30)]
     public string? Phone { get; set; }
+    public bool PhoneVerified { get; set; }
     #endregion
 
     #region Profile

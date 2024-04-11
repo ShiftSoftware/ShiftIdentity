@@ -17,7 +17,9 @@ public class UserListDTO : ShiftEntityListDTO
     public string FullName { get; set; } = default!;
     public string Username { get; set; } = default!;
     public string? Phone { get; set; }
+    public bool PhoneVerified { get; set; }
     public string? Email { get; set; }
+    public bool EmailVerified { get; set; }
     public bool IsActive { get; set; }
     public DateTimeOffset LastSeen { get; set; }
 }
