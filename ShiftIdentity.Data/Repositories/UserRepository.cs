@@ -210,21 +210,34 @@ public class UserRepository :
         if (user is null)
             return null;
 
+        //Check if the username is duplicate
+        if (await db.Users.AnyAsync(x => !x.IsDeleted && x.Username.ToLower() == dto.Username.ToLower() && x.ID != userId))
+            throw new ShiftEntityException(new Message("Duplicate", $"The username {dto.Username} is exists"));
+
+        //Check if the email is duplicate
+        if (await db.Users.AnyAsync(x => !x.IsDeleted && x.Email.ToLower() == (dto.Email ?? "").ToLower() && x.ID != userId))
+            throw new ShiftEntityException(new Message("Duplicate", $"The email {dto.Email} is exists"));
+
+        //Assign phone
+        string? formattedPhone = null;
+        if (dto.Phone != null)
+        {
+            if (!Core.ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(dto.Phone))
+                throw new ShiftEntityException(new Message("Validation Error", "Invalid Phone Number"));
+
+            formattedPhone = Core.ValidatorsAndFormatters.PhoneNumber.GetFormattedPhone(dto.Phone);
+
+            //Check if the phone is duplicate
+            if (await db.Users.AnyAsync(x => !x.IsDeleted && x.Phone.ToLower() == formattedPhone.ToLower() && x.ID != userId))
+                throw new ShiftEntityException(new Message("Duplicate", $"The phone {dto.Phone} is exists"));
+        }
 
         //Assign values
         user.Username = dto.Username;
         user.Email = dto.Email;
         user.FullName = dto.FullName;
         user.BirthDate = dto.BirthDate;
-
-        //Assign phone
-        if (dto.Phone != null)
-        {
-            if (!Core.ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(dto.Phone))
-                throw new ShiftEntityException(new Message("Validation Error", "Invalid Phone Number"));
-
-            user.Phone = Core.ValidatorsAndFormatters.PhoneNumber.GetFormattedPhone(dto.Phone);
-        }
+        user.Phone = formattedPhone;
 
         return user;
     }
