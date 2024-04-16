@@ -3,6 +3,8 @@
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(UserDataForm)}")]
 @inherits ShiftForm<UserDataForm, ShiftIdentity.Core.DTOs.User.UserDataDTO>
 @inject ShiftModal ShiftModal
+@inject HttpClient Http
+@inject MessageService MessageService
 @using ShiftSoftware.ShiftBlazor.Enums
 
 <ShiftEntityForm @bind-Mode="Mode"
@@ -30,7 +32,7 @@
                       Disabled="@Disabled"
                       OnlyValidateIfDirty="true"
                       Label="Username"
-        @bind-Value="TheItem.Username"
+                      @bind-Value="TheItem.Username"
                       For="@(() => TheItem.Username)" />
 
         <br />
@@ -43,7 +45,7 @@
                       Disabled="@Disabled"
                       OnlyValidateIfDirty="true"
                       Label="Phone"
-        @bind-Value="TheItem.Phone"
+                      @bind-Value="TheItem.Phone"
                       For="@(() => TheItem.Phone)" />
 
         <MudTextField Immediate="true"
@@ -51,8 +53,20 @@
                       Disabled="@Disabled"
                       OnlyValidateIfDirty="true"
                       Label="Email"
-        @bind-Value="TheItem.Email"
+                      @bind-Value="TheItem.Email"
                       For="@(() => TheItem.Email)" />
+
+        @if (!TheItem.EmailVerified && this.Mode == FormModes.View && !string.IsNullOrWhiteSpace(TheItem.Email))
+        {
+            <br />
+            <MudButton Size="Size.Small"
+                       OnClick="SendEmailVerification"
+                       Color="Color.Warning"
+                       StartIcon="@Icons.Material.Filled.Email"
+                       Variant="Variant.Text">
+                Send Email Verification
+            </MudButton>
+        }
 
 
         <br />
@@ -65,14 +79,31 @@
                       Disabled="@Disabled"
                       OnlyValidateIfDirty="true"
                       Label="Full Name"
-        @bind-Value="TheItem.FullName"
+                      @bind-Value="TheItem.FullName"
                       For="@(() => TheItem.FullName)" />
 
         <MudDatePicker ReadOnly="@ReadOnly"
                        Disabled="@Disabled"
-        @bind-Date="TheItem.BirthDate"
+                       @bind-Date="TheItem.BirthDate"
                        Label="Birth Date"
                        For="@(() => TheItem.BirthDate)" />
 
     </ChildContent>
 </ShiftEntityForm>
+
+@code {
+    private async Task SendEmailVerification()
+    {
+        var response = await Http.GetAsync("api/usermanager/SendEmailVerificationLink");
+
+        if (response.IsSuccessStatusCode)
+        {
+            MessageService.Success("Email verification link sent successfully.");
+        }
+        else
+        {
+            var result = await response.Content.ReadFromJsonAsync < ShiftEntityResponse<UserDataDTO>>();
+            MessageService.Error(result!.Message!.Body!);
+        }
+    }
+}

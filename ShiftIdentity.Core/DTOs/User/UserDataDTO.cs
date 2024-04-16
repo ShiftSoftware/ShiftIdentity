@@ -32,5 +32,9 @@ namespace ShiftSoftware.ShiftIdentity.Core.DTOs.User
             get { return birthDate; }
             set { birthDate = value?.Date; }
         }
+
+        public bool EmailVerified { get; set; }
+
+        public bool PhoneVerified { get; set; }
     }
 }

@@ -17,6 +17,8 @@ public class ShiftIdentityConfiguration
 
     public List<Type> ActionTrees { get; set; } = default!;
 
+    public SASTokenModel SASToken { get; set; } = default!;
+
     internal bool IsFakeIdentity { get; set; }
     public ShiftIdentityHostingTypes ShiftIdentityHostingType { get; set; }
 }

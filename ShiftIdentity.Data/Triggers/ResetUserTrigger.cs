@@ -19,6 +19,7 @@ internal class ResetUserTrigger : IBeforeSaveTrigger<User>
         if (context.Entity?.Email?.ToLower() != context.UnmodifiedEntity?.Email?.ToLower())
         {
             context.Entity!.EmailVerified = false;
+            context.Entity!.VerificationSASToken = null;
         }
 
         //If phone is changed, reset phone-verfied

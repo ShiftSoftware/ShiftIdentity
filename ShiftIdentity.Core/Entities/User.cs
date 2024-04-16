@@ -35,6 +35,8 @@ public class User : ShiftEntity<User>
 
     public bool RequireChangePassword { get; set; }
 
+    public string? VerificationSASToken { get; set; }
+
     #endregion
 
     #region Contacts

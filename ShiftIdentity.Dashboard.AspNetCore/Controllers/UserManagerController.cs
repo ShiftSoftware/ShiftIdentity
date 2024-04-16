@@ -1,12 +1,16 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ShiftSoftware.ShiftEntity.Core.Services;
 using ShiftSoftware.ShiftEntity.Model;
+using ShiftSoftware.ShiftIdentity.AspNetCore;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
+using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.UserManager;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.ShiftIdentity.Data.Repositories;
+using System.Security.Cryptography;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -20,12 +24,17 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
         private readonly UserRepository userRepo;
         private readonly IClaimService claimService;
         private readonly IMapper mapper;
+        private readonly ShiftIdentityConfiguration options;
+        private readonly IEnumerable<ISendEmailVerification>? sendEmailVerifications;
 
-        public UserManagerController(UserRepository userRepo, IClaimService claimService, IMapper mapper)
+        public UserManagerController(UserRepository userRepo, IClaimService claimService, IMapper mapper,
+            ShiftIdentityConfiguration options, IEnumerable<ISendEmailVerification>? sendEmailVerifications = null)
         {
             this.userRepo = userRepo;
             this.claimService = claimService;
             this.mapper = mapper;
+            this.options = options;
+            this.sendEmailVerifications = sendEmailVerifications;
         }
 
         // GET: api/<UserManagerController>
@@ -105,5 +114,92 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
             return Ok(new ShiftEntityResponse<UserDataDTO>(mapper.Map<UserDataDTO>(user)));
         }
 
+        [HttpGet("SendEmailVerificationLink")]
+        public async Task<IActionResult> SendEmailVerificationLink()
+        {
+            var loginUser = claimService.GetUser();
+            var userId = loginUser.ID.ToLong();
+
+            // Get the user and check if the user is not null
+            var user = await userRepo.FindAsync(userId);
+            if (user is null)
+                return BadRequest(new ShiftEntityResponse<UserDataDTO>
+                {
+                    Message = new Message
+                    {
+                        Body = "User not found!"
+                    }
+                });
+
+            //Check if the email is null
+            if (string.IsNullOrWhiteSpace(user.Email))
+                return BadRequest(new ShiftEntityResponse<UserDataDTO>
+                {
+                    Message = new Message
+                    {
+                        Body = "User email is not found!"
+                    }
+                });
+
+            // Check if the user is already verified
+            if (user.EmailVerified)
+                return BadRequest(new ShiftEntityResponse<UserDataDTO>
+                {
+                    Message = new Message
+                    {
+                        Body = "User email is already verified!"
+                    }
+                });
+
+            // Generate the token and send the email verification
+            var url = Url.Action(nameof(VerifyEmail), new { userId = userId });
+            var uniqueId = $"{url}-{user.Email}";
+            var (token, expires) = TokenService.GenerateSASToken(uniqueId, userId.ToString(), DateTime.UtcNow.AddSeconds(options.SASToken.ExpireInSeconds), options.SASToken.Key);
+
+            // Generate the full url
+            string baseUrl = $"{Request.Scheme}://{Request.Host}";
+            var fullUrl = $"{baseUrl}{(baseUrl.EndsWith('/') ? baseUrl.Substring(0, baseUrl.Length - 1) : "")}{url}?expires={expires}&token={token}";
+
+            // Save the token to the user
+            user.VerificationSASToken = token;
+            await userRepo.SaveChangesAsync();
+
+            // Send the email verification
+            if (sendEmailVerifications is not null)
+                foreach (var sendEmailVerification in sendEmailVerifications)
+                    await sendEmailVerification.SendEmailVerificationAsync(fullUrl, mapper.Map<UserDataDTO>(user));
+
+            return Ok();
+        }
+
+        [HttpGet("VerifyEmail/{userId}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> VerifyEmail(long userId, [FromQuery] string? expires = null, [FromQuery] string? token = null)
+        {
+            // Get the user and check if the user is not null
+            var user = await userRepo.FindAsync(userId);
+            if (user is null)
+                return Ok("User is not found");
+
+            // Verify the token
+            var url = Url.Action(nameof(VerifyEmail), new { userId = userId });
+            if (!TokenService.ValidateSASToken($"{url}-{user.Email}", userId.ToString(), expires!, token!, options.SASToken.Key))
+                return Ok("The operation is failed, the token may be expired or currupted, please retry the operation.");
+
+            // Verify the token against the database
+            if (!TokenService.ValidateSASToken(user.VerificationSASToken ?? "", token ?? ""))
+                return Ok("The operation is failed, the token may be expired or currupted, please retry the operation.");
+
+            // Check if the email is already verified
+            if (user.EmailVerified)
+                return Ok("The email is already verified.");
+
+            // Verify the email
+            user.EmailVerified = true;
+            user.VerificationSASToken = null;
+            await userRepo.SaveChangesAsync();
+
+            return Ok("Youre email is verified successfully.");
+        }
     }
 }
