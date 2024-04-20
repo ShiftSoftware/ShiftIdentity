@@ -15,4 +15,6 @@ public class UserGroupListDTO : ShiftEntityListDTO
     [UserGroupHashIdConverter]
     public override string? ID { get; set; }
     public string Name { get; set; } = default!;
+
+    public string? ExternalId { get; set; }
 }

@@ -25,6 +25,13 @@
                   @bind-Value="TheItem.Name"
                   For="@(() => TheItem.Name)" />
 
+    <MudTextField ReadOnly="@ReadOnly"
+                  Disabled="@Disabled"
+                  OnlyValidateIfDirty="true"
+                  Label="External Id"
+                  @bind-Value="TheItem.ExternalId"
+                  For="@(() => TheItem.ExternalId)" />
+
     <ShiftAutocomplete Label="Users"
                        @bind-Value="LastSelectedUsers"
                        TEntitySet="UserListDTO"

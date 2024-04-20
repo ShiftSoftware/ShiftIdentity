@@ -16,6 +16,8 @@ public class UserGroup : ShiftEntity<UserGroup>
     [Required]
     public string Name { get; set; }
 
+    public string? ExternalId { get; set; }
+
     public virtual ICollection<UserGroupUser> UserGroupUsers { get; set; } = new HashSet<UserGroupUser>();
 
     public UserGroup()

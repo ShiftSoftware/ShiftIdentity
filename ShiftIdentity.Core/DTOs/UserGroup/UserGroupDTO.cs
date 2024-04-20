@@ -17,6 +17,8 @@ public class UserGroupDTO : ShiftEntityViewAndUpsertDTO
     [Required]
     public string Name { get; set; } = default!;
 
+    public string? ExternalId { get; set; }
+
     [UserHashIdConverter]
     public IEnumerable<ShiftEntitySelectDTO> Users { get; set; } = new List<ShiftEntitySelectDTO>();
 }
