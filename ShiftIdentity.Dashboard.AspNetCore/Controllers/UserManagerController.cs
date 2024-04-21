@@ -26,15 +26,18 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
         private readonly IMapper mapper;
         private readonly ShiftIdentityConfiguration options;
         private readonly IEnumerable<ISendEmailVerification>? sendEmailVerifications;
+        private readonly IEnumerable<ISendEmailResetPassword>? sendEmailResetPasswords;
 
         public UserManagerController(UserRepository userRepo, IClaimService claimService, IMapper mapper,
-            ShiftIdentityConfiguration options, IEnumerable<ISendEmailVerification>? sendEmailVerifications = null)
+            ShiftIdentityConfiguration options, IEnumerable<ISendEmailVerification>? sendEmailVerifications = null,
+            IEnumerable<ISendEmailResetPassword>? sendEmailResetPasswords = null)
         {
             this.userRepo = userRepo;
             this.claimService = claimService;
             this.mapper = mapper;
             this.options = options;
             this.sendEmailVerifications = sendEmailVerifications;
+            this.sendEmailResetPasswords = sendEmailResetPasswords;
         }
 
         // GET: api/<UserManagerController>
@@ -200,6 +203,96 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
             await userRepo.SaveChangesAsync();
 
             return Ok("Youre email is verified successfully.");
+        }
+
+        [HttpGet("SendPasswordResetLink")]
+        [AllowAnonymous]
+        public async Task<IActionResult> SendPasswordResetLink([FromQuery] string email)
+        {
+            // Get the user and check if the user is not null
+            var user = await userRepo.GetUserByEmailAsync(email);
+            if (user is null)
+                return NotFound(new ShiftEntityResponse<UserDataDTO>
+                {
+                    Message = new Message
+                    {
+                        Body = "User not found!"
+                    }
+                });
+
+            // Generate the token and send the email verification
+            var url = Url.Action(nameof(ResetPassword), new { userId = user.ID });
+            var uniqueId = $"{url}-{user.Email}";
+            var (token, expires) = TokenService.GenerateSASToken(uniqueId, user.ID.ToString(), 
+                DateTime.UtcNow.AddSeconds(options.SASToken.ExpireInSeconds), options.SASToken.Key);
+
+            // Generate the full url
+            string baseUrl = $"{Request.Scheme}://{Request.Host}";
+            var fullUrl = $"{baseUrl}{(baseUrl.EndsWith('/') ? baseUrl.Substring(0, baseUrl.Length - 1) : "")}{url}?expires={expires}&token={token}";
+
+            // Save the token to the user
+            user.VerificationSASToken = token;
+            await userRepo.SaveChangesAsync();
+
+            // Send the email verification
+            if (sendEmailResetPasswords is not null)
+                foreach (var sendEmailResetPassword in sendEmailResetPasswords)
+                    await sendEmailResetPassword.SendEmailResetPasswordAsync(fullUrl, mapper.Map<UserDataDTO>(user));
+
+            return Ok();
+        }
+
+        [HttpPost("ResetPassword/{userId}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ResetPassword(long userId, [FromBody] ResetPasswordDTO dto,
+            [FromQuery] string? expires = null, [FromQuery] string? token = null)
+        {
+            // Get the user and check if the user is not null
+            var user = await userRepo.FindAsync(userId);
+            if (user is null)
+                return NotFound(new ShiftEntityResponse<UserDataDTO>
+                {
+                    Message = new Message
+                    {
+                        Body = "User not found!"
+                    }
+                });
+
+            // Verify the token
+            var url = Url.Action(nameof(ResetPassword), new { userId = userId });
+            if (!TokenService.ValidateSASToken($"{url}-{user.Email}", userId.ToString(), expires!, token!, options.SASToken.Key))
+                return BadRequest(new ShiftEntityResponse<UserDataDTO>
+                {
+                    Message = new Message
+                    {
+                        Body = "The operation is failed, the token may be expired or currupted, please retry the operation."
+                    }
+                });
+
+            // Verify the token against the database
+            if (!TokenService.ValidateSASToken(user.VerificationSASToken ?? "", token ?? ""))
+                return BadRequest(new ShiftEntityResponse<UserDataDTO>
+                {
+                    Message = new Message
+                    {
+                        Body = "The operation is failed, the token may be expired or currupted, please retry the operation."
+                    }
+                });
+
+            // Reset the password
+            var hash = HashService.GenerateHash(dto.NewPassword);
+            user.PasswordHash = hash.PasswordHash;
+            user.Salt = hash.Salt;
+            user.VerificationSASToken = null;
+            await userRepo.SaveChangesAsync();
+
+            return Ok(new ShiftEntityResponse<UserDataDTO>
+            {
+                Message = new Message
+                {
+                    Body = "Your password is reset successfully."
+                }
+            });
         }
     }
 }
