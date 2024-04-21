@@ -180,6 +180,11 @@ public class UserRepository :
             .FirstOrDefaultAsync(x => x.Username == username);
     }
 
+    public async Task<User?> GetUserByEmailAsync(string email)
+    {
+        return await db.Users.FirstOrDefaultAsync(x => x.Email == email);
+    }
+
     public async Task<User?> ChangePasswordAsync(ChangePasswordDTO dto, long userId)
     {
         var user = await FindAsync(userId, null);
