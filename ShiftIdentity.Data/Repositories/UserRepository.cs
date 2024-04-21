@@ -21,7 +21,11 @@ public class UserRepository :
 
     private readonly ITypeAuthService typeAuthService;
     public UserRepository(ShiftIdentityDbContext db, ITypeAuthService typeAuthService, IMapper mapper) : base(db, r =>
-        r.IncludeRelatedEntitiesWithFindAsync(x => x.Include(y => y.AccessTrees).ThenInclude(y => y.AccessTree), x=> x.Include(y=> y.UserLog))
+        r.IncludeRelatedEntitiesWithFindAsync(
+            x => x.Include(y => y.AccessTrees).ThenInclude(y => y.AccessTree), 
+            x=> x.Include(y=> y.UserLog),
+            x=> x.Include(y=> y.UserGroupUsers)
+        )
     )
     {
         this.typeAuthService = typeAuthService;
