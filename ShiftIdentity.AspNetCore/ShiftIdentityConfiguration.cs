@@ -21,4 +21,5 @@ public class ShiftIdentityConfiguration
 
     internal bool IsFakeIdentity { get; set; }
     public ShiftIdentityHostingTypes ShiftIdentityHostingType { get; set; }
+    public string? FrontEndUrl { get; set; } = default!;
 }

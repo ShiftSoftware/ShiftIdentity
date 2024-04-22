@@ -41,6 +41,14 @@
                               For="@(() => loginDto.Password)" InputType="InputType.Password" />
 
                 <br />
+                <MudButton Size="Size.Small"
+                           Color="Color.Warning"
+                           Href="@($"{Constants.IdentityRoutePreifix}/{nameof(SendResetPasswordLink)}")"
+                           Variant="Variant.Text">
+                    Forgot Password?
+                </MudButton>
+
+                <br />
                 <br />
 
                 <MudGrid Justify="Justify.Center">

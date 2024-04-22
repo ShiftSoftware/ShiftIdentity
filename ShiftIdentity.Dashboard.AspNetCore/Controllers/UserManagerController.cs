@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ShiftSoftware.ShiftEntity.Core.Services;
 using ShiftSoftware.ShiftEntity.Model;
+using ShiftSoftware.ShiftEntity.Model.HashIds;
 using ShiftSoftware.ShiftIdentity.AspNetCore;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
 using ShiftSoftware.ShiftIdentity.Core;
@@ -220,15 +221,28 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
                     }
                 });
 
+            //Check if the email is verified
+            if (!user.EmailVerified)
+                return BadRequest(new ShiftEntityResponse<UserDataDTO>
+                {
+                    Message = new Message
+                    {
+                        Body = "User email is not verified!"
+                    }
+                });
+
+            var id = ShiftEntityHashIdService.Encode<UserDTO>(user.ID);
+
             // Generate the token and send the email verification
-            var url = Url.Action(nameof(ResetPassword), new { userId = user.ID });
+            var url = Url.Action(nameof(ResetPassword), new { userId = id });
             var uniqueId = $"{url}-{user.Email}";
-            var (token, expires) = TokenService.GenerateSASToken(uniqueId, user.ID.ToString(), 
+            var (token, expires) = TokenService.GenerateSASToken(uniqueId, id, 
                 DateTime.UtcNow.AddSeconds(options.SASToken.ExpireInSeconds), options.SASToken.Key);
 
             // Generate the full url
-            string baseUrl = $"{Request.Scheme}://{Request.Host}";
-            var fullUrl = $"{baseUrl}{(baseUrl.EndsWith('/') ? baseUrl.Substring(0, baseUrl.Length - 1) : "")}{url}?expires={expires}&token={token}";
+            string apiBaseUrl = $"{Request.Scheme}://{Request.Host}";
+            string baseUrl = options.FrontEndUrl ?? apiBaseUrl;
+            var fullUrl = $"{baseUrl}{(baseUrl.EndsWith('/') ? baseUrl.Substring(0, baseUrl.Length - 1) : "")}/Identity/ResetPassword/{id}?expires={expires}&token={token}";
 
             // Save the token to the user
             user.VerificationSASToken = token;
@@ -244,11 +258,12 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
 
         [HttpPost("ResetPassword/{userId}")]
         [AllowAnonymous]
-        public async Task<IActionResult> ResetPassword(long userId, [FromBody] ResetPasswordDTO dto,
+        public async Task<IActionResult> ResetPassword(string userId, [FromBody] ResetPasswordDTO dto,
             [FromQuery] string? expires = null, [FromQuery] string? token = null)
         {
             // Get the user and check if the user is not null
-            var user = await userRepo.FindAsync(userId);
+            var id = ShiftEntityHashIdService.Decode<UserDTO>(userId);
+            var user = await userRepo.FindAsync(id);
             if (user is null)
                 return NotFound(new ShiftEntityResponse<UserDataDTO>
                 {
@@ -260,7 +275,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
 
             // Verify the token
             var url = Url.Action(nameof(ResetPassword), new { userId = userId });
-            if (!TokenService.ValidateSASToken($"{url}-{user.Email}", userId.ToString(), expires!, token!, options.SASToken.Key))
+            if (!TokenService.ValidateSASToken($"{url}-{user.Email}", userId, expires!, token!, options.SASToken.Key))
                 return BadRequest(new ShiftEntityResponse<UserDataDTO>
                 {
                     Message = new Message
