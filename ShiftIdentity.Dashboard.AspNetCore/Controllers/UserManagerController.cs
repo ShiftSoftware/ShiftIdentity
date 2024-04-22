@@ -123,6 +123,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
         {
             var loginUser = claimService.GetUser();
             var userId = loginUser.ID.ToLong();
+            var encodedId = ShiftEntityHashIdService.Encode<UserDTO>(userId);
 
             // Get the user and check if the user is not null
             var user = await userRepo.FindAsync(userId);
@@ -156,9 +157,9 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
                 });
 
             // Generate the token and send the email verification
-            var url = Url.Action(nameof(VerifyEmail), new { userId = userId });
+            var url = Url.Action(nameof(VerifyEmail), new { userId = encodedId });
             var uniqueId = $"{url}-{user.Email}";
-            var (token, expires) = TokenService.GenerateSASToken(uniqueId, userId.ToString(), DateTime.UtcNow.AddSeconds(options.SASToken.ExpireInSeconds), options.SASToken.Key);
+            var (token, expires) = TokenService.GenerateSASToken(uniqueId, encodedId, DateTime.UtcNow.AddSeconds(options.SASToken.ExpireInSeconds), options.SASToken.Key);
 
             // Generate the full url
             string baseUrl = $"{Request.Scheme}://{Request.Host}";
@@ -178,10 +179,12 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
 
         [HttpGet("VerifyEmail/{userId}")]
         [AllowAnonymous]
-        public async Task<IActionResult> VerifyEmail(long userId, [FromQuery] string? expires = null, [FromQuery] string? token = null)
+        public async Task<IActionResult> VerifyEmail(string userId, [FromQuery] string? expires = null, [FromQuery] string? token = null)
         {
+            var decodedId = ShiftEntityHashIdService.Decode<UserDTO>(userId);
+
             // Get the user and check if the user is not null
-            var user = await userRepo.FindAsync(userId);
+            var user = await userRepo.FindAsync(decodedId);
             if (user is null)
                 return Ok("User is not found");
 
@@ -231,18 +234,18 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
                     }
                 });
 
-            var id = ShiftEntityHashIdService.Encode<UserDTO>(user.ID);
+            var encodedId = ShiftEntityHashIdService.Encode<UserDTO>(user.ID);
 
             // Generate the token and send the email verification
-            var url = Url.Action(nameof(ResetPassword), new { userId = id });
+            var url = Url.Action(nameof(ResetPassword), new { userId = encodedId });
             var uniqueId = $"{url}-{user.Email}";
-            var (token, expires) = TokenService.GenerateSASToken(uniqueId, id, 
+            var (token, expires) = TokenService.GenerateSASToken(uniqueId, encodedId, 
                 DateTime.UtcNow.AddSeconds(options.SASToken.ExpireInSeconds), options.SASToken.Key);
 
             // Generate the full url
             string apiBaseUrl = $"{Request.Scheme}://{Request.Host}";
             string baseUrl = options.FrontEndUrl ?? apiBaseUrl;
-            var fullUrl = $"{baseUrl}{(baseUrl.EndsWith('/') ? baseUrl.Substring(0, baseUrl.Length - 1) : "")}/Identity/ResetPassword/{id}?expires={expires}&token={token}";
+            var fullUrl = $"{baseUrl}{(baseUrl.EndsWith('/') ? baseUrl.Substring(0, baseUrl.Length - 1) : "")}/Identity/ResetPassword/{encodedId}?expires={expires}&token={token}";
 
             // Save the token to the user
             user.VerificationSASToken = token;
@@ -262,8 +265,8 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
             [FromQuery] string? expires = null, [FromQuery] string? token = null)
         {
             // Get the user and check if the user is not null
-            var id = ShiftEntityHashIdService.Decode<UserDTO>(userId);
-            var user = await userRepo.FindAsync(id);
+            var decodedId = ShiftEntityHashIdService.Decode<UserDTO>(userId);
+            var user = await userRepo.FindAsync(decodedId);
             if (user is null)
                 return NotFound(new ShiftEntityResponse<UserDataDTO>
                 {
