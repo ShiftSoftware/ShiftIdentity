@@ -29,6 +29,7 @@ public class CompanyBranchDTO : ShiftEntityViewAndUpsertDTO
     public ShiftEntitySelectDTO City { get; set; } = default!;
 
     public string? Phone { get; set; }
+    public string? ShortPhone { get; set; }
     public string? Email { get; set; }
     public string? Address { get; set; }
     public string? ExternalId { get; set; } = default!;

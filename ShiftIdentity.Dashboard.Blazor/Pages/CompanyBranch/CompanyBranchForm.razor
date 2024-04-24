@@ -70,7 +70,7 @@
         TEntitySet="RegionListDTO" />
         </MudItem> *@
 
-        <MudItem xs="12" sm="6" lg="4" xl="4">
+        <MudItem xs="12" sm="6" lg="4" xl="3">
             <ShiftAutocomplete Label="City"
                                For="@(() => TheItem.City)"
                                @bind-Value="TheItem.City"
@@ -82,9 +82,18 @@
             <MudTextField ReadOnly="@ReadOnly"
                           Disabled="@Disabled"
                           OnlyValidateIfDirty="true"
-                          Label="HQ Phone"
+                          Label="Phone"
                           @bind-Value="TheItem.Phone"
                           For="@(() => TheItem.Phone)" />
+        </MudItem>
+
+        <MudItem xs="12" sm="6" lg="4" xl="4">
+            <MudTextField ReadOnly="@ReadOnly"
+                          Disabled="@Disabled"
+                          OnlyValidateIfDirty="true"
+                          Label="Short Phone"
+                          @bind-Value="TheItem.ShortPhone"
+                          For="@(() => TheItem.ShortPhone)" />
         </MudItem>
 
         <MudItem xs="12" sm="6" lg="4" xl="4">

@@ -104,6 +104,13 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
 
                 entity.Phone = Core.ValidatorsAndFormatters.PhoneNumber.GetFormattedPhone(dto.Phone);
             }
+            else
+                entity.Phone = null;
+
+            if (!string.IsNullOrWhiteSpace(dto.ShortPhone))
+                entity.ShortPhone = dto.ShortPhone;
+            else
+                entity.ShortPhone = null;
 
             return entity;
         }
