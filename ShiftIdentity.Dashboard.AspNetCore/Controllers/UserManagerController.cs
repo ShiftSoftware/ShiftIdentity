@@ -159,7 +159,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
             // Generate the token and send the email verification
             var url = Url.Action(nameof(VerifyEmail), new { userId = encodedId });
             var uniqueId = $"{url}-{user.Email}";
-            var (token, expires) = TokenService.GenerateSASToken(uniqueId, encodedId, DateTime.UtcNow.AddSeconds(options.SASToken.ExpireInSeconds), options.SASToken.Key);
+            var (token, expires) = TokenService.GenerateSASToken(uniqueId, encodedId, DateTime.UtcNow.AddSeconds(options.SASToken.ExpiresInSeconds), options.SASToken.Key);
 
             // Generate the full url
             string baseUrl = $"{Request.Scheme}://{Request.Host}";
@@ -240,7 +240,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
             var url = Url.Action(nameof(ResetPassword), new { userId = encodedId });
             var uniqueId = $"{url}-{user.Email}";
             var (token, expires) = TokenService.GenerateSASToken(uniqueId, encodedId, 
-                DateTime.UtcNow.AddSeconds(options.SASToken.ExpireInSeconds), options.SASToken.Key);
+                DateTime.UtcNow.AddSeconds(options.SASToken.ExpiresInSeconds), options.SASToken.Key);
 
             // Generate the full url
             string apiBaseUrl = $"{Request.Scheme}://{Request.Host}";

@@ -9,5 +9,5 @@ namespace ShiftSoftware.ShiftIdentity.AspNetCore.Models;
 public class SASTokenModel
 {
     public string Key { get; set; }
-    public int ExpireInSeconds { get; set; }
+    public int ExpiresInSeconds { get; set; }
 }
