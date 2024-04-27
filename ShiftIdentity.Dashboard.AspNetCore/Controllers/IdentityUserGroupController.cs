@@ -4,15 +4,19 @@ using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.UserGroup;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.ShiftIdentity.Data.Repositories;
-using ShiftSoftware.TypeAuth.AspNetCore;
-using ShiftSoftware.TypeAuth.Core;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers;
 
 [Route("api/[controller]")]
 public class IdentityUserGroupController : ShiftEntitySecureControllerAsync<UserGroupRepository, UserGroup, UserGroupListDTO, UserGroupDTO>
 {
-    public IdentityUserGroupController() : base(ShiftIdentityActions.UserGroups)
+    public IdentityUserGroupController() : base(ShiftIdentityActions.UserGroups,
+        x => x
+        .FilterBy(x => x.ID, ShiftIdentityActions.DataLevelAccess.UserGroups)
+        .DecodeHashId<UserGroupDTO>()
+        .IncludeCreatedByCurrentUser(x => x.CreatedByUserID)
+        .IncludeSelfItems(ShiftEntity.Core.Constants.UserGroupIdsClaim)
+    )
     {
     }
 }

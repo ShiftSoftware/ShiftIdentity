@@ -10,6 +10,12 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers;
 [Route("api/[controller]")]
 public class IdentityRegionController : ShiftEntitySecureControllerAsync<RegionRepository, Region, RegionListDTO, RegionDTO>
 {
-    public IdentityRegionController() : base(ShiftIdentityActions.Regions)
+    public IdentityRegionController() : base(ShiftIdentityActions.Regions,
+        x => x
+        .FilterBy(x => x.ID, ShiftIdentityActions.DataLevelAccess.Regions)
+        .DecodeHashId<RegionDTO>()
+        .IncludeCreatedByCurrentUser(x => x.CreatedByUserID)
+        .IncludeSelfItems(ShiftEntity.Core.Constants.RegionIdClaim)
+    )
     { }
 }
