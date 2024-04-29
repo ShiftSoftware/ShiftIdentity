@@ -17,7 +17,7 @@ public class Service : Profile
                 dest => dest.id,
                 opt => opt.MapFrom(src => src.ID.ToString())
             );
-        CreateMap<Core.Entities.Service, CompanyBranchServiceModel>()
+        CreateMap<Core.Entities.Service, CompanyBranchSubItemModel>()
             .ForMember(dest => dest.ItemType, opt => opt.MapFrom(src => CompanyBranchContainerItemTypes.Service))
             .ForMember(
                 dest => dest.id,

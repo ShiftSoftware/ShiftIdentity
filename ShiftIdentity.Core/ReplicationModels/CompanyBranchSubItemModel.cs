@@ -1,13 +1,8 @@
 ﻿using ShiftSoftware.ShiftEntity.Model.Replication;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
 
-public class CompanyBranchBrandModel : ReplicationModel
+public class CompanyBranchSubItemModel : ReplicationModel
 {
     public string Name { get; set; } = default!;
     public string? ExternalId { get; set; } = default!;

@@ -16,7 +16,7 @@ public class Department : Profile
                 dest => dest.id,
                 opt => opt.MapFrom(src => src.ID.ToString())
             );
-        CreateMap<Core.Entities.Department, CompanyBranchDepartmentModel>()
+        CreateMap<Core.Entities.Department, CompanyBranchSubItemModel>()
             .ForMember(dest => dest.ItemType, opt => opt.MapFrom(src => CompanyBranchContainerItemTypes.Department))
             .ForMember(
                 dest => dest.id,
