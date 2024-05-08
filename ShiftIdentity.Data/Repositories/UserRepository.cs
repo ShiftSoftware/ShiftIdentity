@@ -181,12 +181,12 @@ public class UserRepository :
     public async Task<User?> GetUserByUsernameAsync(string username)
     {
         return await db.Users.Include(x=> x.UserLog).Include(x => x.AccessTrees).ThenInclude(x => x.AccessTree)
-            .FirstOrDefaultAsync(x => x.Username == username);
+            .FirstOrDefaultAsync(x => x.Username == username && !x.IsDeleted);
     }
 
     public async Task<User?> GetUserByEmailAsync(string email)
     {
-        return await db.Users.FirstOrDefaultAsync(x => x.Email == email);
+        return await db.Users.FirstOrDefaultAsync(x => x.Email == email && !x.IsDeleted);
     }
 
     public async Task<User?> ChangePasswordAsync(ChangePasswordDTO dto, long userId)
