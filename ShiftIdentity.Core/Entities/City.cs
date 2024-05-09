@@ -1,6 +1,4 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
-using ShiftSoftware.ShiftEntity.Model.Replication;
-using ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -13,7 +11,7 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 public class City : ShiftEntity<City>
 {
     public string Name { get; set; } = default!;
-    public string? ExternalId { get; set; }
+    public string? IntegrationId { get; set; }
     public new long RegionID { get; set; }
     public virtual Region Region { get; set; } = default!;
     public bool BuiltIn { get; set; }

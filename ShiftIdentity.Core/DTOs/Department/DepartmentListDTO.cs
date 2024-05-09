@@ -11,4 +11,6 @@ public class DepartmentListDTO : ShiftEntityListDTO
     [DepartmentHashIdConverter]
     public override string? ID { get; set; }
     public string? Name { get; set; }
+
+    public string? IntegrationId { get; set; }
 }

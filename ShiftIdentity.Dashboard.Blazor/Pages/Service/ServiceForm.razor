@@ -20,6 +20,8 @@
                   Label="Name"
                   @bind-Value="TheItem.Name"
                   For="@(() => TheItem.Name)" />
+
+    <MudTextFieldExtended @bind-Value="TheItem.IntegrationId" Label="Integration ID" For="() => TheItem.IntegrationId" />
 </ShiftEntityForm>
 
 @code {

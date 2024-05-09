@@ -35,7 +35,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
 
             entity.Name = dto.Name;
             entity.ShortCode = dto.ShortCode;
-            entity.ExternalId = dto.ExternalId;
+            entity.IntegrationId = dto.IntegrationId;
             entity.CompanyID = dto.Company.Value.ToLong();
             entity.CityID = dto.City.Value.ToLong();
             entity.CustomFields = dto.CustomFields;

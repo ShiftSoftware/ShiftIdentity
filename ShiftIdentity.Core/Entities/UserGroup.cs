@@ -1,11 +1,7 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
-using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
@@ -16,7 +12,7 @@ public class UserGroup : ShiftEntity<UserGroup>
     [Required]
     public string Name { get; set; }
 
-    public string? ExternalId { get; set; }
+    public string? IntegrationId { get; set; }
 
     public virtual ICollection<UserGroupUser> UserGroupUsers { get; set; } = new HashSet<UserGroupUser>();
 

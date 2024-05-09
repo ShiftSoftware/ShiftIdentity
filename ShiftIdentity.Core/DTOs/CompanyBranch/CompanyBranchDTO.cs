@@ -32,7 +32,7 @@ public class CompanyBranchDTO : ShiftEntityViewAndUpsertDTO
     public string? ShortPhone { get; set; }
     public string? Email { get; set; }
     public string? Address { get; set; }
-    public string? ExternalId { get; set; } = default!;
+    public string? IntegrationId { get; set; } = default!;
     public string? ShortCode { get; set; }
 
     public string? Latitude { get; set; }

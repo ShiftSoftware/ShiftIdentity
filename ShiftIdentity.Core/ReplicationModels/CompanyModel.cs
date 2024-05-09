@@ -1,13 +1,7 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using ShiftSoftware.ShiftEntity.Model;
+﻿using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Enums;
 using ShiftSoftware.ShiftEntity.Model.Replication;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
 
@@ -15,8 +9,7 @@ public class CompanyModel : ReplicationModel
 {
     public string Name { get; set; } = default!;
     public string? LegalName { get; set; }
-    public string? ExternalId { get; set; }
-    public string? AlternativeExternalId { get; set; }
+    public string? IntegrationId { get; set; }
     public string? ShortCode { get; set; }
     public CompanyTypes CompanyType { get; set; }
     public string? Logo { get; set; }

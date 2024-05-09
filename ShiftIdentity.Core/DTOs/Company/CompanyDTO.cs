@@ -20,7 +20,7 @@ public class CompanyDTO : ShiftEntityViewAndUpsertDTO
     public string Name { get; set; } = default!;
     public string? ShortCode { get; set; }
     public string? LegalName { get; set; }
-    public string? ExternalId { get; set; }
+    public string? IntegrationId { get; set; }
     public string? AlternativeExternalId { get; set; }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]

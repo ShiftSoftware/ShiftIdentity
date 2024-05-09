@@ -10,5 +10,5 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 public class Brand : ShiftEntity<Brand>
 {
     public string Name { get; set; } = default!;
-    public string? ExternalId { get; set; }
+    public string? IntegrationId { get; set; }
 }

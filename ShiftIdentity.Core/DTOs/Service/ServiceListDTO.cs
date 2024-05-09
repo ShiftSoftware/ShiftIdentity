@@ -10,4 +10,6 @@ public class ServiceListDTO : ShiftEntityListDTO
     [ServiceHashIdConverter]
     public override string? ID { get; set; }
     public string Name { get; set; } = default!;
+
+    public string? IntegrationId { get; set; }
 }
