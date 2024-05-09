@@ -30,7 +30,7 @@ public class AuthService
         var user = await userRepo.GetUserByUsernameAsync(loginDto.Username);
 
         if (user is null)
-            return new LoginResultModel(LoginResultEnum.UsernameIncorrect, "Username is incorrect");
+            return new LoginResultModel(LoginResultEnum.UsernameIncorrect, "Username or password is incorrect");
 
         if (!HashService.VerifyPassword(loginDto.Password, user.Salt, user.PasswordHash))
         {
@@ -47,7 +47,7 @@ public class AuthService
 
             await userRepo.SaveChangesAsync();
 
-            return new LoginResultModel(LoginResultEnum.PasswordIncorrect, "Password is incorrect");
+            return new LoginResultModel(LoginResultEnum.PasswordIncorrect, "Username or password is incorrect");
         }
 
         //If user deactive

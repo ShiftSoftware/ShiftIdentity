@@ -14,5 +14,5 @@ public class BrandListDTO : ShiftEntityListDTO
     [JsonConverter(typeof(LocalizedTextJsonConverter))]
     public string Name { get; set; } = default!;
 
-    public string? ExternalId { get; set; } = default!;
+    public string? IntegrationId { get; set; } = default!;
 }

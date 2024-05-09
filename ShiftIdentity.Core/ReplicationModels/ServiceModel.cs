@@ -5,4 +5,5 @@ namespace ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
 public class ServiceModel : ReplicationModel
 {
     public string Name { get; set; } = default!;
+    public string? IntegrationId { get; set; }
 }

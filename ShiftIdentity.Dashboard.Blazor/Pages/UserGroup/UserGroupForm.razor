@@ -25,7 +25,12 @@
                   @bind-Value="TheItem.Name"
                   For="@(() => TheItem.Name)" />
 
-
+    <MudTextField ReadOnly="@ReadOnly"
+                  Disabled="@Disabled"
+                  OnlyValidateIfDirty="true"
+                  Label="Integration Id"
+                  @bind-Value="TheItem.IntegrationId"
+                  For="@(() => TheItem.IntegrationId)" />
 
     <ShiftAutocomplete Label="Users"
                        @bind-Value="LastSelectedUsers"

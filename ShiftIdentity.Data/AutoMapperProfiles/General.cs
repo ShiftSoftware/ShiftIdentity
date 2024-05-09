@@ -37,7 +37,7 @@ public class General : Profile
         CreateMap<CompanyBranchBrand, CompanyBranchSubItemModel>()
             .ForMember(dest => dest.ItemType, opt => opt.MapFrom(src => CompanyBranchContainerItemTypes.Brand))
             .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Brand.Name))
-            .ForMember(dest => dest.ExternalId, opt => opt.MapFrom(src => src.Brand.ExternalId))
+            .ForMember(dest => dest.IntegrationId, opt => opt.MapFrom(src => src.Brand.IntegrationId))
             .ForMember(dest => dest.BranchID, opt => opt.MapFrom(src => src.CompanyBranchID))
             .ForMember(
                 dest => dest.id,

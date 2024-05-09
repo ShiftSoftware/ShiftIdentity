@@ -12,4 +12,6 @@ public class DepartmentDTO : ShiftEntityViewAndUpsertDTO
 
     [Required]
     public string Name { get; set; } = default!;
+
+    public string? IntegrationId { get; set; }
 }

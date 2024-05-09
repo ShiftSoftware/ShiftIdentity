@@ -31,7 +31,7 @@ public class UserGroupRepository : ShiftRepository<ShiftIdentityDbContext, UserG
 
         entity.Update(userId);
         entity.Name = dto.Name;
-        entity.ExternalId = dto.ExternalId;
+        entity.IntegrationId = dto.IntegrationId;
 
         //Update departments
         var deletedUsers = entity.UserGroupUsers.Where(x => !dto.Users.Select(s => s.Value.ToLong())

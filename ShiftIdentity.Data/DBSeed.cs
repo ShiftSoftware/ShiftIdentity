@@ -49,7 +49,7 @@ public class DBSeed
 
         region.Name = Core.Constants.BuiltInRegion;
         region.ShortCode = dbSeedOptions?.RegionShortCode;
-        region.ExternalId = dbSeedOptions?.RegionExternalId;
+        region.IntegrationId = dbSeedOptions?.RegionExternalId;
         region.BuiltIn = true;
 
         return region;
@@ -81,8 +81,7 @@ public class DBSeed
         company.BuiltIn = true;
 
         company.ShortCode = dbSeedOptions?.CompanyShortCode;
-        company.ExternalId = dbSeedOptions?.CompanyExternalId;
-        company.AlternativeExternalId = dbSeedOptions?.CompanyAlternativeExternalId;
+        company.IntegrationId = dbSeedOptions?.CompanyExternalId;
         company.CompanyType = dbSeedOptions?.CompanyType ?? CompanyTypes.NotSpecified;
 
         return company;
@@ -102,7 +101,7 @@ public class DBSeed
         companyBranch.BuiltIn = true;
 
         companyBranch.ShortCode = dbSeedOptions?.CompanyBranchShortCode;
-        companyBranch.ExternalId = dbSeedOptions?.CompanyBranchExternalId;
+        companyBranch.IntegrationId = dbSeedOptions?.CompanyBranchExternalId;
 
         return companyBranch;
     }

@@ -1,8 +1,5 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Model;
-using ShiftSoftware.ShiftEntity.Model.Replication;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
-using ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -21,7 +18,7 @@ public class CompanyBranch : ShiftEntity<CompanyBranch>
     public string? Latitude { get; set; }
     public string? Longitude { get; set; }
     public string? Photos { get; set; }
-    public string? ExternalId { get; set; } = default!;
+    public string? IntegrationId { get; set; } = default!;
     public string? ShortCode { get; set; }
     public bool BuiltIn { get; set; }
 

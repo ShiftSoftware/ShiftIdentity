@@ -1,11 +1,6 @@
 ﻿using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.UserGroup;
 
@@ -16,5 +11,5 @@ public class UserGroupListDTO : ShiftEntityListDTO
     public override string? ID { get; set; }
     public string Name { get; set; } = default!;
 
-    public string? ExternalId { get; set; }
+    public string? IntegrationId { get; set; }
 }

@@ -19,7 +19,7 @@ public class CompanyListDTO : ShiftEntityListDTO
     [JsonConverter(typeof(LocalizedTextJsonConverter))]
     public string? LegalName { get; set; }
     public string? ShortCode { get; set; }
-    public string? ExternalId { get; set; } = default!;
+    public string? IntegrationId { get; set; } = default!;
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public CompanyTypes? CompanyType { get; set; }

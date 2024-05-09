@@ -42,18 +42,9 @@
             <MudTextField ReadOnly="@ReadOnly"
                           Disabled="@Disabled"
                           OnlyValidateIfDirty="true"
-                          Label="Externa lId"
-                          @bind-Value="TheItem.ExternalId"
-                          For="@(() => TheItem.ExternalId)" />
-        </MudItem>
-
-        <MudItem xs="12" sm="6" lg="4" xl="3">
-            <MudTextField ReadOnly="@ReadOnly"
-                          Disabled="@Disabled"
-                          OnlyValidateIfDirty="true"
-                          Label="Alternative Externa lId"
-                          @bind-Value="TheItem.AlternativeExternalId"
-                          For="@(() => TheItem.AlternativeExternalId)" />
+                          Label="Integration lId"
+                          @bind-Value="TheItem.IntegrationId"
+                          For="@(() => TheItem.IntegrationId)" />
         </MudItem>
 
         <MudItem xs="12" sm="6" lg="4" xl="3">
