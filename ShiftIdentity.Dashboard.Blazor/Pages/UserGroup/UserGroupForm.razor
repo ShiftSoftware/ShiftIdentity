@@ -25,12 +25,7 @@
                   @bind-Value="TheItem.Name"
                   For="@(() => TheItem.Name)" />
 
-    <MudTextField ReadOnly="@ReadOnly"
-                  Disabled="@Disabled"
-                  OnlyValidateIfDirty="true"
-                  Label="External Id"
-                  @bind-Value="TheItem.ExternalId"
-                  For="@(() => TheItem.ExternalId)" />
+
 
     <ShiftAutocomplete Label="Users"
                        @bind-Value="LastSelectedUsers"
@@ -41,7 +36,7 @@
 
     @foreach (var item in TheItem.Users)
     {
-        <MudChip Color="Color.Primary" OnClose="() => RemoveUserItem(item)">@item.Text</MudChip>
+        <MudChip T="string" Color="Color.Primary" OnClose="() => RemoveUserItem(item)">@item.Text</MudChip>
     }
 </ShiftEntityForm>
 

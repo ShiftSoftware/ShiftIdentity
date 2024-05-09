@@ -70,12 +70,11 @@
                      Disabled="@Disabled"
                      For="@(() => TheItem.IsActive)"
                      Label="Active"
-                     @bind-Checked="@TheItem.IsActive"></MudCheckBox>
+                     @bind-Value="@TheItem.IsActive"></MudCheckBox>
     </MudItem>
 
     <ShiftAutocomplete Label="Company Branch"
                        For="@(() => TheItem.CompanyBranchID)"
-                       T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
                        @bind-Value="TheItem.CompanyBranchID"
                        ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
                        TEntitySet="CompanyBranchListDTO"
@@ -83,7 +82,6 @@
                        />
 
     <ShiftAutocomplete Label="Access Trees"
-                       T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
                        @bind-Value="LastSelectedAccessTree"
                        ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
                        EntitySet="IdentityAccessTree"
@@ -93,7 +91,7 @@
 
     @foreach (var item in TheItem.AccessTrees)
     {
-        <MudChip Color="Color.Primary" OnClose="() => RemoveAccessTreetItem(item)">@item.Text</MudChip>
+        <MudChip T="string" Color="Color.Primary" OnClose="() => RemoveAccessTreetItem(item)">@item.Text</MudChip>
     }
 
     <br />
