@@ -4,11 +4,11 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
-[Table("UserGroupUsers", Schema = "ShiftIdentity")]
-public class UserGroupUser : ShiftEntity<UserGroupUser>
+[Table("TeamUsers", Schema = "ShiftIdentity")]
+public class TeamUser : ShiftEntity<TeamUser>
 {
     public long UserID { get; set; }
-    public long UserGroupID { get; set; }
+    public long TeamID { get; set; }
     public virtual User User { get; set; } = default!;
-    public virtual UserGroup UserGroup { get; set; } = default!;
+    public virtual Team Team { get; set; } = default!;
 }

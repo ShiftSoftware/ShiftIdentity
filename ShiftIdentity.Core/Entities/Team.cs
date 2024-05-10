@@ -6,18 +6,18 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
-[Table("UserGroups", Schema = "ShiftIdentity")]
-public class UserGroup : ShiftEntity<UserGroup>
+[Table("Teams", Schema = "ShiftIdentity")]
+public class Team : ShiftEntity<Team>
 {
     [Required]
     public string Name { get; set; }
 
     public string? IntegrationId { get; set; }
 
-    public virtual ICollection<UserGroupUser> UserGroupUsers { get; set; } = new HashSet<UserGroupUser>();
+    public virtual ICollection<TeamUser> TeamUsers { get; set; } = new HashSet<TeamUser>();
 
-    public UserGroup()
+    public Team()
     {
-        UserGroupUsers = new HashSet<UserGroupUser>();
+        TeamUsers = new HashSet<TeamUser>();
     }
 }

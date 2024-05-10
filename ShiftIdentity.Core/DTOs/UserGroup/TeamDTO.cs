@@ -3,11 +3,11 @@ using ShiftSoftware.ShiftEntity.Model.HashIds;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
-namespace ShiftSoftware.ShiftIdentity.Core.DTOs.UserGroup;
+namespace ShiftSoftware.ShiftIdentity.Core.DTOs.Team;
 
-public class UserGroupDTO : ShiftEntityViewAndUpsertDTO
+public class TeamDTO : ShiftEntityViewAndUpsertDTO
 {
-    [UserGroupHashIdConverter]
+    [TeamHashIdConverter]
     public override string? ID { get; set; }
 
     [Required]

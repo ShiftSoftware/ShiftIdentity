@@ -9,7 +9,7 @@ using ShiftSoftware.ShiftIdentity.Core.DTOs.Department;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Region;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Service;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.UserGroup;
+using ShiftSoftware.ShiftIdentity.Core.DTOs.Team;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Extentsions;
 
@@ -20,7 +20,7 @@ public static class ShiftEntityODataOptionsExtensions
         shiftEntityODataOptions.OdataEntitySet<AppDTO>($"{Core.Constants.IdentityRoutePreifix}App");
         shiftEntityODataOptions.OdataEntitySet<AccessTreeDTO>($"{Core.Constants.IdentityRoutePreifix}AccessTree");
         shiftEntityODataOptions.OdataEntitySet<UserListDTO>($"{Core.Constants.IdentityRoutePreifix}User");
-        shiftEntityODataOptions.OdataEntitySet<UserGroupListDTO>($"{Core.Constants.IdentityRoutePreifix}UserGroup");
+        shiftEntityODataOptions.OdataEntitySet<TeamListDTO>($"{Core.Constants.IdentityRoutePreifix}Team");
         shiftEntityODataOptions.OdataEntitySet<PublicUserListDTO>($"{Core.Constants.IdentityRoutePreifix}PublicUser");
 
 

@@ -1,22 +1,22 @@
 ﻿@using ShiftSoftware.ShiftEntity.Model.Dtos
-@using ShiftSoftware.ShiftIdentity.Core.DTOs.UserGroup
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.Team
 @attribute [Authorize]
 @layout Shared.DefaultLayout
 
 
-@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(UserGroupForm)}/{{Key?}}")]
-@inherits ShiftForm<UserGroupForm, ShiftSoftware.ShiftIdentity.Core.DTOs.UserGroup.UserGroupDTO>
+@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(TeamForm)}/{{Key?}}")]
+@inherits ShiftForm<TeamForm, ShiftSoftware.ShiftIdentity.Core.DTOs.Team.TeamDTO>
 @inject HttpClient Http
 @inject ODataQuery odataQuery
 
 <ShiftEntityForm @bind-Mode="Mode"
                  @bind-Value="TheItem"
                  @ref="FormContainer"
-                 Action="@($"{Constants.IdentityRoutePreifix}UserGroup")"
+                 Action="@($"{Constants.IdentityRoutePreifix}Team")"
                  Title="User Group"
                  @bind-Key="@Key"
-                 TypeAuthAction="ShiftIdentityActions.UserGroups"
-                 T="ShiftSoftware.ShiftIdentity.Core.DTOs.UserGroup.UserGroupDTO">
+                 TypeAuthAction="ShiftIdentityActions.Teams"
+                 T="ShiftSoftware.ShiftIdentity.Core.DTOs.Team.TeamDTO">
 
     <MudTextField ReadOnly="@ReadOnly"
                   Disabled="@Disabled"

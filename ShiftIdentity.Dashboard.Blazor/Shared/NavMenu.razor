@@ -8,7 +8,7 @@
 @using Pages.Region
 @using Pages.City
 @using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.Brand
-@using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.UserGroup
+@using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.Team
 
 @inject ShiftIdentityDashboardBlazorOptions ShiftIdentityDashboardBlazorOptions
 @inject ITypeAuthService TypeAuthService
@@ -68,10 +68,10 @@
                           Icon="@Icons.Material.Outlined.People"
                           TypeAuthAction="ShiftIdentityActions.Users">Users</AuthorizedMudNavLink>
 
-    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(UserGroupList)}")"
+    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(TeamList)}")"
                           Match="NavLinkMatch.All"
                           Icon="@Icons.Material.Outlined.Groups"
-                          TypeAuthAction="ShiftIdentityActions.UserGroups">User Groups</AuthorizedMudNavLink>
+                          TypeAuthAction="ShiftIdentityActions.Teams">User Groups</AuthorizedMudNavLink>
 </MudNavMenu>
 
 @code {

@@ -2,12 +2,12 @@
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
 
-namespace ShiftSoftware.ShiftIdentity.Core.DTOs.UserGroup;
+namespace ShiftSoftware.ShiftIdentity.Core.DTOs.Team;
 
 [ShiftEntityKeyAndName(nameof(ID), nameof(Name))]
-public class UserGroupListDTO : ShiftEntityListDTO
+public class TeamListDTO : ShiftEntityListDTO
 {
-    [UserGroupHashIdConverter]
+    [TeamHashIdConverter]
     public override string? ID { get; set; }
     public string Name { get; set; } = default!;
 

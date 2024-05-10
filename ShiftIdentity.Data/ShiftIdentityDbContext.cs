@@ -35,8 +35,8 @@ namespace ShiftSoftware.ShiftIdentity.Data
         public DbSet<CompanyBranchService> CompanyBranchServices { get; set; }
         public DbSet<CompanyBranchBrand> CompanyBranchBrands { get; set; }
         public DbSet<City> Cities { get; set; }
-        public DbSet<UserGroup> UserGroups { get; set; }
-        public DbSet<UserGroupUser> UserGroupUsers { get; set; }
+        public DbSet<Team> Teams { get; set; }
+        public DbSet<TeamUser> TeamUsers { get; set; }
         public DbSet<Brand> Brands { get; set; }
 
         protected override void OnModelCreating(ModelBuilder b)

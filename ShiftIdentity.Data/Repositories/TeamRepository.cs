@@ -3,7 +3,7 @@ using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.City;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.UserGroup;
+using ShiftSoftware.ShiftIdentity.Core.DTOs.Team;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using System;
 using System.Collections.Generic;
@@ -13,14 +13,14 @@ using System.Threading.Tasks;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
-public class UserGroupRepository : ShiftRepository<ShiftIdentityDbContext, UserGroup, UserGroupListDTO, UserGroupDTO>
+public class TeamRepository : ShiftRepository<ShiftIdentityDbContext, Team, TeamListDTO, TeamDTO>
 {
-    public UserGroupRepository(ShiftIdentityDbContext db) : 
-        base(db, x=> x.IncludeRelatedEntitiesWithFindAsync(s=> s.Include(i=> i.UserGroupUsers).ThenInclude(i=> i.User)))
+    public TeamRepository(ShiftIdentityDbContext db) : 
+        base(db, x=> x.IncludeRelatedEntitiesWithFindAsync(s=> s.Include(i=> i.TeamUsers).ThenInclude(i=> i.User)))
     {
     }
 
-    public override async ValueTask<UserGroup> UpsertAsync(UserGroup entity, UserGroupDTO dto, ActionTypes actionType, long? userId = null)
+    public override async ValueTask<Team> UpsertAsync(Team entity, TeamDTO dto, ActionTypes actionType, long? userId = null)
     {
         //Check there are any duplicate users
         if(dto.Users.GroupBy(item => item.Value).Any(group => group.Count() > 1))
@@ -34,16 +34,16 @@ public class UserGroupRepository : ShiftRepository<ShiftIdentityDbContext, UserG
         entity.IntegrationId = dto.IntegrationId;
 
         //Update departments
-        var deletedUsers = entity.UserGroupUsers.Where(x => !dto.Users.Select(s => s.Value.ToLong())
+        var deletedUsers = entity.TeamUsers.Where(x => !dto.Users.Select(s => s.Value.ToLong())
             .Any(s => s == x.UserID)).ToList();
-        var addedUsers = dto.Users.Where(x => !entity.UserGroupUsers.Select(s => s.UserID)
+        var addedUsers = dto.Users.Where(x => !entity.TeamUsers.Select(s => s.UserID)
             .Any(s => s == x.Value.ToLong())).ToList();
 
-        db.UserGroupUsers.RemoveRange(deletedUsers);
-        await db.UserGroupUsers.AddRangeAsync(addedUsers.Select(x => new UserGroupUser
+        db.TeamUsers.RemoveRange(deletedUsers);
+        await db.TeamUsers.AddRangeAsync(addedUsers.Select(x => new TeamUser
         {
             UserID = x.Value.ToLong(),
-            UserGroup = entity
+            Team = entity
         }).ToList());
 
         //ef core may not set the entity state as Modified if the only the collections are changed (CompanyBranchDepartments, CompanyBranchServices)

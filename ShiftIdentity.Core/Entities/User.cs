@@ -70,18 +70,18 @@ public class User : ShiftEntity<User>
     public virtual UserLog UserLog { get; set; }
 
     public virtual IEnumerable<UserAccessTree> AccessTrees { get; set; }
-    public virtual ICollection<UserGroupUser> UserGroupUsers { get; set; } = new HashSet<UserGroupUser>();
+    public virtual ICollection<TeamUser> TeamUsers { get; set; } = new HashSet<TeamUser>();
 
     public User(long id) : base(id)
     {
         AccessTrees = new List<UserAccessTree>();
-        UserGroupUsers = new HashSet<UserGroupUser>();
+        TeamUsers = new HashSet<TeamUser>();
     }
 
     public User()
     {
         AccessTrees = new List<UserAccessTree>();
-        UserGroupUsers = new HashSet<UserGroupUser>();
+        TeamUsers = new HashSet<TeamUser>();
     }
 
 }

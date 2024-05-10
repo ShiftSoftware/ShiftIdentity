@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.UserGroup;
+using ShiftSoftware.ShiftIdentity.Core.DTOs.Team;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using System;
 using System.Collections.Generic;
@@ -10,16 +10,16 @@ using System.Threading.Tasks;
 
 namespace ShiftSoftware.ShiftIdentity.Data.AutoMapperProfiles;
 
-public class UserGroup : Profile
+public class Team : Profile
 {
-    public UserGroup()
+    public Team()
     {
-        CreateMap<Core.Entities.UserGroup, UserGroupDTO>()
-            .ForMember(x => x.Users, opt => opt.MapFrom(x => x.UserGroupUsers.Select(y =>
+        CreateMap<Core.Entities.Team, TeamDTO>()
+            .ForMember(x => x.Users, opt => opt.MapFrom(x => x.TeamUsers.Select(y =>
             new ShiftEntitySelectDTO { Value = y.User.ID.ToString()!, Text = y.User.Username })))
             .ReverseMap()
-            .ForMember(x => x.UserGroupUsers, m => m.MapFrom(x => x.Users.Select(s =>
-            new UserGroupUser
+            .ForMember(x => x.TeamUsers, m => m.MapFrom(x => x.Users.Select(s =>
+            new TeamUser
             {
                 UserID = s.Value.ToLong()
             }

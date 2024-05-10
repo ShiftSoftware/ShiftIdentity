@@ -5,7 +5,7 @@ using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Region;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.UserGroup;
+using ShiftSoftware.ShiftIdentity.Core.DTOs.Team;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.ShiftIdentity.Core.IRepositories;
 using ShiftSoftware.ShiftIdentity.Core.Models;
@@ -133,8 +133,8 @@ public class TokenService
         claims.Add(new Claim(ShiftEntity.Core.Constants.CompanyBranchIdClaim, ShiftEntityHashIdService.Encode<CompanyBranchDTO>(user.CompanyBranchID)));
 
 
-        foreach (var userGroup in user.UserGroupUsers)
-            claims.Add(new Claim(ShiftEntity.Core.Constants.UserGroupIdsClaim, ShiftEntityHashIdService.Encode<UserGroupDTO>(userGroup.UserGroupID)));
+        foreach (var team in user.TeamUsers)
+            claims.Add(new Claim(ShiftEntity.Core.Constants.TeamIdsClaim, ShiftEntityHashIdService.Encode<TeamDTO>(team.TeamID)));
 
         claims.Add(new Claim(ShiftIdentityClaims.ExternalToken, external.ToString().ToLower()));
 

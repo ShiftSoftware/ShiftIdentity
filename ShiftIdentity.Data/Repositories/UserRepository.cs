@@ -5,7 +5,7 @@ using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.UserGroup;
+using ShiftSoftware.ShiftIdentity.Core.DTOs.Team;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.UserManager;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.ShiftIdentity.Core.IRepositories;
@@ -24,7 +24,7 @@ public class UserRepository :
         r.IncludeRelatedEntitiesWithFindAsync(
             x => x.Include(y => y.AccessTrees).ThenInclude(y => y.AccessTree), 
             x=> x.Include(y=> y.UserLog),
-            x=> x.Include(y=> y.UserGroupUsers)
+            x=> x.Include(y=> y.TeamUsers)
         )
     )
     {

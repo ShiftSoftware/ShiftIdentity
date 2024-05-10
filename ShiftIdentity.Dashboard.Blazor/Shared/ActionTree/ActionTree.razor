@@ -158,7 +158,7 @@
         var regionRequest = this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Region.RegionListDTO>>("/odata/IdentityRegion?$orderby=Name");
         var companyRequest = this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Company.CompanyListDTO>>("/odata/IdentityCompany?$orderby=Name");
         var branchRequest = this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO>>("/odata/IdentityCompanyBranch?$orderby=Company");
-        var userGroupRequest = this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.UserGroup.UserGroupListDTO>>("/odata/IdentityUserGroup?$orderby=Name");
+        var teamRequest = this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Team.TeamListDTO>>("/odata/IdentityTeam?$orderby=Name");
 
         await Task.WhenAll(new List<Task>
         {
@@ -168,7 +168,7 @@
         var regions = await regionRequest;
         var companies = await companyRequest;
         var branches = await branchRequest;
-        var userGroups = await userGroupRequest;
+        var teams = await teamRequest;
 
         Core.ShiftIdentityActions.DataLevelAccess.Regions.Expand(regions.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), true, true);
         
@@ -176,7 +176,7 @@
 
         Core.ShiftIdentityActions.DataLevelAccess.Branches.Expand(branches.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, $"{x.Company} ↔ {x.Name}"); }).ToList(), true, true);
 
-        Core.ShiftIdentityActions.DataLevelAccess.UserGroups.Expand(userGroups.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), true, true);
+        Core.ShiftIdentityActions.DataLevelAccess.Teams.Expand(teams.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), true, true);
     }
 
     protected override async Task OnInitializedAsync()
