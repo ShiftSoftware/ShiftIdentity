@@ -13,7 +13,7 @@
                  @bind-Value="TheItem"
                  @ref="FormContainer"
                  Action="@($"{Constants.IdentityRoutePreifix}Team")"
-                 Title="User Group"
+                 Title="Team"
                  @bind-Key="@Key"
                  TypeAuthAction="ShiftIdentityActions.Teams"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.Team.TeamDTO">
@@ -21,7 +21,7 @@
     <MudTextField ReadOnly="@ReadOnly"
                   Disabled="@Disabled"
                   OnlyValidateIfDirty="true"
-                  Label="Group Name"
+                  Label="Team Name"
                   @bind-Value="TheItem.Name"
                   For="@(() => TheItem.Name)" />
 
