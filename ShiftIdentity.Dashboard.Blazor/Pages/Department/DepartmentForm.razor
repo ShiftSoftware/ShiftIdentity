@@ -14,12 +14,7 @@
                  TypeAuthAction="ShiftIdentityActions.Departments"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentDTO">
 
-    <MudTextField ReadOnly="@ReadOnly"
-                  Disabled="@Disabled"
-                  OnlyValidateIfDirty="true"
-                  Label="Name"
-                  @bind-Value="TheItem.Name"
-                  For="@(() => TheItem.Name)" />
+    <LocalizedTextField @bind-Value="TheItem.Name" For="() => TheItem.Name" Label="Name" />
 
     <MudTextFieldExtended @bind-Value="TheItem.IntegrationId" Label="Integration ID" For="() => TheItem.IntegrationId" />
 </ShiftEntityForm>
