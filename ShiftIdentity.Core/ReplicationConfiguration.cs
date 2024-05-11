@@ -16,4 +16,5 @@ public static class ReplicationConfiguration
     public const string ServiceContainerName = "Services";
     public const string DepartmentContainerName = "Departments";
     public const string BrandContainerName = "Brands";
+    public const string TeamContainerName = "Teams";
 }

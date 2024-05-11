@@ -2,6 +2,7 @@
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Team;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
+using ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,5 +25,11 @@ public class Team : Profile
                 UserID = s.Value.ToLong()
             }
             )));
+
+        CreateMap<Core.Entities.Team, TeamModel>()
+            .ForMember(
+                dest => dest.id,
+                opt => opt.MapFrom(src => src.ID.ToString())
+            );
     }
 }
