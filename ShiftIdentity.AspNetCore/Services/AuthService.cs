@@ -2,6 +2,7 @@
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.IRepositories;
+using System.Security.Claims;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 
@@ -71,7 +72,7 @@ public class AuthService
 
         await userRepo.SaveChangesAsync();
 
-        var token = await tokenService.GenerateInternalJwtTokenAsync(user);
+        var token = tokenService.GenerateInternalJwtToken(user);
 
         return new LoginResultModel(token);
     }
@@ -97,5 +98,25 @@ public class AuthService
         var token = tokenService.GenerateExternalJwtToken(user, authCode);
 
         return token;
+    }
+
+    public async Task<TokenDTO?> RefreshAsync(string refreshToken)
+    {
+        try
+        {
+            var claimPrincipal = tokenService.GetPrincipalFromRefreshToken(refreshToken);
+
+            if (claimPrincipal is null)
+                return null;
+
+            var userId = long.Parse(claimPrincipal?.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var user = await userRepo.FindAsync(userId);
+
+            return await tokenService.RefreshAsync(user);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 }

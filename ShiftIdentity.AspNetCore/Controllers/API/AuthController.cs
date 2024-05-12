@@ -58,7 +58,7 @@ public class AuthController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> Refresh([FromBody] RefreshDTO dto)
     {
-        var token = await tokenService.RefreshAsync(dto.RefreshToken);
+        var token = await authService.RefreshAsync(dto.RefreshToken);
 
         if (token is null)
             return BadRequest(new ShiftEntityResponse<TokenDTO>

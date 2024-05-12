@@ -27,7 +27,7 @@ public class TokenService
         this.userRepository = userRepository;
     }
 
-    public async Task<TokenDTO> GenerateInternalJwtTokenAsync(User user)
+    public TokenDTO GenerateInternalJwtToken(User user)
     {
         return GenerateToken(user);
     }
@@ -40,44 +40,29 @@ public class TokenService
         return GenerateToken(user, true);
     }
 
-    public async Task<TokenDTO?> RefreshAsync(string refreshToken)
+    public async Task<TokenDTO?> RefreshAsync(User? user)
     {
-        try
-        {
-            var claimPrincipal = GetPrincipalFromRefreshToken(refreshToken);
-
-            if (claimPrincipal is null)
-                return null;
-
-            var userId = long.Parse(claimPrincipal?.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var user = await userRepository.FindAsync(userId);
-
-            if (user is null)
-                return null;
-
-            //Check if user is stil active
-            if (!user.IsActive)
-                return null;
-
-            //Update lastseen
-            if (user.UserLog is null)
-                user.UserLog = new Core.Entities.UserLog { LastSeen = DateTimeOffset.UtcNow };
-            else
-                user.UserLog.LastSeen = DateTimeOffset.UtcNow;
-
-            await this.userRepository.SaveChangesAsync();
-
-            var token = GenerateToken(user);
-
-            return token;
-        }
-        catch (Exception)
-        {
+        if (user is null)
             return null;
-        }
+
+        //Check if user is stil active
+        if (!user.IsActive)
+            return null;
+
+        //Update lastseen
+        if (user.UserLog is null)
+            user.UserLog = new Core.Entities.UserLog { LastSeen = DateTimeOffset.UtcNow };
+        else
+            user.UserLog.LastSeen = DateTimeOffset.UtcNow;
+
+        await this.userRepository.SaveChangesAsync();
+
+        var token = GenerateToken(user);
+
+        return token;
     }
 
-    private ClaimsPrincipal? GetPrincipalFromRefreshToken(string token)
+    public ClaimsPrincipal? GetPrincipalFromRefreshToken(string token)
     {
         var tokenValidationParameters = new TokenValidationParameters
         {
