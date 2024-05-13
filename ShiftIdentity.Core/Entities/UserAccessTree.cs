@@ -5,9 +5,9 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
 [Table("UserAccessTrees", Schema = "ShiftIdentity")]
-public class UserAccessTree
+[DontSetCompanyInfoOnThisEntityWithAutoTrigger]
+public class UserAccessTree: ShiftEntity<UserAccessTree>
 {
-    public long ID { get; set; }
     public long UserID { get; set; }
 
     public long AccessTreeID { get; set; }
