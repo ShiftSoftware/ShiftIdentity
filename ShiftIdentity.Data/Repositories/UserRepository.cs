@@ -157,15 +157,15 @@ public class UserRepository :
             ));
         }
 
-        foreach (var item in entity.AccessTrees)
-        {
-            db.UserAccessTrees.Remove(item);
-        }
+        var removedAccessTrees = entity.AccessTrees.Where(x => !accessTreeIds.Contains(x.AccessTreeID)).ToList();
+        var addedAccessTrees = accessTreeIds.Where(x => !entity.AccessTrees.Any(y => y.AccessTreeID == x)).ToList();
 
-        entity.AccessTrees = dto.AccessTrees.Select(x => new UserAccessTree
+        db.UserAccessTrees.RemoveRange(removedAccessTrees);
+        await db.UserAccessTrees.AddRangeAsync(addedAccessTrees.Select(x => new UserAccessTree
         {
-            AccessTree = trees[x.Value.ToLong()]
-        }).ToList();
+            AccessTreeID = x,
+            User = entity
+        }));
 
         return entity;
     }
