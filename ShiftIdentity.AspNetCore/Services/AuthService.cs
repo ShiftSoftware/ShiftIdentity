@@ -1,4 +1,5 @@
-﻿using ShiftSoftware.ShiftIdentity.AspNetCore.Models;
+﻿using PhoneNumbers;
+using ShiftSoftware.ShiftIdentity.AspNetCore.Models;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.IRepositories;
@@ -112,7 +113,20 @@ public class AuthService
             var userId = long.Parse(claimPrincipal?.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var user = await userRepo.FindAsync(userId);
 
-            return await tokenService.RefreshAsync(user);
+            if(user is null || !user.IsActive || user.IsDeleted)
+                return null;
+
+            var token = tokenService.GenerateToken(user);
+
+            //Update lastseen
+            if (user.UserLog is null)
+                user.UserLog = new Core.Entities.UserLog { LastSeen = DateTimeOffset.UtcNow };
+            else
+                user.UserLog.LastSeen = DateTimeOffset.UtcNow;
+
+            await this.userRepo.SaveChangesAsync();
+
+            return token;
         }
         catch (Exception)
         {

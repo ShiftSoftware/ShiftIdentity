@@ -19,12 +19,10 @@ namespace ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 public class TokenService
 {
     private readonly ShiftIdentityConfiguration shiftIdentityConfiguration;
-    private readonly IUserRepository userRepository;
 
-    public TokenService(ShiftIdentityConfiguration shiftIdentityConfiguration, IUserRepository userRepository)
+    public TokenService(ShiftIdentityConfiguration shiftIdentityConfiguration)
     {
         this.shiftIdentityConfiguration = shiftIdentityConfiguration;
-        this.userRepository = userRepository;
     }
 
     public TokenDTO GenerateInternalJwtToken(User user)
@@ -38,28 +36,6 @@ public class TokenService
             return null;
 
         return GenerateToken(user, true);
-    }
-
-    public async Task<TokenDTO?> RefreshAsync(User? user)
-    {
-        if (user is null)
-            return null;
-
-        //Check if user is stil active
-        if (!user.IsActive)
-            return null;
-
-        //Update lastseen
-        if (user.UserLog is null)
-            user.UserLog = new Core.Entities.UserLog { LastSeen = DateTimeOffset.UtcNow };
-        else
-            user.UserLog.LastSeen = DateTimeOffset.UtcNow;
-
-        await this.userRepository.SaveChangesAsync();
-
-        var token = GenerateToken(user);
-
-        return token;
     }
 
     public ClaimsPrincipal? GetPrincipalFromRefreshToken(string token)
@@ -100,7 +76,7 @@ public class TokenService
         return principal;
     }
 
-    private TokenDTO GenerateToken(User user, bool external = false)
+    public TokenDTO GenerateToken(User user, bool external = false)
     {
         var requirePasswordChange = shiftIdentityConfiguration.Security.RequirePasswordChange && user.RequireChangePassword;
 
