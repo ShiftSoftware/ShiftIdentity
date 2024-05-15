@@ -1,4 +1,5 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
+using ShiftSoftware.ShiftEntity.Core.Flags;
 using ShiftSoftware.ShiftEntity.Model;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -8,7 +9,7 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 [TemporalShiftEntity]
 [Table("CompanyBranches", Schema = "ShiftIdentity")]
 [DontSetCompanyInfoOnThisEntityWithAutoTrigger]
-public class CompanyBranch : ShiftEntity<CompanyBranch>
+public class CompanyBranch : ShiftEntity<CompanyBranch>, IEntityHasRegion<CompanyBranch>, IEntityHasCompany<CompanyBranch>
 {
     public string Name { get; set; } = default!;
     public string? Phone { get; set; }
@@ -24,17 +25,17 @@ public class CompanyBranch : ShiftEntity<CompanyBranch>
 
     public Dictionary<string, CustomField>? CustomFields { get; set; }
 
-    public virtual Company Company { get; set; } = default!;
-    public virtual Region Region { get; set; } = default!;
+    public virtual Company? Company { get; set; } = default!;
+    public virtual Region? Region { get; set; } = default!;
     public virtual City City { get; set; } = default!;
     public virtual ICollection<CompanyBranchDepartment>? CompanyBranchDepartments { get; set; }
     public virtual ICollection<CompanyBranchService>? CompanyBranchServices { get; set; }
     public virtual ICollection<CompanyBranchBrand>? CompanyBranchBrands { get; set; }
     public virtual ICollection<User> Users { get; set; }
 
-    public new long RegionID { get; set; }
+    public long? RegionID { get; set; }
     public long? CityID { get; set; }
-    public new long CompanyID { get; set; }
+    public long? CompanyID { get; set; }
 
     public CompanyBranch()
     {

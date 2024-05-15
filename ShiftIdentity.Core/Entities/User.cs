@@ -3,13 +3,14 @@ using System.ComponentModel.DataAnnotations;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
+using ShiftSoftware.ShiftEntity.Core.Flags;
 
 namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
 [Table("Users", Schema = "ShiftIdentity")]
 [DontSetCompanyInfoOnThisEntityWithAutoTrigger]
-public class User : ShiftEntity<User>
+public class User : ShiftEntity<User>, IEntityHasRegion<User>, IEntityHasCompany<User>, IEntityHasCompanyBranch<User>
 {
     #region Security
 
@@ -60,13 +61,13 @@ public class User : ShiftEntity<User>
 
     public DateTimeOffset? LastSeen { get; set; }
 
-    public new long RegionID { get; set; }
-    public new long CompanyID { get; set; }
-    public new long CompanyBranchID { get; set; }
+    public long? RegionID { get; set; }
+    public long? CompanyID { get; set; }
+    public long? CompanyBranchID { get; set; }
 
-    public virtual Region Region { get; set; }
-    public virtual Company Company { get; set; }
-    public virtual CompanyBranch CompanyBranch { get; set; }
+    public virtual Region? Region { get; set; }
+    public virtual Company? Company { get; set; }
+    public virtual CompanyBranch? CompanyBranch { get; set; }
     public virtual UserLog UserLog { get; set; }
 
     public virtual IEnumerable<UserAccessTree> AccessTrees { get; set; }
