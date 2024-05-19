@@ -13,6 +13,10 @@ public class TeamDTO : ShiftEntityViewAndUpsertDTO
     [Required]
     public string Name { get; set; } = default!;
 
+    [Required]
+    [CompanyHashIdConverter]
+    public ShiftEntitySelectDTO Company { get; set; } = default!;
+
     public string? IntegrationId { get; set; }
 
     [UserHashIdConverter]

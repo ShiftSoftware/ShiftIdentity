@@ -1,5 +1,6 @@
 ﻿@using ShiftSoftware.ShiftEntity.Model.Dtos
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Team
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.Company
 @attribute [Authorize]
 @layout Shared.DefaultLayout
 
@@ -24,6 +25,12 @@
                   Label="Team Name"
                   @bind-Value="TheItem.Name"
                   For="@(() => TheItem.Name)" />
+
+    <ShiftAutocomplete Label="Company"
+                       For="@(() => TheItem.Company)"
+                       @bind-Value="TheItem.Company"
+                       EntitySet="IdentityCompany"
+                       TEntitySet="CompanyListDTO" />
 
     <MudTextField ReadOnly="@ReadOnly"
                   Disabled="@Disabled"

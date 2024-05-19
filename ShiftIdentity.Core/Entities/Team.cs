@@ -18,6 +18,8 @@ public class Team : ShiftEntity<Team>, IEntityHasCompany<Team>
     public virtual ICollection<TeamUser> TeamUsers { get; set; } = new HashSet<TeamUser>();
     public long? CompanyID { get; set; }
 
+    public virtual Company? Company { get; set; } = default!;
+
     public Team()
     {
         TeamUsers = new HashSet<TeamUser>();

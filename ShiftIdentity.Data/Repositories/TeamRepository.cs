@@ -2,7 +2,9 @@
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
+using ShiftSoftware.ShiftEntity.Model.HashIds;
 using ShiftSoftware.ShiftIdentity.Core;
+using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Team;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 
@@ -11,8 +13,8 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 public class TeamRepository : ShiftRepository<ShiftIdentityDbContext, Team, TeamListDTO, TeamDTO>
 {
     private readonly ShiftIdentityFeatureLocking shiftIdentityFeatureLocking;
-    public TeamRepository(ShiftIdentityDbContext db, ShiftIdentityFeatureLocking shiftIdentityFeatureLocking) : 
-        base(db, x=> x.IncludeRelatedEntitiesWithFindAsync(s=> s.Include(i=> i.TeamUsers).ThenInclude(i=> i.User)))
+    public TeamRepository(ShiftIdentityDbContext db, ShiftIdentityFeatureLocking shiftIdentityFeatureLocking) :
+        base(db, x => x.IncludeRelatedEntitiesWithFindAsync(s => s.Include(i => i.TeamUsers).ThenInclude(i => i.User), s => s.Include(i => i.Company)))
     {
         this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
     }
@@ -20,14 +22,15 @@ public class TeamRepository : ShiftRepository<ShiftIdentityDbContext, Team, Team
     public override async ValueTask<Team> UpsertAsync(Team entity, TeamDTO dto, ActionTypes actionType, long? userId = null)
     {
         //Check there are any duplicate users
-        if(dto.Users.GroupBy(item => item.Value).Any(group => group.Count() > 1))
+        if (dto.Users.GroupBy(item => item.Value).Any(group => group.Count() > 1))
             throw new ShiftEntityException(new Message("Error", "Duplicate users are not allowed."));
 
-        if(actionType == ActionTypes.Insert)
+        if (actionType == ActionTypes.Insert)
             return await base.UpsertAsync(entity, dto, actionType, userId);
 
         entity.Update(userId);
         entity.Name = dto.Name;
+        entity.CompanyID = dto.Company.Value.ToLong();
         entity.IntegrationId = dto.IntegrationId;
 
         //Update departments

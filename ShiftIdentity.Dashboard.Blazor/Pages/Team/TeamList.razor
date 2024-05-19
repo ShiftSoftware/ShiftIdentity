@@ -10,9 +10,10 @@
            ComponentType="typeof(TeamForm)"
            ShowIDColumn
            Dense
-            TypeAuthAction="ShiftIdentityActions.Teams"
+           TypeAuthAction="ShiftIdentityActions.Teams"
            EnableExport>
 
     <PropertyColumn Title="Name" Property="x => x.Name" />
     <PropertyColumn Title="Integration Id" Property="x => x.IntegrationId" />
+    <PropertyColumn Title="Company" Property="x => x.Company" />
 </ShiftList>

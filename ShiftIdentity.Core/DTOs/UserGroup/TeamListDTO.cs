@@ -12,4 +12,5 @@ public class TeamListDTO : ShiftEntityListDTO
     public string Name { get; set; } = default!;
 
     public string? IntegrationId { get; set; }
+    public string? Company { get; set; }
 }

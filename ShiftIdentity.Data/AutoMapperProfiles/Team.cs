@@ -3,11 +3,6 @@ using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Team;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ShiftSoftware.ShiftIdentity.Data.AutoMapperProfiles;
 
@@ -16,6 +11,10 @@ public class Team : Profile
     public Team()
     {
         CreateMap<Core.Entities.Team, TeamDTO>()
+            .ForMember(
+                    dest => dest.Company,
+                    opt => opt.MapFrom(src => new ShiftEntitySelectDTO { Value = src.CompanyID.ToString()!, Text = src.Company!.Name })
+                )
             .ForMember(x => x.Users, opt => opt.MapFrom(x => x.TeamUsers.Select(y =>
             new ShiftEntitySelectDTO { Value = y.User.ID.ToString()!, Text = y.User.Username })))
             .ReverseMap()
@@ -30,6 +29,12 @@ public class Team : Profile
             .ForMember(
                 dest => dest.id,
                 opt => opt.MapFrom(src => src.ID.ToString())
+            );
+
+        CreateMap<Core.Entities.Team, TeamListDTO>()
+            .ForMember(
+                dest => dest.Company,
+                opt => opt.MapFrom(src => src.Company!.Name)
             );
     }
 }
