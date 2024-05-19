@@ -79,15 +79,15 @@ public class UserRepository :
         entity.BirthDate = dto.BirthDate;
         entity.Phone = formattedPhone;
 
-        if (dto.CompanyBranchID != null)
+        //if (dto.CompanyBranchID != null)
         {
-            entity.CompanyBranchID = dto.CompanyBranchID.Value.ToLong();
+            entity.CompanyBranchID = dto.CompanyBranchID!.Value.ToLong();
 
             var companyBranch = await db.CompanyBranches.FindAsync(entity.CompanyBranchID);
 
-            entity.RegionID = companyBranch!.RegionID;
+            entity.RegionID = companyBranch!.RegionID!.Value;
 
-            entity.CompanyID = companyBranch.CompanyID;
+            entity.CompanyID = companyBranch.CompanyID!.Value;
         }
 
         var typeAuthContextBuilder_Producer = new TypeAuthContextBuilder();
