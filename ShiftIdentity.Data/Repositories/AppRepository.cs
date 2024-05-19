@@ -1,8 +1,8 @@
-﻿using AutoMapper;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
+using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.App;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.ShiftIdentity.Core.IRepositories;
@@ -14,8 +14,10 @@ public class AppRepository :
     IAppRepository
 {
 
-    public AppRepository(ShiftIdentityDbContext db, IMapper mapper) : base(db)
+    private readonly ShiftIdentityFeatureLocking shiftIdentityFeatureLocking;
+    public AppRepository(ShiftIdentityDbContext db, ShiftIdentityFeatureLocking shiftIdentityFeatureLocking) : base(db)
     {
+        this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
     }
 
     public override async ValueTask<App> UpsertAsync(App entity, AppDTO dto, ActionTypes actionType, long? userId = null)
@@ -35,5 +37,13 @@ public class AppRepository :
     public async Task<App?> GetAppAsync(string appId)
     {
         return await db.Apps.FirstOrDefaultAsync(x => x.AppId == appId && !x.IsDeleted);
+    }
+
+    public override Task SaveChangesAsync(bool raiseBeforeCommitTriggers = false)
+    {
+        if (shiftIdentityFeatureLocking.AppFeatureIsLocked)
+            throw new ShiftEntityException(new Message("Error", "App Feature is locked"));
+
+        return base.SaveChangesAsync(raiseBeforeCommitTriggers);
     }
 }

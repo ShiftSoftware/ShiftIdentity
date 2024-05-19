@@ -2,22 +2,19 @@
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.City;
+using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Team;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
 public class TeamRepository : ShiftRepository<ShiftIdentityDbContext, Team, TeamListDTO, TeamDTO>
 {
-    public TeamRepository(ShiftIdentityDbContext db) : 
+    private readonly ShiftIdentityFeatureLocking shiftIdentityFeatureLocking;
+    public TeamRepository(ShiftIdentityDbContext db, ShiftIdentityFeatureLocking shiftIdentityFeatureLocking) : 
         base(db, x=> x.IncludeRelatedEntitiesWithFindAsync(s=> s.Include(i=> i.TeamUsers).ThenInclude(i=> i.User)))
     {
+        this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
     }
 
     public override async ValueTask<Team> UpsertAsync(Team entity, TeamDTO dto, ActionTypes actionType, long? userId = null)
@@ -50,5 +47,13 @@ public class TeamRepository : ShiftRepository<ShiftIdentityDbContext, Team, Team
         db.Entry(entity).State = EntityState.Modified;
 
         return entity;
+    }
+
+    public override Task SaveChangesAsync(bool raiseBeforeCommitTriggers = false)
+    {
+        if (shiftIdentityFeatureLocking.TeamFeatureIsLocked)
+            throw new ShiftEntityException(new Message("Error", "Team Feature is locked"));
+
+        return base.SaveChangesAsync(raiseBeforeCommitTriggers);
     }
 }

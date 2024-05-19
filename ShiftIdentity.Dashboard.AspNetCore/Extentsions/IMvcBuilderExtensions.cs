@@ -63,6 +63,8 @@ public static class IMvcBuilderExtensions
 
         builder.Services.TryAddSingleton(shiftIdentityConfiguration);
 
+        builder.Services.TryAddSingleton(shiftIdentityConfiguration.ShiftIdentityFeatureLocking);
+
         builder.Services.AddSingleton<AuthCodeStoreService>();
         builder.Services.AddScoped<AuthCodeService>();
         builder.Services.AddScoped<AuthService>();

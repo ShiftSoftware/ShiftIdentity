@@ -1,21 +1,23 @@
-﻿using AutoMapper;
-using ShiftSoftware.ShiftEntity.EFCore;
+﻿using Microsoft.EntityFrameworkCore;
 using ShiftSoftware.ShiftEntity.Core;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
-using Microsoft.EntityFrameworkCore;
+using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
-using ShiftSoftware.TypeAuth.Core;
-using System.Net;
+using ShiftSoftware.ShiftIdentity.Core;
+using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
+using ShiftSoftware.TypeAuth.Core;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
 public class AccessTreeRepository : ShiftRepository<ShiftIdentityDbContext, AccessTree, AccessTreeDTO, AccessTreeDTO>
 {
     private readonly ITypeAuthService typeAuthService;
-    public AccessTreeRepository(ShiftIdentityDbContext db, ITypeAuthService typeAuthService, IMapper mapper) : base(db)
+    private readonly ShiftIdentityFeatureLocking shiftIdentityFeatureLocking;
+
+    public AccessTreeRepository(ShiftIdentityDbContext db, ITypeAuthService typeAuthService, ShiftIdentityFeatureLocking shiftIdentityFeatureLocking) : base(db)
     {
         this.typeAuthService = typeAuthService;
+        this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
     }
 
     public override async ValueTask<AccessTree> UpsertAsync(AccessTree entity, AccessTreeDTO dto, ActionTypes actionType, long? userId = null)
@@ -56,5 +58,13 @@ public class AccessTreeRepository : ShiftRepository<ShiftIdentityDbContext, Acce
         entity.Name = dto.Name;
 
         return entity;
+    }
+
+    public override Task SaveChangesAsync(bool raiseBeforeCommitTriggers = false)
+    {
+        if (shiftIdentityFeatureLocking.AccessTreeFeatureIsLocked)
+            throw new ShiftEntityException(new Message("Error", "Access Tree Feature is locked"));
+
+        return base.SaveChangesAsync(raiseBeforeCommitTriggers);
     }
 }

@@ -1,11 +1,9 @@
-﻿using AutoMapper;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.Team;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.UserManager;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.ShiftIdentity.Core.IRepositories;
@@ -20,7 +18,9 @@ public class UserRepository :
 {
 
     private readonly ITypeAuthService typeAuthService;
-    public UserRepository(ShiftIdentityDbContext db, ITypeAuthService typeAuthService, IMapper mapper) : base(db, r =>
+    private readonly ShiftIdentityFeatureLocking shiftIdentityFeatureLocking;
+
+    public UserRepository(ShiftIdentityDbContext db, ITypeAuthService typeAuthService, ShiftIdentityFeatureLocking shiftIdentityFeatureLocking) : base(db, r =>
         r.IncludeRelatedEntitiesWithFindAsync(
             x => x.Include(y => y.AccessTrees).ThenInclude(y => y.AccessTree), 
             x=> x.Include(y=> y.UserLog),
@@ -29,6 +29,7 @@ public class UserRepository :
     )
     {
         this.typeAuthService = typeAuthService;
+        this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
     }
 
     public override async ValueTask<User> UpsertAsync(User entity, UserDTO dto, ActionTypes actionType, long? userId = null)
@@ -253,6 +254,9 @@ public class UserRepository :
 
     public override Task SaveChangesAsync(bool raiseBeforeCommitTriggers = false)
     {
+        if (shiftIdentityFeatureLocking.UserFeatureIsLocked)
+            throw new ShiftEntityException(new Message("Error", "User Feature is locked"));
+
         return base.SaveChangesAsync(raiseBeforeCommitTriggers);
     }
 

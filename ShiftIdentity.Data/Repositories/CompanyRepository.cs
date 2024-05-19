@@ -1,7 +1,7 @@
-﻿using AutoMapper;
-using ShiftSoftware.ShiftEntity.Core;
+﻿using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
+using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using System.Net;
@@ -10,9 +10,10 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
 public class CompanyRepository : ShiftRepository<ShiftIdentityDbContext, Company, CompanyListDTO, CompanyDTO>
 {
-    public CompanyRepository(ShiftIdentityDbContext db, IMapper mapper) : base(db)
+    private readonly ShiftIdentityFeatureLocking shiftIdentityFeatureLocking;
+    public CompanyRepository(ShiftIdentityDbContext db, ShiftIdentityFeatureLocking shiftIdentityFeatureLocking) : base(db)
     {
-
+        this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
     }
 
     public override ValueTask<Company> UpsertAsync(Company entity, CompanyDTO dto, ActionTypes actionType, long? userId = null)
@@ -35,5 +36,13 @@ public class CompanyRepository : ShiftRepository<ShiftIdentityDbContext, Company
             throw new ShiftEntityException(new Message("Error", "Built-In Data can't be modified."), (int)HttpStatusCode.Forbidden);
 
         return base.DeleteAsync(entity, isHardDelete, userId);
+    }
+
+    public override Task SaveChangesAsync(bool raiseBeforeCommitTriggers = false)
+    {
+        if (shiftIdentityFeatureLocking.CompanyFeatureIsLocked)
+            throw new ShiftEntityException(new Message("Error", "Company Feature is locked"));
+
+        return base.SaveChangesAsync(raiseBeforeCommitTriggers);
     }
 }
