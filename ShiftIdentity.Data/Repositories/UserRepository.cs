@@ -34,6 +34,9 @@ public class UserRepository :
 
     public override async ValueTask<User> UpsertAsync(User entity, UserDTO dto, ActionTypes actionType, long? userId = null)
     {
+        if (shiftIdentityFeatureLocking.UserFeatureIsLocked)
+            throw new ShiftEntityException(new Message("Error", "User Feature is locked"));
+
         if (entity.BuiltIn)
             throw new ShiftEntityException(new Message("Error", "Built-In Data can't be modified."), (int)HttpStatusCode.Forbidden);
 
@@ -173,6 +176,9 @@ public class UserRepository :
 
     public override ValueTask<User> DeleteAsync(User entity, bool isHardDelete = false, long? userId = null)
     {
+        if (shiftIdentityFeatureLocking.UserFeatureIsLocked)
+            throw new ShiftEntityException(new Message("Error", "User Feature is locked"));
+
         if (entity.BuiltIn)
             throw new ShiftEntityException(new Message("Error", "Built-In Data can't be modified."), (int)HttpStatusCode.Forbidden);
 
@@ -254,9 +260,6 @@ public class UserRepository :
 
     public override Task SaveChangesAsync(bool raiseBeforeCommitTriggers = false)
     {
-        if (shiftIdentityFeatureLocking.UserFeatureIsLocked)
-            throw new ShiftEntityException(new Message("Error", "User Feature is locked"));
-
         return base.SaveChangesAsync(raiseBeforeCommitTriggers);
     }
 
