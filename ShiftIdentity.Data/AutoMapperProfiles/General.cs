@@ -11,6 +11,7 @@ public class General : Profile
         CreateMap<CompanyBranchService, CompanyBranchSubItemModel>()
             .ForMember(dest => dest.ItemType, opt => opt.MapFrom(src => CompanyBranchContainerItemTypes.Service))
             .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Service.Name))
+            .ForMember(dest => dest.IntegrationId, opt => opt.MapFrom(src => src.Service.IntegrationId))
             .ForMember(dest => dest.BranchID, opt => opt.MapFrom(src => src.CompanyBranchID))
             .ForMember(
                 dest => dest.id,
@@ -24,6 +25,7 @@ public class General : Profile
         CreateMap<CompanyBranchDepartment, CompanyBranchSubItemModel>()
             .ForMember(dest => dest.ItemType, opt => opt.MapFrom(src => CompanyBranchContainerItemTypes.Department))
             .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Department.Name))
+            .ForMember(dest => dest.IntegrationId, opt => opt.MapFrom(src => src.Department.IntegrationId))
             .ForMember(dest => dest.BranchID, opt => opt.MapFrom(src => src.CompanyBranchID))
             .ForMember(
                 dest => dest.id,
