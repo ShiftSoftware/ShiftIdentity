@@ -73,7 +73,10 @@ public static class WebApplicationExtensions
         var jsonTree = System.Text.Json.JsonSerializer.Serialize(tree);
 
         foreach (var user in users)
+        {
             user.AccessTree = jsonTree;
+            user.BuiltIn = true;
+        }
 
         await db.SaveChangesAsync();
 
