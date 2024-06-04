@@ -155,28 +155,41 @@
 
     private async Task ExpandIdentityActions()
     {
-        var regionRequest = this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Region.RegionListDTO>>("/odata/IdentityRegion?$orderby=Name");
-        var companyRequest = this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Company.CompanyListDTO>>("/odata/IdentityCompany?$orderby=Name");
-        var branchRequest = this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO>>("/odata/IdentityCompanyBranch?$orderby=Company");
-        var teamRequest = this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Team.TeamListDTO>>("/odata/IdentityTeam?$orderby=Name");
-
         await Task.WhenAll(new List<Task>
         {
-            regionRequest, companyRequest, branchRequest
+            Task.Run(async () => {
+                var regions = await this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Region.RegionListDTO>>("/odata/IdentityRegion?$orderby=Name");
+
+                Core.ShiftIdentityActions.DataLevelAccess.Regions.Expand(regions.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), true, true);
+            }),
+
+            Task.Run(async () => {
+                var companies = await this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Company.CompanyListDTO>>("/odata/IdentityCompany?$orderby=Name");
+
+                Core.ShiftIdentityActions.DataLevelAccess.Companies.Expand(companies.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), true, true);
+            }),
+
+            Task.Run(async () =>
+            {
+                var branches = await this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO>>("/odata/IdentityCompanyBranch?$orderby=Company");
+
+                Core.ShiftIdentityActions.DataLevelAccess.Branches.Expand(branches.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, $"{x.Company} ↔ {x.Name}"); }).ToList(), true, true);
+            }),
+
+            Task.Run(async () =>
+            {
+                var teams = await this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Team.TeamListDTO>>("/odata/IdentityTeam?$orderby=Name");
+
+                Core.ShiftIdentityActions.DataLevelAccess.Teams.Expand(teams.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), true, true);
+            }),
+
+            Task.Run(async () =>
+            {
+                var brands = await this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Brand.BrandListDTO>>("/odata/IdentityBrand?$orderby=Name");
+
+                Core.ShiftIdentityActions.DataLevelAccess.Brands.Expand(brands.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), false, true);
+            }),
         });
-
-        var regions = await regionRequest;
-        var companies = await companyRequest;
-        var branches = await branchRequest;
-        var teams = await teamRequest;
-
-        Core.ShiftIdentityActions.DataLevelAccess.Regions.Expand(regions.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), true, true);
-        
-        Core.ShiftIdentityActions.DataLevelAccess.Companies.Expand(companies.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), true, true);
-
-        Core.ShiftIdentityActions.DataLevelAccess.Branches.Expand(branches.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, $"{x.Company} ↔ {x.Name}"); }).ToList(), true, true);
-
-        Core.ShiftIdentityActions.DataLevelAccess.Teams.Expand(teams.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), true, true);
     }
 
     protected override async Task OnInitializedAsync()
