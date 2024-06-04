@@ -26,5 +26,6 @@ public class ShiftIdentityActions
         public readonly static DynamicReadWriteDeleteAction Companies = new DynamicReadWriteDeleteAction("Companies");
         public readonly static DynamicReadWriteDeleteAction Branches = new DynamicReadWriteDeleteAction("Branches");
         public readonly static DynamicReadWriteDeleteAction Teams = new DynamicReadWriteDeleteAction("Teams");
+        public readonly static DynamicReadWriteDeleteAction Brands = new DynamicReadWriteDeleteAction("Brands");
     }
 }
