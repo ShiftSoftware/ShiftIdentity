@@ -20,7 +20,7 @@ public class AppRepository :
         this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
     }
 
-    public override async ValueTask<App> UpsertAsync(App entity, AppDTO dto, ActionTypes actionType, long? userId = null)
+    public override async ValueTask<App> UpsertAsync(App entity, AppDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null)
     {
         long id = 0;
 

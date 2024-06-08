@@ -19,7 +19,7 @@ public class TeamRepository : ShiftRepository<ShiftIdentityDbContext, Team, Team
         this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
     }
 
-    public override async ValueTask<Team> UpsertAsync(Team entity, TeamDTO dto, ActionTypes actionType, long? userId = null)
+    public override async ValueTask<Team> UpsertAsync(Team entity, TeamDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null)
     {
         //Check there are any duplicate users
         if (dto.Users.GroupBy(item => item.Value).Any(group => group.Count() > 1))

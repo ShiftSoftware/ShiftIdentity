@@ -16,7 +16,7 @@ public class RegionRepository : ShiftRepository<ShiftIdentityDbContext, Region, 
         this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
     }
 
-    public override ValueTask<Region> UpsertAsync(Region entity, RegionDTO dto, ActionTypes actionType, long? userId = null)
+    public override ValueTask<Region> UpsertAsync(Region entity, RegionDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null)
     {
         if (entity.BuiltIn)
             throw new ShiftEntityException(new Message("Error", "Built-In Data can't be modified."), (int)HttpStatusCode.Forbidden);

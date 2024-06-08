@@ -20,7 +20,7 @@ public class AccessTreeRepository : ShiftRepository<ShiftIdentityDbContext, Acce
         this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
     }
 
-    public override async ValueTask<AccessTree> UpsertAsync(AccessTree entity, AccessTreeDTO dto, ActionTypes actionType, long? userId = null)
+    public override async ValueTask<AccessTree> UpsertAsync(AccessTree entity, AccessTreeDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null)
     {
         long id = 0;
 

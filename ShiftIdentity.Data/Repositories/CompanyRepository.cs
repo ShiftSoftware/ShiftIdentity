@@ -16,7 +16,7 @@ public class CompanyRepository : ShiftRepository<ShiftIdentityDbContext, Company
         this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
     }
 
-    public override ValueTask<Company> UpsertAsync(Company entity, CompanyDTO dto, ActionTypes actionType, long? userId = null)
+    public override ValueTask<Company> UpsertAsync(Company entity, CompanyDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null)
     {
         if (entity.BuiltIn)
             throw new ShiftEntityException(new Message("Error", "Built-In Data can't be modified."), (int)HttpStatusCode.Forbidden);

@@ -32,7 +32,7 @@ public class UserRepository :
         this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
     }
 
-    public override async ValueTask<User> UpsertAsync(User entity, UserDTO dto, ActionTypes actionType, long? userId = null)
+    public override async ValueTask<User> UpsertAsync(User entity, UserDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null)
     {
         if (shiftIdentityFeatureLocking.UserFeatureIsLocked)
             throw new ShiftEntityException(new Message("Error", "User Feature is locked"));
