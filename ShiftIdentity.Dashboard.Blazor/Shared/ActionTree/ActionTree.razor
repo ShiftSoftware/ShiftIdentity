@@ -194,7 +194,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        this.tAuth_LoggedInUser = tAuth as TypeAuthContext;
+        this.tAuth_LoggedInUser = (tAuth as TypeAuthContext)!;
 
         var typeAuthBuilder = new TypeAuthContextBuilder();
 
@@ -203,10 +203,8 @@
         if (shiftIdentityDashboardBlazorOptions.DynamicTypeAuthActionExpander != null)
             await shiftIdentityDashboardBlazorOptions.DynamicTypeAuthActionExpander.Invoke();
 
-        foreach (var item in this.tAuth_LoggedInUser.ActionTree.ActionTreeItems)
-        {
-            typeAuthBuilder.AddActionTree(item.Type!);
-        }
+        foreach (var actionTree in this.tAuth_LoggedInUser!.GetRegisteredActionTrees())
+            typeAuthBuilder.AddActionTree(actionTree);
 
         this.tAuth_View = typeAuthBuilder
         .AddAccessTree(Tree)
