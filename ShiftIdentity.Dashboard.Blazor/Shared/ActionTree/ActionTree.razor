@@ -59,7 +59,7 @@
 
                             <ActionTreeItemIcon ActionTreeItem="context" />
 
-                            <MudText>@(context?.DisplayName ?? context?.TypeName)</MudText>
+                            <MudText>@(context?.DisplayName ?? context?.ID)</MudText>
 
                                 <MudSpacer />
 
@@ -134,8 +134,8 @@
 </MudPaper>
 
 @code {
-    private HashSet<ActionTreeItem> TreeItems = new HashSet<ActionTreeItem> { };
-    private List<ActionTreeItem> LoggedInUserTreeItems_Flattened = new List<ActionTreeItem> { };
+    private HashSet<ActionTreeNode> TreeItems = new HashSet<ActionTreeNode> { };
+    private List<ActionTreeNode> LoggedInUserTreeItems_Flattened = new List<ActionTreeNode> { };
 
     TypeAuthContext tAuth_View = new TypeAuthContext();
     TypeAuthContext tAuth_LoggedInUser = new TypeAuthContext();
@@ -222,7 +222,7 @@
         this.initialized = true;
     }
 
-    void TraverseTree(ActionTreeItem tree, ActionTreeItem? parent, List<ActionTreeItem>? flattenedList = null)
+    void TraverseTree(ActionTreeNode tree, ActionTreeNode? parent, List<ActionTreeNode>? flattenedList = null)
     {
         if (flattenedList != null)
             flattenedList.Add(tree);

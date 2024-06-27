@@ -11,13 +11,13 @@
 }
 @if (dynamicTextAction != null)
 {
-    <MudTextField Value="@(wildCardChecked ? dynamicTextAction.MaximumAccess : (hasWildCardCard ? dynamicTextAction.MinimumAccess : TypeAuth_View.AccessValue(dynamicTextAction, ActionTreeItem.TypeName) ))"
+    <MudTextField Value="@(wildCardChecked ? dynamicTextAction.MaximumAccess : (hasWildCardCard ? dynamicTextAction.MinimumAccess : TypeAuth_View.AccessValue(dynamicTextAction, ActionTreeItem.ID) ))"
               Disabled="@(hasWildCardCard || Disabled)"
               TextChanged="@((e) => TextChanged(e))"
               Variant="Variant.Outlined" Class="type-auth-tree-text"
               ReadOnly="ReadOnly" />
 
-              @ActionTreeItem.TypeName
+              @ActionTreeItem.ID
 }
 
 @code {
@@ -28,7 +28,7 @@
     public TypeAuthContext TypeAuth_View { get; set; } = default!;
 
     [Parameter]
-    public ActionTreeItem ActionTreeItem { get; set; } = default!;
+    public ActionTreeNode ActionTreeItem { get; set; } = default!;
 
     [Parameter]
     public EventCallback AfterBind { get; set; }
@@ -63,7 +63,7 @@
             if (textAction != null)
                 TypeAuth_View.SetAccessValue(textAction, value, TypeAuth_LoggedInUser.AccessValue(textAction));
             if (dynamicTextAction != null)
-                TypeAuth_View.SetAccessValue(dynamicTextAction, ActionTreeItem.TypeName, value, TypeAuth_LoggedInUser.AccessValue(dynamicTextAction, ActionTreeItem.TypeName));
+                TypeAuth_View.SetAccessValue(dynamicTextAction, ActionTreeItem.ID, value, TypeAuth_LoggedInUser.AccessValue(dynamicTextAction, ActionTreeItem.ID));
         }
         catch
         {

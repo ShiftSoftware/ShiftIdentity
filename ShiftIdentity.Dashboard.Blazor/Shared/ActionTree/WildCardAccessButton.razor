@@ -1,7 +1,7 @@
 ﻿@using ShiftSoftware.TypeAuth.Core
 
 <MudButton Style="padding: 1px 8px; font-size: 12px;" Size="Size.Small" Color="@color"
-           Disabled="ActionTreeItem.AdditionalData?.Parent?.WildCardAccess?.Count > 0 || !LoggedInUserTreeItems.Any(x => x.Type == ActionTreeItem.Type && x.WildCardAccess.Contains(Access)) || Disabled"
+           Disabled="ActionTreeItem.AdditionalData?.Parent?.WildCardAccess?.Count > 0 || !LoggedInUserTreeItems.Any(x => x.Path == ActionTreeItem.Path && x.WildCardAccess.Contains(Access)) || Disabled"
            OnClick="Bind"
            Variant="@(ActionTreeItem.WildCardAccess.Contains(Access) ? Variant.Filled : Variant.Text)"
            StartIcon="@(ActionTreeItem.WildCardAccess.Contains( Access) ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckBoxOutlineBlank)">
@@ -11,13 +11,13 @@
 @code {
 
     [Parameter]
-    public List<ActionTreeItem> LoggedInUserTreeItems { get; set; } = default!;
+    public List<ActionTreeNode> LoggedInUserTreeItems { get; set; } = default!;
 
     [Parameter]
-    public ActionTreeItem ActionTreeItem { get; set; } = default!;
+    public ActionTreeNode ActionTreeItem { get; set; } = default!;
 
     [Parameter]
-    public EventCallback<ActionTreeItem> ActionTreeItemChanged { get; set; }
+    public EventCallback<ActionTreeNode> ActionTreeItemChanged { get; set; }
 
     [Parameter]
     public Access Access { get; set; } = default!;
@@ -46,7 +46,7 @@
         await AfterBind.InvokeAsync();
     }
 
-    async Task ToggleWildCardAccess(ActionTreeItem actionTreeItem, Access access)
+    async Task ToggleWildCardAccess(ActionTreeNode actionTreeItem, Access access)
     {
         if (actionTreeItem.WildCardAccess.Contains(access))
         {
@@ -65,7 +65,7 @@
         await ActionTreeItemChanged.InvokeAsync();
     }
 
-    void AssignWildCard(ActionTreeItem actionTreeItem, List<Access> wildCardAccess)
+    void AssignWildCard(ActionTreeNode actionTreeItem, List<Access> wildCardAccess)
     {
         foreach (var item in actionTreeItem.ActionTreeItems)
         {

@@ -144,7 +144,7 @@ public class UserRepository :
 
             var tAuthForThisTree = tAuthBuilderForThisTree.Build();
 
-            var inAccessibleActions = typeAuthService.FindInAccessibleActionsOn(tAuthForThisTree);
+            var inAccessibleActions = (typeAuthService as TypeAuthContext)!.FindInAccessibleActionsOn(tAuthForThisTree);
 
             if (inAccessibleActions.Count > 0)
             {

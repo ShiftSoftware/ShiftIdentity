@@ -1,10 +1,10 @@
 ﻿@using ShiftSoftware.TypeAuth.Core
 
 <MudButton Style="@style" Class="@cssClass" Size="Size.Small" Color="@color"
-           Disabled="@(!TypeAuth_LoggedInUser.Can(ActionTreeItem!.Action!, Access, ActionTreeItem.TypeName) || hasWildCardCard || Disabled)"
+           Disabled="@(!TypeAuth_LoggedInUser.Can(ActionTreeItem!.Action!, Access, ActionTreeItem.ID) || hasWildCardCard || Disabled)"
            OnClick="Bind"
-           Variant="@((TypeAuth_View.Can(ActionTreeItem!.Action!, Access, ActionTreeItem.TypeName) && !hasWildCardCard) || wildCardChecked ? Variant.Filled : Variant.Text)"
-           StartIcon="@((TypeAuth_View.Can(ActionTreeItem!.Action!, Access, ActionTreeItem.TypeName) && !hasWildCardCard) || wildCardChecked ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckBoxOutlineBlank)">
+           Variant="@((TypeAuth_View.Can(ActionTreeItem!.Action!, Access, ActionTreeItem.ID) && !hasWildCardCard) || wildCardChecked ? Variant.Filled : Variant.Text)"
+           StartIcon="@((TypeAuth_View.Can(ActionTreeItem!.Action!, Access, ActionTreeItem.ID) && !hasWildCardCard) || wildCardChecked ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckBoxOutlineBlank)">
     @ChildContent
 </MudButton>
 
@@ -34,7 +34,7 @@
     public TypeAuthContext TypeAuth_View { get; set; } = default!;
 
     [Parameter]
-    public ActionTreeItem ActionTreeItem { get; set; } = default!;
+    public ActionTreeNode ActionTreeItem { get; set; } = default!;
 
     [Parameter]
     public EventCallback AfterBind { get; set; }
@@ -74,7 +74,7 @@
 
     private async Task Bind()
     {
-        TypeAuth_View.ToggleAccess(ActionTreeItem!.Action!, Access, ActionTreeItem.TypeName);
+        TypeAuth_View.ToggleAccess(ActionTreeItem!.Action!, Access, ActionTreeItem.ID);
         await AfterBind.InvokeAsync();
     }
 }
