@@ -114,70 +114,36 @@
             <ShiftAutocompleteWithQuickAdd Label="Departments"
                                            TQuickAdd="ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentDTO"
                                            QuickAddComponentType="@typeof(DepartmentForm)"
-                                           @bind-Value="LastSelectedDepartment"
                                            TEntitySet="DepartmentListDTO"
+                                           @bind-SelectedValues="TheItem.Departments"
                                            EntitySet="IdentityDepartment"
+                                           MultiSelect
                                            QuickAddParameterName="@nameof(DepartmentForm.DepartmentName)" />
 
-            <br />
-
-            @foreach (var item in TheItem.Departments)
-            {
-                if (Mode == ShiftBlazor.Enums.FormModes.Edit || Mode == ShiftBlazor.Enums.FormModes.Create)
-                {
-                    <MudChip T="string" Color="Color.Secondary" OnClose="() => RemoveDepartmentItem(item)">@item.Text</MudChip>
-                }
-                else
-                {
-                    <MudChip T="string" Color="Color.Secondary">@item.Text</MudChip>
-                }
-            }
         </MudItem>
+
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
             <ShiftAutocompleteWithQuickAdd Label="Services"
                                            TQuickAdd="ShiftSoftware.ShiftIdentity.Core.DTOs.Service.ServiceDTO"
                                            QuickAddComponentType="@typeof(ServiceForm)"
-                                           @bind-Value="LastSelectedService"
+                                           @bind-SelectedValues="TheItem.Services"
                                            TEntitySet="ServiceListDTO"
                                            EntitySet="IdentityService"
+                                           MultiSelect
                                            QuickAddParameterName="@nameof(ServiceForm.ServiceName)" />
-            <br />
 
-            @foreach (var item in TheItem.Services)
-            {
-                if(Mode == ShiftBlazor.Enums.FormModes.Edit || Mode == ShiftBlazor.Enums.FormModes.Create)
-                {
-                    <MudChip T="string" Color="Color.Secondary" OnClose="() => RemoveServiceItem(item)">@item.Text</MudChip>
-                }
-                else
-                {
-                    <MudChip T="string" Color="Color.Secondary">@item.Text</MudChip>
-                }
-            }
         </MudItem>
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
             <ShiftAutocompleteWithQuickAdd Label="Brands"
                                            TQuickAdd="ShiftSoftware.ShiftIdentity.Core.DTOs.Brand.BrandDTO"
                                            QuickAddComponentType="@typeof(BrandForm)"
-                                           @bind-Value="LastSelectedBrand"
+                                           @bind-SelectedValues="TheItem.Brands"
                                            TEntitySet="BrandListDTO"
                                            EntitySet="IdentityBrand"
+                                           MultiSelect
                                            QuickAddParameterName="@nameof(BrandForm.BrandName)" />
-            <br />
-
-            @foreach (var item in TheItem.Brands)
-            {
-                if (Mode == ShiftBlazor.Enums.FormModes.Edit || Mode == ShiftBlazor.Enums.FormModes.Create)
-                {
-                    <MudChip T="string" Color="Color.Secondary" OnClose="() => RemoveBrandItem(item)">@item.Text</MudChip>
-                }
-                else
-                {
-                    <MudChip T="string" Color="Color.Secondary">@item.Text</MudChip>
-                }
-            }
         </MudItem>
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
@@ -249,77 +215,5 @@
             else
                 this.TheItem.CustomFields?.TryAdd(field.Key, new CustomField(field.Value));
         }
-    }
-
-    public ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO? LastSelectedDepartment
-    {
-        get { return null; }
-        set
-        {
-            var currentList = TheItem.Departments.ToList();
-
-            if (!currentList.Any(x => x.Value.Equals(value!.Value)))
-            {
-                currentList.Add(value!);
-            }
-
-            TheItem.Departments = currentList;
-        }
-    }
-
-    public void RemoveDepartmentItem(ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO item)
-    {
-        if (Mode <= ShiftBlazor.Enums.FormModes.Archive)
-            return;
-
-        TheItem.Departments = TheItem.Departments.Where(x => !x.Value.Equals(item.Value)).ToList();
-    }
-
-    public ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO? LastSelectedService
-    {
-        get { return null; }
-        set
-        {
-            var currentList = TheItem.Services.ToList();
-
-            if (!currentList.Any(x => x.Value.Equals(value!.Value)))
-            {
-                currentList.Add(value!);
-            }
-
-            TheItem.Services = currentList;
-        }
-    }
-
-    public void RemoveServiceItem(ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO item)
-    {
-        if (Mode <= ShiftBlazor.Enums.FormModes.Archive)
-            return;
-
-        TheItem.Services = TheItem.Services.Where(x => !x.Value.Equals(item.Value)).ToList();
-    }
-
-    public ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO? LastSelectedBrand
-    {
-        get { return null; }
-        set
-        {
-            var currentList = TheItem.Brands.ToList();
-
-            if (!currentList.Any(x => x.Value.Equals(value!.Value)))
-            {
-                currentList.Add(value!);
-            }
-
-            TheItem.Brands = currentList;
-        }
-    }
-
-    public void RemoveBrandItem(ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO item)
-    {
-        if (Mode <= ShiftBlazor.Enums.FormModes.Archive)
-            return;
-
-        TheItem.Brands = TheItem.Brands.Where(x => !x.Value.Equals(item.Value)).ToList();
     }
 }

@@ -42,13 +42,13 @@ public class CompanyBranchDTO : ShiftEntityViewAndUpsertDTO
     public Dictionary<string, CustomField>? CustomFields { get; set; }
 
     [DepartmentHashIdConverter]
-    public IEnumerable<ShiftEntitySelectDTO> Departments { get; set; } = new List<ShiftEntitySelectDTO>();
+    public List<ShiftEntitySelectDTO> Departments { get; set; } = new List<ShiftEntitySelectDTO>();
 
     [ServiceHashIdConverter]
-    public IEnumerable<ShiftEntitySelectDTO> Services { get; set; } = new List<ShiftEntitySelectDTO>();
+    public List<ShiftEntitySelectDTO> Services { get; set; } = new List<ShiftEntitySelectDTO>();
 
     [BrandHashIdConverter]
-    public IEnumerable<ShiftEntitySelectDTO> Brands { get; set; } = new List<ShiftEntitySelectDTO>();
+    public List<ShiftEntitySelectDTO> Brands { get; set; } = new List<ShiftEntitySelectDTO>();
 
     public CompanyBranchDTO()
     {
