@@ -29,7 +29,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
         }
 
-        public override async ValueTask<CompanyBranch> UpsertAsync(CompanyBranch entity, CompanyBranchDTO dto, ActionTypes actionType, long? userId = null)
+        public override async ValueTask<CompanyBranch> UpsertAsync(CompanyBranch entity, CompanyBranchDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null)
         {
             if (entity.BuiltIn)
                 throw new ShiftEntityException(new Message("Error", "Built-In Data can't be modified."), (int)HttpStatusCode.Forbidden);

@@ -32,7 +32,7 @@ public class UserRepository :
         this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
     }
 
-    public override async ValueTask<User> UpsertAsync(User entity, UserDTO dto, ActionTypes actionType, long? userId = null)
+    public override async ValueTask<User> UpsertAsync(User entity, UserDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null)
     {
         if (shiftIdentityFeatureLocking.UserFeatureIsLocked)
             throw new ShiftEntityException(new Message("Error", "User Feature is locked"));
@@ -144,7 +144,7 @@ public class UserRepository :
 
             var tAuthForThisTree = tAuthBuilderForThisTree.Build();
 
-            var inAccessibleActions = typeAuthService.FindInAccessibleActionsOn(tAuthForThisTree);
+            var inAccessibleActions = (typeAuthService as TypeAuthContext)!.FindInAccessibleActionsOn(tAuthForThisTree);
 
             if (inAccessibleActions.Count > 0)
             {
@@ -219,12 +219,16 @@ public class UserRepository :
         return user;
     }
 
-    public async Task<User?> UpdateUserDataAsync(UserDataDTO dto, long userId)
+    public async Task<User?> UpdateUserDataAsync(UserDataDTO dto, long userId)  
     {
         var user = await FindAsync(userId, null);
 
         if (user is null)
             return null;
+
+        //Check if the user is built-in
+        if (user.BuiltIn)
+            throw new ShiftEntityException(new Message("Error", "Built-In Data can't be modified."), (int)HttpStatusCode.Forbidden);
 
         //Check if the username is duplicate
         if (await db.Users.AnyAsync(x => !x.IsDeleted && x.Username.ToLower() == dto.Username.ToLower() && x.ID != userId))

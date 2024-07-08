@@ -1,5 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-	<Import Project="..\..\ShiftTemplates\ShiftFrameworkGlobalSettings.props"  Condition="Exists('..\..\ShiftTemplates\ShiftFrameworkGlobalSettings.props')"/>
+	<Import Project="..\..\ShiftTemplates\ShiftFrameworkGlobalSettings.props" Condition="Exists('..\..\ShiftTemplates\ShiftFrameworkGlobalSettings.props')" />
 
 	<!--The Azure Pipeline clones ShiftTemplates into a directory called 's' by default-->
 	<Import Project="..\..\s\ShiftFrameworkGlobalSettings.props" Condition="Exists('..\..\s\ShiftFrameworkGlobalSettings.props')" />
@@ -27,8 +27,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.2" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.6" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.1" />
 		<PackageReference Include="ShiftSoftware.ShiftEntity.Web" Version="$(ShiftFrameworkVersion)" Condition="!Exists('..\..\ShiftEntity\ShiftEntity.Web\ShiftEntity.Web.csproj')" />
 		<PackageReference Include="ShiftSoftware.TypeAuth.Core" Version="$(TypeAuthVersion)" Condition="!Exists('..\..\TypeAuth\TypeAuth.Core\TypeAuth.Core.csproj')" />
 		<PackageReference Include="ShiftSoftware.Azure.Functions.AspNetCore.Authorization" Version="$(AzureFunctionsAspNetCoreAuthorizationVersion)" Condition="!Exists('..\..\AzureFunctionsAspNetCoreAuthorization\ShiftSoftware.Azure.Functions.AspNetCore.Authorization\ShiftSoftware.Azure.Functions.AspNetCore.Authorization.csproj')" />

@@ -24,7 +24,10 @@ public class FakeUserRepository : IUserRepository
             AccessTrees = shiftIdentityOptions.AccessTrees.Select(x => new UserAccessTree
             {
                 AccessTree = new AccessTree { Tree = x }
-            }).ToList()
+            }).ToList(),
+            RegionID = 1,
+            CompanyBranchID = 1,
+            CompanyID = 1
         };
     }
 
