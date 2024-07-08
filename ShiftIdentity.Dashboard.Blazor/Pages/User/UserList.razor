@@ -12,43 +12,55 @@
            T="UserListDTO"
            @ref="ShiftList"
            ComponentType="typeof(UserForm)"
-           ShowIDColumn
            Dense
            EnableSelection
-            TypeAuthAction="ShiftIdentityActions.Users"
+           TypeAuthAction="ShiftIdentityActions.Users"
            EnableExport>
 
     <ToolbarStartTemplate>
-        <MudButton Color="Color.Error"
-                   Variant="Variant.Outlined"
-                   Size="Size.Small"
-                   StartIcon="@Icons.Material.Filled.LockReset"
-                   Disabled="!(ShiftList!.SelectedItems?.Count > 0)"
-                   OnClick="AssignRandomPasswords">
-            Assign Random Passwords
-        </MudButton>
-        
-        &nbsp;
 
-        <MudButton Color="Color.Error"
-                   Variant="Variant.Outlined"
-                   Size="Size.Small"
-                   StartIcon="@Icons.Material.Filled.Email"
-                   Disabled="!(ShiftList!.SelectedItems?.Count > 0)"
-                   OnClick="VerifyEmails">
-            Verify Emails
-        </MudButton>
+        <MudStack Row>
+            <ActionButton Color="Color.Error"
+                          Variant="Variant.Outlined"
+                          Size="Size.Small"
+                          StartIcon="@Icons.Material.Filled.LockReset"
+                          Confirm
+                          OnResponse="AssignRandomPasswordsResponse"
+                          T="UserListDTO"
+                          Action="@($"{Constants.IdentityRoutePreifix}User/AssignRandomPasswords?shareWithUser={SharePasswordWithUser}")"
+                          >
 
-        &nbsp;
+                <DialogBodyTemplate>
+                    <MudCheckBox @bind-Value="SharePasswordWithUser" Label="Send login info to the user" />
+                </DialogBodyTemplate>
+                <ChildContent>
+                    Assign Random Passwords
+                </ChildContent>
+            </ActionButton>
 
-        <MudButton Color="Color.Error"
-                   Variant="Variant.Outlined"
-                   Size="Size.Small"
-                   StartIcon="@Icons.Material.Filled.Phone"
-                   Disabled="!(ShiftList!.SelectedItems?.Count > 0)"
-                   OnClick="VerifyPhones">
-            Verify Phones
-        </MudButton>
+            <ActionButton Color="Color.Error"
+                          Variant="Variant.Outlined"
+                          Size="Size.Small"
+                          StartIcon="@Icons.Material.Filled.Email"
+                          Confirm
+                          OnResponse="VerifyEmailsResponse"
+                          T="UserListDTO"
+                          Action="@($"{Constants.IdentityRoutePreifix}User/VerifyEmails")">
+                Verify Emails
+            </ActionButton>
+
+            <ActionButton Color="Color.Error"
+                          Variant="Variant.Outlined"
+                          Size="Size.Small"
+                          StartIcon="@Icons.Material.Filled.Phone"
+                          Confirm
+                          OnResponse="VerifyPhonesResponse"
+                          T="UserListDTO"
+                          Action="@($"{Constants.IdentityRoutePreifix}User/VerifyPhones")">
+                Verify Phones
+            </ActionButton>
+        </MudStack>
+
     </ToolbarStartTemplate>
 
     <ChildContent>
@@ -101,42 +113,100 @@
 @code {
     public ShiftList<UserListDTO>? ShiftList { get; set; }
 
-    private async Task AssignRandomPasswords()
+    private bool SharePasswordWithUser { get; set; }
+
+    // private async Task AssignRandomPasswords()
+    // {
+    //     var ids = ShiftList!.SelectedItems?.Select(x => x.ID);
+
+    //     if (ids?.Count() == 0)
+    //         return;
+
+    //     var confirmForm = await DialogService.ShowAsync<ResetPasswordConfirmationDialog>("Warning");
+
+    //     var data = (await confirmForm.Result).Data as Tuple<bool, bool>;
+
+    //     if (data is not null && data.Item1)
+    //     {
+    //         using var response = await Http.PostAsJsonAsync<IEnumerable<string>>($"API/{Constants.IdentityRoutePreifix}User/AssignRandomPasswords?shareWithUser={data.Item2}", ids!);
+
+    //         var users = await response.Content.ReadFromJsonAsync<IEnumerable<UserInfoDTO>>();
+
+    //         if (response.IsSuccessStatusCode)
+    //         {
+    //             if (data.Item2)
+    //             {
+    //                 this.MessageService.Success($"The Password for ({users?.Count()}) users has been reseted.");
+    //             }
+    //             else
+    //             {
+    //                 var parameters = new DialogParameters<ResetPasswordResultDialog>();
+
+    //                 parameters.Add(x => x.Users, users);
+
+    //                 await this.DialogService.ShowAsync<ResetPasswordResultDialog>("Password Reset Results", parameters);
+    //             }
+    //         }
+    //         else
+    //         {
+    //             this.MessageService.Error("An error occurred while resetting the password.");
+    //         }
+    //     }
+    // }
+
+    private async Task AssignRandomPasswordsResponse(ShiftEvent<ShiftEntityResponse<List<UserListDTO>>> data)
     {
-        var ids = ShiftList!.SelectedItems?.Select(x => x.ID);
+        var res = data.Data;
 
-        if (ids?.Count() == 0)
-            return;
-
-        var confirmForm = await DialogService.ShowAsync<ResetPasswordConfirmationDialog>("Warning");
-
-        var data = (await confirmForm.Result).Data as Tuple<bool, bool>;
-
-        if (data is not null && data.Item1)
+        if (res.Message == null)
         {
-            using var response = await Http.PostAsJsonAsync<IEnumerable<string>>($"API/{Constants.IdentityRoutePreifix}User/AssignRandomPasswords?shareWithUser={data.Item2}", ids!);
+            var users = ((JsonElement)res.Additional?["Users"]).Deserialize<IEnumerable<UserInfoDTO>>() ?? [];
 
-            var users = await response.Content.ReadFromJsonAsync<IEnumerable<UserInfoDTO>>();
-
-            if (response.IsSuccessStatusCode)
+            if (SharePasswordWithUser)
             {
-                if (data.Item2)
-                {
-                    this.MessageService.Success($"The Password for ({users?.Count()}) users has been reseted.");
-                }
-                else
-                {
-                    var parameters = new DialogParameters<ResetPasswordResultDialog>();
-
-                    parameters.Add(x => x.Users, users);
-
-                    await this.DialogService.ShowAsync<ResetPasswordResultDialog>("Password Reset Results", parameters);
-                }
+                this.MessageService.Success($"The Password for ({users.Count()}) users has been reseted.");
             }
             else
             {
-                this.MessageService.Error("An error occurred while resetting the password.");
+                var parameters = new DialogParameters<ResetPasswordResultDialog>();
+
+                parameters.Add(x => x.Users, users);
+
+                await this.DialogService.ShowAsync<ResetPasswordResultDialog>("Password Reset Results", parameters);
             }
+        }
+        else
+        {
+            this.MessageService.Error("An error occurred while resetting the password.");
+        }
+    }
+
+
+    private void VerifyEmailsResponse(ShiftEvent<ShiftEntityResponse<List<UserListDTO>>> data)
+    {
+        var res = data.Data;
+
+        if (res.Message == null && res.Entity?.Count > 0)
+        {
+            this.MessageService.Success($"The Email for ({res.Entity.Count}) users has been verified.");
+        }
+        else
+        {
+            this.MessageService.Error("An error occurred while verifying the email.");
+        }
+    }
+
+    private void VerifyPhonesResponse(ShiftEvent<ShiftEntityResponse<List<UserListDTO>>> data)
+    {
+        var res = data.Data;
+
+        if (res.Message == null && res.Entity?.Count > 0)
+        {
+            this.MessageService.Success($"The Phone for ({res.Entity.Count}) users has been verified.");
+        }
+        else
+        {
+            this.MessageService.Error("An error occurred while verifying the phone.");
         }
     }
 
@@ -169,32 +239,32 @@
         }
     }
 
-    private async Task VerifyPhones()
-    {
-        var ids = ShiftList!.SelectedItems?.Select(x => x.ID);
+    // private async Task VerifyPhones()
+    // {
+    //     var ids = ShiftList!.SelectedItems?.Select(x => x.ID);
 
-        if (ids?.Count() == 0)
-            return;
+    //     if (ids?.Count() == 0)
+    //         return;
 
-        bool? result = await DialogService.ShowMessageBox(
-        "Warning",
-        $"Are you sure to verify {ids?.Count()} user phones?",
-        yesText: "Yes", cancelText: "No");
+    //     bool? result = await DialogService.ShowMessageBox(
+    //     "Warning",
+    //     $"Are you sure to verify {ids?.Count()} user phones?",
+    //     yesText: "Yes", cancelText: "No");
 
-        if (result != true)
-            return;
+    //     if (result != true)
+    //         return;
 
-        using var response = await Http.PostAsJsonAsync<IEnumerable<string>>($"API/{Constants.IdentityRoutePreifix}User/VerifyPhones", ids!);
+    //     using var response = await Http.PostAsJsonAsync<IEnumerable<string>>($"API/{Constants.IdentityRoutePreifix}User/VerifyPhones", ids!);
 
-        var users = await response.Content.ReadFromJsonAsync<IEnumerable<UserDTO>>();
+    //     var users = await response.Content.ReadFromJsonAsync<IEnumerable<UserDTO>>();
 
-        if (response.IsSuccessStatusCode)
-        {
-            this.MessageService.Success($"The Phone for ({users?.Count()}) users has been verified.");
-        }
-        else
-        {
-            this.MessageService.Error("An error occurred while verifying the phone.");
-        }
-    }
+    //     if (response.IsSuccessStatusCode)
+    //     {
+    //         this.MessageService.Success($"The Phone for ({users?.Count()}) users has been verified.");
+    //     }
+    //     else
+    //     {
+    //         this.MessageService.Error("An error occurred while verifying the phone.");
+    //     }
+    // }
 }

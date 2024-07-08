@@ -1,5 +1,7 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using ShiftSoftware.ShiftEntity.Model;
+using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
 using ShiftSoftware.ShiftEntity.Web;
 using ShiftSoftware.ShiftIdentity.Core;
@@ -27,9 +29,9 @@ public class IdentityUserController : ShiftEntitySecureControllerAsync<UserRepos
 
     [HttpPost("AssignRandomPasswords")]
     [TypeAuth<ShiftIdentityActions>(nameof(ShiftIdentityActions.Users), TypeAuth.Core.Access.Write)]
-    public async Task<IActionResult> AssignRandomPasswords([FromBody] IEnumerable<string> ids, [FromQuery(Name = "shareWithUser")] bool shareWithUser)
+    public async Task<IActionResult> AssignRandomPasswords([FromBody] SelectState<UserListDTO> ids, [FromQuery(Name = "shareWithUser")] bool shareWithUser)
     {
-        var decodedIds = ids.ToList().Select(x => ShiftEntityHashIdService.Decode<UserDTO>(x));
+        var decodedIds = ids.Items.Select(x => ShiftEntityHashIdService.Decode<UserDTO>(x.ID));
 
         var users = await userRepo.AssignRandomPasswordsAsync(decodedIds);
 
@@ -44,36 +46,42 @@ public class IdentityUserController : ShiftEntitySecureControllerAsync<UserRepos
                     await sendUserInfo.SendUserInfoAsync(userInfos);
         }
 
-        return Ok(userInfos);
+        return Ok(new ShiftEntityResponse<IEnumerable<UserInfoDTO>>
+        {
+            Additional = new Dictionary<string, object>
+            {
+                ["Users"] = userInfos,
+            }
+        });
     }
 
     [HttpPost("VerifyEmails")]
     [TypeAuth<ShiftIdentityActions>(nameof(ShiftIdentityActions.Users), TypeAuth.Core.Access.Write)]
-    public async Task<IActionResult> VerifyEmails([FromBody] IEnumerable<string> ids)
+    public async Task<IActionResult> VerifyEmails([FromBody] SelectState<UserListDTO> ids)
     {
-        var decodedIds = ids.ToList().Select(x => ShiftEntityHashIdService.Decode<UserDTO>(x));
+        var decodedIds = ids.Items.Select(x => ShiftEntityHashIdService.Decode<UserListDTO>(x.ID));
 
         var users = await userRepo.VerifyEmailsAsync(decodedIds);
 
-        var userInfos = this.mapper.Map<IEnumerable<UserDTO>>(users);
+        var userInfos = this.mapper.Map<IEnumerable<UserListDTO>>(users);
 
         await userRepo.SaveChangesAsync();
 
-        return Ok(userInfos);
+        return Ok(new ShiftEntityResponse<IEnumerable<UserListDTO>> { Entity = userInfos });
     }
 
     [HttpPost("VerifyPhones")]
     [TypeAuth<ShiftIdentityActions>(nameof(ShiftIdentityActions.Users), TypeAuth.Core.Access.Write)]
-    public async Task<IActionResult> VerifyPhones([FromBody] IEnumerable<string> ids)
+    public async Task<IActionResult> VerifyPhones([FromBody] SelectState<UserListDTO> ids)
     {
-        var decodedIds = ids.ToList().Select(x => ShiftEntityHashIdService.Decode<UserDTO>(x));
+        var decodedIds = ids.Items.Select(x => ShiftEntityHashIdService.Decode<UserListDTO>(x.ID));
 
         var users = await userRepo.VerifyPhonesAsync(decodedIds);
 
-        var userInfos = this.mapper.Map<IEnumerable<UserDTO>>(users);
+        var userInfos = this.mapper.Map<IEnumerable<UserListDTO>>(users);
 
         await userRepo.SaveChangesAsync();
 
-        return Ok(userInfos);
+        return Ok(new ShiftEntityResponse<IEnumerable<UserListDTO>> { Entity = userInfos });
     }
 }

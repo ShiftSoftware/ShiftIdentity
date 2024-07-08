@@ -8,20 +8,8 @@ using System.Threading.Tasks;
 
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 
-public class UserInfoDTO
+public class UserInfoDTO : UserListDTO
 {
-    [UserHashIdConverter]
-    public string? ID { get; set; }
-
-    public string Username { get; set; } = default!;
-
-    public string? Email { get; set; } = default!;
-
-    public string? Phone { get; set; } = default!;
-
-
-    public string FullName { get; set; } = default!;
-
     [DataType(DataType.Date)]
     public DateTime? BirthDate { get; set; }
 
