@@ -29,7 +29,7 @@ public class IdentityUserController : ShiftEntitySecureControllerAsync<UserRepos
 
     [HttpPost("AssignRandomPasswords")]
     [TypeAuth<ShiftIdentityActions>(nameof(ShiftIdentityActions.Users), TypeAuth.Core.Access.Write)]
-    public async Task<IActionResult> AssignRandomPasswords([FromBody] SelectState<UserListDTO> ids, [FromQuery(Name = "shareWithUser")] bool shareWithUser)
+    public async Task<IActionResult> AssignRandomPasswords([FromBody] SelectStateDTO<UserListDTO> ids, [FromQuery(Name = "shareWithUser")] bool shareWithUser)
     {
         var decodedIds = ids.Items.Select(x => ShiftEntityHashIdService.Decode<UserDTO>(x.ID));
 
@@ -57,7 +57,7 @@ public class IdentityUserController : ShiftEntitySecureControllerAsync<UserRepos
 
     [HttpPost("VerifyEmails")]
     [TypeAuth<ShiftIdentityActions>(nameof(ShiftIdentityActions.Users), TypeAuth.Core.Access.Write)]
-    public async Task<IActionResult> VerifyEmails([FromBody] SelectState<UserListDTO> ids)
+    public async Task<IActionResult> VerifyEmails([FromBody] SelectStateDTO<UserListDTO> ids)
     {
         var decodedIds = ids.Items.Select(x => ShiftEntityHashIdService.Decode<UserListDTO>(x.ID));
 
@@ -72,7 +72,7 @@ public class IdentityUserController : ShiftEntitySecureControllerAsync<UserRepos
 
     [HttpPost("VerifyPhones")]
     [TypeAuth<ShiftIdentityActions>(nameof(ShiftIdentityActions.Users), TypeAuth.Core.Access.Write)]
-    public async Task<IActionResult> VerifyPhones([FromBody] SelectState<UserListDTO> ids)
+    public async Task<IActionResult> VerifyPhones([FromBody] SelectStateDTO<UserListDTO> ids)
     {
         var decodedIds = ids.Items.Select(x => ShiftEntityHashIdService.Decode<UserListDTO>(x.ID));
 
