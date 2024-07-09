@@ -38,7 +38,8 @@ public class CompanyBranchDTO : ShiftEntityViewAndUpsertDTO
     public string? Latitude { get; set; }
     public string? Longitude { get; set; }
     public List<ShiftFileDTO>? Photos { get; set; }
-
+    public string? WorkingHours { get; set; }
+    public string? WorkingDays { get; set; }
     public Dictionary<string, CustomField>? CustomFields { get; set; }
 
     [DepartmentHashIdConverter]
