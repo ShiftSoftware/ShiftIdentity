@@ -16,5 +16,7 @@ public class CityListDTO : ShiftEntityListDTO
     [JsonConverter(typeof(LocalizedTextJsonConverter))]
     public string Name { get; set; } = default!;
     public string? IntegrationId { get; set; }
+
+    [JsonConverter(typeof(LocalizedTextJsonConverter))]
     public string Region { get; set; } = default!;
 }
