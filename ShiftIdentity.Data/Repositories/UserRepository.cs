@@ -24,7 +24,8 @@ public class UserRepository :
         r.IncludeRelatedEntitiesWithFindAsync(
             x => x.Include(y => y.AccessTrees).ThenInclude(y => y.AccessTree), 
             x=> x.Include(y=> y.UserLog),
-            x=> x.Include(y=> y.TeamUsers)
+            x=> x.Include(y=> y.TeamUsers),
+            x=> x.Include(y=> y.CompanyBranch)
         )
     )
     {
