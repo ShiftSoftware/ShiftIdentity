@@ -188,6 +188,7 @@ public class UserRepository :
     public async Task<User?> GetUserByUsernameAsync(string username)
     {
         return await db.Users.Include(x=> x.UserLog).Include(x => x.AccessTrees).ThenInclude(x => x.AccessTree)
+            .Include(x=> x.CompanyBranch)
             .FirstOrDefaultAsync(x => x.Username == username && !x.IsDeleted);
     }
 
