@@ -69,9 +69,7 @@ public class IdentityUserController : ShiftEntitySecureControllerAsync<UserRepos
     [TypeAuth<ShiftIdentityActions>(nameof(ShiftIdentityActions.Users), TypeAuth.Core.Access.Write)]
     public async Task<IActionResult> VerifyEmails([FromBody] SelectStateDTO<UserListDTO> ids)
     {
-        var decodedIds = ids.Items.Select(x => ShiftEntityHashIdService.Decode<UserListDTO>(x.ID));
-
-        var users = await userRepo.FindUsersAsync(decodedIds);
+        var users = await userRepo.FindUsersAsync(ids.Items.Select(x=> x.ID.ToLong()));
 
         List<(User user, string fullUrl)> datas = new();
 
