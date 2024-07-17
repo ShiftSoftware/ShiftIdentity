@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure.Internal;
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
@@ -297,20 +298,9 @@ public class UserRepository :
         return userInfos;
     }
 
-    public async Task<IEnumerable<User>> VerifyEmailsAsync(IEnumerable<long> ids)
+    public async Task<IEnumerable<User>> FindUsersAsync(IEnumerable<long> ids)
     {
-        var users = await db.Users.Where(x => ids.Contains(x.ID)).ToListAsync();
-
-        foreach (var user in users)
-        {
-            if (user.BuiltIn)
-                continue;
-
-            if(!string.IsNullOrWhiteSpace(user.Email))
-                user.EmailVerified = true;
-        }
-
-        return users;
+        return await db.Users.Where(x => ids.Contains(x.ID)).ToListAsync();
     }
 
     public async Task<IEnumerable<User>> VerifyPhonesAsync(IEnumerable<long> ids)

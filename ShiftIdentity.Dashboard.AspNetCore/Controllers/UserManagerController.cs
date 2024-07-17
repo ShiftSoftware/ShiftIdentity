@@ -235,7 +235,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
                 });
 
             var encodedId = ShiftEntityHashIdService.Encode<UserDTO>(user.ID);
-
+            
             // Generate the token and send the email verification
             var url = Url.Action(nameof(ResetPassword), new { userId = encodedId });
             var uniqueId = $"{url}-{user.Email}";
