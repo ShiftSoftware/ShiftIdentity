@@ -28,6 +28,7 @@ public class Company : ShiftEntity<Company>
     public Company()
     {
         CompanyBranches = new HashSet<CompanyBranch>();
+        CustomFields = new();
     }
 
 }
