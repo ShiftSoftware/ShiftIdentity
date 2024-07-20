@@ -1,5 +1,6 @@
 ﻿
 using AutoMapper;
+using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
 using ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
@@ -30,7 +31,19 @@ public class CompanyBranch : Profile
             .ForMember(
                     dest => dest.Brands,
                     opt => opt.MapFrom(src => src.CompanyBranchBrands.Select(y => new ShiftEntitySelectDTO { Value = y.BrandID.ToString()!, Text = y.Brand!.Name }))
-                );
+                )
+            .ForMember(
+                dest => dest.CustomFields,
+                opt => opt.MapFrom(src => src.CustomFields == null ? null : src.CustomFields
+                .ToDictionary(x => x.Key, x =>
+                new CustomField
+                {
+                    DisplayName = x.Value.DisplayName,
+                    IsPassword = x.Value.IsPassword,
+                    IsEncrypted = x.Value.IsEncrypted,
+                    Value = x.Value.IsPassword ? null : x.Value.Value
+                }))
+            );
 
 
         CreateMap<Core.Entities.CompanyBranch, CompanyBranchListDTO>()

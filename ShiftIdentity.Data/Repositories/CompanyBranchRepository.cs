@@ -41,8 +41,20 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             entity.IntegrationId = dto.IntegrationId;
             entity.CompanyID = dto.Company.Value.ToLong();
             entity.CityID = dto.City.Value.ToLong();
-            entity.CustomFields = dto.CustomFields;
             entity.RegionID = (await this.cityRepository.FindAsync(entity.CityID.Value))!.RegionID;
+
+            if (actionType == ActionTypes.Insert)
+                entity.CustomFields = dto.CustomFields;
+            else if (actionType == ActionTypes.Update)
+            {
+                foreach (var customField in dto.CustomFields)
+                {
+                    if(customField.Value.IsPassword && customField.Value.Value is null)
+                        continue;
+
+                    entity.CustomFields[customField.Key] = customField.Value;
+                }
+            }
 
             if (actionType == ActionTypes.Update)
             {

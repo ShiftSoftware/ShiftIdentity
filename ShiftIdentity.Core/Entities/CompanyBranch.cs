@@ -45,6 +45,7 @@ public class CompanyBranch : ShiftEntity<CompanyBranch>, IEntityHasRegion<Compan
         CompanyBranchServices = new HashSet<CompanyBranchService>();
         CompanyBranchBrands = new HashSet<CompanyBranchBrand>();
         Users = new HashSet<User>();
+        CustomFields = new();
     }
 
 }
