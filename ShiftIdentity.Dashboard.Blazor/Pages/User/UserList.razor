@@ -188,7 +188,7 @@
 
         if (res.Message == null && res.Entity?.Count > 0)
         {
-            this.MessageService.Success($"The Email for ({res.Entity.Count}) users has been verified.");
+            this.MessageService.Success($"The verification link send throw email for ({res.Entity.Count}) users.");
         }
         else
         {
