@@ -1,6 +1,7 @@
 ﻿
 using AutoMapper;
 using ShiftSoftware.ShiftEntity.Model;
+using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
 using ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
 
@@ -15,12 +16,13 @@ public class Company : Profile
                 dest => dest.CustomFields,
                 opt => opt.MapFrom(src => src.CustomFields == null ? null : src.CustomFields
                 .ToDictionary(x => x.Key, x =>
-                new CustomField
+                new CustomFieldDTO
                 {
                     DisplayName = x.Value.DisplayName,
                     IsPassword = x.Value.IsPassword,
                     IsEncrypted = x.Value.IsEncrypted,
-                    Value = x.Value.IsPassword ? null : x.Value.Value
+                    Value = x.Value.IsPassword ? null : x.Value.Value,
+                    HasValue = x.Value.Value != null
                 }))
             );
 
@@ -40,7 +42,13 @@ public class Company : Profile
                     if (srcField.IsPassword && srcField.Value == null)
                         continue;
 
-                    dest.CustomFields[key] = srcField;
+                    dest.CustomFields[key] = new CustomField
+                    {
+                        Value = srcField.Value,
+                        DisplayName = srcField.DisplayName,
+                        IsPassword = srcField.IsPassword,
+                        IsEncrypted = srcField.IsEncrypted
+                    };
                 }
             });
 

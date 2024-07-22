@@ -40,7 +40,7 @@ public class CompanyBranchDTO : ShiftEntityViewAndUpsertDTO
     public List<ShiftFileDTO>? Photos { get; set; }
     public string? WorkingHours { get; set; }
     public string? WorkingDays { get; set; }
-    public Dictionary<string, CustomField>? CustomFields { get; set; }
+    public Dictionary<string, CustomFieldDTO>? CustomFields { get; set; }
 
     [DepartmentHashIdConverter]
     public List<ShiftEntitySelectDTO> Departments { get; set; } = new List<ShiftEntitySelectDTO>();

@@ -44,15 +44,27 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             entity.RegionID = (await this.cityRepository.FindAsync(entity.CityID.Value))!.RegionID;
 
             if (actionType == ActionTypes.Insert)
-                entity.CustomFields = dto.CustomFields;
+                entity.CustomFields = dto.CustomFields?.ToDictionary(x => x.Key, x => new CustomField
+                {
+                    Value = x.Value.Value,
+                    IsPassword = x.Value.IsPassword,
+                    DisplayName = x.Value.DisplayName,
+                    IsEncrypted = x.Value.IsEncrypted
+                });
             else if (actionType == ActionTypes.Update)
             {
                 foreach (var customField in dto.CustomFields)
                 {
-                    if(customField.Value.IsPassword && customField.Value.Value is null)
+                    if (customField.Value.IsPassword && customField.Value.Value is null)
                         continue;
 
-                    entity.CustomFields[customField.Key] = customField.Value;
+                    entity.CustomFields[customField.Key] = new CustomField
+                    {
+                        IsEncrypted = customField.Value.IsEncrypted,
+                        IsPassword = customField.Value.IsPassword,
+                        DisplayName = customField.Value.DisplayName,
+                        Value = customField.Value.Value
+                    };
                 }
             }
 

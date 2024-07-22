@@ -30,7 +30,7 @@ public class CompanyDTO : ShiftEntityViewAndUpsertDTO
     public string? HQPhone { get; set; }
     public string? HQEmail { get; set; }
     public string? HQAddress { get; set; }
-    public Dictionary<string, CustomField>? CustomFields { get; set; }
+    public Dictionary<string, CustomFieldDTO>? CustomFields { get; set; }
 
     public CompanyDTO()
     {
