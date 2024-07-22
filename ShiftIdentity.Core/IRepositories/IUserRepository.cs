@@ -12,5 +12,5 @@ public interface IUserRepository
     Task<User?> FindAsync(long id, DateTimeOffset? asOf = null);
     Task<User?> GetUserByUsernameAsync(string username);
     Task SaveChangesAsync(bool wrapInTransaction = false);
-    IQueryable<UserListDTO> OdataList(bool showDeletedRows = false, IQueryable<User>? queryable = null);
+    IQueryable<UserListDTO> OdataList(IQueryable<User>? queryable = null);
 }

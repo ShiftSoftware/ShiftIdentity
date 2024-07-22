@@ -16,9 +16,9 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
         }
 
         [EnableQueryWithHashIdConverter]
-        public IActionResult Get([FromQuery] bool ignoreGlobalFilters = false)
+        public IActionResult Get()
         {
-            return Ok(userRepository.OdataList(ignoreGlobalFilters).Select(x => new PublicUserListDTO { ID = x.ID, Name = x.FullName }));
+            return Ok(userRepository.OdataList().Select(x => new PublicUserListDTO { ID = x.ID, Name = x.FullName }));
         }
     }
 }
