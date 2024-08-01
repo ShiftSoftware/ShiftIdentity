@@ -11,7 +11,7 @@ public class ShiftIdentityConfiguration
 
     public TokenSettingsModel Token { get; set; } = default!;
 
-    public TokenSettingsModel RefreshToken { get; set; } = default!;
+    public RefreshTokenSettingsModel RefreshToken { get; set; } = default!;
 
     public HashIdSettings HashIdSettings { get; set; } = default!;
 

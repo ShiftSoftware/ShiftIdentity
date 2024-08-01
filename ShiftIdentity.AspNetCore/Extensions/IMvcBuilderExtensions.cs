@@ -10,14 +10,18 @@ using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.App;
 using ShiftSoftware.ShiftIdentity.Core.IRepositories;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Extensions;
 
 public static class IMvcBuilderExtensions
 {
-    public static IMvcBuilder AddShiftIdentity(this IMvcBuilder builder, string tokenIssuer, string tokenKey)
+    public static IMvcBuilder AddShiftIdentity(this IMvcBuilder builder, string tokenIssuer, string tokenRSAPublicKeyBase64)
     {
+        var rsa = RSA.Create();
+        rsa.ImportRSAPublicKey(Convert.FromBase64String(tokenRSAPublicKeyBase64), out _);
+
         builder.Services.AddAuthentication(a =>
         {
             a.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -30,7 +34,7 @@ public static class IMvcBuilderExtensions
                 ValidateIssuer = true,
                 ValidIssuer = tokenIssuer,
                 RequireExpirationTime = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(tokenKey)),
+                IssuerSigningKey = new RsaSecurityKey(rsa),
                 ValidateIssuerSigningKey = true,
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.Zero,
@@ -94,7 +98,7 @@ public static class IMvcBuilderExtensions
         var configuration = new ShiftIdentityConfiguration
         {
             Token = tokenConfiguration,
-            RefreshToken = new TokenSettingsModel
+            RefreshToken = new RefreshTokenSettingsModel
             {
                 Audience = "Shift-FakeIdentity",
                 Key = "VeryStrongKeyRequiredForThisEncryption-VeryStrongKeyRequiredForThisEncryption",

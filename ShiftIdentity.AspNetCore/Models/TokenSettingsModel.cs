@@ -2,7 +2,7 @@
 
 public class TokenSettingsModel
 {
-    public string Key { get; set; } = default!;
+    public string RSAPrivateKeyBase64 { get; set; } = default!;
 
     public string Issuer { get; set; } = default!;
 
