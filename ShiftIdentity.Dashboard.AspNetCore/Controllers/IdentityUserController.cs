@@ -41,7 +41,7 @@ public class IdentityUserController : ShiftEntitySecureControllerAsync<UserRepos
     [TypeAuth<ShiftIdentityActions>(nameof(ShiftIdentityActions.Users), TypeAuth.Core.Access.Write)]
     public async Task<IActionResult> AssignRandomPasswords([FromBody] SelectStateDTO<UserListDTO> ids, [FromQuery(Name = "shareWithUser")] bool shareWithUser)
     {
-        var users = await userRepo.AssignRandomPasswordsAsync(ids.Items.Select(x => x.ID.ToLong()));
+        var users = userRepo.AssignRandomPasswords(await this.GetSelectedEntitiesAsync(ids));
 
         var userInfos = this.mapper.Map<IEnumerable<UserInfoDTO>>(users);
 
@@ -67,7 +67,7 @@ public class IdentityUserController : ShiftEntitySecureControllerAsync<UserRepos
     [TypeAuth<ShiftIdentityActions>(nameof(ShiftIdentityActions.Users), TypeAuth.Core.Access.Write)]
     public async Task<IActionResult> VerifyEmails([FromBody] SelectStateDTO<UserListDTO> ids)
     {
-        var users = await userRepo.FindUsersAsync(ids.Items.Select(x=> x.ID.ToLong()));
+        var users = await this.GetSelectedEntitiesAsync(ids);
 
         List<(User user, string fullUrl)> datas = new();
 
@@ -114,7 +114,7 @@ public class IdentityUserController : ShiftEntitySecureControllerAsync<UserRepos
     [TypeAuth<ShiftIdentityActions>(nameof(ShiftIdentityActions.Users), TypeAuth.Core.Access.Write)]
     public async Task<IActionResult> VerifyPhones([FromBody] SelectStateDTO<UserListDTO> ids)
     {
-        var users = await userRepo.VerifyPhonesAsync(ids.Items.Select(x => x.ID.ToLong()));
+        var users = userRepo.VerifyPhonesAsync(await this.GetSelectedEntitiesAsync(ids));
 
         var userInfos = this.mapper.Map<IEnumerable<UserListDTO>>(users);
 

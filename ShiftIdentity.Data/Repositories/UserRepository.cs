@@ -270,9 +270,8 @@ public class UserRepository :
         return base.SaveChangesAsync(raiseBeforeCommitTriggers);
     }
 
-    public async Task<IEnumerable<UserInfoDTO>> AssignRandomPasswordsAsync(IEnumerable<long> ids)
+    public IEnumerable<UserInfoDTO> AssignRandomPasswords(List<User> users)
     {
-        var users = await db.Users.Where(x => ids.Contains(x.ID)).ToListAsync();
         var userInfos = new List<UserInfoDTO>();
 
         foreach (var user in users)
@@ -298,15 +297,8 @@ public class UserRepository :
         return userInfos;
     }
 
-    public async Task<IEnumerable<User>> FindUsersAsync(IEnumerable<long> ids)
+    public IEnumerable<User> VerifyPhonesAsync(List<User> users)
     {
-        return await db.Users.Where(x => ids.Contains(x.ID)).ToListAsync();
-    }
-
-    public async Task<IEnumerable<User>> VerifyPhonesAsync(IEnumerable<long> ids)
-    {
-        var users = await db.Users.Where(x => ids.Contains(x.ID)).ToListAsync();
-
         foreach (var user in users)
         {
             if (user.BuiltIn)
