@@ -16,4 +16,7 @@ public class TeamListDTO : ShiftEntityListDTO
 
     [JsonConverter(typeof(LocalizedTextJsonConverter))]
     public string? Company { get; set; }
+
+    [CompanyHashIdConverter]
+    public string? CompanyId { get; set; }
 }
