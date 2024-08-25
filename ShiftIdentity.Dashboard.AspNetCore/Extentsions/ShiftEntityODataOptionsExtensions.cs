@@ -15,23 +15,23 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Extentsions;
 
 public static class ShiftEntityODataOptionsExtensions
 {
-    public static ShiftEntityODataOptions RegisterShiftIdentityDashboardEntitySets(this ShiftEntityODataOptions shiftEntityODataOptions)
-    {
-        shiftEntityODataOptions.OdataEntitySet<AppDTO>($"{Core.Constants.IdentityRoutePreifix}App");
-        shiftEntityODataOptions.OdataEntitySet<AccessTreeDTO>($"{Core.Constants.IdentityRoutePreifix}AccessTree");
-        shiftEntityODataOptions.OdataEntitySet<UserListDTO>($"{Core.Constants.IdentityRoutePreifix}User");
-        shiftEntityODataOptions.OdataEntitySet<TeamListDTO>($"{Core.Constants.IdentityRoutePreifix}Team");
-        shiftEntityODataOptions.OdataEntitySet<PublicUserListDTO>($"{Core.Constants.IdentityRoutePreifix}PublicUser");
+    //public static ShiftEntityODataOptions RegisterShiftIdentityDashboardEntitySets(this ShiftEntityODataOptions shiftEntityODataOptions)
+    //{
+    //    shiftEntityODataOptions.OdataEntitySet<AppDTO>($"{Core.Constants.IdentityRoutePreifix}App");
+    //    shiftEntityODataOptions.OdataEntitySet<AccessTreeDTO>($"{Core.Constants.IdentityRoutePreifix}AccessTree");
+    //    shiftEntityODataOptions.OdataEntitySet<UserListDTO>($"{Core.Constants.IdentityRoutePreifix}User");
+    //    shiftEntityODataOptions.OdataEntitySet<TeamListDTO>($"{Core.Constants.IdentityRoutePreifix}Team");
+    //    shiftEntityODataOptions.OdataEntitySet<PublicUserListDTO>($"{Core.Constants.IdentityRoutePreifix}PublicUser");
 
 
-        shiftEntityODataOptions.OdataEntitySet<DepartmentListDTO>($"{Core.Constants.IdentityRoutePreifix}Department");
-        shiftEntityODataOptions.OdataEntitySet<RegionListDTO>($"{Core.Constants.IdentityRoutePreifix}Region");
-        shiftEntityODataOptions.OdataEntitySet<CityListDTO>($"{Core.Constants.IdentityRoutePreifix}City");
-        shiftEntityODataOptions.OdataEntitySet<ServiceListDTO>($"{Core.Constants.IdentityRoutePreifix}Service");
-        shiftEntityODataOptions.OdataEntitySet<BrandListDTO>($"{Core.Constants.IdentityRoutePreifix}Brand");
-        shiftEntityODataOptions.OdataEntitySet<CompanyListDTO>($"{Core.Constants.IdentityRoutePreifix}Company");
-        shiftEntityODataOptions.OdataEntitySet<CompanyBranchListDTO>($"{Core.Constants.IdentityRoutePreifix}CompanyBranch");
+    //    shiftEntityODataOptions.OdataEntitySet<DepartmentListDTO>($"{Core.Constants.IdentityRoutePreifix}Department");
+    //    shiftEntityODataOptions.OdataEntitySet<RegionListDTO>($"{Core.Constants.IdentityRoutePreifix}Region");
+    //    shiftEntityODataOptions.OdataEntitySet<CityListDTO>($"{Core.Constants.IdentityRoutePreifix}City");
+    //    shiftEntityODataOptions.OdataEntitySet<ServiceListDTO>($"{Core.Constants.IdentityRoutePreifix}Service");
+    //    shiftEntityODataOptions.OdataEntitySet<BrandListDTO>($"{Core.Constants.IdentityRoutePreifix}Brand");
+    //    shiftEntityODataOptions.OdataEntitySet<CompanyListDTO>($"{Core.Constants.IdentityRoutePreifix}Company");
+    //    shiftEntityODataOptions.OdataEntitySet<CompanyBranchListDTO>($"{Core.Constants.IdentityRoutePreifix}CompanyBranch");
 
-        return shiftEntityODataOptions;
-    }
+    //    return shiftEntityODataOptions;
+    //}
 }

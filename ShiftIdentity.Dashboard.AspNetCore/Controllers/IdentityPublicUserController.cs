@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
+using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Web.Services;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 using ShiftSoftware.ShiftIdentity.Core.IRepositories;
@@ -7,6 +9,7 @@ using ShiftSoftware.ShiftIdentity.Core.IRepositories;
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
 {
     [Authorize]
+    [Route("api/[controller]")]
     public class IdentityPublicUserController : ControllerBase
     {
         IUserRepository userRepository;
@@ -15,10 +18,12 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
             this.userRepository = userRepository;
         }
 
-        [EnableQueryWithHashIdConverter]
-        public IActionResult Get()
+        //[EnableQueryWithHashIdConverter]
+        public async Task<ActionResult<ODataDTO<PublicUserListDTO>>> Get(ODataQueryOptions<PublicUserListDTO> oDataQueryOptions)
         {
-            return Ok(userRepository.OdataList().Select(x => new PublicUserListDTO { ID = x.ID, Name = x.FullName }));
+            var data = userRepository.OdataList().Select(x => new PublicUserListDTO { ID = x.ID, Name = x.FullName });
+
+            return Ok(await ODataIqueryable.GetOdataDTOFromIQueryable(data, oDataQueryOptions, Request));
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Web;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Auth;
@@ -16,14 +17,14 @@ namespace ShiftSoftware.ShiftIdentity.AspNetCore.Extensions
         public static WebApplication AddFakeIdentityEndPoints(this WebApplication app)
         {
             var shiftIdentityOptions = app.Services.GetRequiredService<ShiftIdentityOptions>();
-            var shiftEntityOptions = app.Services.GetRequiredService<ShiftEntityODataOptions>();
+            //var shiftEntityOptions = app.Services.GetRequiredService<ShiftEntityODataOptions>();
 
-            var odataPrefix = shiftEntityOptions.RoutePrefix;
+            //var odataPrefix = shiftEntityOptions.RoutePrefix;
 
-            app.MapGet($"{odataPrefix}/{Core.Constants.IdentityRoutePreifix}PublicUser", () =>
+            app.MapGet($"api/{Core.Constants.IdentityRoutePreifix}PublicUser", () =>
             {
                 return new Dictionary<string, object> {
-                    { "@odata.count", 1 },
+                    { "Count", 1 },
                     { "Value", new List<PublicUserListDTO> {
                         new PublicUserListDTO { ID = shiftIdentityOptions.UserData.ID.ToString(), Name = shiftIdentityOptions.UserData.FullName }
                     } }
