@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc.Authorization;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using ShiftSoftware.ShiftIdentity.AspNetCore;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Fakes;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Models;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
@@ -11,9 +11,9 @@ using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.App;
 using ShiftSoftware.ShiftIdentity.Core.IRepositories;
 using System.Security.Cryptography;
-using System.Text;
 
-namespace ShiftSoftware.ShiftIdentity.AspNetCore.Extensions;
+
+namespace Microsoft.Extensions.DependencyInjection;
 
 public static class IMvcBuilderExtensions
 {

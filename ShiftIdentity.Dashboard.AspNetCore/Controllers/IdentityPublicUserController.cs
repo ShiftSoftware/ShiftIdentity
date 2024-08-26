@@ -19,6 +19,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
         }
 
         //[EnableQueryWithHashIdConverter]
+        [HttpGet]
         public async Task<ActionResult<ODataDTO<PublicUserListDTO>>> Get(ODataQueryOptions<PublicUserListDTO> oDataQueryOptions)
         {
             var data = userRepository.OdataList().Select(x => new PublicUserListDTO { ID = x.ID, Name = x.FullName });

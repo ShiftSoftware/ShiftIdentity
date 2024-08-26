@@ -1,79 +1,76 @@
-﻿using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Model;
-using ShiftSoftware.ShiftEntity.Web;
+using ShiftSoftware.ShiftIdentity.AspNetCore;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Auth;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 using ShiftSoftware.ShiftIdentity.Core.Models;
 using System.Net.Http.Json;
 using System.Web;
 
-namespace ShiftSoftware.ShiftIdentity.AspNetCore.Extensions
+namespace Microsoft.AspNetCore.Builder;
+
+public static class WebApplicationExtensions
 {
-    public static class WebApplicationExtensions
+    public static WebApplication AddFakeIdentityEndPoints(this WebApplication app)
     {
-        public static WebApplication AddFakeIdentityEndPoints(this WebApplication app)
+        var shiftIdentityOptions = app.Services.GetRequiredService<ShiftIdentityOptions>();
+        //var shiftEntityOptions = app.Services.GetRequiredService<ShiftEntityODataOptions>();
+
+        //var odataPrefix = shiftEntityOptions.RoutePrefix;
+
+        app.MapGet($"api/{ShiftSoftware.ShiftIdentity.Core.Constants.IdentityRoutePreifix}PublicUser", () =>
         {
-            var shiftIdentityOptions = app.Services.GetRequiredService<ShiftIdentityOptions>();
-            //var shiftEntityOptions = app.Services.GetRequiredService<ShiftEntityODataOptions>();
+            return new Dictionary<string, object> {
+                { "Count", 1 },
+                { "Value", new List<PublicUserListDTO> {
+                    new PublicUserListDTO { ID = shiftIdentityOptions.UserData.ID.ToString(), Name = shiftIdentityOptions.UserData.FullName }
+                } }
+            };
+        });
 
-            //var odataPrefix = shiftEntityOptions.RoutePrefix;
-
-            app.MapGet($"api/{Core.Constants.IdentityRoutePreifix}PublicUser", () =>
+        app.MapGet($"{ShiftSoftware.ShiftIdentity.Core.Constants.IdentityRoutePreifix}/Auth/AuthCode", async (ShiftIdentityConfiguration shiftIdentityConfiguration, HttpRequest request) =>
+        {
+            var generateAuthCodeDto = new GenerateAuthCodeDTO
             {
-                return new Dictionary<string, object> {
-                    { "Count", 1 },
-                    { "Value", new List<PublicUserListDTO> {
-                        new PublicUserListDTO { ID = shiftIdentityOptions.UserData.ID.ToString(), Name = shiftIdentityOptions.UserData.FullName }
-                    } }
-                };
-            });
+                AppId = request!.Query![nameof(GenerateAuthCodeDTO.AppId)]!,
+                CodeChallenge = request!.Query![nameof(GenerateAuthCodeDTO.CodeChallenge)]!,
+                ReturnUrl = request!.Query![nameof(GenerateAuthCodeDTO.ReturnUrl)]!
+            };
 
-            app.MapGet($"{Core.Constants.IdentityRoutePreifix}/Auth/AuthCode", async (ShiftIdentityConfiguration shiftIdentityConfiguration, HttpRequest request) =>
+            var requestUriBuilder = new UriBuilder(request.Scheme, request.Host.Host, request.Host.Port ?? -1);
+
+            if (requestUriBuilder.Uri.IsDefaultPort)
             {
-                var generateAuthCodeDto = new GenerateAuthCodeDTO
-                {
-                    AppId = request!.Query![nameof(GenerateAuthCodeDTO.AppId)]!,
-                    CodeChallenge = request!.Query![nameof(GenerateAuthCodeDTO.CodeChallenge)]!,
-                    ReturnUrl = request!.Query![nameof(GenerateAuthCodeDTO.ReturnUrl)]!
-                };
+                requestUriBuilder.Port = -1;
+            }
 
-                var requestUriBuilder = new UriBuilder(request.Scheme, request.Host.Host, request.Host.Port ?? -1);
+            var baseUrl = requestUriBuilder.Uri.AbsoluteUri;
 
-                if (requestUriBuilder.Uri.IsDefaultPort)
-                {
-                    requestUriBuilder.Port = -1;
-                }
+            if (!shiftIdentityConfiguration.IsFakeIdentity)
+            {
+                return Microsoft.AspNetCore.Http.Results.Redirect(generateAuthCodeDto.ReturnUrl ?? baseUrl);
+            }
 
-                var baseUrl = requestUriBuilder.Uri.AbsoluteUri;
+            var http = new HttpClient();
 
-                if (!shiftIdentityConfiguration.IsFakeIdentity)
-                {
-                    return Microsoft.AspNetCore.Http.Results.Redirect(generateAuthCodeDto.ReturnUrl ?? baseUrl);
-                }
+            using var response = await http.PostAsJsonAsync(baseUrl + "Api/Auth/AuthCode", generateAuthCodeDto);
 
-                var http = new HttpClient();
+            if (!response.IsSuccessStatusCode)
+                return Microsoft.AspNetCore.Http.Results.Redirect(generateAuthCodeDto.ReturnUrl ?? baseUrl);
 
-                using var response = await http.PostAsJsonAsync(baseUrl + "Api/Auth/AuthCode", generateAuthCodeDto);
+            var result = await response.Content.ReadFromJsonAsync<ShiftEntityResponse<AuthCodeModel>>();
 
-                if (!response.IsSuccessStatusCode)
-                    return Microsoft.AspNetCore.Http.Results.Redirect(generateAuthCodeDto.ReturnUrl ?? baseUrl);
+            var uriBuilder = new UriBuilder(result!.Entity!.RedirectUri);
+            var query = HttpUtility.ParseQueryString(uriBuilder.Query);
+            query["AuthCode"] = result.Entity.Code.ToString();
+            query["ReturnUrl"] = result.Entity.ReturnUrl;
+            uriBuilder.Query = query.ToString();
+            var longurl = uriBuilder.ToString();
 
-                var result = await response.Content.ReadFromJsonAsync<ShiftEntityResponse<AuthCodeModel>>();
+            return Microsoft.AspNetCore.Http.Results.Redirect(longurl);
+        });
 
-                var uriBuilder = new UriBuilder(result!.Entity!.RedirectUri);
-                var query = HttpUtility.ParseQueryString(uriBuilder.Query);
-                query["AuthCode"] = result.Entity.Code.ToString();
-                query["ReturnUrl"] = result.Entity.ReturnUrl;
-                uriBuilder.Query = query.ToString();
-                var longurl = uriBuilder.ToString();
-
-                return Microsoft.AspNetCore.Http.Results.Redirect(longurl);
-            });
-
-            return app;
-        }
+        return app;
     }
 }
