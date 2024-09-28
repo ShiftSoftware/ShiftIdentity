@@ -10,8 +10,8 @@ using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.App;
 using ShiftSoftware.ShiftIdentity.Core.IRepositories;
-using ShiftSoftware.ShiftIdentity.Core.Localization.Resources;
 using ShiftSoftware.ShiftIdentity.Core.Localization;
+using ShiftSoftwareLocalization.Identity;
 using System.Security.Cryptography;
 
 

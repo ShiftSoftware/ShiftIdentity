@@ -37,22 +37,9 @@
 	<ItemGroup>
 	
 	  <ProjectReference Include="..\..\ShiftEntity\ShiftEntity.Core\ShiftEntity.Core.csproj" Condition="Exists('..\..\ShiftEntity\ShiftEntity.Core\ShiftEntity.Core.csproj')" />
+	
+	  <ProjectReference Include="..\..\ShiftFrameworkLocalization\ShiftSoftwareLocalization\ShiftSoftwareLocalization.csproj" />
 	  <ProjectReference Include="..\..\TypeAuth\TypeAuth.Core\TypeAuth.Core.csproj" Condition="Exists('..\..\TypeAuth\TypeAuth.Core\TypeAuth.Core.csproj')" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Compile Update="Localization\Resources\Resource.Designer.cs">
-	    <DependentUpon>Resource.resx</DependentUpon>
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	</ItemGroup>
-
-	<ItemGroup>
-	  <EmbeddedResource Update="Localization\Resources\Resource.resx">
-	    <LastGenOutput>Resource.Designer.cs</LastGenOutput>
-	    <Generator>ResXFileCodeGenerator</Generator>
-	  </EmbeddedResource>
 	</ItemGroup>
 
 </Project>

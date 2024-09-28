@@ -3,11 +3,10 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using ShiftSoftware.ShiftIdentity.Blazor.Handlers;
-//using ShiftSoftware.ShiftIdentity.Blazor.Handlers;
 using ShiftSoftware.ShiftIdentity.Blazor.Providers;
 using ShiftSoftware.ShiftIdentity.Blazor.Services;
 using ShiftSoftware.ShiftIdentity.Core.Localization;
-using ShiftSoftware.ShiftIdentity.Core.Localization.Resources;
+using ShiftSoftwareLocalization.Identity;
 
 namespace ShiftSoftware.ShiftIdentity.Blazor.Extensions;
 
