@@ -2,16 +2,17 @@
 @layout Shared.DefaultLayout
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(RegionList)}")]
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Region;
+@inject ShiftIdentityLocalizer Loc
 
 <ShiftList EntitySet="@($"{Constants.IdentityRoutePreifix}Region")"
-           Title="Region List"
+           Title="@Loc["Region List"]"
            T="RegionListDTO"
            ComponentType="typeof(RegionForm)"
            Dense
            TypeAuthAction="ShiftIdentityActions.Regions"
            EnableExport>
     
-    <PropertyColumn Title="Name" Property="x => x.Name" />
-    <PropertyColumn Title="Integration Id" Property="x => x.IntegrationId" />
-    <PropertyColumn Title="Short Code" Property="x => x.ShortCode" />
+    <PropertyColumn Title="@Loc["Name"]" Property="x => x.Name" />
+    <PropertyColumn Title="@Loc["Integration ID"]" Property="x => x.IntegrationId" />
+    <PropertyColumn Title="@Loc["Short Code"]" Property="x => x.ShortCode" />
 </ShiftList>

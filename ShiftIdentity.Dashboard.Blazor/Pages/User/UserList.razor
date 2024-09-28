@@ -6,9 +6,10 @@
 @inject IDialogService DialogService
 @inject HttpClient Http
 @inject MessageService MessageService
+@inject ShiftIdentityLocalizer Loc
 
 <ShiftList EntitySet="@($"{Constants.IdentityRoutePreifix}User")"
-           Title="User List"
+           Title="@Loc["User List"]"
            T="UserListDTO"
            @ref="ShiftList"
            ComponentType="typeof(UserForm)"
@@ -31,10 +32,10 @@
                           >
 
                 <DialogBodyTemplate>
-                    <MudCheckBox @bind-Value="SharePasswordWithUser" Label="Send login info to the user" />
+                    <MudCheckBox @bind-Value="SharePasswordWithUser" Label="@Loc["Send login info to the user"]" />
                 </DialogBodyTemplate>
                 <ChildContent>
-                    Assign Random Passwords
+                    @Loc["Assign Random Passwords"]"
                 </ChildContent>
             </ActionButton>
 
@@ -46,7 +47,7 @@
                           OnResponse="VerifyEmailsResponse"
                           T="UserListDTO"
                           Action="@($"{Constants.IdentityRoutePreifix}User/VerifyEmails")">
-                Verify Emails
+               @Loc["Verify Emails"]"
             </ActionButton>
 
             <ActionButton Color="Color.Error"
@@ -57,16 +58,16 @@
                           OnResponse="VerifyPhonesResponse"
                           T="UserListDTO"
                           Action="@($"{Constants.IdentityRoutePreifix}User/VerifyPhones")">
-                Verify Phones
+                @Loc["Verify Phones"]
             </ActionButton>
         </MudStack>
 
     </ToolbarStartTemplate>
 
     <ChildContent>
-        <PropertyColumn Title="Name" Property="x => x.FullName" />
-        <PropertyColumn Title="Username" Property="x => x.Username" />
-        <PropertyColumn Title="Phone" Property="x => x.Phone">
+        <PropertyColumn Title="@Loc["Name"]" Property="x => x.FullName" />
+        <PropertyColumn Title="@Loc["Username"]" Property="x => x.Username" />
+        <PropertyColumn Title="@Loc["Phone"]" Property="x => x.Phone">
             <CellTemplate>
                 <MudPaper Elevation="0" Class="d-flex align-items-center p-2">
                     <span class="align-middle">@context?.Item?.Phone</span>
@@ -76,13 +77,13 @@
                         <MudIcon Size="@Size.Small"
                                  Icon="@Icons.Material.Filled.Verified"
                                  Style="color:#3498DB"
-                                 Title="This phone number is verified"
+                                 Title="@Loc["This phone number is verified"]"
                                  Class="mr-2" />
                     }
                 </MudPaper>
             </CellTemplate>
         </PropertyColumn>
-        <PropertyColumn Title="Email" Property="x => x.Email">
+        <PropertyColumn Title="@Loc["Email"]" Property="x => x.Email">
             <CellTemplate>
                 <MudPaper Elevation="0" Class="d-flex align-items-center p-2">
                     <span class="align-middle">@context?.Item?.Email</span>
@@ -92,14 +93,14 @@
                         <MudIcon Size="@Size.Small"
                                  Icon="@Icons.Material.Filled.Verified"
                                  Style="color:#3498DB"
-                                 Title="This email address is verified"
+                                 Title="@Loc["This email address is verified"]"
                                  Class="mr-2" />
                     }
                 </MudPaper>
             </CellTemplate>
         </PropertyColumn>
-        <PropertyColumn Title="Branch" Property="x => x.CompanyBranch" />
-        <PropertyColumn Format="F" Property="x => x.LastSeen.DateTime" Title="Last Seen">
+        <PropertyColumn Title="@Loc["Branch"]" Property="x => x.CompanyBranch" />
+        <PropertyColumn Format="F" Property="x => x.LastSeen.DateTime" Title="@Loc["Last Seen"]">
             <CellTemplate>
                 @if (context?.Item?.LastSeen.DateTime > DateTimeOffset.MinValue)
                 {

@@ -5,6 +5,7 @@
 @inherits ShiftForm<UserForm, ShiftSoftware.ShiftIdentity.Core.DTOs.User.UserDTO>
 @inject HttpClient Http
 @inject ODataQuery odataQuery
+@inject ShiftIdentityLocalizer Loc
 
 @using ShiftSoftware.ShiftEntity.Model.Dtos
 @using ShiftSoftware.ShiftBlazor.Enums
@@ -15,7 +16,7 @@
                  @bind-Value="TheItem"
                  @ref="FormContainer"
                  Action="@($"{Constants.IdentityRoutePreifix}User")"
-                 Title="User"
+                 Title="@Loc["User"]"
                  @bind-Key="@Key"
                  TypeAuthAction="ShiftIdentityActions.Users"
                  OnTaskFinished="@(()=> ready=true)"
@@ -25,14 +26,14 @@
     <MudTextField ReadOnly="@ReadOnly"
                   Disabled="@Disabled"
                   OnlyValidateIfDirty="true"
-                  Label="Full Name"
+                  Label="@Loc["Full Name"]"
                   @bind-Value="TheItem.FullName"
                   For="@(() => TheItem.FullName)" />
 
     <MudTextField ReadOnly="@ReadOnly"
                   Disabled="@Disabled"
                   OnlyValidateIfDirty="true"
-                  Label="Username"
+                  Label="@Loc["Username"]"
                   @bind-Value="TheItem.Username"
                   For="@(() => TheItem.Username)" />
 
@@ -40,7 +41,7 @@
                   ReadOnly="@ReadOnly"
                   Disabled="@Disabled"
                   OnlyValidateIfDirty="true"
-                  Label="Password"
+                  Label="@Loc["Password"]"
                   @bind-Value="TheItem.Password"
                   For="@(() => TheItem.Password)"
                   HelperText="Choose a strong password" />
@@ -48,14 +49,14 @@
     <MudTextField ReadOnly="@ReadOnly"
                   Disabled="@Disabled"
                   OnlyValidateIfDirty="true"
-                  Label="Phone"
+                  Label="@Loc["Phone"]"
                   @bind-Value="TheItem.Phone"
                   For="@(() => TheItem.Phone)" />
 
     <MudTextField ReadOnly="@ReadOnly"
                   Disabled="@Disabled"
                   OnlyValidateIfDirty="true"
-                  Label="Email"
+                  Label="@Loc["Email"]"
                   @bind-Value="TheItem.Email"
                   For="@(() => TheItem.Email)" />
 
@@ -63,17 +64,17 @@
                    Disabled="@Disabled"
                    @bind-Date="TheItem.BirthDate"
                    For="@(() => TheItem.BirthDate)"
-                   Label="Birth Date" />
+                   Label="@Loc["Birth Date"]" />
 
     <MudItem>
         <MudCheckBox ReadOnly="@ReadOnly"
                      Disabled="@Disabled"
                      For="@(() => TheItem.IsActive)"
-                     Label="Active"
+                     Label="@Loc["Active"]"
                      @bind-Value="@TheItem.IsActive"></MudCheckBox>
     </MudItem>
 
-    <ShiftAutocomplete Label="Company Branch"
+    <ShiftAutocomplete Label="@Loc["Company Branch"]"
                        For="@(() => TheItem.CompanyBranchID)"
                        @bind-Value="TheItem.CompanyBranchID"
                        ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
@@ -81,7 +82,7 @@
                        EntitySet="IdentityCompanyBranch"
                        />
 
-    <ShiftAutocomplete Label="Access Trees"
+    <ShiftAutocomplete Label="@Loc["Access Trees"]"
                        @bind-Value="LastSelectedAccessTree"
                        ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
                        EntitySet="IdentityAccessTree"

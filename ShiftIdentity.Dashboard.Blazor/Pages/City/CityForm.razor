@@ -4,6 +4,7 @@
 @inherits ShiftForm<CityForm, ShiftSoftware.ShiftIdentity.Core.DTOs.City.CityDTO>
 @inject HttpClient Http
 @inject ODataQuery odataQuery
+@inject ShiftIdentityLocalizer Loc
 
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Region
 
@@ -11,18 +12,18 @@
                  @bind-Value="TheItem"
                  @ref="FormContainer"
                  Action="@($"{Constants.IdentityRoutePreifix}City")"
-                 Title="City"
+                 Title="@Loc["City"]"
                  @bind-Key="@Key"
                  TypeAuthAction="ShiftIdentityActions.Cities"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.City.CityDTO">
 
-    <LocalizedTextField @bind-Value="TheItem.Name" For="() => TheItem.Name" Label="Name" />
+    <LocalizedTextField @bind-Value="TheItem.Name" For="() => TheItem.Name" Label="@Loc["Name"]" />
 
-    <ShiftAutocomplete Label="Region"
+    <ShiftAutocomplete Label="@Loc["Region"]"
                        For="@(() => TheItem.Region)"
                        @bind-Value="TheItem.Region"
                        EntitySet="IdentityRegion"
                        TEntitySet="RegionListDTO" />
 
-    <MudTextFieldExtended @bind-Value="TheItem.IntegrationId" For="() => TheItem.IntegrationId" Label="Integration Id" />
+    <MudTextFieldExtended @bind-Value="TheItem.IntegrationId" For="() => TheItem.IntegrationId" Label="@Loc["Integration ID"]" />
 </ShiftEntityForm>

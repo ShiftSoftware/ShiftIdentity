@@ -1,4 +1,5 @@
-﻿
+﻿@inject ShiftIdentityLocalizer Loc
+
 <style>
     .mud-treeview-item-content {
         padding: 0;
@@ -22,13 +23,13 @@
 <MudPaper Elevation="2">
     <MudToolBar Dense="true" Class="light-toolbar shift-toolbar-header">
         <MudIcon Icon="@Icons.Material.Filled.LockOpen"></MudIcon>
-        <MudText Class="px-4" Style="margin:0;">Actions</MudText>
+        <MudText Class="px-4" Style="margin:0;">@Loc["Actions"]</MudText>
     </MudToolBar>
 
    
     @if (this.TreeItems.Count == 0)
     {
-        <MudAlert Severity="Severity.Warning">No Items found.</MudAlert>
+        <MudAlert Severity="Severity.Warning">@Loc["No Items found."]</MudAlert>
     }
     else
     {
@@ -66,25 +67,25 @@
                                     <div style="margin-right:5px;">
                                         <WildCardAccessButton LoggedInUserTreeItems="LoggedInUserTreeItems_Flattened" Access="Access.Maximum"
                                                               ActionTreeItem="item" ActionTreeItemChanged="StateHasChanged" Disabled="@(ReadOnly || Disabled)">
-                                            Max
+                                            @Loc["Max"]
                                         </WildCardAccessButton>
                                     </div>
                                     <div style="margin-right:5px;">
                                         <WildCardAccessButton LoggedInUserTreeItems="LoggedInUserTreeItems_Flattened" Access="Access.Delete"
                                                               ActionTreeItem="item" ActionTreeItemChanged="StateHasChanged" Disabled="@(ReadOnly || Disabled)">
-                                            Delete
+                                            @Loc["Delete"]
                                         </WildCardAccessButton>
                                     </div>
                                     <div style="margin-right:5px;">
                                         <WildCardAccessButton LoggedInUserTreeItems="LoggedInUserTreeItems_Flattened" Access="Access.Write"
                                                               ActionTreeItem="item" ActionTreeItemChanged="StateHasChanged" Disabled="@(ReadOnly || Disabled)">
-                                            Write
+                                            @Loc["Write"]
                                         </WildCardAccessButton>
                                     </div>
                                     <div>
                                         <WildCardAccessButton LoggedInUserTreeItems="LoggedInUserTreeItems_Flattened" Access="Access.Read"
                                                               ActionTreeItem="item" ActionTreeItemChanged="StateHasChanged" Disabled="@(ReadOnly || Disabled)">
-                                            Read
+                                            @Loc["Read"]
                                         </WildCardAccessButton>
                                     </div>
                                 }
@@ -93,21 +94,21 @@
                                     @if (item.Action?.Type == ActionType.ReadWriteDelete)
                                     {
                                         <AccessButton ActionTreeItem="item" Access="Access.Delete" TypeAuth_LoggedInUser="tAuth_LoggedInUser"
-                                                      TypeAuth_View="tAuth_View" Disabled="@(ReadOnly || Disabled)">Delete</AccessButton>
+                                                      TypeAuth_View="tAuth_View" Disabled="@(ReadOnly || Disabled)">@Loc["Delete"]</AccessButton>
                                     }
 
                                     @if (item.Action?.Type == ActionType.ReadWriteDelete || item.Action?.Type == ActionType.ReadWrite)
                                     {
                                         <div style="margin: 0 5px;">
                                             <AccessButton ActionTreeItem="item" Access="Access.Write" TypeAuth_LoggedInUser="tAuth_LoggedInUser"
-                                                          TypeAuth_View="tAuth_View" Disabled="@(ReadOnly || Disabled)">Write</AccessButton>
+                                                          TypeAuth_View="tAuth_View" Disabled="@(ReadOnly || Disabled)">@Loc["Write"]</AccessButton>
                                         </div>
                                     }
 
                                     @if (item.Action?.Type == ActionType.ReadWriteDelete || item.Action?.Type == ActionType.ReadWrite || item.Action?.Type == ActionType.Read)
                                     {
                                         <AccessButton ActionTreeItem="item" Access="Access.Read" TypeAuth_LoggedInUser="tAuth_LoggedInUser"
-                                                      TypeAuth_View="tAuth_View" Disabled="@(ReadOnly || Disabled)">Read</AccessButton>
+                                                      TypeAuth_View="tAuth_View" Disabled="@(ReadOnly || Disabled)">@Loc["Read"]</AccessButton>
                                     }
 
                                     @if (item.Action?.Type == ActionType.Boolean)

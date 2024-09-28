@@ -14,6 +14,7 @@
 @inject IIdentityStore storageService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavManager
+@inject ShiftIdentityLocalizer Loc
 
 @*@inject Services.AuthService authService
 @inject MessageService msgService
@@ -35,9 +36,9 @@
 
             <EditForm Model="@loginDto" OnValidSubmit="Login">
                 <DataAnnotationsValidator />
-                <MudTextField T="string" Label="Username" @bind-Value="loginDto.Username" For="@(() => loginDto.Username)" />
+                <MudTextField T="string" Label="@Loc["Username"]" @bind-Value="loginDto.Username" For="@(() => loginDto.Username)" />
 
-                <MudTextField T="string" Label="Password" @bind-Value="loginDto.Password"
+                <MudTextField T="string" Label="@Loc["Password"]" @bind-Value="loginDto.Password"
                               For="@(() => loginDto.Password)" InputType="InputType.Password" />
 
                 <br />
@@ -45,14 +46,14 @@
                            Color="Color.Warning"
                            Href="@($"{Constants.IdentityRoutePreifix}/{nameof(SendResetPasswordLink)}")"
                            Variant="Variant.Text">
-                    Forgot Password?
+                    @Loc["Forgot Password?"]
                 </MudButton>
 
                 <br />
                 <br />
 
                 <MudGrid Justify="Justify.Center">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit">Login</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit">@Loc["Login"]</MudButton>
                 </MudGrid>
             </EditForm>
 

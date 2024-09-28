@@ -16,6 +16,7 @@
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.City
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Department
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Service
+@inject ShiftIdentityLocalizer Loc
 
 
 
@@ -23,7 +24,7 @@
                  @bind-Value="TheItem"
                  @ref="FormContainer"
                  Action="@($"{Constants.IdentityRoutePreifix}CompanyBranch")"
-                 Title="Company Branch"
+                 Title="@Loc["Company Branch"]"
                  @bind-Key="@Key"
                  OnTaskFinished="OnTaskFinished"
                  TypeAuthAction="ShiftIdentityActions.Companies"
@@ -31,14 +32,14 @@
     <MudGrid>
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
-            <LocalizedTextField @bind-Value="TheItem.Name" Label="Name" For="() => TheItem.Name" />
+            <LocalizedTextField @bind-Value="TheItem.Name" Label="@Loc["Name"]" For="() => TheItem.Name" />
         </MudItem>
 
         <MudItem xs="12" sm="6" lg="4" xl="3">
             <MudTextField ReadOnly="@ReadOnly"
                           Disabled="@Disabled"
                           OnlyValidateIfDirty="true"
-                          Label="Short Code"
+                          Label="@Loc["Short Code"]"
                           @bind-Value="TheItem.ShortCode"
                           For="@(() => TheItem.ShortCode)" />
         </MudItem>
@@ -47,13 +48,13 @@
             <MudTextField ReadOnly="@ReadOnly"
                           Disabled="@Disabled"
                           OnlyValidateIfDirty="true"
-                          Label="Integration lId"
+                          Label="@Loc["Integration ID"]"
                           @bind-Value="TheItem.IntegrationId"
                           For="@(() => TheItem.IntegrationId)" />
         </MudItem>
 
         <MudItem xs="12" sm="6" lg="4" xl="3">
-            <ShiftAutocomplete Label="Company"
+            <ShiftAutocomplete Label="@Loc["Company"]"
                                For="@(() => TheItem.Company)"
                                @bind-Value="TheItem.Company"
                                EntitySet="IdentityCompany"
@@ -71,7 +72,7 @@
         </MudItem> *@
 
         <MudItem xs="12" sm="6" lg="4" xl="3">
-            <ShiftAutocomplete Label="City"
+            <ShiftAutocomplete Label="@Loc["City"]"
                                For="@(() => TheItem.City)"
                                @bind-Value="TheItem.City"
                                EntitySet="IdentityCity"
@@ -82,7 +83,7 @@
             <MudTextField ReadOnly="@ReadOnly"
                           Disabled="@Disabled"
                           OnlyValidateIfDirty="true"
-                          Label="Phone"
+                          Label="@Loc["Phone"]"
                           @bind-Value="TheItem.Phone"
                           For="@(() => TheItem.Phone)" />
         </MudItem>
@@ -91,7 +92,7 @@
             <MudTextField ReadOnly="@ReadOnly"
                           Disabled="@Disabled"
                           OnlyValidateIfDirty="true"
-                          Label="Short Phone"
+                          Label="@Loc["Short Phone"]"
                           @bind-Value="TheItem.ShortPhone"
                           For="@(() => TheItem.ShortPhone)" />
         </MudItem>
@@ -100,17 +101,17 @@
             <MudTextField ReadOnly="@ReadOnly"
                           Disabled="@Disabled"
                           OnlyValidateIfDirty="true"
-                          Label="HQ Email"
+                          Label="@Loc["HQ Email"]"
                           @bind-Value="TheItem.Email"
                           For="@(() => TheItem.Email)" />
         </MudItem>
         
         <MudItem xs="12" sm="12" lg="12" xl="12">
-            <LocalizedTextField @bind-Value="TheItem.WorkingHours" Label="Standard Working Hours" For="() => TheItem.WorkingHours" />
+            <LocalizedTextField @bind-Value="TheItem.WorkingHours" Label="@Loc["Standard Working Hours"]" For="() => TheItem.WorkingHours" />
         </MudItem>
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
-            <LocalizedTextField @bind-Value="TheItem.WorkingDays" Label="Standard Working Day" For="() => TheItem.WorkingDays" />
+            <LocalizedTextField @bind-Value="TheItem.WorkingDays" Label="@Loc["Standard Working Day"]" For="() => TheItem.WorkingDays" />
         </MudItem>
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
@@ -119,7 +120,7 @@
             TEntitySet="DepartmentListDTO"
             EntitySet="IdentityDepartment" /> *@
 
-            <ShiftAutocompleteWithQuickAdd Label="Departments"
+            <ShiftAutocompleteWithQuickAdd Label="@Loc["Departments"]"
                                            TQuickAdd="ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentDTO"
                                            QuickAddComponentType="@typeof(DepartmentForm)"
                                            TEntitySet="DepartmentListDTO"
@@ -132,7 +133,7 @@
 
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
-            <ShiftAutocompleteWithQuickAdd Label="Services"
+            <ShiftAutocompleteWithQuickAdd Label="@Loc["Services"]"
                                            TQuickAdd="ShiftSoftware.ShiftIdentity.Core.DTOs.Service.ServiceDTO"
                                            QuickAddComponentType="@typeof(ServiceForm)"
                                            @bind-SelectedValues="TheItem.Services"
@@ -144,7 +145,7 @@
         </MudItem>
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
-            <ShiftAutocompleteWithQuickAdd Label="Brands"
+            <ShiftAutocompleteWithQuickAdd Label="@Loc["Brands"]"
                                            TQuickAdd="ShiftSoftware.ShiftIdentity.Core.DTOs.Brand.BrandDTO"
                                            QuickAddComponentType="@typeof(BrandForm)"
                                            @bind-SelectedValues="TheItem.Brands"
@@ -155,14 +156,14 @@
         </MudItem>
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
-            <LocalizedTextField @bind-Value="TheItem.Address" Label="Address" For="() => TheItem.Address" />
+            <LocalizedTextField @bind-Value="TheItem.Address" Label="@Loc["Address"]" For="() => TheItem.Address" />
         </MudItem>
 
         <MudItem xs="12" sm="6" lg="4" xl="4">
             <MudTextField ReadOnly="@ReadOnly"
                           Disabled="@Disabled"
                           OnlyValidateIfDirty="true"
-                          Label="Latitude"
+                          Label="@Loc["Latitude"]"
                           @bind-Value="TheItem.Latitude"
                           For="@(() => TheItem.Latitude)" />
         </MudItem>
@@ -171,14 +172,14 @@
             <MudTextField ReadOnly="@ReadOnly"
                           Disabled="@Disabled"
                           OnlyValidateIfDirty="true"
-                          Label="Longitude"
+                          Label="@Loc["Longitude"]"
                           @bind-Value="TheItem.Longitude"
                           For="@(() => TheItem.Longitude)" />
         </MudItem>
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
             <FileUploader ShowThumbnail="true"
-                          Label="Photos"
+                          Label="@Loc["Photos"]"
                           For="() => TheItem.Photos"
                           AcceptImages="true"
                           @bind-Values="TheItem.Photos" />

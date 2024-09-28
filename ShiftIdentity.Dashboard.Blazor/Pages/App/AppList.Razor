@@ -2,16 +2,17 @@
 @layout Shared.DefaultLayout
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(AppList)}")]
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.App;
+@inject ShiftIdentityLocalizer Loc
 
 <ShiftList EntitySet="@($"{Constants.IdentityRoutePreifix}App")"
-           Title="App List"
+           Title="@Loc["App List"]"
            T="AppDTO"
            ComponentType="typeof(AppForm)"
            Dense
            TypeAuthAction="ShiftIdentityActions.Apps"
            EnableExport>
 
-    <PropertyColumn Property="x => x.DisplayName" Title="Display Name"/>
-    <PropertyColumn Property="x => x.AppId" Title="App Id" />
-    <PropertyColumn Property="x => x.Description" Title="Description" />
+    <PropertyColumn Property="x => x.DisplayName" Title="@Loc["Display Name"]" />
+    <PropertyColumn Property="x => x.AppId" Title="@Loc["App Id"]" />
+    <PropertyColumn Property="x => x.Description" Title="@Loc["Description"]" />
 </ShiftList>

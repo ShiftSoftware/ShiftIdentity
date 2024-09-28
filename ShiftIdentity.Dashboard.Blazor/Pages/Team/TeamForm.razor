@@ -9,12 +9,13 @@
 @inherits ShiftForm<TeamForm, ShiftSoftware.ShiftIdentity.Core.DTOs.Team.TeamDTO>
 @inject HttpClient Http
 @inject ODataQuery odataQuery
+@inject ShiftIdentityLocalizer Loc
 
 <ShiftEntityForm @bind-Mode="Mode"
                  @bind-Value="TheItem"
                  @ref="FormContainer"
                  Action="@($"{Constants.IdentityRoutePreifix}Team")"
-                 Title="Team"
+                 Title="@Loc["Team"]"
                  @bind-Key="@Key"
                  TypeAuthAction="ShiftIdentityActions.Teams"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.Team.TeamDTO">
@@ -22,11 +23,11 @@
     <MudTextField ReadOnly="@ReadOnly"
                   Disabled="@Disabled"
                   OnlyValidateIfDirty="true"
-                  Label="Team Name"
+                  Label="@Loc["Team Name"]"
                   @bind-Value="TheItem.Name"
                   For="@(() => TheItem.Name)" />
 
-    <ShiftAutocomplete Label="Company"
+    <ShiftAutocomplete Label="@Loc["Company"]"
                        For="@(() => TheItem.Company)"
                        @bind-Value="TheItem.Company"
                        EntitySet="IdentityCompany"
@@ -35,11 +36,11 @@
     <MudTextField ReadOnly="@ReadOnly"
                   Disabled="@Disabled"
                   OnlyValidateIfDirty="true"
-                  Label="Integration Id"
+                  Label="@Loc["Integration ID"]"
                   @bind-Value="TheItem.IntegrationId"
                   For="@(() => TheItem.IntegrationId)" />
 
-    <ShiftAutocomplete Label="Users"
+    <ShiftAutocomplete Label="@Loc["Users"]"
                        @bind-Value="LastSelectedUsers"
                        TEntitySet="UserListDTO"
                        EntitySet="IdentityUser" />

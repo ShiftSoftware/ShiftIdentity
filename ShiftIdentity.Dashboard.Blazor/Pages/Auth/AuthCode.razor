@@ -6,6 +6,8 @@
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Auth
 @using ShiftSoftware.ShiftIdentity.Core.Models
 @using System.Net;
+@inject ShiftIdentityLocalizer Loc
+
 
 <style>
     body {
@@ -56,7 +58,7 @@ else
                 </MudCardHeader>
 
                 <MudCardContent>
-                    <MudText>The app <b>'@authCode.AppDisplayName'</b> is trying to access your account</MudText>
+                    <MudText>@string.Format(Loc["The app is trying to access your account"], authCode.AppDisplayName)</MudText>
 
                     <br />
                     <br />
@@ -70,8 +72,8 @@ else
 
                 </MudCardContent>
                 <MudCardActions>
-                    <MudButton Variant="Variant.Text" Color="Color.Success" OnClick="Allow">Allow</MudButton>
-                    <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="Deny">Deny</MudButton>
+                    <MudButton Variant="Variant.Text" Color="Color.Success" OnClick="Allow">@Loc["Allow"]</MudButton>
+                    <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="Deny">@Loc["Deny"]</MudButton>
                 </MudCardActions>
             </MudCard>
         </MudItem>

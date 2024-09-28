@@ -2,22 +2,23 @@
 @layout Shared.DefaultLayout
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CompanyBranchList)}")]
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
+@inject ShiftIdentityLocalizer Loc
 
 <ShiftList EntitySet="@($"{Constants.IdentityRoutePreifix}CompanyBranch")"
-           Title="Company Branch List"
+           Title="@Loc["Company Branch List"]"
            T="CompanyBranchListDTO"
            ComponentType="typeof(CompanyBranchForm)"
            Dense
            TypeAuthAction="ShiftIdentityActions.CompanyBranches"
            EnableExport>
 
-    <PropertyColumn Title="Name" Property="x => x.Name" />
-    <PropertyColumn Title="Short Code" Property="x => x.ShortCode" />
-    <PropertyColumn Title="City" Property="x => x.City" />
-    <PropertyColumn Title="Company" Property="x => x.Company" />
-    <PropertyColumn Title="Integration ID" Property="x => x.IntegrationId" />
+    <PropertyColumn Title="@Loc["Name"]" Property="x => x.Name" />
+    <PropertyColumn Title="@Loc["Short Code"]" Property="x => x.ShortCode" />
+    <PropertyColumn Title="@Loc["City"]" Property="x => x.City" />
+    <PropertyColumn Title="@Loc["Company"]" Property="x => x.Company" />
+    <PropertyColumn Title="@Loc["Integration ID"]" Property="x => x.IntegrationId" />
 
-    <PropertyColumn Title="Departments" Property="x=> x.Departments">
+    <PropertyColumn Title="@Loc["Departments"]" Property="x=> x.Departments">
         <CellTemplate>
             @foreach (var department in context.Item!.Departments)
             {

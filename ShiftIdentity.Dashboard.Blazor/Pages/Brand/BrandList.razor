@@ -2,15 +2,16 @@
 @layout Shared.DefaultLayout
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(BrandList)}")]
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Brand
+@inject ShiftIdentityLocalizer Loc
 
 <ShiftList EntitySet="@($"{Constants.IdentityRoutePreifix}Brand")"
-           Title="Brand List"
+           Title="@Loc["Brand List"]"
            T="BrandListDTO"
            ComponentType="typeof(BrandForm)"
            Dense
            TypeAuthAction="ShiftIdentityActions.Brands"
            EnableExport>
 
-    <PropertyColumn Title="Name" Property="x => x.Name" />
-    <PropertyColumn Title="Integration Id" Property="x => x.IntegrationId" />
+    <PropertyColumn Title="@Loc["Name"]" Property="x => x.Name" />
+    <PropertyColumn Title="@Loc["Integration ID"]" Property="x => x.IntegrationId" />
 </ShiftList>

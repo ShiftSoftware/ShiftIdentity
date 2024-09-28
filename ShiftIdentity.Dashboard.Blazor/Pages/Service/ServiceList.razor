@@ -2,15 +2,16 @@
 @layout Shared.DefaultLayout
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(ServiceList)}")]
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Service;
+@inject ShiftIdentityLocalizer Loc
 
 <ShiftList EntitySet="@($"{Constants.IdentityRoutePreifix}Service")"
-           Title="Service List"
+           Title="@Loc["Service List"]"
            T="ServiceListDTO"
            ComponentType="typeof(ServiceForm)"
            Dense
            TypeAuthAction="ShiftIdentityActions.Services"
            EnableExport>
 
-    <PropertyColumn Title="Name" Property="x => x.Name" />
-    <PropertyColumn Title="Integration Id" Property="x => x.IntegrationId" />
+    <PropertyColumn Title="@Loc["Name"]" Property="x => x.Name" />
+    <PropertyColumn Title="@Loc["Integration ID"]" Property="x => x.IntegrationId" />
 </ShiftList>

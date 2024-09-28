@@ -4,12 +4,13 @@
 @inherits ShiftForm<AccessTreeForm, ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree.AccessTreeDTO>
 @using System.Text.Json
 @using Microsoft.CSharp
+@inject ShiftIdentityLocalizer Loc
 
 <ShiftEntityForm @bind-Mode="Mode"
                  @bind-Value="TheItem"
                  @ref="FormContainer"
                  Action="@($"{Constants.IdentityRoutePreifix}AccessTree")"
-                 Title="Access Tree"
+                 Title="@Loc["Access Tree"]"
                  @bind-Key="@Key"
                  TypeAuthAction="ShiftIdentityActions.AccessTrees"
                  OnSubmit="()=> { TheItem.Tree =  actionTree!.GenerateAccessTree(); }">
@@ -17,7 +18,7 @@
     <MudTextField ReadOnly="@ReadOnly"
                   Disabled="@Disabled"
                   OnlyValidateIfDirty="true"
-                  Label="Name"
+                  Label="@Loc["Name"]"
                   @bind-Value="TheItem.Name"
                   For="@(() => TheItem.Name)" />
 

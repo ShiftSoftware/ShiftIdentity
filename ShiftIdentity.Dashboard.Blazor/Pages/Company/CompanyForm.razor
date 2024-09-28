@@ -4,6 +4,7 @@
 @inherits ShiftForm<CompanyForm, ShiftSoftware.ShiftIdentity.Core.DTOs.Company.CompanyDTO>
 @inject HttpClient Http
 @inject ShiftIdentityDashboardBlazorOptions Options
+@inject ShiftIdentityLocalizer Loc
 
 @using ShiftSoftware.ShiftEntity.Model.Enums
 
@@ -12,7 +13,7 @@
                  @bind-Value="TheItem"
                  @ref="FormContainer"
                  Action="@($"{Constants.IdentityRoutePreifix}Company")"
-                 Title="Company"
+                 Title="@Loc["Company"]"
                  @bind-Key="@Key"
                  OnTaskFinished="OnTaskFinished"
                  TypeAuthAction="ShiftIdentityActions.Companies"
@@ -22,18 +23,18 @@
     <MudGrid>
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
-            <LocalizedTextField @bind-Value="TheItem.Name" Label="Name" For="() => TheItem.Name" />
+            <LocalizedTextField @bind-Value="TheItem.Name" Label="@Loc["Name"]" For="() => TheItem.Name" />
         </MudItem>
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
-            <LocalizedTextField @bind-Value="TheItem.LegalName" Label="Legal Name" For="() => TheItem.LegalName" />
+            <LocalizedTextField @bind-Value="TheItem.LegalName" Label="@Loc["Legal Name"]" For="() => TheItem.LegalName" />
         </MudItem>
 
         <MudItem xs="12" sm="6" lg="4" xl="3">
             <MudTextField ReadOnly="@ReadOnly"
                           Disabled="@Disabled"
                           OnlyValidateIfDirty="true"
-                          Label="Short Code"
+                          Label="@Loc["Short Code"]"
                           @bind-Value="TheItem.ShortCode"
                           For="@(() => TheItem.ShortCode)" />
         </MudItem>
@@ -42,7 +43,7 @@
             <MudTextField ReadOnly="@ReadOnly"
                           Disabled="@Disabled"
                           OnlyValidateIfDirty="true"
-                          Label="Integration lId"
+                          Label="@Loc["Integration ID"]"
                           @bind-Value="TheItem.IntegrationId"
                           For="@(() => TheItem.IntegrationId)" />
         </MudItem>
@@ -52,7 +53,7 @@
                        Disabled="@Disabled"
                        OnlyValidateIfDirty="true"
                        T="CompanyTypes"
-                       Label="Company Type"
+                       Label="@Loc["Company Type"]"
                        @bind-Value="TheItem.CompanyType"
                        ToStringFunc="@(x=> x.Describe())"
                        For="@(() => TheItem.CompanyType)">
@@ -69,7 +70,7 @@
             <MudTextField ReadOnly="@ReadOnly"
                           Disabled="@Disabled"
                           OnlyValidateIfDirty="true"
-                          Label="HQ Phone"
+                          Label="@Loc["HQ Phone"]"
                           @bind-Value="TheItem.HQPhone"
                           For="@(() => TheItem.HQPhone)" />
         </MudItem>
@@ -78,7 +79,7 @@
             <MudTextField ReadOnly="@ReadOnly"
                           Disabled="@Disabled"
                           OnlyValidateIfDirty="true"
-                          Label="HQ Email"
+                          Label="@Loc["HQ Email"]"
                           @bind-Value="TheItem.HQEmail"
                           For="@(() => TheItem.HQEmail)" />
         </MudItem>
@@ -87,7 +88,7 @@
             <MudTextField ReadOnly="@ReadOnly"
                           Disabled="@Disabled"
                           OnlyValidateIfDirty="true"
-                          Label="HQ Address"
+                          Label="@Loc["HQ Address"]"
                           @bind-Value="TheItem.HQAddress"
                           For="@(() => TheItem.HQAddress)" />
         </MudItem>

@@ -2,21 +2,22 @@
 @layout Shared.DefaultLayout
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CompanyList)}")]
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
+@inject ShiftIdentityLocalizer Loc
 
 <ShiftList EntitySet="@($"{Constants.IdentityRoutePreifix}Company")"
-           Title="Company List"
+           Title="@Loc["Company List"]"
            T="CompanyListDTO"
            ComponentType="typeof(CompanyForm)"
            Dense
            TypeAuthAction="ShiftIdentityActions.Companies"
            EnableExport>
 
-    <PropertyColumn Property="x => x.Name" Title="Name" />
-    <PropertyColumn Property="x => x.LegalName" Title="Legal Name" />
-    <PropertyColumn Property="x => x.ShortCode" Title="Short Code" />
-    <PropertyColumn Property="x => x.IntegrationId" Title="Integration ID" />
+    <PropertyColumn Property="x => x.Name" Title="@Loc["Name"]" />
+    <PropertyColumn Property="x => x.LegalName" Title="@Loc["Legal Name"]" />
+    <PropertyColumn Property="x => x.ShortCode" Title="@Loc["Short Code"]" />
+    <PropertyColumn Property="x => x.IntegrationId" Title="@Loc["Integration ID"]" />
 
-    <PropertyColumn Title="Company Type" Property="x=> x.CompanyType">
+    <PropertyColumn Title="@Loc["Company Type"]" Property="x=> x.CompanyType">
         <CellTemplate>
             <span>@context!.Item!.CompanyType!.Describe()</span>
         </CellTemplate>

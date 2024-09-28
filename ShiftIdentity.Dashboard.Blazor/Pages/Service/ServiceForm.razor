@@ -3,20 +3,21 @@
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(ServiceForm)}/{{Key?}}")]
 @inherits ShiftForm<ServiceForm, ShiftSoftware.ShiftIdentity.Core.DTOs.Service.ServiceDTO>
 @inject HttpClient Http
+@inject ShiftIdentityLocalizer Loc
 
 
 <ShiftEntityForm @bind-Mode="Mode"
                  @bind-Value="TheItem"
                  @ref="FormContainer"
                  Action="@($"{Constants.IdentityRoutePreifix}Service")"
-                 Title="Service"
+                 Title="@Loc["Service"]"
                  @bind-Key="@Key"
                  TypeAuthAction="ShiftIdentityActions.Services"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.Service.ServiceDTO">
 
-    <LocalizedTextField @bind-Value="TheItem.Name" For="() => TheItem.Name" Label="Name" />
+    <LocalizedTextField @bind-Value="TheItem.Name" For="() => TheItem.Name" Label="@Loc["Name"]" />
 
-    <MudTextFieldExtended @bind-Value="TheItem.IntegrationId" Label="Integration ID" For="() => TheItem.IntegrationId" />
+    <MudTextFieldExtended @bind-Value="TheItem.IntegrationId" Label="@Loc["Integration ID"]" For="() => TheItem.IntegrationId" />
 </ShiftEntityForm>
 
 @code {

@@ -2,14 +2,15 @@
 @attribute [Authorize]
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(AccessTreeList)}")]
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
+@inject ShiftIdentityLocalizer Loc
 
 <ShiftList EntitySet="@($"{Constants.IdentityRoutePreifix}AccessTree")"
-           Title="Access Tree List"
+           Title="@Loc["Access Tree List"]"
            T="AccessTreeDTO"
            ComponentType="typeof(AccessTreeForm)"
            Dense
            TypeAuthAction="ShiftIdentityActions.AccessTrees"
            EnableExport>
 
-    <PropertyColumn Property="x => x.Name"/>
+    <PropertyColumn Property="x => x.Name" Title="@Loc["Name"]"/>
 </ShiftList>

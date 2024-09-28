@@ -6,12 +6,13 @@
 @inject HttpClient Http
 @inject MessageService MessageService
 @using ShiftSoftware.ShiftBlazor.Enums
+@inject ShiftIdentityLocalizer Loc
 
 <ShiftEntityForm @bind-Mode="Mode"
                  @bind-Value="TheItem"
                  @ref="FormContainer"
                  Action="UserManager/UserData"
-                 Title="Profile"
+                 Title="@Loc["Profile"]"
                  HideDelete="true"
                  HideRevisions="true"
                  Key="@("")"
@@ -31,7 +32,7 @@
                       ReadOnly="@ReadOnly"
                       Disabled="@Disabled"
                       OnlyValidateIfDirty="true"
-                      Label="Username"
+                      Label="@Loc["Username"]"
                       @bind-Value="TheItem.Username"
                       For="@(() => TheItem.Username)" />
 
@@ -44,7 +45,7 @@
                       ReadOnly="@ReadOnly"
                       Disabled="@Disabled"
                       OnlyValidateIfDirty="true"
-                      Label="Phone"
+                      Label="@Loc["Phone"]"
                       @bind-Value="TheItem.Phone"
                       For="@(() => TheItem.Phone)" />
 
@@ -52,7 +53,7 @@
                       ReadOnly="@ReadOnly"
                       Disabled="@Disabled"
                       OnlyValidateIfDirty="true"
-                      Label="Email"
+                      Label="@Loc["Email"]"
                       @bind-Value="TheItem.Email"
                       For="@(() => TheItem.Email)" />
 
@@ -64,7 +65,7 @@
                        Color="Color.Warning"
                        StartIcon="@Icons.Material.Filled.Email"
                        Variant="Variant.Text">
-                Send Email Verification
+                @Loc["Send Email Verification"]
             </MudButton>
         }
 
@@ -78,14 +79,14 @@
                       ReadOnly="@ReadOnly"
                       Disabled="@Disabled"
                       OnlyValidateIfDirty="true"
-                      Label="Full Name"
+                      Label="@Loc["Full Name"]"
                       @bind-Value="TheItem.FullName"
                       For="@(() => TheItem.FullName)" />
 
         <MudDatePicker ReadOnly="@ReadOnly"
                        Disabled="@Disabled"
                        @bind-Date="TheItem.BirthDate"
-                       Label="Birth Date"
+                       Label="@Loc["Birth Date"]"
                        For="@(() => TheItem.BirthDate)" />
 
     </ChildContent>
@@ -98,7 +99,7 @@
 
         if (response.IsSuccessStatusCode)
         {
-            MessageService.Success("Email verification link sent successfully.");
+            MessageService.Success(Loc["Email verification link sent successfully."]);
         }
         else
         {

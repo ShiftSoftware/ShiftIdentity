@@ -3,13 +3,14 @@
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(AppForm)}/{{Key?}}")]
 @inherits ShiftForm<AppForm, ShiftSoftware.ShiftIdentity.Core.DTOs.App.AppDTO>
 @inject HttpClient Http
+@inject ShiftIdentityLocalizer Loc
 
 
 <ShiftEntityForm @bind-Mode="Mode"
                  @bind-Value="TheItem"
                  @ref="FormContainer"
                  Action="@($"{Constants.IdentityRoutePreifix}App")"
-                 Title="App"
+                 Title="@Loc["App"]"
                  @bind-Key="@Key"
                  TypeAuthAction="ShiftIdentityActions.Apps"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.App.AppDTO">
@@ -17,35 +18,35 @@
     <MudTextField ReadOnly="@ReadOnly"
                   Disabled="@Disabled"
                   OnlyValidateIfDirty="true"
-                  Label="Display Name"
+                  Label="@Loc["Display Name"]"
                   @bind-Value="TheItem.DisplayName"
                   For="@(() => TheItem.DisplayName)" />
 
     <MudTextField ReadOnly="@ReadOnly"
                   Disabled="@Disabled"
                   OnlyValidateIfDirty="true"
-                  Label="App ID"
+                  Label="@Loc["App Id"]"
                   @bind-Value="TheItem.AppId"
                   For="@(() => TheItem.AppId)" />
 
     <MudTextField ReadOnly="@ReadOnly"
                   Disabled="@Disabled"
                   OnlyValidateIfDirty="true"
-                  Label="Description"
+                  Label="@Loc["Description"]"
                   @bind-Value="TheItem.Description"
                   For="@(() => TheItem.Description)" />
 
     <MudTextField ReadOnly="@ReadOnly"
                   Disabled="@Disabled"
                   OnlyValidateIfDirty="true"
-                  Label="Redirect Uri"
+                  Label="@Loc["Redirect URI"]"
                   @bind-Value="TheItem.RedirectUri"
                   For="@(() => TheItem.RedirectUri)" />
 
                   <br/>
     @if (!string.IsNullOrWhiteSpace(TheItem.RedirectUri))
     {
-        <MudAlert Severity="Severity.Warning">The user will be redirected to @($"{TheItem.RedirectUri}/Auth/Token")</MudAlert>
+        <MudAlert Severity="Severity.Warning">@Loc["The user will be redirected to"] @($"{TheItem.RedirectUri}/Auth/Token")</MudAlert>
     }
 
     @*    <MudTextField ReadOnly="@ReadOnly"
