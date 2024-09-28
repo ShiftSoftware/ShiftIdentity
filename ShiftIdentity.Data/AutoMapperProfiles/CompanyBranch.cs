@@ -1,10 +1,9 @@
 ﻿
 using AutoMapper;
-using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
+using ShiftSoftware.ShiftEntity.Model.Replication.IdentityModels;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
-using ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
 
 namespace ShiftSoftware.ShiftIdentity.Data.AutoMapperProfiles;
 
@@ -75,7 +74,7 @@ public class CompanyBranch : Profile
             )
             .ForMember(
                 dest => dest.Location,
-                opt => opt.MapFrom(src => (string.IsNullOrWhiteSpace(src.Longitude) || string.IsNullOrWhiteSpace(src.Latitude)) ? null : new Location(new decimal[] { decimal.Parse(src.Longitude), decimal.Parse(src.Latitude) }, "Point"))
+                opt => opt.MapFrom(src => (string.IsNullOrWhiteSpace(src.Longitude) || string.IsNullOrWhiteSpace(src.Latitude)) ? null : new Location(new decimal[] { decimal.Parse(src.Longitude), decimal.Parse(src.Latitude) }))
             );
     }
 }
