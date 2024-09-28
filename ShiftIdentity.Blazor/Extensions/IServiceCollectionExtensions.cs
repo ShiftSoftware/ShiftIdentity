@@ -6,13 +6,15 @@ using ShiftSoftware.ShiftIdentity.Blazor.Handlers;
 //using ShiftSoftware.ShiftIdentity.Blazor.Handlers;
 using ShiftSoftware.ShiftIdentity.Blazor.Providers;
 using ShiftSoftware.ShiftIdentity.Blazor.Services;
+using ShiftSoftware.ShiftIdentity.Core.Localization;
+using ShiftSoftware.ShiftIdentity.Core.Localization.Resources;
 
 namespace ShiftSoftware.ShiftIdentity.Blazor.Extensions;
 
 public static class IServiceCollectionExtensions
 {
     public static IServiceCollection AddShiftIdentity(this IServiceCollection services,
-        string appId, string baseUrl, string frontEndBaseUrl, bool noNeedAuthCode = false)
+        string appId, string baseUrl, string frontEndBaseUrl, bool noNeedAuthCode = false, Type? localizationResource = null)
     {
         if (services == null)
         {
@@ -33,6 +35,12 @@ public static class IServiceCollectionExtensions
         services.TryAddScoped<AuthenticationStateProvider, ShiftIdentityAuthStateProvider>();
         services.AddTransient<TokenMessageHandler>();
         services.AddAuthorizationCore();
+
+        // Register localizer
+        if (localizationResource is null)
+            services.AddTransient(x => new ShiftIdentityLocalizer(x, typeof(Resource)));
+        else
+            services.AddTransient(x => new ShiftIdentityLocalizer(x, localizationResource));
 
 
         return services;

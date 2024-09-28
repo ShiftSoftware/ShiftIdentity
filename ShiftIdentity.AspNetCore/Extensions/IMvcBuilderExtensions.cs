@@ -10,6 +10,8 @@ using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.App;
 using ShiftSoftware.ShiftIdentity.Core.IRepositories;
+using ShiftSoftware.ShiftIdentity.Core.Localization.Resources;
+using ShiftSoftware.ShiftIdentity.Core.Localization;
 using System.Security.Cryptography;
 
 
@@ -17,7 +19,8 @@ namespace Microsoft.Extensions.DependencyInjection;
 
 public static class IMvcBuilderExtensions
 {
-    public static IMvcBuilder AddShiftIdentity(this IMvcBuilder builder, string tokenIssuer, string tokenRSAPublicKeyBase64)
+    public static IMvcBuilder AddShiftIdentity(this IMvcBuilder builder, string tokenIssuer, string tokenRSAPublicKeyBase64,
+        Type? localizationResource = null)
     {
         var rsa = RSA.Create();
         rsa.ImportRSAPublicKey(Convert.FromBase64String(tokenRSAPublicKeyBase64), out _);
@@ -82,6 +85,12 @@ public static class IMvcBuilderExtensions
         });
 
         builder.AddMvcOptions(o => o.Filters.Add(new AuthorizeFilter()));
+
+        // Register localizer
+        if (localizationResource is null)
+            builder.Services.AddTransient(x => new ShiftIdentityLocalizer(x, typeof(Resource)));
+        else
+            builder.Services.AddTransient(x => new ShiftIdentityLocalizer(x, localizationResource));
 
         return builder;
     }

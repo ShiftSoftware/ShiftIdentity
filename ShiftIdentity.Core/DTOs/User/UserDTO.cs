@@ -5,6 +5,7 @@ using System;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
 using FluentValidation;
+using ShiftSoftware.ShiftIdentity.Core.Localization;
 
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 
@@ -66,13 +67,13 @@ public class UserDTO : ShiftEntityViewAndUpsertDTO
 
 public class UserValidator : AbstractValidator<UserDTO>
 {
-    public UserValidator()
+    public UserValidator(ShiftIdentityLocalizer localizer)
     {
         RuleFor(x => x.Phone)
             .Custom((x, context) =>
             {
                 if (x is not null && !ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(x))
-                    context.AddFailure("Invalid Phone Number.");
+                    context.AddFailure(localizer["InvalidPhoneNumber"]);
             });
     }
 }
