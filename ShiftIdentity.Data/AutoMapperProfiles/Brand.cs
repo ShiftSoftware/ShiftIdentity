@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
+using ShiftSoftware.ShiftEntity.Model.Replication.IdentityModels;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Brand;
-using ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
 
 namespace ShiftSoftware.ShiftIdentity.Data.AutoMapperProfiles;
 

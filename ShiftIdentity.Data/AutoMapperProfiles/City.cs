@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
+using ShiftSoftware.ShiftEntity.Model.Replication.IdentityModels;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.City;
-using ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
 
 
 namespace ShiftSoftware.ShiftIdentity.Data.AutoMapperProfiles;

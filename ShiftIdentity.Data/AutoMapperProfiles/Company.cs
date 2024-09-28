@@ -1,9 +1,9 @@
 ﻿
 using AutoMapper;
 using ShiftSoftware.ShiftEntity.Model;
+using ShiftSoftware.ShiftEntity.Model.Replication.IdentityModels;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
-using ShiftSoftware.ShiftIdentity.Core.ReplicationModels;
 
 namespace ShiftSoftware.ShiftIdentity.Data.AutoMapperProfiles;
 
