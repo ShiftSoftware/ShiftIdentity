@@ -25,7 +25,7 @@
     </ToolbarStartTemplate>
 
     <ChildContent>
-        <h2>Security</h2>
+        <h2>@Loc["Security"]</h2>
         <MudDivider />
 
         <MudTextField Immediate="true"
@@ -39,7 +39,7 @@
         <br />
         <br />
 
-        <h2>Contacts</h2>
+        <h2>@Loc["Contacts"]</h2>
         <MudDivider />
         <MudTextField Immediate="true"
                       ReadOnly="@ReadOnly"
@@ -73,7 +73,7 @@
         <br />
         <br />
 
-        <h2>Profile</h2>
+        <h2>@Loc["Profile"]</h2>
         <MudDivider />
         <MudTextField Immediate="true"
                       ReadOnly="@ReadOnly"
@@ -103,7 +103,7 @@
         }
         else
         {
-            var result = await response.Content.ReadFromJsonAsync < ShiftEntityResponse<UserDataDTO>>();
+            var result = await response.Content.ReadFromJsonAsync <ShiftEntityResponse<UserDataDTO>>();
             MessageService.Error(result!.Message!.Body!);
         }
     }
