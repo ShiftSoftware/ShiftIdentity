@@ -20,7 +20,7 @@
     <ToolbarStartTemplate>
         @if (this.Mode == FormModes.View)
         {
-            <MudButton OnClick="()=> ShiftModal.Open<ChangePasswordForm>(null, ModalOpenMode.Popup, null)" Size="Size.Small" Color="Color.Warning" StartIcon="@Icons.Material.Filled.Edit" Variant="Variant.Filled">Change Password</MudButton>
+            <MudButton OnClick="()=> ShiftModal.Open<ChangePasswordForm>(null, ModalOpenMode.Popup, null)" Size="Size.Small" Color="Color.Warning" StartIcon="@Icons.Material.Filled.Edit" Variant="Variant.Filled">@Loc["Change Password"]</MudButton>
         }
     </ToolbarStartTemplate>
 
