@@ -6,6 +6,7 @@ using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Auth;
+using ShiftSoftware.ShiftIdentity.Core.Localization;
 using ShiftSoftware.ShiftIdentity.Core.Models;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Controllers.API;
@@ -20,13 +21,15 @@ public class AuthController : ControllerBase
     private readonly TokenService tokenService;
     private readonly IClaimService claimService;
     private readonly ShiftIdentityConfiguration shiftIdentityConfiguration;
+    private readonly ShiftIdentityLocalizer Loc;
 
     public AuthController(
             AuthService authService,
             AuthCodeService authCodeService,
             TokenService tokenService,
             IClaimService claimService,
-            ShiftIdentityConfiguration shiftIdentityConfiguration
+            ShiftIdentityConfiguration shiftIdentityConfiguration,
+            ShiftIdentityLocalizer Loc
         )
     {
         this.authService = authService;
@@ -34,6 +37,7 @@ public class AuthController : ControllerBase
         this.tokenService = tokenService;
         this.claimService = claimService;
         this.shiftIdentityConfiguration = shiftIdentityConfiguration;
+        this.Loc = Loc;
     }
 
     [HttpPost("Login")]
@@ -65,7 +69,7 @@ public class AuthController : ControllerBase
             {
                 Message = new Message
                 {
-                    Body = "Invalid refresh token"
+                    Body = Loc["Invalid refresh token"]
                 }
             });
 
@@ -95,7 +99,7 @@ public class AuthController : ControllerBase
             {
                 Message = new Message
                 {
-                    Body = "Failed to genearate auth-code"
+                    Body = Loc["Failed to genearate auth-code"]
                 }
             });
 
@@ -127,7 +131,7 @@ public class AuthController : ControllerBase
             {
                 Message = new Message
                 {
-                    Body = "Failed to genearate token"
+                    Body = Loc["Failed to genearate token"]
                 }
             });
 

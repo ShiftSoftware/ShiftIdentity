@@ -3,6 +3,7 @@ using ShiftSoftware.ShiftIdentity.AspNetCore.Models;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.IRepositories;
+using ShiftSoftware.ShiftIdentity.Core.Localization;
 using System.Security.Claims;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Services;
@@ -13,18 +14,21 @@ public class AuthService
     private readonly ShiftIdentityConfiguration shiftIdentityConfigurations;
     private readonly TokenService tokenService;
     private readonly AuthCodeService authCodeService;
+    private readonly ShiftIdentityLocalizer Loc;
 
     public AuthService(
         IUserRepository userRepo,
         ShiftIdentityConfiguration shiftIdentityConfiguration,
         TokenService tokenService,
-        AuthCodeService authCodeService
+        AuthCodeService authCodeService,
+        ShiftIdentityLocalizer Loc
         )
     {
         this.userRepo = userRepo;
         this.shiftIdentityConfigurations = shiftIdentityConfiguration;
         this.tokenService = tokenService;
         this.authCodeService = authCodeService;
+        this.Loc = Loc;
     }
 
     public async Task<LoginResultModel> LoginAsync(LoginDTO loginDto)
@@ -32,7 +36,7 @@ public class AuthService
         var user = await userRepo.GetUserByUsernameAsync(loginDto.Username);
 
         if (user is null)
-            return new LoginResultModel(LoginResultEnum.UsernameIncorrect, "Username or password is incorrect");
+            return new LoginResultModel(LoginResultEnum.UsernameIncorrect, Loc["Username or password is incorrect"]);
 
         if (!HashService.VerifyPassword(loginDto.Password, user.Salt, user.PasswordHash))
         {
@@ -49,17 +53,17 @@ public class AuthService
 
             await userRepo.SaveChangesAsync();
 
-            return new LoginResultModel(LoginResultEnum.PasswordIncorrect, "Username or password is incorrect");
+            return new LoginResultModel(LoginResultEnum.PasswordIncorrect, Loc["Username or password is incorrect"]);
         }
 
         //If user deactive
         if (!user.IsActive)
-            return new LoginResultModel(LoginResultEnum.UserDeactive, "The user is deactivated");
+            return new LoginResultModel(LoginResultEnum.UserDeactive, Loc["The user is deactivated"]);
 
         //If user is lockdown
         var lockdownUntil = user.LockDownUntil ?? new DateTime(0);
         if (lockdownUntil > DateTime.UtcNow)
-            return new LoginResultModel(LoginResultEnum.UserLockDown, $"User is lockdown for {shiftIdentityConfigurations.Security.LockDownInMinutes} minutes");
+            return new LoginResultModel(LoginResultEnum.UserLockDown, Loc["User is lockdown for {0} minutes", shiftIdentityConfigurations.Security.LockDownInMinutes]);
 
         //If user credentials are correct, then reset loginattempt and lockdownuntil
         user.LoginAttempts = 0;

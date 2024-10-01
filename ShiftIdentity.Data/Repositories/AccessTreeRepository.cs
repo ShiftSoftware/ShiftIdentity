@@ -5,6 +5,7 @@ using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
+using ShiftSoftware.ShiftIdentity.Core.Localization;
 using ShiftSoftware.TypeAuth.Core;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
@@ -13,11 +14,13 @@ public class AccessTreeRepository : ShiftRepository<ShiftIdentityDbContext, Acce
 {
     private readonly ITypeAuthService typeAuthService;
     private readonly ShiftIdentityFeatureLocking shiftIdentityFeatureLocking;
+    private readonly ShiftIdentityLocalizer Loc;
 
-    public AccessTreeRepository(ShiftIdentityDbContext db, ITypeAuthService typeAuthService, ShiftIdentityFeatureLocking shiftIdentityFeatureLocking) : base(db)
+    public AccessTreeRepository(ShiftIdentityDbContext db, ITypeAuthService typeAuthService, ShiftIdentityFeatureLocking shiftIdentityFeatureLocking, ShiftIdentityLocalizer Loc) : base(db)
     {
         this.typeAuthService = typeAuthService;
         this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
+        this.Loc = Loc;
     }
 
     public override async ValueTask<AccessTree> UpsertAsync(AccessTree entity, AccessTreeDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null)
@@ -29,7 +32,7 @@ public class AccessTreeRepository : ShiftRepository<ShiftIdentityDbContext, Acce
 
         //Check if the access-tree-name in the same scope is duplicate
         if (await db.AccessTrees.AnyAsync(x => !x.IsDeleted && x.Name.ToLower() == dto.Name.ToLower() && x.ID != id))
-            throw new ShiftEntityException(new Message("Duplicate", $"the access tree name ({dto.Name}) already exists."));
+            throw new ShiftEntityException(new Message(Loc["Duplicate"], Loc["the access tree name {0} already exists.", dto.Name]));
 
         var typeAuthContextBuilder_Producer = new TypeAuthContextBuilder();
         var typeAuthContextBuilder_Preserver = new TypeAuthContextBuilder();
@@ -63,7 +66,7 @@ public class AccessTreeRepository : ShiftRepository<ShiftIdentityDbContext, Acce
     public override Task SaveChangesAsync(bool raiseBeforeCommitTriggers = false)
     {
         if (shiftIdentityFeatureLocking.AccessTreeFeatureIsLocked)
-            throw new ShiftEntityException(new Message("Error", "Access Tree Feature is locked"));
+            throw new ShiftEntityException(new Message(Loc["Error"], Loc["Access Tree Feature is locked"]));
 
         return base.SaveChangesAsync(raiseBeforeCommitTriggers);
     }

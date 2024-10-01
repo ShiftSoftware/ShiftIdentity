@@ -8,6 +8,7 @@ using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.UserManager;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.ShiftIdentity.Core.IRepositories;
+using ShiftSoftware.ShiftIdentity.Core.Localization;
 using ShiftSoftware.TypeAuth.Core;
 using System.Net;
 
@@ -20,8 +21,9 @@ public class UserRepository :
 
     private readonly ITypeAuthService typeAuthService;
     private readonly ShiftIdentityFeatureLocking shiftIdentityFeatureLocking;
+    private readonly ShiftIdentityLocalizer Loc;
 
-    public UserRepository(ShiftIdentityDbContext db, ITypeAuthService typeAuthService, ShiftIdentityFeatureLocking shiftIdentityFeatureLocking) : base(db, r =>
+    public UserRepository(ShiftIdentityDbContext db, ITypeAuthService typeAuthService, ShiftIdentityFeatureLocking shiftIdentityFeatureLocking, ShiftIdentityLocalizer Loc) : base(db, r =>
         r.IncludeRelatedEntitiesWithFindAsync(
             x => x.Include(y => y.AccessTrees).ThenInclude(y => y.AccessTree), 
             x=> x.Include(y=> y.UserLog),
@@ -32,15 +34,16 @@ public class UserRepository :
     {
         this.typeAuthService = typeAuthService;
         this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
+        this.Loc = Loc;
     }
 
     public override async ValueTask<User> UpsertAsync(User entity, UserDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null)
     {
         if (shiftIdentityFeatureLocking.UserFeatureIsLocked)
-            throw new ShiftEntityException(new Message("Error", "User Feature is locked"));
+            throw new ShiftEntityException(new Message(Loc["Error"], Loc["User Feature is locked"]));
 
         if (entity.BuiltIn)
-            throw new ShiftEntityException(new Message("Error", "Built-In Data can't be modified."), (int)HttpStatusCode.Forbidden);
+            throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
         long id = 0;
 
@@ -49,29 +52,29 @@ public class UserRepository :
 
         //Check if the username is duplicate
         if (await db.Users.AnyAsync(x => !x.IsDeleted && x.Username.ToLower() == dto.Username.ToLower() && x.ID != id))
-            throw new ShiftEntityException(new Message("Duplicate", $"The username {dto.Username} is exists"));
+            throw new ShiftEntityException(new Message(Loc["Duplicate"], Loc["The username {0} exist", dto.Username]));
 
         //Check if the email is duplicate
         if (await db.Users.AnyAsync(x => !x.IsDeleted && x.Email.ToLower() == (dto.Email ?? "").ToLower() && x.ID != id))
-            throw new ShiftEntityException(new Message("Duplicate", $"The email {dto.Email} is exists"));
+            throw new ShiftEntityException(new Message(Loc["Duplicate"], Loc["The email {0} exist", dto.Email]));
 
         //Check if the phone is duplicate
         string? formattedPhone = null;
         if (!string.IsNullOrWhiteSpace(dto.Phone))
         {
             if (!Core.ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(dto.Phone))
-                throw new ShiftEntityException(new Message("Validation Error", "Invalid Phone Number"));
+                throw new ShiftEntityException(new Message(Loc["Validation Error"], Loc["Invalid Phone Number"]));
 
             formattedPhone = Core.ValidatorsAndFormatters.PhoneNumber.GetFormattedPhone(dto.Phone);
         }
 
         if (await db.Users.AnyAsync(x => !x.IsDeleted && x.Phone.ToLower() == (formattedPhone ?? "").ToLower() && x.ID != id))
-            throw new ShiftEntityException(new Message("Duplicate", $"The phone {dto.Phone} is exists"));
+            throw new ShiftEntityException(new Message(Loc["Duplicate"], Loc["The phone {0} exist", dto.Phone]));
         
         if (actionType == ActionTypes.Insert)
         {
             if (string.IsNullOrWhiteSpace(dto.Password))
-                throw new ShiftEntityException(new Message("Validation Error", "Password can not be empty."));
+                throw new ShiftEntityException(new Message(Loc["Validation Error"], Loc["Password can not be empty."]));
         }
 
         entity.Username = dto.Username;
@@ -157,8 +160,8 @@ public class UserRepository :
         if (inaccessibleAccessTress.Count > 0)
         {
             throw new ShiftEntityException(new Message(
-                "Error",
-                "Below Access Trees contain accesses that you can not grant",
+                Loc["Error"],
+                Loc["Below Access Trees contain accesses that you can not grant"],
                 inaccessibleAccessTress.Select(x => new Message(x.Key.Name, null!, x.Value.Select(y => new Message(y.Key.Name!, y.Value.ToString()!)).ToList())).ToList()
             ));
         }
@@ -179,10 +182,10 @@ public class UserRepository :
     public override ValueTask<User> DeleteAsync(User entity, bool isHardDelete = false, long? userId = null)
     {
         if (shiftIdentityFeatureLocking.UserFeatureIsLocked)
-            throw new ShiftEntityException(new Message("Error", "User Feature is locked"));
+            throw new ShiftEntityException(new Message(Loc["Error"], Loc["User Feature is locked"]));
 
         if (entity.BuiltIn)
-            throw new ShiftEntityException(new Message("Error", "Built-In Data can't be modified."), (int)HttpStatusCode.Forbidden);
+            throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
         return base.DeleteAsync(entity, isHardDelete, userId);
     }
@@ -206,10 +209,10 @@ public class UserRepository :
             return null;
 
         if (!HashService.VerifyPassword(dto.CurrentPassword, user.Salt, user.PasswordHash))
-            throw new ShiftEntityException(new Message("Validation Error", "Current Password is incorrect"));
+            throw new ShiftEntityException(new Message(Loc["Validation Error"], Loc["Current Password is incorrect"]));
 
         if (dto.CurrentPassword == dto.NewPassword)
-            throw new ShiftEntityException(new Message("Validation Error", "New Password can not be the same as the current password"));
+            throw new ShiftEntityException(new Message(Loc["Validation Error"], Loc["New Password can not be the same as the current password"]));
 
 
         var hash = HashService.GenerateHash(dto.NewPassword);
@@ -231,28 +234,28 @@ public class UserRepository :
 
         //Check if the user is built-in
         if (user.BuiltIn)
-            throw new ShiftEntityException(new Message("Error", "Built-In Data can't be modified."), (int)HttpStatusCode.Forbidden);
+            throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
         //Check if the username is duplicate
         if (await db.Users.AnyAsync(x => !x.IsDeleted && x.Username.ToLower() == dto.Username.ToLower() && x.ID != userId))
-            throw new ShiftEntityException(new Message("Duplicate", $"The username {dto.Username} is exists"));
+            throw new ShiftEntityException(new Message(Loc["Duplicate"], Loc["The username {0} exist", dto.Username]));
 
         //Check if the email is duplicate
         if (await db.Users.AnyAsync(x => !x.IsDeleted && x.Email.ToLower() == (dto.Email ?? "").ToLower() && x.ID != userId))
-            throw new ShiftEntityException(new Message("Duplicate", $"The email {dto.Email} is exists"));
+            throw new ShiftEntityException(new Message(Loc["Duplicate"], Loc["The email {0} exist", dto.Email]));
 
         //Assign phone
         string? formattedPhone = null;
         if (dto.Phone != null)
         {
             if (!Core.ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(dto.Phone))
-                throw new ShiftEntityException(new Message("Validation Error", "Invalid Phone Number"));
+                throw new ShiftEntityException(new Message(Loc["Validation Error"], Loc["Invalid Phone Number"]));
 
             formattedPhone = Core.ValidatorsAndFormatters.PhoneNumber.GetFormattedPhone(dto.Phone);
 
             //Check if the phone is duplicate
             if (await db.Users.AnyAsync(x => !x.IsDeleted && x.Phone.ToLower() == formattedPhone.ToLower() && x.ID != userId))
-                throw new ShiftEntityException(new Message("Duplicate", $"The phone {dto.Phone} is exists"));
+                throw new ShiftEntityException(new Message(Loc["Duplicate"], Loc["The phone {0} exist", dto.Phone]));
         }
 
         //Assign values

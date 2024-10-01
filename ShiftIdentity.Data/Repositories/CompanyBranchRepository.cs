@@ -6,6 +6,7 @@ using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
+using ShiftSoftware.ShiftIdentity.Core.Localization;
 using System.Net;
 using System.Text.Json;
 
@@ -15,7 +16,8 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
     {
         private readonly CityRepository cityRepository;
         private readonly ShiftIdentityFeatureLocking shiftIdentityFeatureLocking;
-        public CompanyBranchRepository(ShiftIdentityDbContext db, CityRepository cityRepository, ShiftIdentityFeatureLocking shiftIdentityFeatureLocking) : base(db, r =>
+        private readonly ShiftIdentityLocalizer Loc;
+        public CompanyBranchRepository(ShiftIdentityDbContext db, CityRepository cityRepository, ShiftIdentityFeatureLocking shiftIdentityFeatureLocking, ShiftIdentityLocalizer Loc) : base(db, r =>
             r.IncludeRelatedEntitiesWithFindAsync(
                 x => x.Include(y => y.Company),
                 x => x.Include(y => y.City).ThenInclude(x=> x.Region), //Region is Required for Replication Model
@@ -27,12 +29,13 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
         {
             this.cityRepository = cityRepository;
             this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
+            this.Loc = Loc;
         }
 
         public override async ValueTask<CompanyBranch> UpsertAsync(CompanyBranch entity, CompanyBranchDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null)
         {
             if (entity.BuiltIn)
-                throw new ShiftEntityException(new Message("Error", "Built-In Data can't be modified."), (int)HttpStatusCode.Forbidden);
+                throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
             var oldRegionId = entity.RegionID;
 
@@ -71,7 +74,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             if (actionType == ActionTypes.Update)
             {
                 if (entity.RegionID != oldRegionId || entity.CompanyID != dto.Company.Value.ToLong())
-                    throw new ShiftEntityException(new Message("Error", $"Company and Region can not be changed after creation."));
+                    throw new ShiftEntityException(new Message(Loc["Error"], Loc["Company and Region can not be changed after creation."]));
             }
 
             //Update departments
@@ -129,7 +132,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             if (!string.IsNullOrWhiteSpace(dto.Phone))
             {
                 if (!Core.ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(dto.Phone))
-                    throw new ShiftEntityException(new Message("Validation Error", "Invalid Phone Number"));
+                    throw new ShiftEntityException(new Message(Loc["Validation Error"], Loc["Invalid Phone Number"]));
 
                 entity.Phone = Core.ValidatorsAndFormatters.PhoneNumber.GetFormattedPhone(dto.Phone);
             }
@@ -147,7 +150,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
         public override ValueTask<CompanyBranch> DeleteAsync(CompanyBranch entity, bool isHardDelete = false, long? userId = null)
         {
             if (entity.BuiltIn)
-                throw new ShiftEntityException(new Message("Error", "Built-In Data can't be modified."), (int)HttpStatusCode.Forbidden);
+                throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
             return base.DeleteAsync(entity, isHardDelete, userId);
         }
@@ -155,7 +158,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
         public override Task SaveChangesAsync(bool raiseBeforeCommitTriggers = false)
         {
             if (shiftIdentityFeatureLocking.CompanyBranchFeatureIsLocked)
-                throw new ShiftEntityException(new Message("Error", "Company Branch Feature is locked"));
+                throw new ShiftEntityException(new Message(Loc["Error"], Loc["Company Branch Feature is locked"]));
 
             return base.SaveChangesAsync(raiseBeforeCommitTriggers);
         }
