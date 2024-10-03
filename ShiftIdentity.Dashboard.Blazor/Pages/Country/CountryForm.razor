@@ -1,0 +1,39 @@
+@attribute [Authorize]
+@layout Shared.DefaultLayout
+@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CountryForm)}/{{Key?}}")]
+@inherits ShiftForm<CountryForm, ShiftSoftware.ShiftIdentity.Core.DTOs.Country.CountryDTO>
+@inject HttpClient Http
+@inject ShiftIdentityLocalizer Loc
+
+<ShiftEntityForm @bind-Mode="Mode"
+                 @bind-Value="TheItem"
+                 @ref="FormContainer"
+                 Action="@($"{Constants.IdentityRoutePreifix}Country")"
+                 Title="@Loc["Country"]"
+                 @bind-Key="@Key"
+                 TypeAuthAction="ShiftIdentityActions.Countries"
+                 T="ShiftSoftware.ShiftIdentity.Core.DTOs.Country.CountryDTO">
+
+    <LocalizedTextField @bind-Value="TheItem.Name" Label="@Loc["Name"]" For="() => TheItem.Name" />
+
+    <MudTextField ReadOnly="@ReadOnly"
+                  Disabled="@Disabled"
+                  OnlyValidateIfDirty="true"
+                  Label="@Loc["Short Code"]"
+                  @bind-Value="TheItem.ShortCode"
+                  For="@(() => TheItem.ShortCode)" />
+
+    <MudTextField ReadOnly="@ReadOnly"
+                  Disabled="@Disabled"
+                  OnlyValidateIfDirty="true"
+                  Label="@Loc["Integration ID"]"
+                  @bind-Value="TheItem.IntegrationId"
+                  For="@(() => TheItem.IntegrationId)" />
+
+    <MudTextField ReadOnly="@ReadOnly"
+                  Disabled="@Disabled"
+                  OnlyValidateIfDirty="true"
+                  Label="@Loc["Calling Code"]"
+                  @bind-Value="TheItem.CallingCode"
+                  For="@(() => TheItem.CallingCode)" />
+</ShiftEntityForm>

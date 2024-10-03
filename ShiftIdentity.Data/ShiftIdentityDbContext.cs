@@ -38,6 +38,7 @@ namespace ShiftSoftware.ShiftIdentity.Data
         public DbSet<Team> Teams { get; set; }
         public DbSet<TeamUser> TeamUsers { get; set; }
         public DbSet<Brand> Brands { get; set; }
+        public DbSet<Country> Countries { get; set; }
 
         protected override void OnModelCreating(ModelBuilder b)
         {

@@ -88,6 +88,7 @@ public static class IMvcBuilderExtensions
         builder.Services.AddScoped<CompanyRepository>();
         builder.Services.AddScoped<CompanyBranchRepository>();
         builder.Services.AddScoped<TeamRepository>();
+        builder.Services.AddScoped<CountryRepository>();
 
         builder.Services.AddScoped<ShiftIdentityDbContext>(x=> x.GetRequiredService<TDbContext>());
 

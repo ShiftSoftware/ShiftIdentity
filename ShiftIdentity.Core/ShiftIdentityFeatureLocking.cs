@@ -2,6 +2,7 @@
 
 public class ShiftIdentityFeatureLocking
 {
+    public bool CountryFeatureIsLocked { get; set; }
     public bool RegionFeatureIsLocked { get; set; }
     public bool CityFeatureIsLocked { get; set; }
     public bool BrandFeatureIsLocked { get; set; }

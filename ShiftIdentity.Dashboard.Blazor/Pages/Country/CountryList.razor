@@ -1,0 +1,19 @@
+@attribute [Authorize]
+@layout Shared.DefaultLayout
+@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CountryList)}")]
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.Country;
+@inject ShiftIdentityLocalizer Loc
+
+<ShiftList EntitySet="@($"{Constants.IdentityRoutePreifix}Country")"
+           Title="@Loc["Region List"]"
+           T="CountryListDTO"
+           ComponentType="typeof(CountryForm)"
+           Dense
+           TypeAuthAction="ShiftIdentityActions.Countries"
+           EnableExport>
+
+    <PropertyColumn Title="@Loc["Name"]" Property="x => x.Name" />
+    <PropertyColumn Title="@Loc["Integration ID"]" Property="x => x.IntegrationId" />
+    <PropertyColumn Title="@Loc["Short Code"]" Property="x => x.ShortCode" />
+    <PropertyColumn Title="@Loc["Calling Code"]" Property="x => x.CallingCode" />
+</ShiftList>
