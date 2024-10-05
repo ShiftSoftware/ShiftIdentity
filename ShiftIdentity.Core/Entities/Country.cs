@@ -18,4 +18,10 @@ public class Country : ShiftEntity<Country>
     public string? ShortCode { get; set; }
     public string CallingCode { get; set; } = default!;
     public bool BuiltIn { get; set; }
+    public virtual IEnumerable<Region> Regions { get; set; }
+
+    public Country()
+    {
+        Regions = new HashSet<Region>();
+    }
 }

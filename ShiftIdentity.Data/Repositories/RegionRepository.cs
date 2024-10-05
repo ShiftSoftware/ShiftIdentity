@@ -13,7 +13,10 @@ public class RegionRepository : ShiftRepository<ShiftIdentityDbContext, Region, 
 {
     private readonly ShiftIdentityFeatureLocking shiftIdentityFeatureLocking;
     private readonly ShiftIdentityLocalizer Loc;
-    public RegionRepository(ShiftIdentityDbContext db, ShiftIdentityFeatureLocking shiftIdentityFeatureLocking, ShiftIdentityLocalizer Loc) : base(db)
+    public RegionRepository(
+        ShiftIdentityDbContext db,
+        ShiftIdentityFeatureLocking shiftIdentityFeatureLocking, 
+        ShiftIdentityLocalizer Loc) : base(db, x=> x.IncludeRelatedEntitiesWithFindAsync(i=> i.Include(s=> s.Country)))
     {
         this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
         this.Loc = Loc;

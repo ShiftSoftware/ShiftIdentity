@@ -16,10 +16,10 @@
 @inject ShiftIdentityLocalizer Loc
 
 <MudNavMenu>
-    @* <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(CountryList)}")"
+    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(CountryList)}")"
                           Match="NavLinkMatch.All"
                           Icon="@Icons.Material.Outlined.Flag"
-                          TypeAuthAction="ShiftIdentityActions.Regions">@Loc["Countries"]</AuthorizedMudNavLink> *@
+                          TypeAuthAction="ShiftIdentityActions.Regions">@Loc["Countries"]</AuthorizedMudNavLink>
 
     <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(RegionList)}")"
                           Match="NavLinkMatch.All"

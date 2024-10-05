@@ -16,4 +16,7 @@ public class RegionListDTO : ShiftEntityListDTO
     public string Name { get; set; } = default!;
     public string? IntegrationId { get; set; }
     public string? ShortCode { get; set; }
+
+    [JsonConverter(typeof(LocalizedTextJsonConverter))]
+    public string? Country { get; set; } = default!;
 }

@@ -13,6 +13,8 @@ public class Region : ShiftEntity<Region>
     public string? IntegrationId { get; set; }
     public string? ShortCode { get; set; }
     public bool BuiltIn { get; set; }
+    public long? CountryID { get; set; }
+    public virtual Country? Country { get; set; }
 
     public virtual ICollection<CompanyBranch> CompanyBranches { get; set; }
 

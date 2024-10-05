@@ -14,4 +14,8 @@ public class RegionDTO : ShiftEntityViewAndUpsertDTO
     public string Name { get; set; } = default!;
     public string? IntegrationId { get; set; }
     public string? ShortCode { get; set; }
+
+    [Required]
+    [CountryHashIdConverter]
+    public ShiftEntitySelectDTO Country { get; set; } = default!;
 }

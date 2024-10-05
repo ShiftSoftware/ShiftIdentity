@@ -16,6 +16,12 @@
 
     <LocalizedTextField @bind-Value="TheItem.Name" Label="@Loc["Name"]" For="() => TheItem.Name" />
 
+    <ShiftAutocomplete Label="@Loc["Country"]"
+                       For="@(() => TheItem.Country)"
+                       @bind-Value="TheItem.Country"
+                       EntitySet="IdentityCountry"
+                       TEntitySet="CountryListDTO" />
+
     <MudTextField ReadOnly="@ReadOnly"
                   Disabled="@Disabled"
                   OnlyValidateIfDirty="true"
