@@ -10,7 +10,11 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 [TemporalShiftEntity]
 [Table("Users", Schema = "ShiftIdentity")]
 [DontSetCompanyInfoOnThisEntityWithAutoTrigger]
-public class User : ShiftEntity<User>, IEntityHasRegion<User>, IEntityHasCompany<User>, IEntityHasCompanyBranch<User>
+public class User : ShiftEntity<User>, 
+    IEntityHasCountry<User>, 
+    IEntityHasRegion<User>,
+    IEntityHasCompany<User>, 
+    IEntityHasCompanyBranch<User>
 {
     #region Security
 
@@ -61,10 +65,12 @@ public class User : ShiftEntity<User>, IEntityHasRegion<User>, IEntityHasCompany
 
     public DateTimeOffset? LastSeen { get; set; }
 
+    public long? CountryID { get; set; }
     public long? RegionID { get; set; }
     public long? CompanyID { get; set; }
     public long? CompanyBranchID { get; set; }
 
+    public virtual Country? Country { get; set; }
     public virtual Region? Region { get; set; }
     public virtual Company? Company { get; set; }
     public virtual CompanyBranch? CompanyBranch { get; set; }

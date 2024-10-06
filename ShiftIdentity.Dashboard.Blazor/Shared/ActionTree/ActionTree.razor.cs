@@ -44,6 +44,12 @@ public partial class ActionTree
         await Task.WhenAll(new List<Task>
         {
             Task.Run(async () => {
+                var countries = await this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Country.CountryListDTO>>("/api/IdentityCountry?$orderby=Name");
+
+                Core.ShiftIdentityActions.DataLevelAccess.Countries.Expand(countries.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), true, true);
+            }),
+
+            Task.Run(async () => {
                 var regions = await this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Region.RegionListDTO>>("/api/IdentityRegion?$orderby=Name");
 
                 Core.ShiftIdentityActions.DataLevelAccess.Regions.Expand(regions.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), true, true);

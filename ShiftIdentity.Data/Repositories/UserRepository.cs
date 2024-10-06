@@ -88,8 +88,11 @@ public class UserRepository :
         {
             entity.CompanyBranchID = dto.CompanyBranchID!.Value.ToLong();
 
-            var companyBranch = await db.CompanyBranches.FindAsync(entity.CompanyBranchID);
+            var companyBranch = await db.CompanyBranches
+                .Include(x => x.Region)
+                .FirstOrDefaultAsync(x => x.ID == entity.CompanyBranchID);
 
+            entity.CountryID = companyBranch!.Region?.CountryID;
             entity.RegionID = companyBranch!.RegionID!.Value;
 
             entity.CompanyID = companyBranch.CompanyID!.Value;
