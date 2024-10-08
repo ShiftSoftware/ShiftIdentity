@@ -83,16 +83,16 @@ public class TokenService
         var requirePasswordChange = shiftIdentityConfiguration.Security.RequirePasswordChange && user.RequireChangePassword;
 
         var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, ShiftEntityHashIdService.Encode<Core.DTOs.User.UserDTO>(user.ID)),
-                new Claim(ClaimTypes.Name, user.Username),
-                new Claim(ClaimTypes.GivenName, user.FullName),
-            };
+        {
+            new Claim(ClaimTypes.NameIdentifier, ShiftEntityHashIdService.Encode<Core.DTOs.User.UserDTO>(user.ID)),
+            new Claim(ClaimTypes.Name, user.Username),
+            new Claim(ClaimTypes.GivenName, user.FullName),
+            new Claim(ShiftEntity.Core.Constants.CountryIdClaim, ShiftEntityHashIdService.Encode<CountryDTO>(user.CountryID!.Value)),
+            new Claim(ShiftEntity.Core.Constants.RegionIdClaim, ShiftEntityHashIdService.Encode<RegionDTO>(user.RegionID!.Value)),
+            new Claim(ShiftEntity.Core.Constants.CompanyIdClaim, ShiftEntityHashIdService.Encode<CompanyDTO>(user.CompanyID!.Value)),
+            new Claim(ShiftEntity.Core.Constants.CompanyBranchIdClaim, ShiftEntityHashIdService.Encode<CompanyBranchDTO>(user.CompanyBranchID!.Value))
+        };
 
-        claims.Add(new Claim(ShiftEntity.Core.Constants.CountryIdClaim, ShiftEntityHashIdService.Encode<CountryDTO>(user.CountryID!.Value)));
-        claims.Add(new Claim(ShiftEntity.Core.Constants.RegionIdClaim, ShiftEntityHashIdService.Encode<RegionDTO>(user.RegionID!.Value)));
-        claims.Add(new Claim(ShiftEntity.Core.Constants.CompanyIdClaim, ShiftEntityHashIdService.Encode<CompanyDTO>(user.CompanyID!.Value)));
-        claims.Add(new Claim(ShiftEntity.Core.Constants.CompanyBranchIdClaim, ShiftEntityHashIdService.Encode<CompanyBranchDTO>(user.CompanyBranchID!.Value)));
         if(user.CompanyBranch is not null)
             claims.Add(new Claim(ShiftEntity.Core.Constants.CityIdClaim, ShiftEntityHashIdService.Encode<CityDTO>(user.CompanyBranch.CityID!.Value)));
 

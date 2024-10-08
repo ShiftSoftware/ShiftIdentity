@@ -27,6 +27,8 @@ public class DBSeed
 
     public async Task SeedAsync()
     {
+        Country country = await SeedCountryAsync();
+
         Region region = await SeedRegionAsync();
 
         City city = await SeedCityAsync(region);
@@ -35,9 +37,24 @@ public class DBSeed
 
         CompanyBranch companyBranch = await SeedCompanyBranchAsync(city, company);
 
-        await SeedUserAsync(region, company, companyBranch);
+        await SeedUserAsync(country, region, company, companyBranch);
 
         await db.SaveChangesAsync();
+    }
+
+    private async Task<Country> SeedCountryAsync()
+    {
+        var country = await db.Countries.FirstOrDefaultAsync(x => x.Name == Core.Constants.BuiltInCountry);
+        if (country == null) {
+            country = new();
+        }
+
+        country.Name = Core.Constants.BuiltInCountry;
+        country.ShortCode = dbSeedOptions?.CountryShortCode;
+        country.IntegrationId = dbSeedOptions?.CountryExternalId;
+        country.BuiltIn = true;
+
+        return country;
     }
 
     private async Task<Region> SeedRegionAsync()
@@ -106,7 +123,7 @@ public class DBSeed
         return companyBranch;
     }
 
-    private async Task SeedUserAsync(Region region, Company company, CompanyBranch companyBranch)
+    private async Task SeedUserAsync(Country country, Region region, Company company, CompanyBranch companyBranch)
     {
         var user = await db.Users.FirstOrDefaultAsync(x => x.Username == Core.Constants.BuiltInUsername);
 
@@ -132,6 +149,7 @@ public class DBSeed
         user.BuiltIn = true;
         user.RequireChangePassword = false;
 
+        user.Country = country;
         user.Region = region;
         user.Company = company;
         user.CompanyBranch = companyBranch;

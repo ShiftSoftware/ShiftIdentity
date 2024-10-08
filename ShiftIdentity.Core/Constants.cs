@@ -8,4 +8,5 @@ public class Constants
     public const string BuiltInRegion = "Built-in System Region";
     public const string BuiltInCompany = "Built-in System Company";
     public const string BuiltInBranch = "Built-in System Branch";
+    public const string BuiltInCountry = "Built-in System Country";
 }

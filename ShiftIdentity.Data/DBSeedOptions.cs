@@ -4,6 +4,9 @@ namespace ShiftSoftware.ShiftIdentity.Data;
 
 public class DBSeedOptions
 {
+    public string? CountryShortCode { get; set; }
+    public string? CountryExternalId { get; set; }
+
     public string? RegionShortCode { get; set; }
     public string? RegionExternalId { get; set; }
 
