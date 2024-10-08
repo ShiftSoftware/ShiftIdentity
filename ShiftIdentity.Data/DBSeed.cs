@@ -52,6 +52,7 @@ public class DBSeed
         country.Name = Core.Constants.BuiltInCountry;
         country.ShortCode = dbSeedOptions?.CountryShortCode;
         country.IntegrationId = dbSeedOptions?.CountryExternalId;
+        country.CallingCode = dbSeedOptions?.CountryCallingCode ?? Core.Constants.BuiltInCountryCallingCode;
         country.BuiltIn = true;
 
         return country;
