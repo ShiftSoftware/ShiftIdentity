@@ -15,9 +15,16 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
     public class CompanyBranchRepository : ShiftRepository<ShiftIdentityDbContext, CompanyBranch, CompanyBranchListDTO, CompanyBranchDTO>
     {
         private readonly CityRepository cityRepository;
+        private readonly RegionRepository regionRepo;
         private readonly ShiftIdentityFeatureLocking shiftIdentityFeatureLocking;
         private readonly ShiftIdentityLocalizer Loc;
-        public CompanyBranchRepository(ShiftIdentityDbContext db, CityRepository cityRepository, ShiftIdentityFeatureLocking shiftIdentityFeatureLocking, ShiftIdentityLocalizer Loc) : base(db, r =>
+        public CompanyBranchRepository(
+            ShiftIdentityDbContext db,
+            CityRepository cityRepository,
+            RegionRepository regionRepo,
+            ShiftIdentityFeatureLocking shiftIdentityFeatureLocking,
+            ShiftIdentityLocalizer Loc
+        ) : base(db, r =>
             r.IncludeRelatedEntitiesWithFindAsync(
                 x => x.Include(y => y.Company),
                 x => x.Include(y => y.City).ThenInclude(x=> x.Region), //Region is Required for Replication Model
@@ -28,6 +35,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
         )
         {
             this.cityRepository = cityRepository;
+            this.regionRepo = regionRepo;
             this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
             this.Loc = Loc;
         }
@@ -38,6 +46,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
                 throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
             var oldRegionId = entity.RegionID;
+            var oldCountryId = entity.CountryID;
 
             entity.Name = dto.Name;
             entity.ShortCode = dto.ShortCode;
@@ -45,6 +54,9 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             entity.CompanyID = dto.Company.Value.ToLong();
             entity.CityID = dto.City.Value.ToLong();
             entity.RegionID = (await this.cityRepository.FindAsync(entity.CityID.Value))!.RegionID;
+            
+            if(entity.RegionID is not null)
+                entity.CountryID = (await this.regionRepo.FindAsync(entity.RegionID.GetValueOrDefault()))?.CountryID;
 
             if (actionType == ActionTypes.Insert)
                 entity.CustomFields = dto.CustomFields?.ToDictionary(x => x.Key, x => new CustomField
@@ -75,6 +87,9 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             {
                 if (entity.RegionID != oldRegionId || entity.CompanyID != dto.Company.Value.ToLong())
                     throw new ShiftEntityException(new Message(Loc["Error"], Loc["Company and Region can not be changed after creation."]));
+
+                if (entity.CountryID != oldCountryId)
+                    throw new ShiftEntityException(new Message(Loc["Error"], Loc["Country can not be changed after creation."]));
             }
 
             //Update departments

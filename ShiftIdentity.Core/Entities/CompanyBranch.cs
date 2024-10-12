@@ -9,7 +9,8 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 [TemporalShiftEntity]
 [Table("CompanyBranches", Schema = "ShiftIdentity")]
 [DontSetCompanyInfoOnThisEntityWithAutoTrigger]
-public class CompanyBranch : ShiftEntity<CompanyBranch>, IEntityHasRegion<CompanyBranch>, IEntityHasCompany<CompanyBranch>
+public class CompanyBranch : 
+    ShiftEntity<CompanyBranch>, IEntityHasRegion<CompanyBranch>, IEntityHasCompany<CompanyBranch>, IEntityHasCountry<CompanyBranch>
 {
     public string Name { get; set; } = default!;
     public string? Phone { get; set; }
@@ -38,6 +39,7 @@ public class CompanyBranch : ShiftEntity<CompanyBranch>, IEntityHasRegion<Compan
     public long? RegionID { get; set; }
     public long? CityID { get; set; }
     public long? CompanyID { get; set; }
+    public long? CountryID { get; set; }
 
     public CompanyBranch()
     {
