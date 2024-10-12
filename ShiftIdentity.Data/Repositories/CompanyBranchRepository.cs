@@ -27,7 +27,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
         ) : base(db, r =>
             r.IncludeRelatedEntitiesWithFindAsync(
                 x => x.Include(y => y.Company),
-                x => x.Include(y => y.City).ThenInclude(x=> x.Region), //Region is Required for Replication Model
+                x => x.Include(y => y.City).ThenInclude(y=> y.Region).ThenInclude(y=> y.Country), //Region is Required for Replication Model
                 x => x.Include(y => y.CompanyBranchDepartments).ThenInclude(y => y.Department),
                 x => x.Include(y => y.CompanyBranchServices).ThenInclude(y => y.Service),
                 x => x.Include(y => y.CompanyBranchBrands).ThenInclude(y => y.Brand)
@@ -88,7 +88,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
                 if (entity.RegionID != oldRegionId || entity.CompanyID != dto.Company.Value.ToLong())
                     throw new ShiftEntityException(new Message(Loc["Error"], Loc["Company and Region can not be changed after creation."]));
 
-                if (entity.CountryID != oldCountryId)
+                if (entity.CountryID != oldCountryId && oldCountryId is not null)
                     throw new ShiftEntityException(new Message(Loc["Error"], Loc["Country can not be changed after creation."]));
             }
 

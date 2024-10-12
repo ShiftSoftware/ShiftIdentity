@@ -26,12 +26,30 @@ public class Region : Profile
 
         CreateMap<Core.Entities.Region, RegionModel>()
             .ForMember(
+                dest => dest.CountryID,
+                opt => opt.MapFrom(src => src.CountryID)
+            )
+            .ForMember(
                 dest => dest.RegionID,
                 opt => opt.MapFrom(src => src.ID.ToString())
             )
             .ForMember(
                 dest => dest.ItemType,
-                opt => opt.MapFrom(src => RegionContainerItemTypes.Region)
+                opt => opt.MapFrom(src => CountryContainerItemTypes.Region)
+            )
+            .ForMember(
+                dest => dest.id,
+                opt => opt.MapFrom(src => src.ID.ToString())
+            );
+
+        CreateMap<Core.Entities.Region, CityRegionModel>()
+            .ForMember(
+                dest => dest.CountryID,
+                opt => opt.MapFrom(src => src.CountryID)
+            )
+            .ForMember(
+                dest => dest.RegionID,
+                opt => opt.MapFrom(src => src.ID.ToString())
             )
             .ForMember(
                 dest => dest.id,

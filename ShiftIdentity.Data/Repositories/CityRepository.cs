@@ -20,7 +20,7 @@ public class CityRepository : ShiftRepository<ShiftIdentityDbContext, City, City
         RegionRepository regionRepo,
         ShiftIdentityFeatureLocking shiftIdentityFeatureLocking,
         ShiftIdentityLocalizer Loc
-    ) : base(db, x => x.IncludeRelatedEntitiesWithFindAsync(y => y.Include(z => z.Region)))
+    ) : base(db, x => x.IncludeRelatedEntitiesWithFindAsync(y => y.Include(z => z.Region).ThenInclude(z=> z.Country)))
     {
         this.regionRepo = regionRepo;
         this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
@@ -37,7 +37,7 @@ public class CityRepository : ShiftRepository<ShiftIdentityDbContext, City, City
         entity.CountryID = (await this.regionRepo.FindAsync(dto.Region.Value.ToLong()))?.CountryID;
 
         if (actionType == ActionTypes.Update)
-            if (entity.CountryID != oldCountryId)
+            if (entity.CountryID != oldCountryId && oldCountryId is not null)
                 throw new ShiftEntityException(new Message(Loc["Error"], Loc["Country can not be changed after creation."]));
 
         return await base.UpsertAsync(entity, dto, actionType, userId);

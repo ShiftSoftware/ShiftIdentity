@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace ShiftSoftware.ShiftIdentity.Core;
+﻿namespace ShiftSoftware.ShiftIdentity.Core;
 
 public static class ReplicationConfiguration
 {
@@ -12,6 +6,7 @@ public static class ReplicationConfiguration
     public const string CompanyContainerName = "Companies";
     public const string CompanyBranchContainerName = "CompanyBranches";
     public const string RegionContainerName = "Regions";
+    public const string CountryContainerName = "Countries";
     public const string CityContainerName = "Cities";
     public const string ServiceContainerName = "Services";
     public const string DepartmentContainerName = "Departments";
