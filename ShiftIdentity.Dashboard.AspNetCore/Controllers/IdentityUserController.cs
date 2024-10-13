@@ -26,9 +26,19 @@ public class IdentityUserController : ShiftEntitySecureControllerAsync<UserRepos
     public IdentityUserController(UserRepository userRepo,
         IMapper mapper,
         ShiftIdentityConfiguration options,
+        DynamicActionFilters dynamicActionFilters,
         IEnumerable<ISendEmailVerification>? sendEmailVerifications = null,
         IEnumerable<ISendUserInfo>? sendUserInfos = null)
-        : base(ShiftIdentityActions.Users)
+        : base(ShiftIdentityActions.Users, x=>
+        {
+            x.DisableDefaultBrandFilter = dynamicActionFilters.DisableDefaultBrandFilter;
+            x.DisableDefaultCityFilter = dynamicActionFilters.DisableDefaultCityFilter;
+            x.DisableDefaultTeamFilter = dynamicActionFilters.DisableDefaultTeamFilter;
+            x.DisableDefaultCountryFilter = dynamicActionFilters.DisableDefaultCountryFilter;
+            x.DisableDefaultCompanyBranchFilter = dynamicActionFilters.DisableDefaultCompanyBranchFilter;
+            x.DisableDefaultCompanyFilter = dynamicActionFilters.DisableDefaultCompanyFilter;
+            x.DisableDefaultRegionFilter = dynamicActionFilters.DisableDefaultRegionFilter;
+        })
     {
         this.userRepo = userRepo;
         this.mapper = mapper;

@@ -17,12 +17,23 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers;
 [Route("api/[controller]")]
 public class IdentityCountryController : ShiftEntitySecureControllerAsync<CountryRepository, Country, CountryListDTO, CountryDTO>
 {
-    public IdentityCountryController() : base(ShiftIdentityActions.Countries,
-        x => x
-        .FilterBy(x => x.ID, ShiftIdentityActions.DataLevelAccess.Countries)
-        .DecodeHashId<CountryDTO>()
-        .IncludeCreatedByCurrentUser(x => x.CreatedByUserID)
-        .IncludeSelfItems(ShiftEntity.Core.Constants.CountryIdClaim)
+    public IdentityCountryController(DynamicActionFilters dynamicActionFilters) : base(ShiftIdentityActions.Countries,
+        x =>
+        {
+            if(!dynamicActionFilters.DisableDefaultCountryFilter)
+                x.FilterBy(x => x.ID, ShiftIdentityActions.DataLevelAccess.Countries)
+                    .DecodeHashId<CountryDTO>()
+                    .IncludeCreatedByCurrentUser(x => x.CreatedByUserID)
+                    .IncludeSelfItems(ShiftEntity.Core.Constants.CountryIdClaim);
+
+            x.DisableDefaultBrandFilter = dynamicActionFilters.DisableDefaultBrandFilter;
+            x.DisableDefaultCityFilter = dynamicActionFilters.DisableDefaultCityFilter;
+            x.DisableDefaultTeamFilter = dynamicActionFilters.DisableDefaultTeamFilter;
+            x.DisableDefaultCountryFilter = dynamicActionFilters.DisableDefaultCountryFilter;
+            x.DisableDefaultCompanyBranchFilter = dynamicActionFilters.DisableDefaultCompanyBranchFilter;
+            x.DisableDefaultCompanyFilter = dynamicActionFilters.DisableDefaultCompanyFilter;
+            x.DisableDefaultRegionFilter = dynamicActionFilters.DisableDefaultRegionFilter;
+        }
     )
     {
     }

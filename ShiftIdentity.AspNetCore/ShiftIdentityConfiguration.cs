@@ -23,4 +23,5 @@ public class ShiftIdentityConfiguration
     public ShiftIdentityHostingTypes ShiftIdentityHostingType { get; set; }
     public string? FrontEndUrl { get; set; } = default!;
     public ShiftIdentityFeatureLocking ShiftIdentityFeatureLocking { get; set; } = new ShiftIdentityFeatureLocking();
+    public DynamicActionFilters DynamicActionFilters { get; set; } = new();
 }
