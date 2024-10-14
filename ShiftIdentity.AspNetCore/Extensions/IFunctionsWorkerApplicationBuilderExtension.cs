@@ -1,14 +1,18 @@
 ﻿using Microsoft.Azure.Functions.Worker;
 using Microsoft.IdentityModel.Tokens;
 using ShiftSoftware.Azure.Functions.AspNetCore.Authorization.Extensions;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Extensions;
 
 public static class IFunctionsWorkerApplicationBuilderExtension
 {
-    public static IFunctionsWorkerApplicationBuilder AddShiftIdentity(this IFunctionsWorkerApplicationBuilder builder, string tokenIssuer, string tokenKey)
+    public static IFunctionsWorkerApplicationBuilder AddShiftIdentity(this IFunctionsWorkerApplicationBuilder builder, string tokenIssuer, string tokenRSAPublicKeyBase64)
     {
+        var rsa = RSA.Create();
+        rsa.ImportRSAPublicKey(Convert.FromBase64String(tokenRSAPublicKeyBase64), out _);
+
         builder.AddAuthentication().AddJwtBearer(
             new TokenValidationParameters
             {
@@ -16,7 +20,7 @@ public static class IFunctionsWorkerApplicationBuilderExtension
                 ValidateIssuer = true,
                 ValidIssuer = tokenIssuer,
                 RequireExpirationTime = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(tokenKey)),
+                IssuerSigningKey = new RsaSecurityKey(rsa),
                 ValidateIssuerSigningKey = true,
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.Zero,
