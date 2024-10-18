@@ -87,13 +87,15 @@ public class TokenService
             new Claim(ClaimTypes.NameIdentifier, ShiftEntityHashIdService.Encode<Core.DTOs.User.UserDTO>(user.ID)),
             new Claim(ClaimTypes.Name, user.Username),
             new Claim(ClaimTypes.GivenName, user.FullName),
-            new Claim(ShiftEntity.Core.Constants.CountryIdClaim, ShiftEntityHashIdService.Encode<CountryDTO>(user.CountryID!.Value)),
             new Claim(ShiftEntity.Core.Constants.RegionIdClaim, ShiftEntityHashIdService.Encode<RegionDTO>(user.RegionID!.Value)),
             new Claim(ShiftEntity.Core.Constants.CompanyIdClaim, ShiftEntityHashIdService.Encode<CompanyDTO>(user.CompanyID!.Value)),
             new Claim(ShiftEntity.Core.Constants.CompanyBranchIdClaim, ShiftEntityHashIdService.Encode<CompanyBranchDTO>(user.CompanyBranchID!.Value))
         };
 
-        if(user.CompanyBranch is not null)
+        if (user.CountryID is not null)
+            claims.Add(new Claim(ShiftEntity.Core.Constants.CountryIdClaim, ShiftEntityHashIdService.Encode<CountryDTO>(user.CountryID!.Value)));
+
+        if (user.CompanyBranch is not null)
             claims.Add(new Claim(ShiftEntity.Core.Constants.CityIdClaim, ShiftEntityHashIdService.Encode<CityDTO>(user.CompanyBranch.CityID!.Value)));
 
         foreach (var team in user.TeamUsers)
