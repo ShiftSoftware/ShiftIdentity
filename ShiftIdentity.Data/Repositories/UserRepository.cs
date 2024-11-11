@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure.Internal;
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
+using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.UserManager;
@@ -25,10 +26,10 @@ public class UserRepository :
 
     public UserRepository(ShiftIdentityDbContext db, ITypeAuthService typeAuthService, ShiftIdentityFeatureLocking shiftIdentityFeatureLocking, ShiftIdentityLocalizer Loc) : base(db, r =>
         r.IncludeRelatedEntitiesWithFindAsync(
-            x => x.Include(y => y.AccessTrees).ThenInclude(y => y.AccessTree), 
-            x=> x.Include(y=> y.UserLog),
-            x=> x.Include(y=> y.TeamUsers),
-            x=> x.Include(y=> y.CompanyBranch)
+            x => x.Include(y => y.AccessTrees).ThenInclude(y => y.AccessTree),
+            x => x.Include(y => y.UserLog),
+            x => x.Include(y => y.TeamUsers),
+            x => x.Include(y => y.CompanyBranch)
         )
     )
     {
@@ -70,7 +71,7 @@ public class UserRepository :
 
         if (await db.Users.AnyAsync(x => !x.IsDeleted && x.Phone.ToLower() == (formattedPhone ?? "").ToLower() && x.ID != id))
             throw new ShiftEntityException(new Message(Loc["Duplicate"], Loc["The phone {0} exist", dto.Phone]));
-        
+
         if (actionType == ActionTypes.Insert)
         {
             if (string.IsNullOrWhiteSpace(dto.Password))
@@ -195,8 +196,8 @@ public class UserRepository :
 
     public async Task<User?> GetUserByUsernameAsync(string username)
     {
-        return await db.Users.Include(x=> x.UserLog).Include(x => x.AccessTrees).ThenInclude(x => x.AccessTree)
-            .Include(x=> x.CompanyBranch)
+        return await db.Users.Include(x => x.UserLog).Include(x => x.AccessTrees).ThenInclude(x => x.AccessTree)
+            .Include(x => x.CompanyBranch)
             .FirstOrDefaultAsync(x => x.Username == username && !x.IsDeleted);
     }
 
@@ -228,7 +229,7 @@ public class UserRepository :
         return user;
     }
 
-    public async Task<User?> UpdateUserDataAsync(UserDataDTO dto, long userId)  
+    public async Task<User?> UpdateUserDataAsync(UserDataDTO dto, long userId)
     {
         var user = await FindAsync(userId, null);
 
@@ -315,5 +316,52 @@ public class UserRepository :
         }
 
         return users;
+    }
+
+    public async Task<IEnumerable<(string Username, string Email, string Password)>> UserImportAsync(IEnumerable<UserImportUserDTO> userImports)
+    {
+        var reslut = new List<(string Username, string Email, string Password)>();
+
+        var userImportsList = userImports.ToList();
+        var usernames = userImportsList.Select(u => u.Username.ToLower()).ToList();
+        var emails = userImportsList.Select(u => u.Email.ToLower()).ToList();
+
+        var existingUsers = await db.Users
+            .Where(u => !u.IsDeleted && (usernames.Contains(u.Username.ToLower()) || emails.Contains(u.Email.ToLower())))
+            .Select(u => new { u.Username, u.Email })
+            .ToListAsync();
+
+        var existingUsernames = existingUsers.Select(u => u.Username.ToLower()).ToHashSet();
+        var existingEmails = existingUsers.Select(u => u.Email.ToLower()).ToHashSet();
+
+        var filteredUserImports = userImportsList
+            .Where(u => !existingUsernames.Contains(u.Username.ToLower()) && !existingEmails.Contains(u.Email.ToLower()))
+            .ToList();
+
+        foreach (var userImport in filteredUserImports)
+        {
+            var password = PasswordGenerator.GeneratePassword(20);
+
+            var userDto = new UserDTO
+            {
+                FullName = userImport.FullName,
+                Username = userImport.Username,
+                Phone = userImport.Phone,
+                Email = userImport.Email,
+                BirthDate = userImport.BirthDate,
+                CompanyBranchID = new ShiftEntitySelectDTO { Value = userImport.CompanyBranchID },
+                Password = password,
+            };
+
+            var user = await UpsertAsync(new User(), userDto, ActionTypes.Insert);
+            user.EmailVerified = true;
+            user.PhoneVerified = true;
+
+            db.Users.Add(user);
+
+            reslut.Add((userImport.Username, userImport.Email, password));
+        }
+
+        return reslut;
     }
 }

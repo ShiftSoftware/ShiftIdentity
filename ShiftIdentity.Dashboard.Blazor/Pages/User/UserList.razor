@@ -35,7 +35,7 @@
                     <MudCheckBox @bind-Value="SharePasswordWithUser" Label="@Loc["Send login info to the user"]" />
                 </DialogBodyTemplate>
                 <ChildContent>
-                    @Loc["Assign Random Passwords"]"
+                    @Loc["Assign Random Passwords"]
                 </ChildContent>
             </ActionButton>
 
@@ -47,7 +47,7 @@
                           OnResponse="VerifyEmailsResponse"
                           T="UserListDTO"
                           Action="@($"{Constants.IdentityRoutePreifix}User/VerifyEmails")">
-               @Loc["Verify Emails"]"
+               @Loc["Verify Emails"]
             </ActionButton>
 
             <ActionButton Color="Color.Error"
@@ -60,6 +60,15 @@
                           Action="@($"{Constants.IdentityRoutePreifix}User/VerifyPhones")">
                 @Loc["Verify Phones"]
             </ActionButton>
+
+            <MudButton Color="Color.Primary"
+                       Variant="Variant.Outlined"
+                       Class="mr-5"
+                       Size="Size.Small"
+                       OnClick="@(()=>OpenImportModal(null))">
+                <MudIcon Icon="@Icons.Material.Filled.AttachFile" />
+                @Loc["Import"]
+            </MudButton>
         </MudStack>
 
     </ToolbarStartTemplate>
@@ -115,6 +124,11 @@
     public ShiftList<UserListDTO>? ShiftList { get; set; }
 
     private bool SharePasswordWithUser { get; set; }
+
+    private async Task OpenImportModal(long? id)
+    {
+        await ShiftList!.OpenDialog(typeof(UserImportForm));
+    }
 
     // private async Task AssignRandomPasswords()
     // {

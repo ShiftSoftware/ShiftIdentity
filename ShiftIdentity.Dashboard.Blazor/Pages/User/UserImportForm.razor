@@ -1,0 +1,65 @@
+﻿@inject ShiftIdentityLocalizer Loc
+
+@inherits ShiftForm<UserImportForm, UserImportDTO>
+
+<ShiftEntityForm @bind-Mode="Mode"
+                 @bind-Value="TheItem"
+                 @ref="FormContainer"
+                 Action="IdentityUser/ImportUsers"
+                 Title="@Loc["Import User From CSV"]"
+                 TypeAuthAction="ShiftIdentityActions.Users"
+                 HideDelete="true"
+                 HideEdit="true"
+                 OnValidSubmit="OnSubmit"
+                 @bind-Key="@Key">
+
+    @if (selectedFile is not null)
+    {
+        <MudText Typo="Typo.h6">@selectedFile.Name</MudText>
+    }
+
+    <MudFileUpload T="IBrowserFile" FilesChanged="SelectFile" Accept=".csv" MaximumFileCount="1">
+        <ActivatorContent>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.CloudUpload">
+                @Loc["Select CSV File"]
+            </MudButton>
+        </ActivatorContent>
+    </MudFileUpload>
+
+    <MudCheckBoxExtended Label="@Loc["Send login info to the user"]"
+                         @bind-Value="TheItem.SendLoginInfoByEmail"
+                         For="@(() => TheItem.SendLoginInfoByEmail)" />
+</ShiftEntityForm>
+
+@code {
+    private IBrowserFile? selectedFile;
+
+    private void SelectFile(IBrowserFile file)
+    {
+        selectedFile = file;
+    }
+
+    async Task<IEnumerable<UserImportUserDTO>> ParseCSVAsync()
+    {
+
+        if (selectedFile is null)
+            return new List<UserImportUserDTO>();
+
+        using var stream = selectedFile.OpenReadStream();
+        using var reader = new StreamReader(stream);
+        var fileContent = await reader.ReadToEndAsync();
+
+        var engine = new FileHelperEngine<UserImportUserDTO>();
+        var records = engine.ReadString(fileContent);
+
+        return records;
+    }
+
+    async Task OnSubmit()
+    {
+        var users = await ParseCSVAsync();
+        TheItem.Users = users.ToList();
+    }
+}

@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using ShiftSoftware.ShiftEntity.Core.Services;
 using ShiftSoftware.ShiftEntity.Model;
@@ -11,6 +12,7 @@ using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.ShiftIdentity.Data.Repositories;
 using ShiftSoftware.TypeAuth.AspNetCore;
+using ShiftSoftware.TypeAuth.Core;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers;
 
@@ -20,6 +22,8 @@ public class IdentityUserController : ShiftEntitySecureControllerAsync<UserRepos
     private readonly UserRepository userRepo;
     private readonly IMapper mapper;
     private readonly ShiftIdentityConfiguration options;
+    private readonly ITypeAuthService typeAuth;
+    private readonly IHttpContextAccessor httpContextAccessor;
     private readonly IEnumerable<ISendEmailVerification>? sendEmailVerifications;
     private readonly IEnumerable<ISendUserInfo>? sendUserInfos;
 
@@ -27,6 +31,8 @@ public class IdentityUserController : ShiftEntitySecureControllerAsync<UserRepos
         IMapper mapper,
         ShiftIdentityConfiguration options,
         DynamicActionFilters dynamicActionFilters,
+        ITypeAuthService typeAuth,
+        IHttpContextAccessor httpContextAccessor,
         IEnumerable<ISendEmailVerification>? sendEmailVerifications = null,
         IEnumerable<ISendUserInfo>? sendUserInfos = null)
         : base(ShiftIdentityActions.Users, x=>
@@ -43,6 +49,8 @@ public class IdentityUserController : ShiftEntitySecureControllerAsync<UserRepos
         this.userRepo = userRepo;
         this.mapper = mapper;
         this.options = options;
+        this.typeAuth = typeAuth;
+        this.httpContextAccessor = httpContextAccessor;
         this.sendEmailVerifications = sendEmailVerifications;
         this.sendUserInfos = sendUserInfos;
     }
@@ -131,5 +139,42 @@ public class IdentityUserController : ShiftEntitySecureControllerAsync<UserRepos
         await userRepo.SaveChangesAsync();
 
         return Ok(new ShiftEntityResponse<IEnumerable<UserListDTO>> { Entity = userInfos });
+    }
+
+    [HttpPost("ImportUsers")]
+    [TypeAuth<ShiftIdentityActions>(nameof(ShiftIdentityActions.Users), TypeAuth.Core.Access.Write)]
+    public async Task<IActionResult> ImportUsers([FromBody] UserImportDTO userImport)
+    {
+        try
+        {
+            var selfBranchId = httpContextAccessor.HttpContext?.GetHashedCompanyBranchID()!;
+            foreach (var user in userImport.Users)
+                if(!typeAuth.CanRead(ShiftIdentityActions.DataLevelAccess.Branches, user.CompanyBranchID, selfBranchId))
+                    throw new ShiftEntityException(new Message("Error", "Unauthorized"), (int)System.Net.HttpStatusCode.Forbidden);
+
+            var users = await userRepo.UserImportAsync(userImport.Users);
+
+            await userRepo.SaveChangesAsync();
+
+            if (userImport.SendLoginInfoByEmail)
+                if (sendUserInfos is not null)
+                    foreach (var sendUserInfo in sendUserInfos)
+                        await sendUserInfo.SendUserInfoAsync(users.Select(x=> new UserInfoDTO
+                        {
+                            Username = x.Username,
+                            PlainTextPassword = x.Password,
+                            Email = x.Email,
+                        }));
+        }
+        catch (ShiftEntityException ex)
+        {
+            return StatusCode(ex.HttpStatusCode, new ShiftEntityResponse<UserImportDTO>
+            {
+                Message = ex.Message,
+                Additional = ex.AdditionalData,
+            });
+        }
+
+        return Ok(new ShiftEntityResponse<UserImportDTO> { Entity = userImport });
     }
 }
