@@ -351,6 +351,7 @@ public class UserRepository :
                 BirthDate = userImport.BirthDate,
                 CompanyBranchID = new ShiftEntitySelectDTO { Value = userImport.CompanyBranchID },
                 Password = password,
+                IsActive = true,
             };
 
             var user = await UpsertAsync(new User(), userDto, ActionTypes.Insert);
