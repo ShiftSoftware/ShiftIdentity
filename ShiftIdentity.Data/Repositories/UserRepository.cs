@@ -356,7 +356,9 @@ public class UserRepository :
 
             var user = await UpsertAsync(new User(), userDto, ActionTypes.Insert);
             user.EmailVerified = true;
-            user.PhoneVerified = true;
+            
+            if(!string.IsNullOrWhiteSpace(user.Phone))
+                user.PhoneVerified = true;
 
             db.Users.Add(user);
 
