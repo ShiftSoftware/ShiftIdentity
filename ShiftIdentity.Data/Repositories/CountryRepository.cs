@@ -47,7 +47,7 @@ public class CountryRepository : ShiftRepository<ShiftIdentityDbContext, Country
     public override Task SaveChangesAsync(bool raiseBeforeCommitTriggers = false)
     {
         if (shiftIdentityFeatureLocking.CountryFeatureIsLocked)
-            throw new ShiftEntityException(new Message(localizer["Error"], localizer["Region Feature is locked"]));
+            throw new ShiftEntityException(new Message(localizer["Error"], localizer["Country Feature is locked"]));
 
         return base.SaveChangesAsync(raiseBeforeCommitTriggers);
     }

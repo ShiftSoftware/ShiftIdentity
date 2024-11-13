@@ -14,13 +14,10 @@ public class UserDTO : ShiftEntityViewAndUpsertDTO
     [UserHashIdConverter]
     public override string? ID { get; set; }
 
-    [Required]
     [CompanyBranchHashIdConverter]
     public ShiftEntitySelectDTO? CompanyBranchID { get; set; }
 
     #region Security
-    [Required]
-    [MaxLength(255)]
     public string Username { get; set; } = default!;
 
     public string? Password { get; set; } = default!;
@@ -32,22 +29,16 @@ public class UserDTO : ShiftEntityViewAndUpsertDTO
     #endregion
 
     #region Contacts
-    [MaxLength(255)]
-    [EmailAddress]
     public string? Email { get; set; }
 
-    [MaxLength(30)]
     public string? Phone { get; set; }
     #endregion
 
     #region Profile
 
-    [Required]
-    [MaxLength(255)]
     public string FullName { get; set; } = default!;
 
     private DateTime? birthDate;
-    [DataType(DataType.Date)]
     public DateTime? BirthDate
     {
         get { return birthDate; }
@@ -69,11 +60,29 @@ public class UserValidator : AbstractValidator<UserDTO>
 {
     public UserValidator(ShiftIdentityLocalizer localizer)
     {
+        RuleFor(x => x.Username)
+                .NotEmpty().WithMessage(localizer["Please provide", localizer["Username"]])
+                .MaximumLength(255).WithMessage(localizer["Your input cannot be more than 255 characters"]);
+
+        RuleFor(x => x.Email)
+            .EmailAddress().WithMessage(localizer["Invalid Email Address"])
+            .MaximumLength(255).WithMessage(localizer["Your input cannot be more than 255 characters"]);
+
+        RuleFor(x => x.FullName)
+            .NotEmpty().WithMessage(localizer["Please provide", localizer["Full Name"]])
+            .MaximumLength(255).WithMessage(localizer["Your input cannot be more than 255 characters"]);
+
         RuleFor(x => x.Phone)
             .Custom((x, context) =>
             {
                 if (x is not null && !ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(x))
-                    context.AddFailure(localizer["InvalidPhoneNumber"]);
+                    context.AddFailure(localizer["Invalid Phone Number"]);
             });
+
+        RuleFor(x => x.BirthDate)
+            .Must(x => x.HasValue ? x.Value.TimeOfDay == TimeSpan.Zero : true).WithMessage(localizer["Please provide a valid date"]);
+
+        RuleFor(x => x.CompanyBranchID)
+            .NotNull().WithMessage(localizer["Please select", localizer["Company Branch"]]);
     }
 }

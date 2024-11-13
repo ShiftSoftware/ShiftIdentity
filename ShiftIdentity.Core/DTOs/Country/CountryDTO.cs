@@ -1,5 +1,7 @@
-﻿using ShiftSoftware.ShiftEntity.Model.Dtos;
+﻿using FluentValidation;
+using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
+using ShiftSoftware.ShiftIdentity.Core.Localization;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -21,4 +23,16 @@ public class CountryDTO : ShiftEntityViewAndUpsertDTO
 
     [Required]
     public string CallingCode { get; set; } = default!;
+}
+
+public class CountryValidator : AbstractValidator<CountryDTO> {
+
+    public CountryValidator(ShiftIdentityLocalizer localizer)
+    {
+        RuleFor(x=> x.Name)
+            .NotEmpty().WithMessage(localizer["Please enter a name"]);
+
+        RuleFor(x=> x.CallingCode)
+            .NotEmpty().WithMessage(localizer["Please provide", localizer["Calling Code"]]);
+    }
 }

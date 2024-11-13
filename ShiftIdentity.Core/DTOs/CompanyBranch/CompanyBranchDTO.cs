@@ -4,6 +4,7 @@ using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
 using ShiftSoftware.ShiftEntity.Model.Replication;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
+using ShiftSoftware.ShiftIdentity.Core.Localization;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
@@ -14,17 +15,14 @@ public class CompanyBranchDTO : ShiftEntityViewAndUpsertDTO
     [CompanyBranchHashIdConverter]
     public override string? ID { get; set; }
 
-    [Required]
     public string Name { get; set; } = default!;
 
-    [Required]
     [CompanyHashIdConverter]
     public ShiftEntitySelectDTO Company { get; set; } = default!;
 
     [CompanyHashIdConverter]
     public string? CompanyID { get; set; }
 
-    [Required]
     [CityHashIdConverter]
     public ShiftEntitySelectDTO City { get; set; } = default!;
 
@@ -57,16 +55,24 @@ public class CompanyBranchDTO : ShiftEntityViewAndUpsertDTO
     }
 }
 
-
 public class CompanyBranchValidator : AbstractValidator<CompanyBranchDTO>
 {
-    public CompanyBranchValidator()
+    public CompanyBranchValidator(ShiftIdentityLocalizer localizer)
     {
+        RuleFor(x => x.Name)
+            .NotEmpty().WithMessage(localizer["Please enter a name"]);
+
+        RuleFor(x=> x.Company)
+            .NotNull().WithMessage(localizer["Please select", localizer["Company"]]);
+
+        RuleFor(x => x.City)
+            .NotNull().WithMessage(localizer["Please select", localizer["City"]]);
+
         RuleFor(x => x.Phone)
             .Custom((x, context) =>
             {
                 if (x is not null && !ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(x))
-                    context.AddFailure("Invalid Phone Number.");
+                    context.AddFailure(localizer["Invalid Phone Number"]);
             });
     }
 }
