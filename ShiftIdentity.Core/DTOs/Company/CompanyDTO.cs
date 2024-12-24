@@ -23,7 +23,7 @@ public class CompanyDTO : ShiftEntityViewAndUpsertDTO
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public CompanyTypes CompanyType { get; set; }
-    public string? Logo { get; set; }
+    public List<ShiftFileDTO>? Logo { get; set; }
     public string? HQPhone { get; set; }
     public string? HQEmail { get; set; }
     public string? HQAddress { get; set; }

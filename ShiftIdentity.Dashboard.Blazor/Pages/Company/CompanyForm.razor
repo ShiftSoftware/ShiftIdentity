@@ -93,6 +93,15 @@
                           For="@(() => TheItem.HQAddress)" />
         </MudItem>
 
+        <MudItem xs="12" sm="12" lg="12" xl="12">
+            <FileUploader ShowThumbnail="true"
+                          Label="@Loc["Logo"]"
+                          For="() => TheItem.Logo"
+                          AcceptImages="true"
+                          MaxFileCount="1"
+                          @bind-Values="TheItem.Logo" />
+        </MudItem>
+
         @if (this.TheItem.CustomFields is not null && this.TheItem.CustomFields?.Count > 0)
         {
             @foreach (var field in this.TheItem.CustomFields)
