@@ -7,6 +7,7 @@ using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
 using ShiftSoftware.ShiftIdentity.Core.Localization;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Text.RegularExpressions;
 
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
 
@@ -74,5 +75,37 @@ public class CompanyBranchValidator : AbstractValidator<CompanyBranchDTO>
                 if (x is not null && !ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(x))
                     context.AddFailure(localizer["Invalid Phone Number"]);
             });
+
+        var pattern = @"^-?\d+(\.\d+)?$";
+        var regex = new Regex(pattern);
+
+        RuleFor(x => x.Longitude)
+            .Custom((x, context) =>
+            {
+                if (x is not null && !regex.IsMatch(x.ToString()))
+                {
+                    context.AddFailure(localizer["Longitude must be a decimal"]);
+                    return;
+                }
+                 
+                var longitude = float.Parse(x);
+                if(x is not null && longitude > 180 || longitude < -180)
+                    context.AddFailure(localizer["Longitude must be between -180 and 180"]);
+            });
+
+        RuleFor(x => x.Latitude)
+            .Custom((x, context) =>
+            {
+                if (x is not null && !regex.IsMatch(x.ToString()))
+                {
+                    context.AddFailure(localizer["Latitude must be a decimal"]);
+                    return;
+                }
+
+                var latitude = float.Parse(x);
+                if (x is not null && latitude > 90 || latitude < -90)
+                    context.AddFailure(localizer["Latitude must be between -90 and 90"]);
+            });
+            
     }
 }
