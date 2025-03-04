@@ -1,12 +1,9 @@
 ﻿using FluentValidation;
-using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
-using ShiftSoftware.ShiftEntity.Model.Replication;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
 using ShiftSoftware.ShiftIdentity.Core.Localization;
+using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
 
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
@@ -26,10 +23,14 @@ public class CompanyBranchDTO : ShiftEntityViewAndUpsertDTO
 
     [CityHashIdConverter]
     public ShiftEntitySelectDTO City { get; set; } = default!;
-
     public string? Phone { get; set; }
+
+    public List<TaggedTextDTO> Phones { get; set; } = new();
+
     public string? ShortPhone { get; set; }
+
     public string? Email { get; set; }
+    public List<TaggedTextDTO> Emails { get; set; } = new();
     public string? Address { get; set; }
     public string? IntegrationId { get; set; } = default!;
     public string? ShortCode { get; set; }
@@ -72,7 +73,7 @@ public class CompanyBranchValidator : AbstractValidator<CompanyBranchDTO>
         RuleFor(x => x.Phone)
             .Custom((x, context) =>
             {
-                if (x is not null && !ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(x))
+                if (x is not null && !string.IsNullOrWhiteSpace(x) && !ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(x))
                     context.AddFailure(localizer["Invalid Phone Number"]);
             });
 
@@ -87,11 +88,12 @@ public class CompanyBranchValidator : AbstractValidator<CompanyBranchDTO>
                     context.AddFailure(localizer["Longitude must be a decimal"]);
                     return;
                 }
-                 
+
                 var longitude = float.Parse(x);
-                if(x is not null && longitude > 180 || longitude < -180)
+                if (x is not null && longitude > 180 || longitude < -180)
                     context.AddFailure(localizer["Longitude must be between -180 and 180"]);
-            });
+            })
+            .When(x => x.Longitude is not null);
 
         RuleFor(x => x.Latitude)
             .Custom((x, context) =>
@@ -105,7 +107,8 @@ public class CompanyBranchValidator : AbstractValidator<CompanyBranchDTO>
                 var latitude = float.Parse(x);
                 if (x is not null && latitude > 90 || latitude < -90)
                     context.AddFailure(localizer["Latitude must be between -90 and 90"]);
-            });
+            })
+            .When(x => x.Latitude is not null);
             
     }
 }

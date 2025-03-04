@@ -1,6 +1,7 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Core.Flags;
 using ShiftSoftware.ShiftEntity.Model;
+using ShiftSoftware.ShiftEntity.Model.Dtos;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -14,8 +15,10 @@ public class CompanyBranch :
 {
     public string Name { get; set; } = default!;
     public string? Phone { get; set; }
+    public List<TaggedTextDTO> Phones { get; set; } = new();
     public string? ShortPhone { get; set; }
     public string? Email { get; set; }
+    public List<TaggedTextDTO> Emails { get; set; } = new();
     public string? Address { get; set; }
     public string? Latitude { get; set; }
     public string? Longitude { get; set; }

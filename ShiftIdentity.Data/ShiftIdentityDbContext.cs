@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
+using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.ShiftIdentity.Data.Triggers;
 using System.Text.Json;
@@ -62,6 +63,16 @@ namespace ShiftSoftware.ShiftIdentity.Data
                         c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                         c => c.ToDictionary(x => x.Key, x => x.Value)
                     )
+                );
+
+                x.Property(p => p.Phones).HasConversion(
+                    x => JsonSerializer.Serialize(x, new JsonSerializerOptions(JsonSerializerDefaults.Web)),
+                    x => string.IsNullOrWhiteSpace(x) ? new () : JsonSerializer.Deserialize<List<TaggedTextDTO>>(x, new JsonSerializerOptions(JsonSerializerDefaults.Web))!
+                );
+
+                x.Property(p => p.Emails).HasConversion(
+                    x => JsonSerializer.Serialize(x, new JsonSerializerOptions(JsonSerializerDefaults.Web)),
+                    x => string.IsNullOrWhiteSpace(x) ? new() : JsonSerializer.Deserialize<List<TaggedTextDTO>>(x, new JsonSerializerOptions(JsonSerializerDefaults.Web))!
                 );
             });
             b.Entity<Company>(x =>

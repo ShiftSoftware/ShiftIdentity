@@ -13,10 +13,17 @@ public static class PhoneNumber
 
     public static bool PhoneIsValid(string phone)
     {
-        var phoneNumberUtil = PhoneNumbers.PhoneNumberUtil.GetInstance();
+        try
+        {
+            var phoneNumberUtil = PhoneNumbers.PhoneNumberUtil.GetInstance();
 
-        var phoneNumber = phoneNumberUtil.Parse(phone, "IQ");
+            var phoneNumber = phoneNumberUtil.Parse(phone, "IQ");
 
-        return phoneNumberUtil.IsValidNumber(phoneNumber);
+            return phoneNumberUtil.IsValidNumber(phoneNumber);
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

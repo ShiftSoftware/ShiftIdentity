@@ -7,6 +7,8 @@ public class ShiftIdentityDashboardBlazorOptions
 {
     internal Dictionary<string, CustomFieldBase> CompanyBranchCustomFields = new();
     internal Dictionary<string, CustomFieldBase> CompanyCustomFields = new();
+    internal List<string> CompanyBranchPhoneTags = new();
+    internal List<string> CompanyBranchEmailTags = new();
 
     public string Title { get; set; } = default!;
     public string LogoPath { get; set; } = default!;
@@ -18,6 +20,20 @@ public class ShiftIdentityDashboardBlazorOptions
     public ShiftIdentityDashboardRoutes DashboardRoutes { get; set; } = new ShiftIdentityDashboardRoutes();
 
     public Func<Task>? DynamicTypeAuthActionExpander { get; set; }
+
+    public ShiftIdentityDashboardBlazorOptions AddCompanyBranchPhoneTag(string tag)
+    {
+        this.CompanyBranchPhoneTags.Add(tag);
+
+        return this;
+    }
+
+    public ShiftIdentityDashboardBlazorOptions AddCompanyBranchEmailTag(string tag)
+    {
+        this.CompanyBranchEmailTags.Add(tag);
+
+        return this;
+    }
 
     public ShiftIdentityDashboardBlazorOptions AddCompanyBranchCustomField(string fieldName, string displayName,
         bool isPassword = false, bool isEncrypted = false)
