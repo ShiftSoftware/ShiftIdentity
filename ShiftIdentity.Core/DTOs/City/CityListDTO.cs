@@ -1,6 +1,4 @@
-﻿
-using ShiftSoftware.ShiftEntity.Core;
-using ShiftSoftware.ShiftEntity.Model;
+﻿using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
 using System.Text.Json.Serialization;
@@ -19,4 +17,15 @@ public class CityListDTO : ShiftEntityListDTO
 
     [JsonConverter(typeof(LocalizedTextJsonConverter))]
     public string Region { get; set; } = default!;
+
+
+    [JsonConverter(typeof(LocalizedTextJsonConverter))]
+    public string Country { get; set; } = default!;
+
+
+    [CountryHashIdConverter]
+    public string? CountryID { get; set; }
+
+    [RegionHashIdConverter]
+    public string? RegionID { get; set; }
 }

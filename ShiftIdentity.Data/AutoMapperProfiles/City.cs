@@ -25,7 +25,11 @@ public class City : Profile
         CreateMap<Core.Entities.City, CityListDTO>()
             .ForMember(
                     dest => dest.Region,
-                    opt => opt.MapFrom(src => src.Region.Name)
+                    opt => opt.MapFrom(src => src.Region!.Name)
+                )
+            .ForMember(
+                    dest => dest.Country,
+                    opt => opt.MapFrom(src => src.Region!.Country!.Name)
                 );
 
         CreateMap<Core.Entities.City, CityModel>()
