@@ -8,41 +8,47 @@ namespace ShiftSoftware.ShiftIdentity.AspNetCore.Extensions;
 
 public static class IFunctionsWorkerApplicationBuilderExtension
 {
-    public static IFunctionsWorkerApplicationBuilder AddShiftIdentity(this IFunctionsWorkerApplicationBuilder builder, string tokenIssuer, string tokenRSAPublicKeyBase64)
+    public static IFunctionsWorkerApplicationBuilder AddShiftIdentity(this IFunctionsWorkerApplicationBuilder builder, string tokenIssuer, string tokenRSAPublicKeyBase64, bool validateTokenLifeTime = true)
     {
         var rsa = RSA.Create();
         rsa.ImportRSAPublicKey(Convert.FromBase64String(tokenRSAPublicKeyBase64), out _);
 
-        builder.AddAuthentication().AddJwtBearer(
-            new TokenValidationParameters
+        var o = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = tokenIssuer,
+            IssuerSigningKey = new RsaSecurityKey(rsa),
+            ValidateIssuerSigningKey = true,
+            ValidateAudience = false,
+            ValidateLifetime = false,
+            RequireExpirationTime = false,
+        };
+
+        if (validateTokenLifeTime)
+        {
+            o.ValidateLifetime = true;
+            o.RequireExpirationTime = true;
+            o.ClockSkew = TimeSpan.Zero;
+            o.LifetimeValidator = (DateTime? notBefore, DateTime? expires, SecurityToken securityToken,
+                                 TokenValidationParameters validationParameters) =>
             {
-                ValidateAudience = false,
-                ValidateIssuer = true,
-                ValidIssuer = tokenIssuer,
-                RequireExpirationTime = true,
-                IssuerSigningKey = new RsaSecurityKey(rsa),
-                ValidateIssuerSigningKey = true,
-                ValidateLifetime = true,
-                ClockSkew = TimeSpan.Zero,
-                LifetimeValidator = (DateTime? notBefore, DateTime? expires, SecurityToken securityToken,
-                                     TokenValidationParameters validationParameters) =>
-                {
-                    bool result = false;
-                    var now = DateTime.UtcNow;
+                bool result = false;
+                var now = DateTime.UtcNow;
 
-                    if (notBefore != null && now < notBefore)
-                        result = false;
+                if (notBefore != null && now < notBefore)
+                    result = false;
 
-                    if (expires != null)
-                        result = expires > now;
+                if (expires != null)
+                    result = expires > now;
 
-                    if (!result)
-                        throw new SecurityTokenExpiredException("Token expired");
+                if (!result)
+                    throw new SecurityTokenExpiredException("Token expired");
 
-                    return result;
-                }
-            }
-        );
+                return result;
+            };
+        }
+
+        builder.AddAuthentication().AddJwtBearer(o);
 
         return builder;
     }
