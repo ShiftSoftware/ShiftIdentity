@@ -75,6 +75,12 @@
                           For="@(() => TheItem.HQPhone)" />
         </MudItem>
 
+        <MudItem xs="12" sm="12" lg="12" xl="12">
+            <LocalizedTextField @bind-Value="TheItem.HQAddress"
+                                Label="@Loc["HQ Address"]"
+                                For="() => TheItem.HQAddress" />
+        </MudItem>
+
         <MudItem xs="12" sm="6" lg="4" xl="3">
             <MudTextField ReadOnly="@ReadOnly"
                           Disabled="@Disabled"
@@ -82,13 +88,6 @@
                           Label="@Loc["HQ Email"]"
                           @bind-Value="TheItem.HQEmail"
                           For="@(() => TheItem.HQEmail)" />
-        </MudItem>
-
-        <MudItem xs="12" sm="12" lg="12" xl="12">
-            <LocalizedTextField 
-                @bind-Value="TheItem.HQAddress" 
-                Label="@Loc["HQ Address"]" 
-                For="() => TheItem.HQAddress" />
         </MudItem>
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
