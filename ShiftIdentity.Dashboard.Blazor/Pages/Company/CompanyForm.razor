@@ -90,6 +90,15 @@
                           For="@(() => TheItem.HQEmail)" />
         </MudItem>
 
+        <MudItem xs="12" sm="6" lg="4" xl="3">
+            <MudTextField ReadOnly="@ReadOnly"
+                          Disabled="@Disabled"
+                          OnlyValidateIfDirty="true"
+                          Label="@Loc["Website"]"
+                          @bind-Value="TheItem.Website"
+                          For="@(() => TheItem.Website)" />
+        </MudItem>
+
         <MudItem xs="12" sm="12" lg="12" xl="12">
             <FileUploader ShowThumbnail="true"
                           Label="@Loc["Logo"]"
