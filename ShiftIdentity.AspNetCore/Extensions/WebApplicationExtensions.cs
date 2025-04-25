@@ -54,7 +54,7 @@ public static class WebApplicationExtensions
 
             var http = new HttpClient();
 
-            using var response = await http.PostAsJsonAsync(baseUrl + "Api/Auth/AuthCode", generateAuthCodeDto);
+            using var response = await http.PostAsJsonAsync(baseUrl + "Auth/AuthCode", generateAuthCodeDto);
 
             if (!response.IsSuccessStatusCode)
                 return Microsoft.AspNetCore.Http.Results.Redirect(generateAuthCodeDto.ReturnUrl ?? baseUrl);

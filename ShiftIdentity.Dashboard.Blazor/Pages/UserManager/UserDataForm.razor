@@ -95,7 +95,7 @@
 @code {
     private async Task SendEmailVerification()
     {
-        var response = await Http.GetAsync("api/usermanager/SendEmailVerificationLink");
+        var response = await Http.GetAsync("usermanager/SendEmailVerificationLink");
 
         if (response.IsSuccessStatusCode)
         {

@@ -44,7 +44,7 @@ public class HttpMessageHandlerService
 
         var refreshToken = storedToken?.RefreshToken;
 
-        using var response =await http.PostAsJsonAsync<RefreshDTO>("api/auth/" + "Refresh", new RefreshDTO { RefreshToken = refreshToken });
+        using var response =await http.PostAsJsonAsync<RefreshDTO>("auth/" + "Refresh", new RefreshDTO { RefreshToken = refreshToken });
 
         if (response.IsSuccessStatusCode)
         {

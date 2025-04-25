@@ -16,7 +16,7 @@ internal class ShiftIdentityProvider : IShiftIdentityProvider
 
     public async Task<HttpResponse<ShiftEntityResponse<TokenDTO?>?>> GetTokenWithAppIdOnlyAsync(string baseUrl, GenerateExternalTokenWithAppIdOnlyDTO dto)
     {
-        var url = $"{(baseUrl.EndsWith('/') ? baseUrl : baseUrl + "/")}Api/Auth/TokenWithAppIdOnly";
+        var url = $"{(baseUrl.EndsWith('/') ? baseUrl : baseUrl + "/")}Auth/TokenWithAppIdOnly";
         using var response = await http.PostAsJsonAsync(url, dto);
 
         return new HttpResponse<ShiftEntityResponse<TokenDTO?>?>
@@ -31,7 +31,7 @@ internal class ShiftIdentityProvider : IShiftIdentityProvider
     /// <returns></returns>
     public async Task<HttpResponse<ShiftEntityResponse<TokenDTO?>?>> RefreshTokenAsync(string baseUrl, RefreshDTO dto)
     {
-        var url = $"{(baseUrl.EndsWith('/') ? baseUrl : baseUrl + "/")}Api/Auth/Refresh";
+        var url = $"{(baseUrl.EndsWith('/') ? baseUrl : baseUrl + "/")}Auth/Refresh";
         using var response = await http.PostAsJsonAsync(url, dto);
 
         return new HttpResponse<ShiftEntityResponse<TokenDTO?>?>
@@ -40,7 +40,7 @@ internal class ShiftIdentityProvider : IShiftIdentityProvider
 
     public async Task<HttpResponse<ShiftEntityResponse<UserDataDTO?>?>> GetUserDataAsync(string baseUrl)
     {
-        var url = $"{(baseUrl.EndsWith('/') ? baseUrl : baseUrl + "/")}Api/UserManager/UserData";
+        var url = $"{(baseUrl.EndsWith('/') ? baseUrl : baseUrl + "/")}UserManager/UserData";
         using var response = await http.GetAsync(url);
 
         return new HttpResponse<ShiftEntityResponse<UserDataDTO?>?>
@@ -49,7 +49,7 @@ internal class ShiftIdentityProvider : IShiftIdentityProvider
 
     public async Task<HttpResponse<ShiftEntityResponse<UserDataDTO?>?>> UpdateUserDataAsync(string baseUrl, UserDataDTO dto)
     {
-        var url = $"{(baseUrl.EndsWith('/') ? baseUrl : baseUrl + "/")}Api/UserManager/UserData";
+        var url = $"{(baseUrl.EndsWith('/') ? baseUrl : baseUrl + "/")}UserManager/UserData";
         using var response = await http.PutAsJsonAsync(url, dto);
 
         return new HttpResponse<ShiftEntityResponse<UserDataDTO?>?>
@@ -58,7 +58,7 @@ internal class ShiftIdentityProvider : IShiftIdentityProvider
 
     public async Task<HttpResponse<ShiftEntityResponse<TokenDTO?>?>> LoginAsync(string baseUrl, LoginDTO dto)
     {
-        var url = $"{(baseUrl.EndsWith('/') ? baseUrl : baseUrl + "/")}Api/Auth/Login";
+        var url = $"{(baseUrl.EndsWith('/') ? baseUrl : baseUrl + "/")}Auth/Login";
         using var response = await http.PostAsJsonAsync(url, dto);
 
         return new HttpResponse<ShiftEntityResponse<TokenDTO?>?>

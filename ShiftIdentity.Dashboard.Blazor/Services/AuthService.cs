@@ -17,7 +17,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services
         private readonly AuthenticationStateProvider? authStateProvider;
         private readonly HttpClient http;
         private readonly NavigationManager navManager;
-        private const string url = "api/auth/";
+        private const string url = "auth/";
 
         public AuthService(
             HttpService httpService,
