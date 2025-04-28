@@ -44,47 +44,47 @@ public partial class ActionTree
         await Task.WhenAll(new List<Task>
         {
             Task.Run(async () => {
-                var countries = await this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Country.CountryListDTO>>("/IdentityCountry?$orderby=Name");
+                var countries = await this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Country.CountryListDTO>>("IdentityCountry?$orderby=Name");
 
                 Core.ShiftIdentityActions.DataLevelAccess.Countries.Expand(countries.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), true, true);
             }),
 
             Task.Run(async () => {
-                var regions = await this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Region.RegionListDTO>>("/IdentityRegion?$orderby=Name");
+                var regions = await this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Region.RegionListDTO>>("IdentityRegion?$orderby=Name");
 
                 Core.ShiftIdentityActions.DataLevelAccess.Regions.Expand(regions.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), true, true);
             }),
 
             Task.Run(async () => {
-                var companies = await this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Company.CompanyListDTO>>("/IdentityCompany?$orderby=Name");
+                var companies = await this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Company.CompanyListDTO>>("IdentityCompany?$orderby=Name");
 
                 Core.ShiftIdentityActions.DataLevelAccess.Companies.Expand(companies.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), true, true);
             }),
 
             Task.Run(async () =>
             {
-                var branches = await this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO>>("/IdentityCompanyBranch?$orderby=Company");
+                var branches = await this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO>>("IdentityCompanyBranch?$orderby=Company");
 
                 Core.ShiftIdentityActions.DataLevelAccess.Branches.Expand(branches.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, $"{x.Company} ↔ {x.Name}"); }).ToList(), true, true);
             }),
 
             Task.Run(async () =>
             {
-                var teams = await this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Team.TeamListDTO>>("/IdentityTeam?$orderby=Name");
+                var teams = await this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Team.TeamListDTO>>("IdentityTeam?$orderby=Name");
 
                 Core.ShiftIdentityActions.DataLevelAccess.Teams.Expand(teams.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), true, true);
             }),
 
             Task.Run(async () =>
             {
-                var brands = await this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Brand.BrandListDTO>>("/IdentityBrand?$orderby=Name");
+                var brands = await this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Brand.BrandListDTO>>("IdentityBrand?$orderby=Name");
 
                 Core.ShiftIdentityActions.DataLevelAccess.Brands.Expand(brands.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), false, true);
             }),
 
             Task.Run(async () =>
             {
-                var cities = await this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.City.CityListDTO>>("/IdentityCity?$orderby=Name");
+                var cities = await this.httpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.City.CityListDTO>>("IdentityCity?$orderby=Name");
 
                 Core.ShiftIdentityActions.DataLevelAccess.Cities.Expand(cities.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), true, true);
             }),
