@@ -11,7 +11,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services;
 
 public class UserManagerService
 {
-    private const string BASE_URL = "/usermanager/";
+    private const string BASE_URL = "usermanager/";
     private readonly HttpService http;
 
     public UserManagerService(HttpService http)
