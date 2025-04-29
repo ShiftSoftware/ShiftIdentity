@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure.Internal;
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.EFCore;
@@ -21,10 +22,15 @@ public class UserRepository :
 {
 
     private readonly ITypeAuthService typeAuthService;
+    private readonly IMapper mapper;
     private readonly ShiftIdentityFeatureLocking shiftIdentityFeatureLocking;
     private readonly ShiftIdentityLocalizer Loc;
 
-    public UserRepository(ShiftIdentityDbContext db, ITypeAuthService typeAuthService, ShiftIdentityFeatureLocking shiftIdentityFeatureLocking, ShiftIdentityLocalizer Loc) : base(db, r =>
+    public UserRepository(ShiftIdentityDbContext db, 
+        ITypeAuthService typeAuthService, 
+        IMapper mapper,
+        ShiftIdentityFeatureLocking shiftIdentityFeatureLocking, 
+        ShiftIdentityLocalizer Loc) : base(db, r =>
         r.IncludeRelatedEntitiesWithFindAsync(
             x => x.Include(y => y.AccessTrees).ThenInclude(y => y.AccessTree),
             x => x.Include(y => y.UserLog),
@@ -34,6 +40,7 @@ public class UserRepository :
     )
     {
         this.typeAuthService = typeAuthService;
+        this.mapper = mapper;
         this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
         this.Loc = Loc;
     }
@@ -263,10 +270,7 @@ public class UserRepository :
         }
 
         //Assign values
-        user.Username = dto.Username;
-        user.Email = dto.Email;
-        user.FullName = dto.FullName;
-        user.BirthDate = dto.BirthDate;
+        this.mapper.Map(dto, user);
         user.Phone = formattedPhone;
 
         return user;

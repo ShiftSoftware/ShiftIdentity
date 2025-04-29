@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using FluentValidation;
+using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
 using ShiftSoftware.ShiftIdentity.Core.Localization;
 
@@ -30,6 +32,8 @@ namespace ShiftSoftware.ShiftIdentity.Core.DTOs.User
         public bool EmailVerified { get; set; }
 
         public bool PhoneVerified { get; set; }
+
+        public List<ShiftFileDTO>? Signature { get; set; }
     }
 
     public class UserDataValidator: AbstractValidator<UserDataDTO>

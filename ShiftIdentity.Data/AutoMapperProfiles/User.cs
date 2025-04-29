@@ -29,7 +29,7 @@ public class User : Profile
                 opt => opt.MapFrom(x => (x.UserLog == null || x.UserLog.LastSeen == null ? x.LastSeen : x.UserLog.LastSeen))
             );
 
-        CreateMap<Core.Entities.User, UserDataDTO>();
+        CreateMap<Core.Entities.User, UserDataDTO>().ReverseMap();
         CreateMap<Core.Entities.User, UserInfoDTO>();
     }
 }

@@ -69,6 +69,7 @@ public class User : ShiftEntity<User>,
     public long? RegionID { get; set; }
     public long? CompanyID { get; set; }
     public long? CompanyBranchID { get; set; }
+    public string? Signature { get; set; }
 
     public virtual Country? Country { get; set; }
     public virtual Region? Region { get; set; }

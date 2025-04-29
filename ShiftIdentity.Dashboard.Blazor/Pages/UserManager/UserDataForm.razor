@@ -89,6 +89,16 @@
                        Label="@Loc["Birth Date"]"
                        For="@(() => TheItem.BirthDate)" />
 
+        <MudItem xs="6" sm="6" lg="2" xl="2">
+            <FileUploader ShowThumbnail="true"
+                          Label="@Loc["Signature"]"
+                          For="() => TheItem.Signature"
+                          MaxFileCount="1"
+                          AcceptImages="true"
+                          DisableToolbar="true"
+                          @bind-Values="TheItem.Signature" />
+        </MudItem>
+
     </ChildContent>
 </ShiftEntityForm>
 
