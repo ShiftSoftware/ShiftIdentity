@@ -46,13 +46,16 @@ namespace ShiftSoftware.ShiftIdentity.Data
             base.OnModelCreating(b);
 
             b.Entity<AccessTree>().HasIndex(x => x.Name).IsUnique().HasFilter($"{nameof(AccessTree.IsDeleted)} = 0");
+
             b.Entity<App>().HasIndex(x => x.AppId).IsUnique().HasFilter($"{nameof(App.IsDeleted)} = 0");
+
             b.Entity<User>(x =>
             {
                 x.HasIndex(x => x.Username).IsUnique().HasFilter($"{nameof(User.IsDeleted)} = 0");
                 x.HasIndex(x => x.Email).IsUnique().HasFilter($"{nameof(User.IsDeleted)} = 0 AND {nameof(User.Email)} is not null");
                 x.HasIndex(x => x.Phone).IsUnique().HasFilter($"{nameof(User.IsDeleted)} = 0 AND {nameof(User.Phone)} is not null");
             });
+
             b.Entity<CompanyBranch>(x =>
             {
                 x.Property(p => p.CustomFields).HasConversion(
@@ -75,6 +78,7 @@ namespace ShiftSoftware.ShiftIdentity.Data
                     x => string.IsNullOrWhiteSpace(x) ? new() : JsonSerializer.Deserialize<List<TaggedTextDTO>>(x, new JsonSerializerOptions(JsonSerializerDefaults.Web))!
                 );
             });
+
             b.Entity<Company>(x =>
             {
                 x.Property(p => p.CustomFields).HasConversion(
@@ -86,6 +90,11 @@ namespace ShiftSoftware.ShiftIdentity.Data
                         c => c.ToDictionary(x => x.Key, x => x.Value)
                     )
                 );
+
+                x.HasOne(x => x.ParentCompany)
+                    .WithMany(x => x.ChildCompanies)
+                    .HasForeignKey(x => x.ParentCompanyID)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
         }
 

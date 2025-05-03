@@ -1,4 +1,5 @@
-﻿using ShiftSoftware.ShiftEntity.Core;
+﻿using Microsoft.EntityFrameworkCore;
+using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftIdentity.Core;
@@ -30,7 +31,37 @@ public class CompanyRepository : ShiftRepository<ShiftIdentityDbContext, Company
                 throw new ShiftEntityException(new Message(Loc["Validation Error"], Loc["Invalid Phone Number"]));
         }
 
-        return base.UpsertAsync(entity, dto, actionType, userId);
+        var parentCompanyId = String.IsNullOrWhiteSpace(dto.ParentCompany?.Value)? null: dto.ParentCompany?.Value?.ToLong();
+
+        if (actionType == ActionTypes.Update && parentCompanyId != null)
+        {
+            // Prevent self-reference
+            if (parentCompanyId == entity.ID)
+                throw new ShiftEntityException(new Message(Loc["Validation Error"], Loc["Parent company and the child company should not be the same"]));
+
+            // Prevent circular reference
+            var parentId = parentCompanyId;
+            do
+            {
+                var parent = db.Companies
+                    .AsNoTracking()
+                    .FirstOrDefault(x => x.ID == parentId);
+
+                if (parent == null)
+                    break;
+
+                if (parent.ID == entity.ID)
+                    throw new ShiftEntityException(new Message(Loc["Validation Error"], Loc["Circular reference is not allowed"]));
+
+                parentId = parent.ParentCompanyID;
+            } while (parentCompanyId != null);
+        }
+
+        var result = base.UpsertAsync(entity, dto, actionType, userId);
+
+        entity.ParentCompanyID = parentCompanyId;
+
+        return result;
     }
 
     public override ValueTask<Company> DeleteAsync(Company entity, bool isHardDelete = false, long? userId = null)

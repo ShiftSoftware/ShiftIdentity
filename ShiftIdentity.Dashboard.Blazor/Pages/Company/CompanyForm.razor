@@ -7,6 +7,7 @@
 @inject ShiftIdentityLocalizer Loc
 
 @using ShiftSoftware.ShiftEntity.Model.Enums
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.Company
 
 
 <ShiftEntityForm @bind-Mode="Mode"
@@ -97,6 +98,15 @@
                           Label="@Loc["Website"]"
                           @bind-Value="TheItem.Website"
                           For="@(() => TheItem.Website)" />
+        </MudItem>
+
+        <MudItem xs="12" sm="6" lg="4" xl="3">
+            <ShiftAutocomplete Label="@Loc["Parent Company"]"
+                               For="@(() => TheItem.ParentCompany)"
+                               @bind-Value="TheItem.ParentCompany"
+                               EntitySet="IdentityCompany"
+                               Filter="(string.IsNullOrWhiteSpace(TheItem.ID)? null: x=> x.Add(f => { f.Field = nameof(CompanyListDTO.ID); f.Value = TheItem.ID; f.Operator=ShiftBlazor.Enums.ODataOperator.NotEqual;}))"
+                               TEntitySet="CompanyListDTO" />
         </MudItem>
 
         <MudItem xs="12" sm="12" lg="12" xl="12">

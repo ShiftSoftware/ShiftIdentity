@@ -24,6 +24,11 @@ public class Company : ShiftEntity<Company>
     public bool BuiltIn { get; set; }
     public Dictionary<string, CustomField>? CustomFields { get; set; }
 
+
+    public long? ParentCompanyID { get; set; }
+    public Company ParentCompany { get; set; }
+    public virtual ICollection<Company> ChildCompanies { get; set; } = new HashSet<Company>();
+
     public virtual ICollection<CompanyBranch> CompanyBranches { get; set; }
 
     public Company()

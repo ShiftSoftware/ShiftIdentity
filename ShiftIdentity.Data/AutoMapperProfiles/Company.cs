@@ -1,6 +1,7 @@
 ﻿
 using AutoMapper;
 using ShiftSoftware.ShiftEntity.Model;
+using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.Replication.IdentityModels;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
@@ -12,6 +13,10 @@ public class Company : Profile
     public Company()
     {
         CreateMap<Core.Entities.Company, CompanyDTO>()
+            .ForMember(
+                    dest => dest.ParentCompany,
+                    opt => opt.MapFrom(src => new ShiftEntitySelectDTO { Value = src.ParentCompanyID.ToString()!})
+                )
             .ForMember(
                 dest => dest.CustomFields,
                 opt => opt.MapFrom(src => src.CustomFields == null ? null : src.CustomFields
@@ -52,7 +57,11 @@ public class Company : Profile
                 }
             });
 
-        CreateMap<Core.Entities.Company, CompanyListDTO>();
+        CreateMap<Core.Entities.Company, CompanyListDTO>()
+            .ForMember(
+                m => m.ParentCompanyName,
+                opt => opt.MapFrom(x => x.ParentCompany == null ? null : x.ParentCompany.Name)
+            );
 
         CreateMap<Core.Entities.Company, CompanyModel>()
             .ForMember(

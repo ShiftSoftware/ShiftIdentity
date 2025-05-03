@@ -23,4 +23,7 @@ public class CompanyListDTO : ShiftEntityListDTO
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public CompanyTypes? CompanyType { get; set; }
+
+    [JsonConverter(typeof(LocalizedTextJsonConverter))]
+    public string? ParentCompanyName { get; set; }
 }
