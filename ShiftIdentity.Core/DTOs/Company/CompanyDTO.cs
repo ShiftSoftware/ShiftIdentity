@@ -31,7 +31,7 @@ public class CompanyDTO : ShiftEntityViewAndUpsertDTO
     public Dictionary<string, CustomFieldDTO>? CustomFields { get; set; }
 
     [CompanyHashIdConverter]
-    public ShiftEntitySelectDTO ParentCompany { get; set; } = default!;
+    public ShiftEntitySelectDTO? ParentCompany { get; set; } = default!;
 
     public CompanyDTO()
     {
