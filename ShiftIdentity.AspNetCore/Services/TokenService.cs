@@ -1,4 +1,5 @@
 ﻿using Microsoft.IdentityModel.Tokens;
+using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
@@ -15,6 +16,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 
@@ -162,6 +164,8 @@ public class TokenService
 
             if (user?.Phone is not null)
                 result.UserData.Phones = new List<PhoneDTO> { new PhoneDTO { Phone = user.Phone } };
+
+            result.UserData.UserSignature = string.IsNullOrWhiteSpace(user?.Signature)? null: JsonSerializer.Deserialize<IEnumerable<ShiftFileDTO>>(user!.Signature);
         }
 
         return result;
