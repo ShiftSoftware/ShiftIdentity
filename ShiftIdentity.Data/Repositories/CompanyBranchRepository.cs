@@ -1,5 +1,5 @@
-﻿using AutoMapper;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
@@ -18,12 +18,15 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
         private readonly RegionRepository regionRepo;
         private readonly ShiftIdentityFeatureLocking shiftIdentityFeatureLocking;
         private readonly ShiftIdentityLocalizer Loc;
+        private readonly IConfiguration configuration;
+
         public CompanyBranchRepository(
             ShiftIdentityDbContext db,
             CityRepository cityRepository,
             RegionRepository regionRepo,
             ShiftIdentityFeatureLocking shiftIdentityFeatureLocking,
-            ShiftIdentityLocalizer Loc
+            ShiftIdentityLocalizer Loc,
+            IConfiguration configuration
         ) : base(db, r =>
             r.IncludeRelatedEntitiesWithFindAsync(
                 x => x.Include(y => y.Company),
@@ -38,6 +41,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             this.regionRepo = regionRepo;
             this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
             this.Loc = Loc;
+            this.configuration = configuration;
         }
 
         public override async ValueTask<CompanyBranch> UpsertAsync(CompanyBranch entity, CompanyBranchDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null)
@@ -56,8 +60,8 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             entity.Phones = dto.Phones;
             entity.Emails = dto.Emails;
             entity.RegionID = (await this.cityRepository.FindAsync(entity.CityID.Value))!.RegionID;
-            
-            if(entity.RegionID is not null)
+
+            if (entity.RegionID is not null)
                 entity.CountryID = (await this.regionRepo.FindAsync(entity.RegionID.GetValueOrDefault()))?.CountryID;
 
             if (actionType == ActionTypes.Insert)
@@ -148,10 +152,15 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
 
             if (!string.IsNullOrWhiteSpace(dto.Phone))
             {
-                if (!Core.ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(dto.Phone))
-                    throw new ShiftEntityException(new Message(Loc["Validation Error"], Loc["Invalid Phone Number"]));
+                if (!configuration.GetSection("ShiftIdentity").Exists() || configuration.GetSection("ShiftIdentity:DisablePhoneNumberValidation").Value == "False")
+                {
+                    if (!Core.ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(dto.Phone))
+                        throw new ShiftEntityException(new Message(Loc["Validation Error"], Loc["Invalid Phone Number"]));
 
-                entity.Phone = Core.ValidatorsAndFormatters.PhoneNumber.GetFormattedPhone(dto.Phone);
+                    entity.Phone = Core.ValidatorsAndFormatters.PhoneNumber.GetFormattedPhone(dto.Phone);
+                }
+                else
+                    entity.Phone = dto.Phone;
             }
             else
                 entity.Phone = null;

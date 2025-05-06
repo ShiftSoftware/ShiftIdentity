@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
@@ -14,10 +15,12 @@ public class CompanyRepository : ShiftRepository<ShiftIdentityDbContext, Company
 {
     private readonly ShiftIdentityFeatureLocking shiftIdentityFeatureLocking;
     private readonly ShiftIdentityLocalizer Loc;
-    public CompanyRepository(ShiftIdentityDbContext db, ShiftIdentityFeatureLocking shiftIdentityFeatureLocking, ShiftIdentityLocalizer Loc) : base(db)
+    private readonly IConfiguration configuration;
+    public CompanyRepository(ShiftIdentityDbContext db, ShiftIdentityFeatureLocking shiftIdentityFeatureLocking, ShiftIdentityLocalizer Loc, IConfiguration configuration) : base(db)
     {
         this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
         this.Loc = Loc;
+        this.configuration = configuration;
     }
 
     public override ValueTask<Company> UpsertAsync(Company entity, CompanyDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null)
@@ -27,9 +30,20 @@ public class CompanyRepository : ShiftRepository<ShiftIdentityDbContext, Company
 
         if (!string.IsNullOrWhiteSpace(dto.HQPhone))
         {
-            if (!Core.ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(dto.HQPhone))
-                throw new ShiftEntityException(new Message(Loc["Validation Error"], Loc["Invalid Phone Number"]));
+            if (!configuration.GetSection("ShiftIdentity").Exists() || configuration.GetSection("ShiftIdentity:DisablePhoneNumberValidation").Value == "False")
+            {
+                if (!Core.ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(dto.HQPhone))
+                    throw new ShiftEntityException(new Message(Loc["Validation Error"], Loc["Invalid Phone Number"]));
+
+                dto.HQPhone = Core.ValidatorsAndFormatters.PhoneNumber.GetFormattedPhone(dto.HQPhone);
+            }
+            else
+            {
+                dto.HQPhone = dto.HQPhone;
+            }
         }
+        else
+            entity.HQPhone = null;
 
         var parentCompanyId = String.IsNullOrWhiteSpace(dto.ParentCompany?.Value)? null: dto.ParentCompany?.Value?.ToLong();
 

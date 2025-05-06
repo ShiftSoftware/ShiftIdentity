@@ -43,12 +43,12 @@ public class CompanyValidator : AbstractValidator<CompanyDTO>
 {
     public CompanyValidator(ShiftIdentityLocalizer localizer)
     {
-        RuleFor(x => x.HQPhone)
-            .Custom((x, context) =>
-            {
-                if (x is not null && !ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(x))
-                    context.AddFailure(localizer["Invalid Phone Number"]);
-            });
+        //RuleFor(x => x.HQPhone)
+        //    .Custom((x, context) =>
+        //    {
+        //        if (x is not null && !ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(x))
+        //            context.AddFailure(localizer["Invalid Phone Number"]);
+        //    });
 
         RuleFor(x=> x.HQEmail)
             .EmailAddress().WithMessage(localizer["Invalid Email Address"]);

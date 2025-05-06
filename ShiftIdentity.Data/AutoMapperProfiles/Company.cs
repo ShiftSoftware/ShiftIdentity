@@ -32,10 +32,6 @@ public class Company : Profile
             );
 
         CreateMap<CompanyDTO, Core.Entities.Company>()
-            .ForMember(
-                m => m.HQPhone,
-                opt => opt.MapFrom(x => x.HQPhone == null ? null : Core.ValidatorsAndFormatters.PhoneNumber.GetFormattedPhone(x.HQPhone))
-            )
             .ForMember(x=> x.CustomFields, x=> x.Ignore())
             .AfterMap((src, dest) =>
             {

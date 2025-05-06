@@ -70,12 +70,12 @@ public class CompanyBranchValidator : AbstractValidator<CompanyBranchDTO>
         RuleFor(x => x.City)
             .NotNull().WithMessage(localizer["Please select", localizer["City"]]);
 
-        RuleFor(x => x.Phone)
-            .Custom((x, context) =>
-            {
-                if (x is not null && !string.IsNullOrWhiteSpace(x) && !ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(x))
-                    context.AddFailure(localizer["Invalid Phone Number"]);
-            });
+        //RuleFor(x => x.Phone)
+        //    .Custom((x, context) =>
+        //    {
+        //        if (x is not null && !string.IsNullOrWhiteSpace(x) && !ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(x))
+        //            context.AddFailure(localizer["Invalid Phone Number"]);
+        //    });
 
         var pattern = @"^-?\d+(\.\d+)?$";
         var regex = new Regex(pattern);
