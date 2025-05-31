@@ -62,6 +62,11 @@ public class AuthController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> Refresh([FromBody] RefreshDTO dto)
     {
+        // Set security headers to prevent caching.
+        Response.Headers["Cache-Control"] = "no-store, no-cache";
+        Response.Headers["Pragma"] = "no-cache";
+        Response.Headers["Expires"] = "0";
+
         var token = await authService.RefreshAsync(dto.RefreshToken);
 
         if (token is null)
@@ -72,11 +77,6 @@ public class AuthController : ControllerBase
                     Body = Loc["Invalid refresh token"]
                 }
             });
-
-        // Set security headers to prevent caching.
-        Response.Headers["Cache-Control"] = "no-store, no-cache";
-        Response.Headers["Pragma"] = "no-cache";
-        Response.Headers["Expires"] = "0";
 
         return Ok(new ShiftEntityResponse<TokenDTO>(token));
     }
