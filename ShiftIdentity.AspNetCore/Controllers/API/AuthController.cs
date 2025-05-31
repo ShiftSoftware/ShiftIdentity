@@ -73,6 +73,11 @@ public class AuthController : ControllerBase
                 }
             });
 
+        // Set security headers to prevent caching.
+        Response.Headers["Cache-Control"] = "no-store, no-cache";
+        Response.Headers["Pragma"] = "no-cache";
+        Response.Headers["Expires"] = "0";
+
         return Ok(new ShiftEntityResponse<TokenDTO>(token));
     }
 
