@@ -37,4 +37,7 @@ public class CompanyBranchListDTO : ShiftEntityListDTO
 
     [DepartmentHashIdConverter]
     public IEnumerable<ShiftEntitySelectDTO> Departments { get; set; } = new List<ShiftEntitySelectDTO>();
+
+    [BrandHashIdConverter]
+    public List<ShiftEntitySelectDTO> Brands { get; set; } = new List<ShiftEntitySelectDTO>();
 }

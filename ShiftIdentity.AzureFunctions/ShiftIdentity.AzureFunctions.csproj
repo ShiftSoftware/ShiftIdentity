@@ -3,40 +3,39 @@
 
 	<!--The Azure Pipeline clones ShiftTemplates into a directory called 's' by default-->
 	<Import Project="..\..\s\ShiftFrameworkGlobalSettings.props" Condition="Exists('..\..\s\ShiftFrameworkGlobalSettings.props')" />
-
+	
 	<PropertyGroup>
 		<TargetFramework>net9.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 
-		<PackageId>ShiftSoftware.ShiftIdentity.AspNetCore</PackageId>
-		<Product>Shift Identity AspNetCore</Product>
-		<AssemblyName>ShiftSoftware.ShiftIdentity.AspNetCore</AssemblyName>
+		<PackageId>ShiftSoftware.ShiftIdentity.AzureFunctions</PackageId>
+		<Product>Shift Identity Azure Functions</Product>
+		<AssemblyName>ShiftSoftware.ShiftIdentity.AzureFunctions</AssemblyName>
 		<Version>$(ShiftFrameworkVersion)</Version>
 		<Authors>aza.asim,Shift Software,Nahro</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<IsPackable>True</IsPackable>
 		<PackageIcon>icon.png</PackageIcon>
-		<RootNamespace>ShiftSoftware.ShiftIdentity.AspNetCore</RootNamespace>
+		<RootNamespace>ShiftSoftware.ShiftIdentity.AzureFunctions</RootNamespace>
 	</PropertyGroup>
 
-	<ItemGroup>
-		<Compile Remove="AppModel.cs" />
-		<Compile Remove="Controllers\MVC\AuthController.cs" />
-		<Compile Remove="Extensions\ControllerBaseExtensions.cs" />
-	</ItemGroup>
+
+
+
+
+
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.6" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.6" />
 		<PackageReference Include="ShiftSoftware.ShiftEntity.Web" Version="$(ShiftFrameworkVersion)" Condition="!Exists('..\..\ShiftEntity\ShiftEntity.Web\ShiftEntity.Web.csproj')" />
 		<PackageReference Include="ShiftSoftware.TypeAuth.Core" Version="$(TypeAuthVersion)" Condition="!Exists('..\..\TypeAuth\TypeAuth.Core\TypeAuth.Core.csproj')" />
-		<!--<PackageReference Include="ShiftSoftware.Azure.Functions.AspNetCore.Authorization" Version="$(AzureFunctionsAspNetCoreAuthorizationVersion)" Condition="!Exists('..\..\AzureFunctionsAspNetCoreAuthorization\ShiftSoftware.Azure.Functions.AspNetCore.Authorization\ShiftSoftware.Azure.Functions.AspNetCore.Authorization.csproj')" />-->
+		<PackageReference Include="ShiftSoftware.Azure.Functions.AspNetCore.Authorization" Version="$(AzureFunctionsAspNetCoreAuthorizationVersion)" Condition="!Exists('..\..\AzureFunctionsAspNetCoreAuthorization\ShiftSoftware.Azure.Functions.AspNetCore.Authorization\ShiftSoftware.Azure.Functions.AspNetCore.Authorization.csproj')" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<None Include="Images\icon.png" Pack="true" PackagePath="\" />
-		<Folder Include="Controllers\MVC\" />
 		<Folder Include="Images\" />
 	</ItemGroup>
 
@@ -44,7 +43,7 @@
 		<ProjectReference Include="..\ShiftIdentity.Core\ShiftIdentity.Core.csproj" />
 		<ProjectReference Include="..\..\ShiftEntity\ShiftEntity.Web\ShiftEntity.Web.csproj" Condition="Exists('..\..\ShiftEntity\ShiftEntity.Web\ShiftEntity.Web.csproj')" />
 		<ProjectReference Include="..\..\TypeAuth\TypeAuth.Core\TypeAuth.Core.csproj" Condition="Exists('..\..\TypeAuth\TypeAuth.Core\TypeAuth.Core.csproj')" />
-		<!--<ProjectReference Include="..\..\AzureFunctionsAspNetCoreAuthorization\ShiftSoftware.Azure.Functions.AspNetCore.Authorization\ShiftSoftware.Azure.Functions.AspNetCore.Authorization.csproj" Condition="Exists('..\..\AzureFunctionsAspNetCoreAuthorization\ShiftSoftware.Azure.Functions.AspNetCore.Authorization\ShiftSoftware.Azure.Functions.AspNetCore.Authorization.csproj')" />-->
+		<ProjectReference Include="..\..\AzureFunctionsAspNetCoreAuthorization\ShiftSoftware.Azure.Functions.AspNetCore.Authorization\ShiftSoftware.Azure.Functions.AspNetCore.Authorization.csproj" Condition="Exists('..\..\AzureFunctionsAspNetCoreAuthorization\ShiftSoftware.Azure.Functions.AspNetCore.Authorization\ShiftSoftware.Azure.Functions.AspNetCore.Authorization.csproj')" />
 	</ItemGroup>
 
 </Project>

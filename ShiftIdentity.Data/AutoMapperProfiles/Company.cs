@@ -55,6 +55,11 @@ public class Company : Profile
 
         CreateMap<Core.Entities.Company, CompanyListDTO>()
             .ForMember(
+                    dest => dest.Brands,
+                    opt => opt.MapFrom(src => src.CompanyBranches!.SelectMany(x=> x.CompanyBranchBrands!).Select(x=> x.BrandID).Distinct()
+                        .Select(x => new ShiftEntitySelectDTO { Value = x.ToString() }))
+                )
+            .ForMember(
                 m => m.ParentCompanyName,
                 opt => opt.MapFrom(x => x.ParentCompany == null ? null : x.ParentCompany.Name)
             );

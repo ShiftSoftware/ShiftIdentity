@@ -1,10 +1,8 @@
-﻿using Microsoft.Azure.Functions.Worker;
-using Microsoft.IdentityModel.Tokens;
+﻿using Microsoft.IdentityModel.Tokens;
 using ShiftSoftware.Azure.Functions.AspNetCore.Authorization.Extensions;
 using System.Security.Cryptography;
-using System.Text;
 
-namespace ShiftSoftware.ShiftIdentity.AspNetCore.Extensions;
+namespace Microsoft.Azure.Functions.Worker;
 
 public static class IFunctionsWorkerApplicationBuilderExtension
 {

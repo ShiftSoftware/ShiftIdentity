@@ -3,6 +3,7 @@ using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.Enums;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
@@ -26,4 +27,7 @@ public class CompanyListDTO : ShiftEntityListDTO
 
     [JsonConverter(typeof(LocalizedTextJsonConverter))]
     public string? ParentCompanyName { get; set; }
+
+    [BrandHashIdConverter]
+    public List<ShiftEntitySelectDTO> Brands { get; set; } = new List<ShiftEntitySelectDTO>();
 }
