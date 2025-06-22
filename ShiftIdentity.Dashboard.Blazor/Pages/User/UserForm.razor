@@ -77,14 +77,12 @@
     <ShiftAutocomplete Label="@Loc["Company Branch"]"
                        For="@(() => TheItem.CompanyBranchID)"
                        @bind-Value="TheItem.CompanyBranchID"
-                       ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
                        TEntitySet="CompanyBranchListDTO"
                        EntitySet="IdentityCompanyBranch"
                        />
 
     <ShiftAutocomplete Label="@Loc["Access Trees"]"
                        @bind-Value="LastSelectedAccessTree"
-                       ToStringFunc="@(e=> e==null ? null : $"{e.Text}")"
                        EntitySet="IdentityAccessTree"
                        TEntitySet="AccessTreeDTO" />
 

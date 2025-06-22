@@ -251,39 +251,36 @@
             TEntitySet="DepartmentListDTO"
             EntitySet="IdentityDepartment" /> *@
 
-            <ShiftAutocompleteWithQuickAdd Label="@Loc["Departments"]"
-                                           TQuickAdd="ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentDTO"
-                                           QuickAddComponentType="@typeof(DepartmentForm)"
-                                           TEntitySet="DepartmentListDTO"
-                                           @bind-SelectedValues="TheItem.Departments"
-                                           EntitySet="IdentityDepartment"
-                                           MultiSelect
-                                           QuickAddParameterName="@nameof(DepartmentForm.DepartmentName)" />
+            <ShiftAutocomplete Label="@Loc["Departments"]"
+                               QuickAddComponentType="@typeof(DepartmentForm)"
+                               TEntitySet="DepartmentListDTO"
+                               @bind-SelectedValues="TheItem.Departments"
+                               EntitySet="IdentityDepartment"
+                               MultiSelect
+                               QuickAddParameterName="@nameof(DepartmentForm.DepartmentName)" />
 
         </MudItem>
 
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
-            <ShiftAutocompleteWithQuickAdd Label="@Loc["Services"]"
-                                           TQuickAdd="ShiftSoftware.ShiftIdentity.Core.DTOs.Service.ServiceDTO"
-                                           QuickAddComponentType="@typeof(ServiceForm)"
-                                           @bind-SelectedValues="TheItem.Services"
-                                           TEntitySet="ServiceListDTO"
-                                           EntitySet="IdentityService"
-                                           MultiSelect
-                                           QuickAddParameterName="@nameof(ServiceForm.ServiceName)" />
+            <ShiftAutocomplete Label="@Loc["Services"]"
+                               QuickAddComponentType="@typeof(ServiceForm)"
+                               @bind-SelectedValues="TheItem.Services"
+                               TEntitySet="ServiceListDTO"
+                               EntitySet="IdentityService"
+                               MultiSelect
+                               QuickAddParameterName="@nameof(ServiceForm.ServiceName)" />
 
         </MudItem>
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
-            <ShiftAutocompleteWithQuickAdd Label="@Loc["Brands"]"
-                                           TQuickAdd="ShiftSoftware.ShiftIdentity.Core.DTOs.Brand.BrandDTO"
-                                           QuickAddComponentType="@typeof(BrandForm)"
-                                           @bind-SelectedValues="TheItem.Brands"
-                                           TEntitySet="BrandListDTO"
-                                           EntitySet="IdentityBrand"
-                                           MultiSelect
-                                           QuickAddParameterName="@nameof(BrandForm.BrandName)" />
+            <ShiftAutocomplete Label="@Loc["Brands"]"
+                               QuickAddComponentType="@typeof(BrandForm)"
+                               @bind-SelectedValues="TheItem.Brands"
+                               TEntitySet="BrandListDTO"
+                               EntitySet="IdentityBrand"
+                               MultiSelect
+                               QuickAddParameterName="@nameof(BrandForm.BrandName)" />
         </MudItem>
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
