@@ -345,6 +345,17 @@
 
     private void SetCustomFiles()
     {
+        // Remove removed fields
+        if (TheItem.CustomFields is not null && TheItem.CustomFields.Count > 0)
+        {
+            var keysToRemove = TheItem.CustomFields.Keys
+                .Where(key => Options.CompanyBranchCustomFields.ContainsKey(key) is false)
+                .ToList();
+
+            foreach (var key in keysToRemove)
+                TheItem.CustomFields.Remove(key);
+        }
+
         foreach (var field in this.Options.CompanyBranchCustomFields)
         {
             if (this.TheItem.CustomFields?.ContainsKey(field.Key) ?? false)
