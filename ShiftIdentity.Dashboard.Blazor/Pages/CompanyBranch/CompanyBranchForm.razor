@@ -345,16 +345,10 @@
 
     private void SetCustomFiles()
     {
-        // Remove removed fields
-        if (TheItem.CustomFields is not null && TheItem.CustomFields.Count > 0)
-        {
-            var keysToRemove = TheItem.CustomFields.Keys
-                .Where(key => Options.CompanyBranchCustomFields.ContainsKey(key) is false)
-                .ToList();
-
-            foreach (var key in keysToRemove)
-                TheItem.CustomFields.Remove(key);
-        }
+        // Only keep fields that are registred in Options
+        TheItem.CustomFields = TheItem.CustomFields?
+            .Where(kv => Options.CompanyBranchCustomFields.ContainsKey(kv.Key))
+            .ToDictionary(kv => kv.Key, kv => kv.Value);
 
         foreach (var field in this.Options.CompanyBranchCustomFields)
         {
