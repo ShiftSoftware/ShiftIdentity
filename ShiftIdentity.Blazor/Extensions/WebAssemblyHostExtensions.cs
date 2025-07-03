@@ -37,7 +37,7 @@ public static class WebAssemblyHostExtensions
 
         //Skip the refresh if tab is not active
         var isTabActive = await IsTabActive(services);
-        if (!isTabActive)
+        if (!isTabActive && !firtTimeRun)
             return;
 
         var storedToken = await tokenStore.GetTokenAsync();
