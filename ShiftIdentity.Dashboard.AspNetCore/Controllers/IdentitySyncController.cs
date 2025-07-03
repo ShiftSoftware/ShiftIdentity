@@ -32,9 +32,13 @@ public class IdentitySyncController : ControllerBase
             return Unauthorized("Only available in Staging & Development");
 
         await db.UserLogs.ExecuteDeleteAsync();
+        await db.UserAccessTrees.ExecuteDeleteAsync();
+        await db.TeamUsers.ExecuteDeleteAsync();
         await db.Users.Where(x => !x.BuiltIn).ExecuteDeleteAsync();
         await db.AccessTrees.ExecuteDeleteAsync();
-        await db.UserAccessTrees.ExecuteDeleteAsync();
+        await db.CompanyBranchBrands.ExecuteDeleteAsync();
+        await db.CompanyBranchDepartments.ExecuteDeleteAsync();
+        await db.CompanyBranchServices.ExecuteDeleteAsync();
         await db.CompanyBranches.Where(x => !x.BuiltIn).ExecuteDeleteAsync();
         await db.Cities.Where(x => !x.BuiltIn).ExecuteDeleteAsync();
         await db.Regions.Where(x => !x.BuiltIn).ExecuteDeleteAsync();
@@ -56,6 +60,11 @@ public class IdentitySyncController : ControllerBase
         await this.CopyAccessTrees();
         await this.CopyUsers();
         await this.CopyTeams();
+        await this.CopyUserAccessTrees();
+        await this.CopyTeamUsers();
+        await this.CopyCompanyBranchBrands();
+        await this.CopyCompanyBranchDepartments();
+        await this.CopyCompanyBranchServices();
 
         #region Trigger Replication
 
@@ -91,6 +100,21 @@ public class IdentitySyncController : ControllerBase
 
         foreach (var item in await db.Teams.ToListAsync())
             db.Teams.Entry(item).State = EntityState.Modified;
+
+        foreach (var item in await db.UserAccessTrees.ToListAsync())
+            db.UserAccessTrees.Entry(item).State = EntityState.Modified;
+
+        foreach (var item in await db.TeamUsers.ToListAsync())
+            db.TeamUsers.Entry(item).State = EntityState.Modified;
+
+        foreach (var item in await db.CompanyBranchBrands.ToListAsync())
+            db.CompanyBranchBrands.Entry(item).State = EntityState.Modified;
+
+        foreach (var item in await db.CompanyBranchDepartments.ToListAsync())
+            db.CompanyBranchDepartments.Entry(item).State = EntityState.Modified;
+
+        foreach (var item in await db.CompanyBranchServices.ToListAsync())
+            db.CompanyBranchServices.Entry(item).State = EntityState.Modified;
 
         await db.SaveChangesAsync();
 
@@ -403,6 +427,146 @@ public class IdentitySyncController : ControllerBase
             await db.SaveChangesWithoutTriggersAsync();
 
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.Teams OFF");
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    private async Task CopyUserAccessTrees()
+    {
+        var liveData = await liveDb
+            .UserAccessTrees
+            .AsNoTracking()
+            .ToListAsync();
+
+        using var transaction = await db.Database.BeginTransactionAsync();
+
+        try
+        {
+            // Enable identity insert — inside the same transaction
+            await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.UserAccessTrees ON");
+
+            db.UserAccessTrees.AddRange(liveData);
+            await db.SaveChangesWithoutTriggersAsync();
+
+            await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.UserAccessTrees OFF");
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    private async Task CopyTeamUsers()
+    {
+        var liveData = await liveDb
+            .TeamUsers
+            .AsNoTracking()
+            .ToListAsync();
+
+        using var transaction = await db.Database.BeginTransactionAsync();
+
+        try
+        {
+            // Enable identity insert — inside the same transaction
+            await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.TeamUsers ON");
+
+            db.TeamUsers.AddRange(liveData);
+            await db.SaveChangesWithoutTriggersAsync();
+
+            await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.TeamUsers OFF");
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    private async Task CopyCompanyBranchBrands()
+    {
+        var liveData = await liveDb
+            .CompanyBranchBrands
+            .AsNoTracking()
+            .ToListAsync();
+
+        using var transaction = await db.Database.BeginTransactionAsync();
+
+        try
+        {
+            // Enable identity insert — inside the same transaction
+            await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.CompanyBranchBrands ON");
+
+            db.CompanyBranchBrands.AddRange(liveData);
+            await db.SaveChangesWithoutTriggersAsync();
+
+            await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.CompanyBranchBrands OFF");
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    private async Task CopyCompanyBranchDepartments()
+    {
+        var liveData = await liveDb
+            .CompanyBranchDepartments
+            .AsNoTracking()
+            .ToListAsync();
+
+        using var transaction = await db.Database.BeginTransactionAsync();
+
+        try
+        {
+            // Enable identity insert — inside the same transaction
+            await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.CompanyBranchDepartments ON");
+
+            db.CompanyBranchDepartments.AddRange(liveData);
+            await db.SaveChangesWithoutTriggersAsync();
+
+            await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.CompanyBranchDepartments OFF");
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    private async Task CopyCompanyBranchServices()
+    {
+        var liveData = await liveDb
+            .CompanyBranchServices
+            .AsNoTracking()
+            .ToListAsync();
+
+        using var transaction = await db.Database.BeginTransactionAsync();
+
+        try
+        {
+            // Enable identity insert — inside the same transaction
+            await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.CompanyBranchServices ON");
+
+            db.CompanyBranchServices.AddRange(liveData);
+            await db.SaveChangesWithoutTriggersAsync();
+
+            await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.CompanyBranchServices OFF");
 
             await transaction.CommitAsync();
         }
