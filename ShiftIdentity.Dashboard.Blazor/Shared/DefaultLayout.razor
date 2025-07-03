@@ -1,12 +1,14 @@
-﻿@using Microsoft.AspNetCore.Components.WebAssembly.Hosting
+﻿@using Microsoft.Extensions.Configuration
 
 @inherits LayoutBase
 @inject SettingManager SettingManager
 @inject ShiftIdentityDashboardBlazorOptions ShiftIdentityDashboardBlazorOptions
-@inject IWebAssemblyHostEnvironment Env
+
 @inject HttpClient HttpClient
 @inject ISnackbar Snackbar
 @inject ShiftIdentityLocalizer Loc
+
+@inject IConfiguration Configuration
 
 <MudRTLProvider RightToLeft="SettingManager.GetLanguage().RTL">
 
@@ -20,7 +22,7 @@
 
             <MudSpacer />
 
-            @if (Env.IsStaging() || Env.IsDevelopment())
+            @if (_isStaging || _isDevelopment)
             {
                 <UserAvatar>
                     <MenuItemsTemplate>
@@ -65,10 +67,26 @@
     bool _drawerOpen = false;
     bool _pullingData = false;
 
+    bool _isDevelopment;
+    bool _isStaging;
+
     void DrawerToggle()
     {
         _drawerOpen = !_drawerOpen;
-    }    
+    }
+
+    protected override void OnInitialized()
+    {
+        var env = this.Configuration.GetValue<string>("Environment");
+
+        if (!string.IsNullOrWhiteSpace(env))
+        {
+            _isDevelopment = env.Equals("Development", StringComparison.InvariantCultureIgnoreCase);
+            _isStaging = env.Equals("Staging", StringComparison.InvariantCultureIgnoreCase);
+        }
+
+        base.OnInitialized();
+    }
 
     async Task PullData()
     {
@@ -81,7 +99,9 @@
 
         try
         {
-            await HttpClient.GetAsync("IdentitySync/pull-live-db-data");
+            var response = await HttpClient.GetAsync("IdentitySync/pull-live-db-data");
+
+            response.EnsureSuccessStatusCode();
 
             this._pullingData = false;
 
