@@ -2,6 +2,12 @@
 @inject SettingManager SettingManager
 @inject ShiftIdentityDashboardBlazorOptions ShiftIdentityDashboardBlazorOptions
 
+@using Microsoft.AspNetCore.Components.WebAssembly.Hosting
+
+@inject IWebAssemblyHostEnvironment Env
+@inject HttpClient HttpClient
+@inject ISnackbar Snackbar
+
 <MudRTLProvider RightToLeft="SettingManager.GetLanguage().RTL">
 
     <AddMudProviders />
@@ -23,6 +29,22 @@
 
         <MudMainContent>
             <MudContainer MaxWidth="MaxWidth.ExtraLarge" Style="padding-block: 24px;">
+                @if (Env.IsStaging() || Env.IsDevelopment())
+                {
+                    <MudButton Disabled="@_pullingData" OnClick="PullData" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="mb-3">
+                        @if (_pullingData)
+                        {
+                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true"/>
+                            <MudText Class="ms-2">Pulling Data</MudText>
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Download" Size="Size.Small" />
+                            <MudText Class="ms-2">Pull Live Data</MudText>
+                        }
+                    </MudButton>
+                }
+
                 @Body
             </MudContainer>
         </MudMainContent>
@@ -33,9 +55,39 @@
 
 @code {
     bool _drawerOpen = false;
+    bool _pullingData = false;
 
     void DrawerToggle()
     {
         _drawerOpen = !_drawerOpen;
+    }
+
+    async Task PullData()
+    {
+        if (this._pullingData)
+            return;
+
+        this._pullingData = true;
+
+        StateHasChanged();
+
+        try
+        {
+            await HttpClient.GetAsync("IdentitySync/pull-live-db-data");
+
+            this._pullingData = false;
+
+            StateHasChanged();
+
+            Snackbar.Add(message: "Successfully Pulled Live Data", severity: Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            this._pullingData = false;
+
+            StateHasChanged();
+
+            Snackbar.Add(message: ex.Message, severity: Severity.Error);
+        }
     }
 }
