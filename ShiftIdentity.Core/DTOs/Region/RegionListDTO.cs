@@ -19,4 +19,8 @@ public class RegionListDTO : ShiftEntityListDTO
 
     [JsonConverter(typeof(LocalizedTextJsonConverter))]
     public string? Country { get; set; } = default!;
+
+
+    [CountryHashIdConverter]
+    public string? CountryID { get; set; }
 }

@@ -2,6 +2,7 @@
 @layout Shared.DefaultLayout
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CityList)}")]
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.City;
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.Region
 @inject ShiftIdentityLocalizer Loc
 
 <ShiftList EntitySet="@($"{Constants.IdentityRoutePreifix}City")"
@@ -9,8 +10,14 @@
            T="CityListDTO"
            ComponentType="typeof(CityForm)"
            Dense
+           EnableFilterPanel
            TypeAuthAction="ShiftIdentityActions.Cities"
            EnableExport>
+
+    <StringFilter Property="x => x.Name" Label="@Loc["Name"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="3" />
+    <ForeignFilter Property="x => x.CountryID" Label="@Loc["Country"]" lg="3" DTOType="typeof(CountryListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Country")" />
+    <ForeignFilter Property="x => x.RegionID" Label="@Loc["Region"]" lg="3" DTOType="typeof(RegionListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Region")" />
+    <StringFilter Property="x => x.IntegrationId" Label="@Loc["Integration ID"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="3" />
 
     <PropertyColumn Title="@Loc["Name"]" Property="x => x.Name" />
     <PropertyColumn Title="@Loc["Country"]" Property="x => x.Country" />

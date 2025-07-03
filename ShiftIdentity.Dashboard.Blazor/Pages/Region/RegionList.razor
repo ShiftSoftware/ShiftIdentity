@@ -9,9 +9,14 @@
            T="RegionListDTO"
            ComponentType="typeof(RegionForm)"
            Dense
+           EnableFilterPanel
            TypeAuthAction="ShiftIdentityActions.Regions"
            EnableExport>
-    
+
+    <StringFilter Property="x => x.Name" Label="@Loc["Name"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" />
+    <ForeignFilter Property="x => x.CountryID" Label="@Loc["Country"]" lg="4" DTOType="typeof(CountryListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Country")" />
+    <StringFilter Property="x => x.IntegrationId" Label="@Loc["Integration ID"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" />
+
     <PropertyColumn Title="@Loc["Name"]" Property="x => x.Name" />
     <PropertyColumn Title="@Loc["Country"]" Property="x => x.Country" />
     <PropertyColumn Title="@Loc["Integration ID"]" Property="x => x.IntegrationId" />

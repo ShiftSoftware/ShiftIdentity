@@ -10,14 +10,20 @@
            ComponentType="typeof(CompanyForm)"
            Dense
            TypeAuthAction="ShiftIdentityActions.Companies"
+           EnableFilterPanel
            EnableExport>
+
+    <StringFilter Property="x => x.Name" Label="@Loc["Name"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="3" />
+    <StringFilter Property="x => x.IntegrationId" Label="@Loc["Integration ID"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="3" />
+    <EnumFilter Property="x => x.CompanyType" Label="@Loc["Company Type"]" />
+    <ForeignFilter Property="x => x.ParentCompanyID" Label="@Loc["Parent Company"]" lg="3" DTOType="typeof(CompanyListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Company")" />
 
     <PropertyColumn Property="x => x.Name" Title="@Loc["Name"]" />
     <PropertyColumn Property="x => x.LegalName" Title="@Loc["Legal Name"]" />
     <PropertyColumn Property="x => x.ShortCode" Title="@Loc["Short Code"]" />
     <PropertyColumn Property="x => x.IntegrationId" Title="@Loc["Integration ID"]" />
 
-    <PropertyColumn Title="@Loc["Company Type"]" Property="x=> x.CompanyType">
+    <PropertyColumn Title="@Loc["Company Type"]" Property="x => x.CompanyType">
         <CellTemplate>
             <span>@context!.Item!.CompanyType!.Describe()</span>
         </CellTemplate>

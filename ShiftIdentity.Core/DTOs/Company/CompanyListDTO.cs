@@ -30,4 +30,8 @@ public class CompanyListDTO : ShiftEntityListDTO
 
     [BrandHashIdConverter]
     public List<ShiftEntitySelectDTO> Brands { get; set; } = new List<ShiftEntitySelectDTO>();
+
+
+    [CompanyHashIdConverter]
+    public string? ParentCompanyID { get; set; }
 }

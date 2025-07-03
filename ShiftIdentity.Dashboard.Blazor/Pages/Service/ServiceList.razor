@@ -9,8 +9,12 @@
            T="ServiceListDTO"
            ComponentType="typeof(ServiceForm)"
            Dense
+           EnableFilterPanel
            TypeAuthAction="ShiftIdentityActions.Services"
            EnableExport>
+
+    <StringFilter Property="x => x.Name" Label="@Loc["Name"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="6" />
+    <StringFilter Property="x => x.IntegrationId" Label="@Loc["Integration ID"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="6" />
 
     <PropertyColumn Title="@Loc["Name"]" Property="x => x.Name" />
     <PropertyColumn Title="@Loc["Integration ID"]" Property="x => x.IntegrationId" />
