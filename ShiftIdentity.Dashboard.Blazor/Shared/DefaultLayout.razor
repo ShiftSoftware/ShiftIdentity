@@ -1,12 +1,12 @@
-﻿@inherits LayoutBase
+﻿@using Microsoft.AspNetCore.Components.WebAssembly.Hosting
+
+@inherits LayoutBase
 @inject SettingManager SettingManager
 @inject ShiftIdentityDashboardBlazorOptions ShiftIdentityDashboardBlazorOptions
-
-@using Microsoft.AspNetCore.Components.WebAssembly.Hosting
-
 @inject IWebAssemblyHostEnvironment Env
 @inject HttpClient HttpClient
 @inject ISnackbar Snackbar
+@inject ShiftIdentityLocalizer Loc
 
 <MudRTLProvider RightToLeft="SettingManager.GetLanguage().RTL">
 
@@ -20,7 +20,31 @@
 
             <MudSpacer />
 
-            <UserAvatar></UserAvatar>
+            @if (Env.IsStaging() || Env.IsDevelopment())
+            {
+                <UserAvatar>
+                    <MenuItemsTemplate>
+                        <MudListItem OnClick="PullData" T="string">
+                            <MudStack Row Style="gap: 15px; white-space: nowrap;">
+                                @if (_pullingData)
+                                {
+                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                }
+                                else
+                                {
+                                    <MudIcon Style="opacity: 0.75;" Icon="@Icons.Material.Filled.Download" />
+                                }
+
+                                <MudText>@Loc["Pull Live Data"]</MudText>
+                            </MudStack>
+                        </MudListItem>
+                    </MenuItemsTemplate>
+                </UserAvatar>
+            }
+            else
+            {
+                <UserAvatar />
+            }
         </MudAppBar>
 
         <MudDrawer @bind-Open="@_drawerOpen" ClipMode="DrawerClipMode.Docked" Elevation="1" Variant="@DrawerVariant.Mini" Breakpoint="Breakpoint.Lg" OpenMiniOnHover="true">
@@ -29,22 +53,6 @@
 
         <MudMainContent>
             <MudContainer MaxWidth="MaxWidth.ExtraLarge" Style="padding-block: 24px;">
-                @if (Env.IsStaging() || Env.IsDevelopment())
-                {
-                    <MudButton Disabled="@_pullingData" OnClick="PullData" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="mb-3">
-                        @if (_pullingData)
-                        {
-                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true"/>
-                            <MudText Class="ms-2">Pulling Data</MudText>
-                        }
-                        else
-                        {
-                            <MudIcon Icon="@Icons.Material.Filled.Download" Size="Size.Small" />
-                            <MudText Class="ms-2">Pull Live Data</MudText>
-                        }
-                    </MudButton>
-                }
-
                 @Body
             </MudContainer>
         </MudMainContent>
@@ -60,7 +68,7 @@
     void DrawerToggle()
     {
         _drawerOpen = !_drawerOpen;
-    }
+    }    
 
     async Task PullData()
     {
