@@ -24,7 +24,8 @@ public class TokenMessageHandlerWithAutoRefresh : DelegatingHandler
         tokenStore = tokenProvider;
         this.msg = msg;
         _asyncPolicy = Policy
-            .HandleResult<HttpResponseMessage>(r => r.StatusCode is HttpStatusCode.Unauthorized)
+            .Handle<HttpRequestException>()
+            .OrResult<HttpResponseMessage>(r => r.StatusCode is HttpStatusCode.Unauthorized)
             .RetryAsync(async (_, _) =>
             {
                 var success = await httpMessageHandlerService.RefreshAsync();
@@ -38,7 +39,8 @@ public class TokenMessageHandlerWithAutoRefresh : DelegatingHandler
             });
 
         _policy = Policy
-            .HandleResult<HttpResponseMessage>(r => r.StatusCode is HttpStatusCode.Unauthorized)
+            .Handle<HttpRequestException>()
+            .OrResult<HttpResponseMessage>(r => r.StatusCode is HttpStatusCode.Unauthorized)
             .Retry(async (_, _) =>
             {
                 var success = await httpMessageHandlerService.RefreshAsync();
