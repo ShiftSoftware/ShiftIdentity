@@ -2,6 +2,7 @@
 @layout Shared.DefaultLayout
 
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(TeamList)}")]
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.Company
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Team;
 @inject ShiftIdentityLocalizer Loc
 
@@ -10,8 +11,14 @@
            T="TeamListDTO"
            ComponentType="typeof(TeamForm)"
            Dense
+           FilterPanelDefaultOpen
+           EnableFilterPanel
            TypeAuthAction="ShiftIdentityActions.Teams"
            EnableExport>
+
+    <StringFilter Property="x => x.Name" Label="@Loc["Name"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" md="6" sm="12" xs="12" />
+    <StringFilter Property="x => x.IntegrationId" Label="@Loc["Integration ID"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" md="6" sm="12" xs="12" />
+    <ForeignFilter Property="x => x.CompanyId" Label="@Loc["Company"]" DTOType="typeof(CompanyListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Company")" lg="4" md="6" sm="12" xs="12" />
 
     <PropertyColumn Title="@Loc["Name"]" Property="x => x.Name" />
     <PropertyColumn Title="@Loc["Integration ID"]" Property="x => x.IntegrationId" />

@@ -2,6 +2,7 @@
 @layout Shared.DefaultLayout
 
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(UserList)}")]
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 @inject IDialogService DialogService
 @inject HttpClient Http
@@ -14,6 +15,8 @@
            @ref="ShiftList"
            ComponentType="typeof(UserForm)"
            Dense
+           FilterPanelDefaultOpen
+           EnableFilterPanel
            EnableSelection
            TypeAuthAction="ShiftIdentityActions.Users"
            EnableExport>
@@ -28,8 +31,7 @@
                           Confirm
                           OnResponse="AssignRandomPasswordsResponse"
                           T="UserListDTO"
-                          Action="@($"{Constants.IdentityRoutePreifix}User/AssignRandomPasswords?shareWithUser={SharePasswordWithUser}")"
-                          >
+                          Action="@($"{Constants.IdentityRoutePreifix}User/AssignRandomPasswords?shareWithUser={SharePasswordWithUser}")">
 
                 <DialogBodyTemplate>
                     <MudCheckBox @bind-Value="SharePasswordWithUser" Label="@Loc["Send login info to the user"]" />
@@ -47,7 +49,7 @@
                           OnResponse="VerifyEmailsResponse"
                           T="UserListDTO"
                           Action="@($"{Constants.IdentityRoutePreifix}User/VerifyEmails")">
-               @Loc["Verify Emails"]
+                @Loc["Verify Emails"]
             </ActionButton>
 
             <ActionButton Color="Color.Error"
@@ -74,6 +76,14 @@
     </ToolbarStartTemplate>
 
     <ChildContent>
+
+        <StringFilter Property="x => x.FullName" Label="@Loc["Name"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" md="6" sm="12" xs="12" />
+        <StringFilter Property="x => x.Username" Label="@Loc["Username"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" md="6" sm="12" xs="12" />
+        <StringFilter Property="x => x.Phone" Label="@Loc["Phone"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" md="6" sm="12" xs="12" />
+        <StringFilter Property="x => x.Email" Label="@Loc["Email"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" md="6" sm="12" xs="12" />
+        <ForeignFilter Property="x => x.CompanyBranch" Label="@Loc["Branch"]" DTOType="typeof(CompanyBranchListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}CompanyBranch")" lg="4" md="6" sm="12" xs="12" />
+        <DateTimeFilter Property="x => x.LastSeen" Label="@Loc["Last Seen"]" lg="4" md="6" sm="12" xs="12" />
+
         <PropertyColumn Title="@Loc["Name"]" Property="x => x.FullName" />
         <PropertyColumn Title="@Loc["Username"]" Property="x => x.Username" />
         <PropertyColumn Title="@Loc["Phone"]" Property="x => x.Phone">

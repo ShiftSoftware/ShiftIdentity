@@ -9,8 +9,12 @@
            T="AccessTreeDTO"
            ComponentType="typeof(AccessTreeForm)"
            Dense
+           FilterPanelDefaultOpen
+           EnableFilterPanel
            TypeAuthAction="ShiftIdentityActions.AccessTrees"
            EnableExport>
+
+    <StringFilter Property="x => x.Name" Label="@Loc["Name"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="12" md="12" sm="12" xs="12" />
 
     <PropertyColumn Property="x => x.Name" Title="@Loc["Name"]"/>
 </ShiftList>

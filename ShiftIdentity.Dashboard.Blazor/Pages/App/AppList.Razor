@@ -9,8 +9,12 @@
            T="AppDTO"
            ComponentType="typeof(AppForm)"
            Dense
+           FilterPanelDefaultOpen
+           EnableFilterPanel
            TypeAuthAction="ShiftIdentityActions.Apps"
            EnableExport>
+
+    <StringFilter Property="x => x.DisplayName" Label="@Loc["Display Name"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="12" md="12" sm="12" xs="12" />
 
     <PropertyColumn Property="x => x.DisplayName" Title="@Loc["Display Name"]" />
     <PropertyColumn Property="x => x.AppId" Title="@Loc["App Id"]" />

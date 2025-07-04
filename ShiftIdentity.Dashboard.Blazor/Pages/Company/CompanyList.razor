@@ -11,12 +11,13 @@
            Dense
            TypeAuthAction="ShiftIdentityActions.Companies"
            EnableFilterPanel
+           FilterPanelDefaultOpen
            EnableExport>
 
-    <StringFilter Property="x => x.Name" Label="@Loc["Name"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="3" />
-    <StringFilter Property="x => x.IntegrationId" Label="@Loc["Integration ID"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="3" />
-    <EnumFilter Property="x => x.CompanyType" Label="@Loc["Company Type"]" />
-    <ForeignFilter Property="x => x.ParentCompanyID" Label="@Loc["Parent Company"]" lg="3" DTOType="typeof(CompanyListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Company")" />
+    <StringFilter Property="x => x.Name" Label="@Loc["Name"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="3" md="6" sm="12" xs="12" />
+    <StringFilter Property="x => x.IntegrationId" Label="@Loc["Integration ID"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="3" md="6" sm="12" xs="12" />
+    <EnumFilter Property="x => x.CompanyType" Label="@Loc["Company Type"]" lg="3" md="6" sm="12" xs="12" />
+    <ForeignFilter Property="x => x.ParentCompanyID" Label="@Loc["Parent Company"]" DTOType="typeof(CompanyListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Company")" lg="3" md="6" sm="12" xs="12" />
 
     <PropertyColumn Property="x => x.Name" Title="@Loc["Name"]" />
     <PropertyColumn Property="x => x.LegalName" Title="@Loc["Legal Name"]" />

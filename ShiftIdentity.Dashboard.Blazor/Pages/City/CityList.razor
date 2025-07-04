@@ -10,14 +10,15 @@
            T="CityListDTO"
            ComponentType="typeof(CityForm)"
            Dense
+           FilterPanelDefaultOpen
            EnableFilterPanel
            TypeAuthAction="ShiftIdentityActions.Cities"
            EnableExport>
 
-    <StringFilter Property="x => x.Name" Label="@Loc["Name"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="3" />
-    <ForeignFilter Property="x => x.CountryID" Label="@Loc["Country"]" lg="3" DTOType="typeof(CountryListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Country")" />
-    <ForeignFilter Property="x => x.RegionID" Label="@Loc["Region"]" lg="3" DTOType="typeof(RegionListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Region")" />
-    <StringFilter Property="x => x.IntegrationId" Label="@Loc["Integration ID"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="3" />
+    <StringFilter Property="x => x.Name" Label="@Loc["Name"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="6" md="6" sm="12" xs="12" />
+    <ForeignFilter Property="x => x.CountryID" Label="@Loc["Country"]" DTOType="typeof(CountryListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Country")" lg="6" md="6" sm="12" xs="12" />
+    <ForeignFilter Property="x => x.RegionID" Label="@Loc["Region"]" DTOType="typeof(RegionListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Region")" lg="6" md="6" sm="12" xs="12" />
+    <StringFilter Property="x => x.IntegrationId" Label="@Loc["Integration ID"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="6" md="6" sm="12" xs="12" />
 
     <PropertyColumn Title="@Loc["Name"]" Property="x => x.Name" />
     <PropertyColumn Title="@Loc["Country"]" Property="x => x.Country" />
