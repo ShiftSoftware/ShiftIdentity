@@ -65,8 +65,10 @@ public class UserValidator : AbstractValidator<UserDTO>
                 .MaximumLength(255).WithMessage(localizer["Your input cannot be more than 255 characters"]);
 
         RuleFor(x => x.Email)
-            .EmailAddress().WithMessage(localizer["Invalid Email Address"])
-            .MaximumLength(255).WithMessage(localizer["Your input cannot be more than 255 characters"]);
+            .EmailAddress()
+            .WithMessage(localizer["Invalid Email Address"])
+            .MaximumLength(255).WithMessage(localizer["Your input cannot be more than 255 characters"])
+            .When(x => !string.IsNullOrWhiteSpace(x.Email));
 
         RuleFor(x => x.FullName)
             .NotEmpty().WithMessage(localizer["Please provide", localizer["Full Name"]])
@@ -77,10 +79,13 @@ public class UserValidator : AbstractValidator<UserDTO>
             {
                 if (x is not null && !ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(x))
                     context.AddFailure(localizer["Invalid Phone Number"]);
-            });
+            })
+            .When(x => !string.IsNullOrWhiteSpace(x.Phone));
 
         RuleFor(x => x.BirthDate)
-            .Must(x => x.HasValue ? x.Value.TimeOfDay == TimeSpan.Zero : true).WithMessage(localizer["Please provide a valid date"]);
+            .Must(x => x.HasValue ? x.Value.TimeOfDay == TimeSpan.Zero : true)
+            .WithMessage(localizer["Please provide a valid date"])
+            .When(x => x.BirthDate != null);
 
         RuleFor(x => x.CompanyBranchID)
             .NotNull().WithMessage(localizer["Please select", localizer["Company Branch"]]);
