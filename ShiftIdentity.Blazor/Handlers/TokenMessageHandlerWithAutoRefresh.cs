@@ -3,6 +3,7 @@ using Polly.Retry;
 using ShiftSoftware.ShiftIdentity.Blazor.Services;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Security.Authentication;
 
 namespace ShiftSoftware.ShiftIdentity.Blazor.Handlers;
 
@@ -26,31 +27,23 @@ public class TokenMessageHandlerWithAutoRefresh : DelegatingHandler
         _asyncPolicy = Policy
             .Handle<HttpRequestException>()
             .OrResult<HttpResponseMessage>(r => r.StatusCode is HttpStatusCode.Unauthorized)
-            .RetryAsync(async (_, _) =>
+            .RetryAsync(1, async (_, _) =>
             {
                 var success = await httpMessageHandlerService.RefreshAsync();
 
                 if (!success.GetValueOrDefault())
-                {
-                    // Optionally log or handle the case when token refresh is not successful
-                    // For example, you can throw a custom exception to prevent further retries.
-                    throw new Exception("Token refresh failed.");
-                }
+                    throw new AuthenticationException("Token refresh failed.");
             });
 
         _policy = Policy
             .Handle<HttpRequestException>()
             .OrResult<HttpResponseMessage>(r => r.StatusCode is HttpStatusCode.Unauthorized)
-            .Retry(async (_, _) =>
+            .Retry(1, async (_, _) =>
             {
                 var success = await httpMessageHandlerService.RefreshAsync();
 
                 if (!success.GetValueOrDefault())
-                {
-                    // Optionally log or handle the case when token refresh is not successful
-                    // For example, you can throw a custom exception to prevent further retries.
-                    throw new Exception("Token refresh failed.");
-                }
+                    throw new AuthenticationException("Token refresh failed.");
             });
     }
 
