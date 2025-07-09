@@ -53,7 +53,7 @@ public class TokenMessageHandlerWithAutoRefresh : DelegatingHandler
             var token = (await tokenStore.GetTokenAsync())?.Token ?? "";
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-            var result = await base.SendAsync(request, cancellationToken);
+            var result = await base.SendAsync(await CloneRequestIfNeededAsync(request), cancellationToken);
 
             if(result.IsSuccessStatusCode)
                 await this.msg.RemoveWarningMessageAsync();
@@ -67,11 +67,45 @@ public class TokenMessageHandlerWithAutoRefresh : DelegatingHandler
         var token = tokenStore.GetTokenAsync().Result?.Token ?? "";
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var result = base.Send(request, cancellationToken);
+        var result = base.Send(CloneRequestIfNeededAsync(request).GetAwaiter().GetResult(), cancellationToken);
 
         if (result.IsSuccessStatusCode)
             this.msg.RemoveWarningMessageAsync().Wait();
 
         return result;
     });
+
+    private async Task<HttpRequestMessage> CloneRequestIfNeededAsync(HttpRequestMessage request)
+    {
+        // Only clone if we have content that might be read-once
+        if (request.Content == null)
+            return request;
+
+        // Create a new request with the same properties
+        var clone = new HttpRequestMessage(request.Method, request.RequestUri)
+        {
+            Version = request.Version
+        };
+
+        // Copy headers
+        foreach (var header in request.Headers)
+            clone.Headers.TryAddWithoutValidation(header.Key, header.Value);
+
+        // Clone content if present
+        if (request.Content != null)
+        {
+            var contentBytes = await request.Content.ReadAsByteArrayAsync();
+            clone.Content = new ByteArrayContent(contentBytes);
+
+            // Copy content headers
+            foreach (var header in request.Content.Headers)
+                clone.Content.Headers.TryAddWithoutValidation(header.Key, header.Value);
+        }
+
+        // Copy properties
+        foreach (var prop in request.Options)
+            clone.Options.TryAdd(prop.Key, prop.Value);
+
+        return clone;
+    }
 }
