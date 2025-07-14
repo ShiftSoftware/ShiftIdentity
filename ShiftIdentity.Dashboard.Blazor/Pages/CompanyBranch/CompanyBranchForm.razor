@@ -131,8 +131,7 @@
                                         <MudSelectExtended OnlyValidateIfDirty="true"
                                                            Label="@Loc["Tag"]"
                                                            @bind-Value="line.Tag"
-                                                           For="@(() => line.Tag)"
-                                                           AnchorOrigin="Origin.BottomCenter">
+                                                           For="@(() => line.Tag)">
                                             @foreach (var tag in this.Options.CompanyBranchPhoneTags)
                                             {
                                                 <MudSelectItem Value="@tag" T="string">@tag</MudSelectItem>                                                
@@ -196,8 +195,7 @@
                                         <MudSelectExtended OnlyValidateIfDirty="true"
                                                            Label="@Loc["Tag"]"
                                                            @bind-Value="line.Tag"
-                                                           For="@(() => line.Tag)"
-                                                           AnchorOrigin="Origin.BottomCenter">
+                                                           For="@(() => line.Tag)">
                                             @foreach (var tag in this.Options.CompanyBranchEmailTags)
                                             {
                                                 <MudSelectItem Value="@tag" T="string">@tag</MudSelectItem>
