@@ -1,4 +1,5 @@
 ﻿using ShiftSoftware.ShiftEntity.Model.Dtos;
+using ShiftSoftware.ShiftEntity.Model.Enums;
 using System.Collections.Generic;
 
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs
@@ -18,5 +19,7 @@ namespace ShiftSoftware.ShiftIdentity.Core.DTOs
         public List<PhoneDTO> Phones { get; set; } = default!;
 
         public IEnumerable<ShiftFileDTO>? UserSignature { get; set; }
+
+        public CompanyTypes? CompanyType { get; set; }
     }
 }

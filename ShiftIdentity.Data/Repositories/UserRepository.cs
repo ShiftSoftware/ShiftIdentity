@@ -35,7 +35,8 @@ public class UserRepository :
             x => x.Include(y => y.AccessTrees).ThenInclude(y => y.AccessTree),
             x => x.Include(y => y.UserLog),
             x => x.Include(y => y.TeamUsers),
-            x => x.Include(y => y.CompanyBranch)
+            x => x.Include(y => y.CompanyBranch),
+            x => x.Include(y => y.Company)
         )
     )
     {
@@ -204,7 +205,7 @@ public class UserRepository :
     public async Task<User?> GetUserByUsernameAsync(string username)
     {
         return await db.Users.Include(x => x.UserLog).Include(x => x.AccessTrees).ThenInclude(x => x.AccessTree)
-            .Include(x => x.CompanyBranch)
+            .Include(x => x.CompanyBranch).Include(x => x.Company)
             .FirstOrDefaultAsync(x => x.Username == username && !x.IsDeleted);
     }
 
