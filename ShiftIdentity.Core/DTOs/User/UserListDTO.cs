@@ -14,6 +14,12 @@ public class UserListDTO : ShiftEntityListDTO
 
     [JsonConverter(typeof(LocalizedTextJsonConverter))]
     public string? CompanyBranch { get; set; }
+
+    [CompanyBranchHashIdConverter]
+    public string? CompanyBranchID { get; set; }
+    [CompanyHashIdConverter]
+    public string? CompanyID { get; set; }
+
     public string FullName { get; set; } = default!;
     public string Username { get; set; } = default!;
     public string? Phone { get; set; }

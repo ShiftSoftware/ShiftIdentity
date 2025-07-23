@@ -2,6 +2,7 @@
 @layout Shared.DefaultLayout
 
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(UserList)}")]
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.Company
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 @inject IDialogService DialogService
@@ -81,7 +82,8 @@
         <StringFilter Property="x => x.Username" Label="@Loc["Username"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" md="6" sm="12" xs="12" />
         <StringFilter Property="x => x.Phone" Label="@Loc["Phone"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" md="6" sm="12" xs="12" />
         <StringFilter Property="x => x.Email" Label="@Loc["Email"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" md="6" sm="12" xs="12" />
-        <ForeignFilter Property="x => x.CompanyBranch" Label="@Loc["Branch"]" DTOType="typeof(CompanyBranchListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}CompanyBranch")" lg="4" md="6" sm="12" xs="12" />
+        <ForeignFilter @ref="CompanyFilter" Property="x => x.CompanyID" Label="@Loc["Company"]" DTOType="typeof(CompanyListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Company")" lg="4" md="6" sm="12" xs="12" />
+        <ForeignFilter Property="x => x.CompanyBranchID" AutocompleteFilter="x => x.Add(CompanyFilter?.Filter)" Label="@Loc["Branch"]" DTOType="typeof(CompanyBranchListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}CompanyBranch")" lg="4" md="6" sm="12" xs="12" />
         <DateTimeFilter Property="x => x.LastSeen" Label="@Loc["Last Seen"]" lg="4" md="6" sm="12" xs="12" />
 
         <PropertyColumn Title="@Loc["Name"]" Property="x => x.FullName" />
@@ -131,6 +133,8 @@
 </ShiftList>
 
 @code {
+
+    public ForeignFilter<UserListDTO, string?>? CompanyFilter { get; set; } 
     public ShiftList<UserListDTO>? ShiftList { get; set; }
 
     private bool SharePasswordWithUser { get; set; }
