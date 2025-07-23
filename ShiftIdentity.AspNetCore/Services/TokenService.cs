@@ -91,7 +91,8 @@ public class TokenService
             new Claim(ClaimTypes.GivenName, user.FullName),
             new Claim(ShiftEntity.Core.Constants.RegionIdClaim, ShiftEntityHashIdService.Encode<RegionDTO>(user.RegionID!.Value)),
             new Claim(ShiftEntity.Core.Constants.CompanyIdClaim, ShiftEntityHashIdService.Encode<CompanyDTO>(user.CompanyID!.Value)),
-            new Claim(ShiftEntity.Core.Constants.CompanyBranchIdClaim, ShiftEntityHashIdService.Encode<CompanyBranchDTO>(user.CompanyBranchID!.Value))
+            new Claim(ShiftEntity.Core.Constants.CompanyBranchIdClaim, ShiftEntityHashIdService.Encode<CompanyBranchDTO>(user.CompanyBranchID!.Value)),
+            new Claim(ShiftEntity.Core.Constants.CompanyTypeClaim, user.Company?.CompanyType.ToString()??string.Empty),
         };
 
         if (user.CountryID is not null)
@@ -154,6 +155,7 @@ public class TokenService
                 FullName = user.FullName,
                 ID = user.ID.ToString(),
                 Username = user.Username,
+                CompanyType = user.Company?.CompanyType,
             }
         };
 
@@ -165,7 +167,7 @@ public class TokenService
             if (user?.Phone is not null)
                 result.UserData.Phones = new List<PhoneDTO> { new PhoneDTO { Phone = user.Phone } };
 
-            result.UserData.UserSignature = string.IsNullOrWhiteSpace(user?.Signature)? null: JsonSerializer.Deserialize<IEnumerable<ShiftFileDTO>>(user!.Signature);
+            result.UserData.UserSignature = string.IsNullOrWhiteSpace(user?.Signature) ? null : JsonSerializer.Deserialize<IEnumerable<ShiftFileDTO>>(user!.Signature);
         }
 
         return result;
