@@ -3,6 +3,7 @@ using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.Enums;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
+using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
@@ -34,4 +35,6 @@ public class CompanyListDTO : ShiftEntityListDTO
 
     [CompanyHashIdConverter]
     public string? ParentCompanyID { get; set; }
+
+    public DateTime? TerminationDate { get; set; }
 }

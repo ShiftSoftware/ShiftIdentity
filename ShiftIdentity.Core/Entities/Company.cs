@@ -1,6 +1,7 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Enums;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -22,6 +23,7 @@ public class Company : ShiftEntity<Company>
     public string? HQAddress { get; set; }
     public string? Website { get; set; }
     public bool BuiltIn { get; set; }
+    public DateTime? TerminationDate { get; set; }
     public Dictionary<string, CustomField>? CustomFields { get; set; }
 
 

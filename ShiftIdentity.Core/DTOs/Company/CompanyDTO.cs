@@ -5,6 +5,7 @@ using ShiftSoftware.ShiftEntity.Model.Enums;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
 using ShiftSoftware.ShiftEntity.Model.Replication;
 using ShiftSoftware.ShiftIdentity.Core.Localization;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
@@ -28,6 +29,7 @@ public class CompanyDTO : ShiftEntityViewAndUpsertDTO
     public string? HQEmail { get; set; }
     public string? HQAddress { get; set; }
     public string? Website { get; set; }
+    public DateTime? TerminationDate { get; set; }
     public Dictionary<string, CustomFieldDTO>? CustomFields { get; set; }
 
     [CompanyHashIdConverter]
