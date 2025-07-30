@@ -29,6 +29,8 @@ public class CompanyBranchDTO : ShiftEntityViewAndUpsertDTO
 
     public string? ShortPhone { get; set; }
 
+    public DateTime? TerminationDate { get; set; }
+
     public string? Email { get; set; }
     public List<TaggedTextDTO> Emails { get; set; } = new();
     public string? Address { get; set; }

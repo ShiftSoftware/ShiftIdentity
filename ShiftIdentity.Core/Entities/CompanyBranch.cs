@@ -2,6 +2,7 @@
 using ShiftSoftware.ShiftEntity.Core.Flags;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -28,7 +29,7 @@ public class CompanyBranch :
     public string? IntegrationId { get; set; } = default!;
     public string? ShortCode { get; set; }
     public bool BuiltIn { get; set; }
-
+    public DateTime? TerminationDate { get; set; }
     public Dictionary<string, CustomField>? CustomFields { get; set; }
 
     public virtual Company? Company { get; set; } = default!;

@@ -59,6 +59,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             entity.CityID = dto.City.Value.ToLong();
             entity.Phones = dto.Phones;
             entity.Emails = dto.Emails;
+            entity.TerminationDate = dto.TerminationDate;
             entity.RegionID = (await this.cityRepository.FindAsync(entity.CityID.Value))!.RegionID;
 
             if (entity.RegionID is not null)

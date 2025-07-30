@@ -106,6 +106,15 @@
                           @bind-Value="TheItem.Email"
                           For="@(() => TheItem.Email)" />
         </MudItem>
+
+        <MudItem xs="12" sm="6" lg="4" xl="3">
+            <MudDatePickerExtended ReadOnly="@ReadOnly"
+                                   Disabled="@Disabled"
+                                   Clearable="true"
+                                   Label="@Loc["TerminationDate"]"
+                                   @bind-Date="TheItem.TerminationDate"
+                                   For="@(() => TheItem.TerminationDate)" />
+        </MudItem>
         
         <MudItem lg="12" md="12" sm="12" xs="12" Class="">
             <MudCard Elevation="2">

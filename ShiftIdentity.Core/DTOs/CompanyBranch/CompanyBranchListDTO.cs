@@ -1,6 +1,7 @@
 ﻿using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
+using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
@@ -16,6 +17,8 @@ public class CompanyBranchListDTO : ShiftEntityListDTO
     public string? Name { get; set; }
     public string? ShortCode { get; set; }
     public string? IntegrationId { get; set; }
+
+    public DateTime? TerminationDate { get; set; }
 
     [CityHashIdConverter]
     public string? CityId { get; set; }
