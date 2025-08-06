@@ -13,11 +13,11 @@ public class IdentityCompanyController : ShiftEntitySecureControllerAsync<Compan
     public IdentityCompanyController(DynamicActionFilters dynamicActionFilters) : base(ShiftIdentityActions.Companies,
         x =>
         {
-            if (!dynamicActionFilters.DisableDefaultCompanyFilter)
-                x.FilterBy(x => x.ID, ShiftIdentityActions.DataLevelAccess.Companies)
-                    .DecodeHashId<CompanyDTO>()
-                    .IncludeCreatedByCurrentUser(x => x.CreatedByUserID)
-                    .IncludeSelfItems(ShiftEntity.Core.Constants.CompanyIdClaim);
+            //if (!dynamicActionFilters.DisableDefaultCompanyFilter)
+            //    x.FilterBy(x => x.ID, ShiftIdentityActions.DataLevelAccess.Companies)
+            //        .DecodeHashId<CompanyDTO>()
+            //        .IncludeCreatedByCurrentUser(x => x.CreatedByUserID)
+            //        .IncludeSelfItems(ShiftEntity.Core.Constants.CompanyIdClaim);
 
             x.DisableDefaultBrandFilter = dynamicActionFilters.DisableDefaultBrandFilter;
             x.DisableDefaultCityFilter = dynamicActionFilters.DisableDefaultCityFilter;

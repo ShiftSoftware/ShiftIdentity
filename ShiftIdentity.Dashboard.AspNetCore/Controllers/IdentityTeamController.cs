@@ -13,11 +13,11 @@ public class IdentityTeamController : ShiftEntitySecureControllerAsync<TeamRepos
     public IdentityTeamController(DynamicActionFilters dynamicActionFilters) : base(ShiftIdentityActions.Teams,
         x =>
         {
-            if (!dynamicActionFilters.DisableDefaultTeamFilter)
-                x.FilterBy(x => x.ID, ShiftIdentityActions.DataLevelAccess.Teams)
-                    .DecodeHashId<TeamDTO>()
-                    .IncludeCreatedByCurrentUser(x => x.CreatedByUserID)
-                    .IncludeSelfItems(ShiftEntity.Core.Constants.TeamIdsClaim);
+            //if (!dynamicActionFilters.DisableDefaultTeamFilter)
+            //    x.FilterBy(x => x.ID, ShiftIdentityActions.DataLevelAccess.Teams)
+            //        .DecodeHashId<TeamDTO>()
+            //        .IncludeCreatedByCurrentUser(x => x.CreatedByUserID)
+            //        .IncludeSelfItems(ShiftEntity.Core.Constants.TeamIdsClaim);
 
             x.DisableDefaultBrandFilter = dynamicActionFilters.DisableDefaultBrandFilter;
             x.DisableDefaultCityFilter = dynamicActionFilters.DisableDefaultCityFilter;

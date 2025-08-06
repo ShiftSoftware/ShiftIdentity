@@ -20,11 +20,11 @@ public class IdentityCountryController : ShiftEntitySecureControllerAsync<Countr
     public IdentityCountryController(DynamicActionFilters dynamicActionFilters) : base(ShiftIdentityActions.Countries,
         x =>
         {
-            if(!dynamicActionFilters.DisableDefaultCountryFilter)
-                x.FilterBy(x => x.ID, ShiftIdentityActions.DataLevelAccess.Countries)
-                    .DecodeHashId<CountryDTO>()
-                    .IncludeCreatedByCurrentUser(x => x.CreatedByUserID)
-                    .IncludeSelfItems(ShiftEntity.Core.Constants.CountryIdClaim);
+            //if(!dynamicActionFilters.DisableDefaultCountryFilter)
+            //    x.FilterBy(x => x.ID, ShiftIdentityActions.DataLevelAccess.Countries)
+            //        .DecodeHashId<CountryDTO>()
+            //        .IncludeCreatedByCurrentUser(x => x.CreatedByUserID)
+            //        .IncludeSelfItems(ShiftEntity.Core.Constants.CountryIdClaim);
 
             x.DisableDefaultBrandFilter = dynamicActionFilters.DisableDefaultBrandFilter;
             x.DisableDefaultCityFilter = dynamicActionFilters.DisableDefaultCityFilter;

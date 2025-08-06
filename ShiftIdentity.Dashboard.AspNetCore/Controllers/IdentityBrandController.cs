@@ -13,10 +13,10 @@ public class IdentityBrandController : ShiftEntitySecureControllerAsync<BrandRep
     public IdentityBrandController(DynamicActionFilters dynamicActionFilters) : base(ShiftIdentityActions.Brands,
         x =>
         {
-            if (!dynamicActionFilters.DisableDefaultBrandFilter)
-                x.FilterBy(x => x.ID, ShiftIdentityActions.DataLevelAccess.Brands)
-                    .DecodeHashId<BrandDTO>()
-                    .IncludeCreatedByCurrentUser(x => x.CreatedByUserID);
+            //if (!dynamicActionFilters.DisableDefaultBrandFilter)
+            //    x.FilterBy(x => x.ID, ShiftIdentityActions.DataLevelAccess.Brands)
+            //        .DecodeHashId<BrandDTO>()
+            //        .IncludeCreatedByCurrentUser(x => x.CreatedByUserID);
 
             x.DisableDefaultBrandFilter = dynamicActionFilters.DisableDefaultBrandFilter;
             x.DisableDefaultCityFilter = dynamicActionFilters.DisableDefaultCityFilter;

@@ -15,11 +15,11 @@ public class IdentityCityController : ShiftEntitySecureControllerAsync<CityRepos
     public IdentityCityController(DynamicActionFilters dynamicActionFilters) : base(ShiftIdentityActions.Cities,
         x =>
         {
-            if (!dynamicActionFilters.DisableDefaultCityFilter)
-                x.FilterBy(x => x.ID, ShiftIdentityActions.DataLevelAccess.Cities)
-                    .DecodeHashId<CityDTO>()
-                    .IncludeCreatedByCurrentUser(x => x.CreatedByUserID)
-                    .IncludeSelfItems(ShiftEntity.Core.Constants.CityIdClaim);
+            //if (!dynamicActionFilters.DisableDefaultCityFilter)
+            //    x.FilterBy(x => x.ID, ShiftIdentityActions.DataLevelAccess.Cities)
+            //        .DecodeHashId<CityDTO>()
+            //        .IncludeCreatedByCurrentUser(x => x.CreatedByUserID)
+            //        .IncludeSelfItems(ShiftEntity.Core.Constants.CityIdClaim);
 
             x.DisableDefaultBrandFilter = dynamicActionFilters.DisableDefaultBrandFilter;
             x.DisableDefaultCityFilter = dynamicActionFilters.DisableDefaultCityFilter;
