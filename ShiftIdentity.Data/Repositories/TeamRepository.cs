@@ -16,7 +16,11 @@ public class TeamRepository : ShiftRepository<ShiftIdentityDbContext, Team, Team
     private readonly ShiftIdentityFeatureLocking shiftIdentityFeatureLocking;
     private readonly ShiftIdentityLocalizer Loc;
     public TeamRepository(ShiftIdentityDbContext db, ShiftIdentityFeatureLocking shiftIdentityFeatureLocking, ShiftIdentityLocalizer Loc) :
-        base(db, x => x.IncludeRelatedEntitiesWithFindAsync(s => s.Include(i => i.TeamUsers).ThenInclude(i => i.User), s => s.Include(i => i.Company)))
+        base(db, x => x.IncludeRelatedEntitiesWithFindAsync(
+            s => s.Include(i => i.TeamUsers).ThenInclude(i => i.User),
+            s => s.Include(i => i.TeamCompanyBranches).ThenInclude(i => i.CompanyBranch),
+            s => s.Include(i => i.Company))
+    )
     {
         this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
         this.Loc = Loc;
@@ -36,16 +40,35 @@ public class TeamRepository : ShiftRepository<ShiftIdentityDbContext, Team, Team
         entity.CompanyID = dto.Company.Value.ToLong();
         entity.IntegrationId = dto.IntegrationId;
 
-        //Update departments
-        var deletedUsers = entity.TeamUsers.Where(x => !dto.Users.Select(s => s.Value.ToLong())
-            .Any(s => s == x.UserID)).ToList();
+        if (dto.Tags is not null)
+            entity.Tags = dto.Tags.ToList();
+        else
+            entity.Tags = new List<string>();
+
+            var deletedUsers = entity.TeamUsers.Where(x => !dto.Users.Select(s => s.Value.ToLong())
+                .Any(s => s == x.UserID)).ToList();
         var addedUsers = dto.Users.Where(x => !entity.TeamUsers.Select(s => s.UserID)
             .Any(s => s == x.Value.ToLong())).ToList();
 
         db.TeamUsers.RemoveRange(deletedUsers);
+
         await db.TeamUsers.AddRangeAsync(addedUsers.Select(x => new TeamUser
         {
             UserID = x.Value.ToLong(),
+            Team = entity
+        }).ToList());
+
+
+        var deletedBranches = entity.TeamCompanyBranches.Where(x => !dto.CompanyBranches.Select(s => s.Value.ToLong())
+            .Any(s => s == x.CompanyBranchID)).ToList();
+        var addedBranches = dto.CompanyBranches.Where(x => !entity.TeamCompanyBranches.Select(s => s.CompanyBranchID)
+            .Any(s => s == x.Value.ToLong())).ToList();
+
+        db.TeamCompanyBranches.RemoveRange(deletedBranches);
+
+        await db.TeamCompanyBranches.AddRangeAsync(addedBranches.Select(x => new TeamCompanyBranch
+        {
+            CompanyBranchID = x.Value.ToLong(),
             Team = entity
         }).ToList());
 
