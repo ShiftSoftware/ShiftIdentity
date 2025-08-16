@@ -10,7 +10,6 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
 [Table("Countries", Schema = "ShiftIdentity")]
-[DontSetCompanyInfoOnThisEntityWithAutoTrigger]
 public class Country : ShiftEntity<Country>
 {
     public string Name { get; set; } = default!;

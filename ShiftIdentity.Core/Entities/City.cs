@@ -8,7 +8,6 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
 [Table("Cities", Schema = "ShiftIdentity")]
-[DontSetCompanyInfoOnThisEntityWithAutoTrigger]
 public class City : ShiftEntity<City>, IEntityHasRegion<City>, IEntityHasCountry<City>
 {
     public string Name { get; set; } = default!;

@@ -10,7 +10,6 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
 [Table("CompanyBranches", Schema = "ShiftIdentity")]
-[DontSetCompanyInfoOnThisEntityWithAutoTrigger]
 public class CompanyBranch : 
     ShiftEntity<CompanyBranch>, IEntityHasRegion<CompanyBranch>, IEntityHasCompany<CompanyBranch>, IEntityHasCountry<CompanyBranch>
 {

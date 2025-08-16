@@ -9,7 +9,6 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
 [Table("Users", Schema = "ShiftIdentity")]
-[DontSetCompanyInfoOnThisEntityWithAutoTrigger]
 public class User : ShiftEntity<User>, 
     IEntityHasCountry<User>, 
     IEntityHasRegion<User>,

@@ -9,7 +9,6 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
 [Table("Companies", Schema = "ShiftIdentity")]
-[DontSetCompanyInfoOnThisEntityWithAutoTrigger]
 public class Company : ShiftEntity<Company>
 {
     public string Name { get; set; } = default!;

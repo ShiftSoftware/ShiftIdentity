@@ -35,7 +35,7 @@ public class TeamRepository : ShiftRepository<ShiftIdentityDbContext, Team, Team
         if (actionType == ActionTypes.Insert)
             return await base.UpsertAsync(entity, dto, actionType, userId);
 
-        entity.Update(userId);
+        //entity.Update(userId);
         entity.Name = dto.Name;
         entity.CompanyID = dto.Company.Value.ToLong();
         entity.IntegrationId = dto.IntegrationId;
