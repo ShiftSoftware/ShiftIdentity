@@ -277,9 +277,9 @@ public class UserRepository :
         return user;
     }
 
-    public override Task SaveChangesAsync(bool raiseBeforeCommitTriggers = false)
+    public override Task SaveChangesAsync()
     {
-        return base.SaveChangesAsync(raiseBeforeCommitTriggers);
+        return base.SaveChangesAsync();
     }
 
     public IEnumerable<UserInfoDTO> AssignRandomPasswords(List<User> users)

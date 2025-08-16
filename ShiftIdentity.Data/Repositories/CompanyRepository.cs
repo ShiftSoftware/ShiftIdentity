@@ -86,11 +86,11 @@ public class CompanyRepository : ShiftRepository<ShiftIdentityDbContext, Company
         return base.DeleteAsync(entity, isHardDelete, userId);
     }
 
-    public override Task SaveChangesAsync(bool raiseBeforeCommitTriggers = false)
+    public override Task SaveChangesAsync()
     {
         if (shiftIdentityFeatureLocking.CompanyFeatureIsLocked)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Company Feature is locked"]));
 
-        return base.SaveChangesAsync(raiseBeforeCommitTriggers);
+        return base.SaveChangesAsync();
     }
 }

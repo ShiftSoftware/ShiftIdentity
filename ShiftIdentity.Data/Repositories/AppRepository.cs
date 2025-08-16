@@ -42,11 +42,11 @@ public class AppRepository :
         return await db.Apps.FirstOrDefaultAsync(x => x.AppId == appId && !x.IsDeleted);
     }
 
-    public override Task SaveChangesAsync(bool raiseBeforeCommitTriggers = false)
+    public override Task SaveChangesAsync()
     {
         if (shiftIdentityFeatureLocking.AppFeatureIsLocked)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["App Feature is locked"]));
 
-        return base.SaveChangesAsync(raiseBeforeCommitTriggers);
+        return base.SaveChangesAsync();
     }
 }

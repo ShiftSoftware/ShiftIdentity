@@ -78,11 +78,11 @@ public class TeamRepository : ShiftRepository<ShiftIdentityDbContext, Team, Team
         return entity;
     }
 
-    public override Task SaveChangesAsync(bool raiseBeforeCommitTriggers = false)
+    public override Task SaveChangesAsync()
     {
         if (shiftIdentityFeatureLocking.TeamFeatureIsLocked)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Team Feature is locked"]));
 
-        return base.SaveChangesAsync(raiseBeforeCommitTriggers);
+        return base.SaveChangesAsync();
     }
 }

@@ -182,12 +182,12 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             return base.DeleteAsync(entity, isHardDelete, userId);
         }
 
-        public override Task SaveChangesAsync(bool raiseBeforeCommitTriggers = false)
+        public override Task SaveChangesAsync()
         {
             if (shiftIdentityFeatureLocking.CompanyBranchFeatureIsLocked)
                 throw new ShiftEntityException(new Message(Loc["Error"], Loc["Company Branch Feature is locked"]));
 
-            return base.SaveChangesAsync(raiseBeforeCommitTriggers);
+            return base.SaveChangesAsync();
         }
     }
 }

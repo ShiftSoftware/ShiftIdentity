@@ -17,11 +17,11 @@ public class DepartmentRepository : ShiftRepository<ShiftIdentityDbContext, Depa
         this.Loc = Loc;
     }
 
-    public override Task SaveChangesAsync(bool raiseBeforeCommitTriggers = false)
+    public override Task SaveChangesAsync()
     {
         if (shiftIdentityFeatureLocking.DepartmentFeatureIsLocked)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Department Feature is locked"]));
 
-        return base.SaveChangesAsync(raiseBeforeCommitTriggers);
+        return base.SaveChangesAsync();
     }
 }

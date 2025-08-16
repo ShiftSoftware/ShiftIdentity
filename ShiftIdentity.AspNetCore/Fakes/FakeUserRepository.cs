@@ -51,7 +51,7 @@ public class FakeUserRepository : IUserRepository
         };
     }
 
-    public async Task SaveChangesAsync(bool wrapInTransaction = false)
+    public async Task SaveChangesAsync()
     {
 
     }
