@@ -1,4 +1,5 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
+using ShiftSoftware.ShiftEntity.Core.Flags;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Enums;
 using System;
@@ -9,7 +10,7 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
 [Table("Companies", Schema = "ShiftIdentity")]
-public class Company : ShiftEntity<Company>
+public class Company : ShiftEntity<Company>, IEntityHasCompany<Company>
 {
     public string Name { get; set; } = default!;
     public string? LegalName { get; set; }
@@ -31,6 +32,7 @@ public class Company : ShiftEntity<Company>
     public virtual ICollection<Company> ChildCompanies { get; set; } = new HashSet<Company>();
 
     public virtual ICollection<CompanyBranch> CompanyBranches { get; set; }
+    public long? CompanyID { get; set; }
 
     public Company()
     {

@@ -13,11 +13,11 @@ public class IdentityRegionController : ShiftEntitySecureControllerAsync<RegionR
     public IdentityRegionController(DynamicActionFilters dynamicActionFilters) : base(ShiftIdentityActions.Regions,
         x =>
         {
-            if(!dynamicActionFilters.DisableDefaultRegionFilter)
-                x.FilterBy(x => x.ID, ShiftIdentityActions.DataLevelAccess.Regions)
-                    .DecodeHashId<RegionDTO>()
-                    .IncludeCreatedByCurrentUser(x => x.CreatedByUserID)
-                    .IncludeSelfItems(ShiftEntity.Core.Constants.RegionIdClaim);
+            //if(!dynamicActionFilters.DisableDefaultRegionFilter)
+            //    x.FilterBy(x => x.ID, ShiftIdentityActions.DataLevelAccess.Regions)
+            //        .DecodeHashId<RegionDTO>()
+            //        .IncludeCreatedByCurrentUser(x => x.CreatedByUserID)
+            //        .IncludeSelfItems(ShiftEntity.Core.Constants.RegionIdClaim);
 
             x.DisableDefaultBrandFilter = dynamicActionFilters.DisableDefaultBrandFilter;
             x.DisableDefaultCityFilter = dynamicActionFilters.DisableDefaultCityFilter;

@@ -86,6 +86,8 @@ namespace ShiftSoftware.ShiftIdentity.Data
                     x => JsonSerializer.Serialize(x, new JsonSerializerOptions(JsonSerializerDefaults.Web)),
                     x => string.IsNullOrWhiteSpace(x) ? new() : JsonSerializer.Deserialize<List<TaggedTextDTO>>(x, new JsonSerializerOptions(JsonSerializerDefaults.Web))!
                 );
+
+                x.Property(c => c.CompanyBranchID).HasComputedColumnSql(nameof(CompanyBranch.ID));
             });
 
             b.Entity<Company>(x =>
@@ -104,6 +106,23 @@ namespace ShiftSoftware.ShiftIdentity.Data
                     .WithMany(x => x.ChildCompanies)
                     .HasForeignKey(x => x.ParentCompanyID)
                     .OnDelete(DeleteBehavior.Restrict);
+
+                x.Property(c => c.CompanyID).HasComputedColumnSql(nameof(Company.ID));
+            });
+
+            b.Entity<City>(x =>
+            {
+                x.Property(c => c.CityID).HasComputedColumnSql(nameof(City.ID));
+            });
+
+            b.Entity<Country>(x =>
+            {
+                x.Property(c => c.CountryID).HasComputedColumnSql(nameof(Country.ID));
+            });
+
+            b.Entity<Region>(x =>
+            {
+                x.Property(c => c.RegionID).HasComputedColumnSql(nameof(Region.ID));
             });
         }
 
