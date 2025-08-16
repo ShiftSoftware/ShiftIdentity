@@ -43,12 +43,12 @@ public class CityRepository : ShiftRepository<ShiftIdentityDbContext, City, City
         return await base.UpsertAsync(entity, dto, actionType, userId);
     }
 
-    public override ValueTask<City> DeleteAsync(City entity, bool isHardDelete = false, long? userId = null)
+    public override ValueTask<City> DeleteAsync(City entity, bool isHardDelete = false, long? userId = null, bool disableDefaultDataLevelAccess = false)
     {
         if (entity.BuiltIn)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
-        return base.DeleteAsync(entity, isHardDelete, userId);
+        return base.DeleteAsync(entity, isHardDelete, userId, disableDefaultDataLevelAccess);
     }
 
     public override Task SaveChangesAsync()
