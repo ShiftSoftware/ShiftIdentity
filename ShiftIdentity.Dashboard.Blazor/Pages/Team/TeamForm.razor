@@ -1,8 +1,11 @@
-﻿@using ShiftSoftware.ShiftEntity.Model.Dtos
+﻿@using ShiftSoftware.ShiftBlazor.Enums
+@using ShiftSoftware.ShiftEntity.Model.Dtos
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Team
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Company
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch
 @attribute [Authorize]
 @layout Shared.DefaultLayout
+
 
 
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(TeamForm)}/{{Key?}}")]
@@ -10,6 +13,7 @@
 @inject HttpClient Http
 @inject ODataQuery odataQuery
 @inject ShiftIdentityLocalizer Loc
+@inject ShiftIdentityDashboardBlazorOptions Options
 
 <ShiftEntityForm @bind-Mode="Mode"
                  @bind-Value="TheItem"
@@ -19,63 +23,62 @@
                  @bind-Key="@Key"
                  TypeAuthAction="ShiftIdentityActions.Teams"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.Team.TeamDTO">
+    <MudGrid Spacing="4">
+        <MudItem lg="4" md="12" sm="12" xs="12">
+            <MudTextField ReadOnly="@ReadOnly"
+                          Disabled="@Disabled"
+                          OnlyValidateIfDirty="true"
+                          Label="@Loc["Team Name"]"
+                          @bind-Value="TheItem.Name"
+                          For="@(() => TheItem.Name)" />
+        </MudItem>
+        <MudItem lg="4" md="12" sm="12" xs="12">
+            <MudTextField ReadOnly="@ReadOnly"
+                          Disabled="@Disabled"
+                          OnlyValidateIfDirty="true"
+                          Label="@Loc["Integration ID"]"
+                          @bind-Value="TheItem.IntegrationId"
+                          For="@(() => TheItem.IntegrationId)" />
+        </MudItem>
+        <MudItem lg="4" md="12" sm="12" xs="12">
+            <ShiftAutocomplete Label="@Loc["Company"]"
+                               For="@(() => TheItem.Company)"
+                               Value="TheItem.Company"
+                               ValueChanged="(v) => { TheItem.Company = v; TheItem.CompanyBranches = new(); TheItem.Users = new(); }"
+                               EntitySet="IdentityCompany"
+                               TEntitySet="CompanyListDTO" />
+        </MudItem>
+        <MudItem lg="12" md="12" sm="12" xs="12">
+            <ShiftAutocomplete Label="@Loc["Company Branch"]"
+                               TEntitySet="CompanyBranchListDTO"
+                               Filter="@(x=> x.Add(nameof(CompanyBranchListDTO.CompanyId), ShiftBlazor.Enums.ODataOperator.Equal, TheItem.Company.Value))"
+                               Disabled="TheItem.Company == null"
+                               @bind-SelectedValues="TheItem.CompanyBranches"
+                               EntitySet="IdentityCompanyBranch"
+                               MultiSelect />
+        </MudItem>
 
-    <MudTextField ReadOnly="@ReadOnly"
-                  Disabled="@Disabled"
-                  OnlyValidateIfDirty="true"
-                  Label="@Loc["Team Name"]"
-                  @bind-Value="TheItem.Name"
-                  For="@(() => TheItem.Name)" />
+        <MudItem lg="12" md="12" sm="12" xs="12">
+            <ShiftAutocomplete Label="@Loc["Users"]"
+                               TEntitySet="UserListDTO"
+                               Filter="@(x=> x.Add(nameof(UserListDTO.CompanyID), ShiftBlazor.Enums.ODataOperator.Equal, TheItem.Company.Value))"
+                               Disabled="TheItem.Company == null"
+                               @bind-SelectedValues="TheItem.Users"
+                               EntitySet="IdentityUser"
+                               MultiSelect />
+        </MudItem>
 
-    <ShiftAutocomplete Label="@Loc["Company"]"
-                       For="@(() => TheItem.Company)"
-                       @bind-Value="TheItem.Company"
-                       EntitySet="IdentityCompany"
-                       TEntitySet="CompanyListDTO" />
-
-    <MudTextField ReadOnly="@ReadOnly"
-                  Disabled="@Disabled"
-                  OnlyValidateIfDirty="true"
-                  Label="@Loc["Integration ID"]"
-                  @bind-Value="TheItem.IntegrationId"
-                  For="@(() => TheItem.IntegrationId)" />
-
-    <ShiftAutocomplete Label="@Loc["Users"]"
-                       @bind-Value="LastSelectedUsers"
-                       TEntitySet="UserListDTO"
-                       EntitySet="IdentityUser" />
-
-    <br />
-
-    @foreach (var item in TheItem.Users)
-    {
-        <MudChip T="string" Color="Color.Primary" OnClose="() => RemoveUserItem(item)">@item.Text</MudChip>
-    }
+        <MudItem lg="12" md="12" sm="12" xs="12">
+            <MudSelectExtended MultiSelection="true"
+                               OnlyValidateIfDirty="true"
+                               @bind-SelectedValues="TheItem.Tags"
+                               T="string"
+                               Label="@Loc["Tags"]">
+                @foreach (var state in Options.TeamTags)
+                {
+                    <MudSelectItem T="string" Value="@state">@state</MudSelectItem>
+                }
+            </MudSelectExtended>
+        </MudItem>
+    </MudGrid>
 </ShiftEntityForm>
-
-@code {
-    public ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO? LastSelectedUsers
-    {
-        get { return null; }
-        set
-        {
-            var currentList = TheItem.Users.ToList();
-
-            if (!currentList.Any(x => x.Value.Equals(value!.Value)))
-            {
-                currentList.Add(value!);
-            }
-
-            TheItem.Users = currentList;
-        }
-    }
-
-    public void RemoveUserItem(ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO item)
-    {
-        if (Mode <= ShiftBlazor.Enums.FormModes.Archive)
-            return;
-
-        TheItem.Users = TheItem.Users?.Where(x => !x.Value.Equals(item.Value)).ToList();
-    }
-}
-

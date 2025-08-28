@@ -1,7 +1,8 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
-using ShiftSoftware.ShiftEntity.Core.Flags;
+using ShiftSoftware.ShiftEntity.Model.Flags;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -9,9 +10,12 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
 [Table("CompanyBranches", Schema = "ShiftIdentity")]
-[DontSetCompanyInfoOnThisEntityWithAutoTrigger]
 public class CompanyBranch : 
-    ShiftEntity<CompanyBranch>, IEntityHasRegion<CompanyBranch>, IEntityHasCompany<CompanyBranch>, IEntityHasCountry<CompanyBranch>
+    ShiftEntity<CompanyBranch>, 
+    IEntityHasRegion<CompanyBranch>,
+    IEntityHasCompany<CompanyBranch>, 
+    IEntityHasCountry<CompanyBranch>,
+    IEntityHasCompanyBranch<CompanyBranch>
 {
     public string Name { get; set; } = default!;
     public string? Phone { get; set; }
@@ -28,7 +32,7 @@ public class CompanyBranch :
     public string? IntegrationId { get; set; } = default!;
     public string? ShortCode { get; set; }
     public bool BuiltIn { get; set; }
-
+    public DateTime? TerminationDate { get; set; }
     public Dictionary<string, CustomField>? CustomFields { get; set; }
 
     public virtual Company? Company { get; set; } = default!;
@@ -43,6 +47,7 @@ public class CompanyBranch :
     public long? CityID { get; set; }
     public long? CompanyID { get; set; }
     public long? CountryID { get; set; }
+    public long? CompanyBranchID { get; set; }
 
     public CompanyBranch()
     {

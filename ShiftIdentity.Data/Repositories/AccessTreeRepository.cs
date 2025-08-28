@@ -63,11 +63,11 @@ public class AccessTreeRepository : ShiftRepository<ShiftIdentityDbContext, Acce
         return entity;
     }
 
-    public override Task SaveChangesAsync(bool raiseBeforeCommitTriggers = false)
+    public override Task SaveChangesAsync()
     {
         if (shiftIdentityFeatureLocking.AccessTreeFeatureIsLocked)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Access Tree Feature is locked"]));
 
-        return base.SaveChangesAsync(raiseBeforeCommitTriggers);
+        return base.SaveChangesAsync();
     }
 }

@@ -82,7 +82,7 @@
         <StringFilter Property="x => x.Username" Label="@Loc["Username"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" md="6" sm="12" xs="12" />
         <StringFilter Property="x => x.Phone" Label="@Loc["Phone"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" md="6" sm="12" xs="12" />
         <StringFilter Property="x => x.Email" Label="@Loc["Email"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" md="6" sm="12" xs="12" />
-        <ForeignFilter @ref="CompanyFilter" Property="x => x.CompanyID" Label="@Loc["Company"]" DTOType="typeof(CompanyListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Company")" lg="4" md="6" sm="12" xs="12" />
+        <ForeignFilter AdditionalParameters='new (){ ["GroupSelectedValues"] = false }' @ref="CompanyFilter" Property="x => x.CompanyID" Label="@Loc["Company"]" DTOType="typeof(CompanyListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Company")" lg="4" md="6" sm="12" xs="12" />
         <ForeignFilter Property="x => x.CompanyBranchID" AutocompleteFilter="x => x.Add(CompanyFilter?.Filter)" Label="@Loc["Branch"]" DTOType="typeof(CompanyBranchListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}CompanyBranch")" lg="4" md="6" sm="12" xs="12" />
         <DateTimeFilter Property="x => x.LastSeen" Label="@Loc["Last Seen"]" lg="4" md="6" sm="12" xs="12" />
 

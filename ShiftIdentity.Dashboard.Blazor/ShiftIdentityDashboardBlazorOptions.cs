@@ -9,6 +9,7 @@ public class ShiftIdentityDashboardBlazorOptions
     internal Dictionary<string, CustomFieldBase> CompanyCustomFields = new();
     internal List<string> CompanyBranchPhoneTags = new();
     internal List<string> CompanyBranchEmailTags = new();
+    internal List<string> TeamTags = new();
 
     public string Title { get; set; } = default!;
     public string LogoPath { get; set; } = default!;
@@ -31,6 +32,13 @@ public class ShiftIdentityDashboardBlazorOptions
     public ShiftIdentityDashboardBlazorOptions AddCompanyBranchEmailTag(string tag)
     {
         this.CompanyBranchEmailTags.Add(tag);
+
+        return this;
+    }
+
+    public ShiftIdentityDashboardBlazorOptions AddTeamTag(string tag)
+    {
+        this.TeamTags.Add(tag);
 
         return this;
     }

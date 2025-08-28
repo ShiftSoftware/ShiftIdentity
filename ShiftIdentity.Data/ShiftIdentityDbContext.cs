@@ -38,6 +38,7 @@ namespace ShiftSoftware.ShiftIdentity.Data
         public DbSet<City> Cities { get; set; }
         public DbSet<Team> Teams { get; set; }
         public DbSet<TeamUser> TeamUsers { get; set; }
+        public DbSet<TeamCompanyBranch> TeamCompanyBranches { get; set; }
         public DbSet<Brand> Brands { get; set; }
         public DbSet<Country> Countries { get; set; }
 
@@ -54,6 +55,14 @@ namespace ShiftSoftware.ShiftIdentity.Data
                 x.HasIndex(x => x.Username).IsUnique().HasFilter($"{nameof(User.IsDeleted)} = 0");
                 x.HasIndex(x => x.Email).IsUnique().HasFilter($"{nameof(User.IsDeleted)} = 0 AND {nameof(User.Email)} is not null");
                 x.HasIndex(x => x.Phone).IsUnique().HasFilter($"{nameof(User.IsDeleted)} = 0 AND {nameof(User.Phone)} is not null");
+            });
+
+            b.Entity<Team>(x =>
+            {
+                x.Property(p => p.Tags).HasConversion(
+                    x => JsonSerializer.Serialize(x, new JsonSerializerOptions(JsonSerializerDefaults.Web)),
+                    x => string.IsNullOrWhiteSpace(x) ? new() : JsonSerializer.Deserialize<List<string>>(x, new JsonSerializerOptions(JsonSerializerDefaults.Web))!
+                );
             });
 
             b.Entity<CompanyBranch>(x =>
@@ -77,6 +86,8 @@ namespace ShiftSoftware.ShiftIdentity.Data
                     x => JsonSerializer.Serialize(x, new JsonSerializerOptions(JsonSerializerDefaults.Web)),
                     x => string.IsNullOrWhiteSpace(x) ? new() : JsonSerializer.Deserialize<List<TaggedTextDTO>>(x, new JsonSerializerOptions(JsonSerializerDefaults.Web))!
                 );
+
+                x.Property(c => c.CompanyBranchID).HasComputedColumnSql(nameof(CompanyBranch.ID));
             });
 
             b.Entity<Company>(x =>
@@ -95,6 +106,23 @@ namespace ShiftSoftware.ShiftIdentity.Data
                     .WithMany(x => x.ChildCompanies)
                     .HasForeignKey(x => x.ParentCompanyID)
                     .OnDelete(DeleteBehavior.Restrict);
+
+                x.Property(c => c.CompanyID).HasComputedColumnSql(nameof(Company.ID));
+            });
+
+            b.Entity<City>(x =>
+            {
+                x.Property(c => c.CityID).HasComputedColumnSql(nameof(City.ID));
+            });
+
+            b.Entity<Country>(x =>
+            {
+                x.Property(c => c.CountryID).HasComputedColumnSql(nameof(Country.ID));
+            });
+
+            b.Entity<Region>(x =>
+            {
+                x.Property(c => c.RegionID).HasComputedColumnSql(nameof(Region.ID));
             });
         }
 

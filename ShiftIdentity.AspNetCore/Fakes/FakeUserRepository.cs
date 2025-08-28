@@ -12,7 +12,7 @@ public class FakeUserRepository : IUserRepository
     {
         this.shiftIdentityOptions = shiftIdentityOptions;
     }
-    public async Task<User?> FindAsync(long id, DateTimeOffset? asOf = null)
+    public async Task<User?> FindAsync(long id, DateTimeOffset? asOf = null, bool disableDefaultDataLevelAccess = false)
     {
         return new User(id)
         {
@@ -51,7 +51,7 @@ public class FakeUserRepository : IUserRepository
         };
     }
 
-    public async Task SaveChangesAsync(bool wrapInTransaction = false)
+    public async Task SaveChangesAsync()
     {
 
     }

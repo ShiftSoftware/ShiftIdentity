@@ -191,7 +191,7 @@ public class UserRepository :
         return entity;
     }
 
-    public override ValueTask<User> DeleteAsync(User entity, bool isHardDelete = false, long? userId = null)
+    public override ValueTask<User> DeleteAsync(User entity, bool isHardDelete = false, long? userId = null, bool disableDefaultDataLevelAccess = false)
     {
         if (shiftIdentityFeatureLocking.UserFeatureIsLocked)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["User Feature is locked"]));
@@ -199,7 +199,7 @@ public class UserRepository :
         if (entity.BuiltIn)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
-        return base.DeleteAsync(entity, isHardDelete, userId);
+        return base.DeleteAsync(entity, isHardDelete, userId, disableDefaultDataLevelAccess);
     }
 
     public async Task<User?> GetUserByUsernameAsync(string username)
@@ -277,9 +277,9 @@ public class UserRepository :
         return user;
     }
 
-    public override Task SaveChangesAsync(bool raiseBeforeCommitTriggers = false)
+    public override Task SaveChangesAsync()
     {
-        return base.SaveChangesAsync(raiseBeforeCommitTriggers);
+        return base.SaveChangesAsync();
     }
 
     public IEnumerable<UserInfoDTO> AssignRandomPasswords(List<User> users)

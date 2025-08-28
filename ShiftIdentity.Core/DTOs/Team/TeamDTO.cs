@@ -16,11 +16,17 @@ public class TeamDTO : ShiftEntityViewAndUpsertDTO
 
     [CompanyHashIdConverter]
     public ShiftEntitySelectDTO Company { get; set; } = default!;
-
     public string? IntegrationId { get; set; }
 
+
+    [CompanyBranchHashIdConverter]
+    public List<ShiftEntitySelectDTO> CompanyBranches { get; set; } = new List<ShiftEntitySelectDTO>();
+
+
     [UserHashIdConverter]
-    public IEnumerable<ShiftEntitySelectDTO> Users { get; set; } = new List<ShiftEntitySelectDTO>();
+    public List<ShiftEntitySelectDTO> Users { get; set; } = new List<ShiftEntitySelectDTO>();
+
+    public IEnumerable<string> Tags { get; set; } = new HashSet<string>() { };
 }
 
 public class TeamValidator : AbstractValidator<TeamDTO>

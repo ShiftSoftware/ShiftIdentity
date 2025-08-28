@@ -115,7 +115,7 @@ public class AuthService
                 return null;
 
             var userId = long.Parse(claimPrincipal?.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var user = await userRepo.FindAsync(userId);
+            var user = await userRepo.FindAsync(userId, null, true);
 
             if(user is null || !user.IsActive || user.IsDeleted)
                 return null;

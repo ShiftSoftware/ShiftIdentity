@@ -17,11 +17,11 @@ public class BrandRepository : ShiftRepository<ShiftIdentityDbContext, Brand, Br
         this.Loc = Loc;
     }
 
-    public override Task SaveChangesAsync(bool raiseBeforeCommitTriggers = false)
+    public override Task SaveChangesAsync()
     {
         if (shiftIdentityFeatureLocking.BrandFeatureIsLocked)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Brand Feature is locked"]));
 
-        return base.SaveChangesAsync(raiseBeforeCommitTriggers);
+        return base.SaveChangesAsync();
     }
 }

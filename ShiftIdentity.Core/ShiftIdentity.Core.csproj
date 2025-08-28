@@ -21,7 +21,7 @@
 	<ItemGroup>
 		<PackageReference Include="FileHelpers" Version="3.5.2" />
 		<PackageReference Include="FluentValidation" Version="12.0.0" />
-		<PackageReference Include="libphonenumber-csharp" Version="9.0.7" />
+		<PackageReference Include="libphonenumber-csharp" Version="9.0.12" />
 		<PackageReference Include="ShiftSoftware.ShiftEntity" Version="$(ShiftFrameworkVersion)" Condition="!Exists('..\..\ShiftEntity\ShiftEntity.Core\ShiftEntity.Core.csproj')" />
 		<PackageReference Include="ShiftSoftwareLocalization" Version="$(ShiftFrameworkVersion)" Condition="!Exists('..\..\ShiftFrameworkLocalization\ShiftSoftwareLocalization\ShiftSoftwareLocalization.csproj')" />
 		<PackageReference Include="ShiftSoftware.TypeAuth.Core" Version="$(TypeAuthVersion)" Condition="!Exists('..\..\TypeAuth\TypeAuth.Core\TypeAuth.Core.csproj')" />

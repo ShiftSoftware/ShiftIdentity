@@ -1,5 +1,5 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
-using ShiftSoftware.ShiftEntity.Core.Flags;
+using ShiftSoftware.ShiftEntity.Model.Flags;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -19,9 +19,12 @@ public class Team : ShiftEntity<Team>, IEntityHasCompany<Team>
     public long? CompanyID { get; set; }
 
     public virtual Company? Company { get; set; } = default!;
+    public virtual ICollection<TeamCompanyBranch> TeamCompanyBranches { get; set; } = new HashSet<TeamCompanyBranch>();
+    public List<string> Tags { get; set; } = new();
 
     public Team()
     {
         TeamUsers = new HashSet<TeamUser>();
+        TeamCompanyBranches = new HashSet<TeamCompanyBranch>();
     }
 }

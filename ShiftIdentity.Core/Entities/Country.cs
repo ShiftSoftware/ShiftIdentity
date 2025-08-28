@@ -1,4 +1,5 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
+using ShiftSoftware.ShiftEntity.Model.Flags;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -10,8 +11,7 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
 [Table("Countries", Schema = "ShiftIdentity")]
-[DontSetCompanyInfoOnThisEntityWithAutoTrigger]
-public class Country : ShiftEntity<Country>
+public class Country : ShiftEntity<Country>, IEntityHasCountry<Country>
 {
     public string Name { get; set; } = default!;
     public string? IntegrationId { get; set; }
@@ -19,6 +19,7 @@ public class Country : ShiftEntity<Country>
     public string CallingCode { get; set; } = default!;
     public bool BuiltIn { get; set; }
     public virtual IEnumerable<Region> Regions { get; set; }
+    public long? CountryID { get; set; }
 
     public Country()
     {
