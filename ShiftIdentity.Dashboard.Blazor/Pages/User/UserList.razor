@@ -30,9 +30,9 @@
                           Size="Size.Small"
                           StartIcon="@Icons.Material.Filled.LockReset"
                           Confirm
-                          OnResponse="AssignRandomPasswordsResponse"
+                          OnResult="AssignRandomPasswordsResponse"
                           T="UserListDTO"
-                          Action="@($"{Constants.IdentityRoutePreifix}User/AssignRandomPasswords?shareWithUser={SharePasswordWithUser}")">
+                          Endpoint="@($"{Constants.IdentityRoutePreifix}User/AssignRandomPasswords?shareWithUser={SharePasswordWithUser}")">
 
                 <DialogBodyTemplate>
                     <MudCheckBox @bind-Value="SharePasswordWithUser" Label="@Loc["Send login info to the user"]" />
@@ -47,9 +47,9 @@
                           Size="Size.Small"
                           StartIcon="@Icons.Material.Filled.Email"
                           Confirm
-                          OnResponse="VerifyEmailsResponse"
+                          OnResult="VerifyEmailsResponse"
                           T="UserListDTO"
-                          Action="@($"{Constants.IdentityRoutePreifix}User/VerifyEmails")">
+                          Endpoint="@($"{Constants.IdentityRoutePreifix}User/VerifyEmails")">
                 @Loc["Verify Emails"]
             </ActionButton>
 
@@ -58,9 +58,9 @@
                           Size="Size.Small"
                           StartIcon="@Icons.Material.Filled.Phone"
                           Confirm
-                          OnResponse="VerifyPhonesResponse"
+                          OnResult="VerifyPhonesResponse"
                           T="UserListDTO"
-                          Action="@($"{Constants.IdentityRoutePreifix}User/VerifyPhones")">
+                          Endpoint="@($"{Constants.IdentityRoutePreifix}User/VerifyPhones")">
                 @Loc["Verify Phones"]
             </ActionButton>
 
@@ -89,11 +89,11 @@
         <PropertyColumn Title="@Loc["Name"]" Property="x => x.FullName" />
         <PropertyColumn Title="@Loc["Username"]" Property="x => x.Username" />
         <PropertyColumn Title="@Loc["Phone"]" Property="x => x.Phone">
-            <CellTemplate>
+            <CellTemplate Context="cel">
                 <MudPaper Elevation="0" Class="d-flex align-items-center p-2">
-                    <span class="align-middle">@context?.Item?.Phone</span>
+                    <span class="align-middle">@cel?.Item?.Phone</span>
                     &nbsp;&nbsp;&nbsp;
-                    @if (context?.Item?.PhoneVerified == true)
+                    @if (cel?.Item?.PhoneVerified == true)
                     {
                         <MudIcon Size="@Size.Small"
                                  Icon="@Icons.Material.Filled.Verified"
@@ -105,11 +105,11 @@
             </CellTemplate>
         </PropertyColumn>
         <PropertyColumn Title="@Loc["Email"]" Property="x => x.Email">
-            <CellTemplate>
+            <CellTemplate Context="cel">
                 <MudPaper Elevation="0" Class="d-flex align-items-center p-2">
-                    <span class="align-middle">@context?.Item?.Email</span>
+                    <span class="align-middle">@cel?.Item?.Email</span>
                     &nbsp;&nbsp;&nbsp;
-                    @if (context?.Item?.EmailVerified == true)
+                    @if (cel?.Item?.EmailVerified == true)
                     {
                         <MudIcon Size="@Size.Small"
                                  Icon="@Icons.Material.Filled.Verified"
@@ -121,14 +121,9 @@
             </CellTemplate>
         </PropertyColumn>
         <PropertyColumn Title="@Loc["Branch"]" Property="x => x.CompanyBranch" />
-        <PropertyColumn Format="F" Property="x => x.LastSeen.DateTime" Title="@Loc["Last Seen"]">
-            <CellTemplate>
-                @if (context?.Item?.LastSeen.DateTime > DateTimeOffset.MinValue)
-                {
-                    @context.Item.LastSeen.DateTime
-                }
-            </CellTemplate>
-        </PropertyColumn>
+        <PropertyColumnExtended Format="F" Property="x => x.LastSeen" Title="@Loc["Last Seen"]">
+
+        </PropertyColumnExtended>
     </ChildContent>
 </ShiftList>
 
@@ -183,13 +178,11 @@
     //     }
     // }
 
-    private async Task AssignRandomPasswordsResponse(ShiftEvent<ShiftEntityResponse<List<UserListDTO>>> data)
+    private async ValueTask<bool> AssignRandomPasswordsResponse(ShiftEntityResponse<IList<UserListDTO>> res)
     {
-        var res = data.Data;
-
         if (res.Message == null)
         {
-            var users = ((JsonElement)res.Additional?["Users"]).Deserialize<IEnumerable<UserInfoDTO>>() ?? [];
+            var users = ((JsonElement?)res.Additional?["Users"])?.Deserialize<IEnumerable<UserInfoDTO>>() ?? [];
 
             if (SharePasswordWithUser)
             {
@@ -208,13 +201,13 @@
         {
             this.MessageService.Error("An error occurred while resetting the password.");
         }
+
+        return false;
     }
 
 
-    private void VerifyEmailsResponse(ShiftEvent<ShiftEntityResponse<List<UserListDTO>>> data)
+    private ValueTask<bool> VerifyEmailsResponse(ShiftEntityResponse<IList<UserListDTO>> res)
     {
-        var res = data.Data;
-
         if (res.Message == null && res.Entity?.Count > 0)
         {
             this.MessageService.Success($"The verification link send throw email for ({res.Entity.Count}) users.");
@@ -223,12 +216,12 @@
         {
             this.MessageService.Error("An error occurred while verifying the email.");
         }
+
+        return ValueTask.FromResult(false);
     }
 
-    private void VerifyPhonesResponse(ShiftEvent<ShiftEntityResponse<List<UserListDTO>>> data)
+    private ValueTask<bool> VerifyPhonesResponse(ShiftEntityResponse<IList<UserListDTO>> res)
     {
-        var res = data.Data;
-
         if (res.Message == null && res.Entity?.Count > 0)
         {
             this.MessageService.Success($"The Phone for ({res.Entity.Count}) users has been verified.");
@@ -237,6 +230,8 @@
         {
             this.MessageService.Error("An error occurred while verifying the phone.");
         }
+
+        return ValueTask.FromResult(false);
     }
 
     // private async Task VerifyEmails()

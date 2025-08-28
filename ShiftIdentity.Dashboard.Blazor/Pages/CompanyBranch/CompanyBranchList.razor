@@ -27,9 +27,9 @@
     <PropertyColumn Title="@Loc["Company"]" Property="x => x.Company" />
     <PropertyColumn Title="@Loc["Integration ID"]" Property="x => x.IntegrationId" />
 
-    <PropertyColumn Title="@Loc["Departments"]" Property="x => x.Departments">
+    <PropertyColumn Title="@Loc["Departments"]" Property="x => x.Departments" Context="col"> 
         <CellTemplate>
-            @foreach (var department in context.Item!.Departments)
+            @foreach (var department in col.Item!.Departments)
             {
                 <MudChip Size="Size.Small" Color="Color.Primary">@department.Text</MudChip>
             }
