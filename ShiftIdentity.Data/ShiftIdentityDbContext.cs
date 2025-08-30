@@ -57,12 +57,19 @@ namespace ShiftSoftware.ShiftIdentity.Data
                 x.HasIndex(x => x.Phone).IsUnique().HasFilter($"{nameof(User.IsDeleted)} = 0 AND {nameof(User.Phone)} is not null");
             });
 
+            b.Entity<Brand>(x =>
+            {
+                x.Property(c => c.BrandID).HasComputedColumnSql(nameof(Brand.ID));
+            });
+
             b.Entity<Team>(x =>
             {
                 x.Property(p => p.Tags).HasConversion(
                     x => JsonSerializer.Serialize(x, new JsonSerializerOptions(JsonSerializerDefaults.Web)),
                     x => string.IsNullOrWhiteSpace(x) ? new() : JsonSerializer.Deserialize<List<string>>(x, new JsonSerializerOptions(JsonSerializerDefaults.Web))!
                 );
+
+                x.Property(c => c.TeamID).HasComputedColumnSql(nameof(Team.ID));
             });
 
             b.Entity<CompanyBranch>(x =>

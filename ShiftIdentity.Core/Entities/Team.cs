@@ -8,7 +8,7 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
 [Table("Teams", Schema = "ShiftIdentity")]
-public class Team : ShiftEntity<Team>, IEntityHasCompany<Team>
+public class Team : ShiftEntity<Team>, IEntityHasCompany<Team>, IEntityHasTeam<Team>
 {
     [Required]
     public string Name { get; set; } = default!;
@@ -21,6 +21,8 @@ public class Team : ShiftEntity<Team>, IEntityHasCompany<Team>
     public virtual Company? Company { get; set; } = default!;
     public virtual ICollection<TeamCompanyBranch> TeamCompanyBranches { get; set; } = new HashSet<TeamCompanyBranch>();
     public List<string> Tags { get; set; } = new();
+
+    public long? TeamID { get; set; }
 
     public Team()
     {
