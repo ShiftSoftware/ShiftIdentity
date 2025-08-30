@@ -29,7 +29,7 @@ public class DBSeed
     {
         Country country = await SeedCountryAsync();
 
-        Region region = await SeedRegionAsync();
+        Region region = await SeedRegionAsync(country);
 
         City city = await SeedCityAsync(region);
 
@@ -58,7 +58,7 @@ public class DBSeed
         return country;
     }
 
-    private async Task<Region> SeedRegionAsync()
+    private async Task<Region> SeedRegionAsync(Country country)
     {
         var region = await db.Regions.FirstOrDefaultAsync(x => x.Name == Core.Constants.BuiltInRegion);
 
@@ -69,6 +69,7 @@ public class DBSeed
         region.ShortCode = dbSeedOptions?.RegionShortCode;
         region.IntegrationId = dbSeedOptions?.RegionExternalId;
         region.BuiltIn = true;
+        region.Country = country;
 
         return region;
     }
