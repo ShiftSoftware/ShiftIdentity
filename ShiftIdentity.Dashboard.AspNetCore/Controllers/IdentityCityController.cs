@@ -11,6 +11,6 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers;
 [Route("api/[controller]")]
 public class IdentityCityController : ShiftEntitySecureControllerAsync<CityRepository, City, CityListDTO, CityDTO>
 {
-    public IdentityCityController(DynamicActionFilters dynamicActionFilters) : base(ShiftIdentityActions.Cities)
+    public IdentityCityController() : base(ShiftIdentityActions.Cities)
     { }
 }

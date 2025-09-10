@@ -15,7 +15,7 @@ public class TeamRepository : ShiftRepository<ShiftIdentityDbContext, Team, Team
 {
     private readonly ShiftIdentityFeatureLocking shiftIdentityFeatureLocking;
     private readonly ShiftIdentityLocalizer Loc;
-    public TeamRepository(ShiftIdentityDbContext db, ShiftIdentityFeatureLocking shiftIdentityFeatureLocking, ShiftIdentityLocalizer Loc) :
+    public TeamRepository(ShiftIdentityDbContext db, ShiftIdentityFeatureLocking shiftIdentityFeatureLocking, ShiftIdentityDefaultDataLevelAccessOptions shiftIdentityDefaultDataLevelAccessOptions, ShiftIdentityLocalizer Loc) :
         base(db, x => x.IncludeRelatedEntitiesWithFindAsync(
             s => s.Include(i => i.TeamUsers).ThenInclude(i => i.User),
             s => s.Include(i => i.TeamCompanyBranches).ThenInclude(i => i.CompanyBranch),
@@ -24,6 +24,7 @@ public class TeamRepository : ShiftRepository<ShiftIdentityDbContext, Team, Team
     {
         this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
         this.Loc = Loc;
+        this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
     }
 
     public override async ValueTask<Team> UpsertAsync(Team entity, TeamDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null)

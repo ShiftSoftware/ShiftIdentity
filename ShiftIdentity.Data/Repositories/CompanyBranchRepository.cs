@@ -26,6 +26,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             RegionRepository regionRepo,
             ShiftIdentityFeatureLocking shiftIdentityFeatureLocking,
             ShiftIdentityLocalizer Loc,
+            ShiftIdentityDefaultDataLevelAccessOptions shiftIdentityDefaultDataLevelAccessOptions,
             IConfiguration configuration
         ) : base(db, r =>
             r.IncludeRelatedEntitiesWithFindAsync(
@@ -42,6 +43,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
             this.Loc = Loc;
             this.configuration = configuration;
+            this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
         }
 
         public override async ValueTask<CompanyBranch> UpsertAsync(CompanyBranch entity, CompanyBranchDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null)

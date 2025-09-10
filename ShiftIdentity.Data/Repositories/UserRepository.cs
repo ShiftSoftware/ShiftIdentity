@@ -28,6 +28,7 @@ public class UserRepository :
     public UserRepository(ShiftIdentityDbContext db, 
         ITypeAuthService typeAuthService, 
         IMapper mapper,
+        ShiftIdentityDefaultDataLevelAccessOptions shiftIdentityDefaultDataLevelAccessOptions,
         ShiftIdentityFeatureLocking shiftIdentityFeatureLocking, 
         ShiftIdentityLocalizer Loc) : base(db, r =>
         r.IncludeRelatedEntitiesWithFindAsync(
@@ -43,6 +44,7 @@ public class UserRepository :
         this.mapper = mapper;
         this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
         this.Loc = Loc;
+        this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
     }
 
     public override async ValueTask<User> UpsertAsync(User entity, UserDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null)

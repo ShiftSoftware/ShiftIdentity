@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System;
+﻿using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Models;
 using ShiftSoftware.ShiftIdentity.Core;
 
@@ -23,5 +22,5 @@ public class ShiftIdentityConfiguration
     public ShiftIdentityHostingTypes ShiftIdentityHostingType { get; set; }
     public string? FrontEndUrl { get; set; } = default!;
     public ShiftIdentityFeatureLocking ShiftIdentityFeatureLocking { get; set; } = new ShiftIdentityFeatureLocking();
-    public DynamicActionFilters DynamicActionFilters { get; set; } = new();
+    public ShiftIdentityDefaultDataLevelAccessOptions DefaultDataLevelAccessOptions { get; set; } = new();
 }

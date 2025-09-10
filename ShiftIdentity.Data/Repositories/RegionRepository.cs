@@ -15,11 +15,13 @@ public class RegionRepository : ShiftRepository<ShiftIdentityDbContext, Region, 
     private readonly ShiftIdentityLocalizer Loc;
     public RegionRepository(
         ShiftIdentityDbContext db,
+        ShiftIdentityDefaultDataLevelAccessOptions shiftIdentityDefaultDataLevelAccessOptions,
         ShiftIdentityFeatureLocking shiftIdentityFeatureLocking, 
         ShiftIdentityLocalizer Loc) : base(db, x=> x.IncludeRelatedEntitiesWithFindAsync(i=> i.Include(s=> s.Country)))
     {
         this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
         this.Loc = Loc;
+        this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
     }
 
     public override ValueTask<Region> UpsertAsync(Region entity, RegionDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null)

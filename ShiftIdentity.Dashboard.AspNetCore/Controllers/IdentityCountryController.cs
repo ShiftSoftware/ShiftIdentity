@@ -10,7 +10,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers;
 [Route("api/[controller]")]
 public class IdentityCountryController : ShiftEntitySecureControllerAsync<CountryRepository, Country, CountryListDTO, CountryDTO>
 {
-    public IdentityCountryController(DynamicActionFilters dynamicActionFilters) : base(ShiftIdentityActions.Countries)
+    public IdentityCountryController() : base(ShiftIdentityActions.Countries)
     {
     }
 }

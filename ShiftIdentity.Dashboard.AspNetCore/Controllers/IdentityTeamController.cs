@@ -10,7 +10,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers;
 [Route("api/[controller]")]
 public class IdentityTeamController : ShiftEntitySecureControllerAsync<TeamRepository, Team, TeamListDTO, TeamDTO>
 {
-    public IdentityTeamController(DynamicActionFilters dynamicActionFilters) : base(ShiftIdentityActions.Teams)
+    public IdentityTeamController() : base(ShiftIdentityActions.Teams)
     {
     }
 }

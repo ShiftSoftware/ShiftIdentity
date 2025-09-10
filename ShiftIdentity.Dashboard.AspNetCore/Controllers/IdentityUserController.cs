@@ -30,7 +30,6 @@ public class IdentityUserController : ShiftEntitySecureControllerAsync<UserRepos
     public IdentityUserController(UserRepository userRepo,
         IMapper mapper,
         ShiftIdentityConfiguration options,
-        DynamicActionFilters dynamicActionFilters,
         ITypeAuthService typeAuth,
         IHttpContextAccessor httpContextAccessor,
         IEnumerable<ISendEmailVerification>? sendEmailVerifications = null,
