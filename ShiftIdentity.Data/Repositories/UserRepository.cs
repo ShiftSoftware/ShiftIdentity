@@ -217,7 +217,7 @@ public class UserRepository :
 
     public async Task<User?> ChangePasswordAsync(ChangePasswordDTO dto, long userId)
     {
-        var user = await FindAsync(userId, null);
+        var user = await FindAsync(userId, null, disableDefaultDataLevelAccess: true, disableGlobalFilters: true);
         if (user is null)
             return null;
 
@@ -240,7 +240,7 @@ public class UserRepository :
 
     public async Task<User?> UpdateUserDataAsync(UserDataDTO dto, long userId)
     {
-        var user = await FindAsync(userId, null);
+        var user = await FindAsync(userId, null, disableGlobalFilters: true, disableDefaultDataLevelAccess: true);
 
         if (user is null)
             return null;
