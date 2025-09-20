@@ -36,7 +36,7 @@ public class CityRepository : ShiftRepository<ShiftIdentityDbContext, City, City
 
         var oldCountryId = entity.CountryID;
 
-        entity.CountryID = (await this.regionRepo.FindAsync(dto.Region.Value.ToLong()))?.CountryID;
+        entity.CountryID = (await this.regionRepo.FindAsync(dto.Region.Value.ToLong(), disableDefaultDataLevelAccess: true, disableGlobalFilters: true))?.CountryID;
 
         if (actionType == ActionTypes.Update)
             if (entity.CountryID != oldCountryId && oldCountryId is not null)

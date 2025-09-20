@@ -62,10 +62,10 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             entity.Phones = dto.Phones;
             entity.Emails = dto.Emails;
             entity.TerminationDate = dto.TerminationDate;
-            entity.RegionID = (await this.cityRepository.FindAsync(entity.CityID.Value))!.RegionID;
+            entity.RegionID = (await this.cityRepository.FindAsync(entity.CityID.Value, disableDefaultDataLevelAccess: true, disableGlobalFilters: true))!.RegionID;
 
             if (entity.RegionID is not null)
-                entity.CountryID = (await this.regionRepo.FindAsync(entity.RegionID.GetValueOrDefault()))?.CountryID;
+                entity.CountryID = (await this.regionRepo.FindAsync(entity.RegionID.GetValueOrDefault(), disableDefaultDataLevelAccess: true, disableGlobalFilters: true))?.CountryID;
 
             if (actionType == ActionTypes.Insert)
                 entity.CustomFields = dto.CustomFields?.ToDictionary(x => x.Key, x => new CustomField
