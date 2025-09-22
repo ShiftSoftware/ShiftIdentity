@@ -13,7 +13,7 @@ public class Region : Profile
         CreateMap<Core.Entities.Region, RegionDTO>()
             .ForMember(
                 dest => dest.Country,
-                opt => opt.MapFrom(src => new ShiftEntitySelectDTO { Value = src.Country.ID.ToString()!, Text = src.Country!.Name })
+                opt => opt.MapFrom(src => new ShiftEntitySelectDTO { Value = src.CountryID.ToString()!, Text = src.Country!.Name })
             )
             .ReverseMap()
             .ForMember(
