@@ -283,7 +283,7 @@ public class UserRepository :
         return base.SaveChangesAsync();
     }
 
-    public IEnumerable<UserInfoDTO> AssignRandomPasswords(List<User> users)
+    public IEnumerable<UserInfoDTO> AssignRandomPasswords(List<User> users, int passwordLength)
     {
         var userInfos = new List<UserInfoDTO>();
 
@@ -292,7 +292,7 @@ public class UserRepository :
             if (user.BuiltIn)
                 continue;
 
-            var password = PasswordGenerator.GeneratePassword(20);
+            var password = PasswordGenerator.GeneratePassword(passwordLength);
 
             var hash = HashService.GenerateHash(password);
 
