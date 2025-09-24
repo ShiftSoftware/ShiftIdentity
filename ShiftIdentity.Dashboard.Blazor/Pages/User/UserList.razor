@@ -39,6 +39,10 @@
                     <MudTextField @bind-Value="passwordLength"
                                   Label="@Loc["Password Length"]"
                                   Immediate="true"/>
+                    <br />
+                    <MudAlert Severity="Severity.Info">
+                        @Loc["Password length should not be less that 6"]
+                    </MudAlert>
                 </DialogBodyTemplate>
                 <ChildContent>
                     @Loc["Assign Random Passwords"]

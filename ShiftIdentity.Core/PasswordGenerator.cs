@@ -12,8 +12,8 @@ public class PasswordGenerator
 
     public static string GeneratePassword(int length)
     {
-        if(length <1)
-            throw new ArgumentException("Password length must be at least 1.", nameof(length));
+        if(length <6)
+            throw new ArgumentException("Password length must be at least 6.", nameof(length));
 
         return RandomNumberGenerator.GetString(
             Lowercase + Uppercase + Digits + SpecialChars,
