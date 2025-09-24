@@ -1,11 +1,12 @@
-﻿using ShiftSoftware.ShiftEntity.Model.Dtos;
+﻿using FluentValidation;
+using ShiftSoftware.ShiftEntity.Model.Dtos;
+using ShiftSoftware.ShiftEntity.Model.HashIds;
+using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
+using ShiftSoftware.ShiftIdentity.Core.Localization;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
-using ShiftSoftware.ShiftEntity.Model.HashIds;
-using FluentValidation;
-using ShiftSoftware.ShiftIdentity.Core.Localization;
+using System.Linq;
 
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 
@@ -60,6 +61,13 @@ public class UserValidator : AbstractValidator<UserDTO>
 {
     public UserValidator(ShiftIdentityLocalizer localizer)
     {
+        RuleFor(x => x.Password)
+            .MinimumLength(6).WithMessage(localizer["The password must be at least n characters long", 6])
+            .MaximumLength(255).WithMessage(localizer["Your input cannot be more than 255 characters"])
+            .Matches(@"^(?=.*[0-9]).+$").WithMessage(localizer["The password must contain at least one digit"])
+            .Must(HaveRequiredUniqueChars).WithMessage(localizer["The password must contain at least 3 unique characters"])
+            .When(x => !string.IsNullOrWhiteSpace(x.Password));
+
         RuleFor(x => x.Username)
                 .NotEmpty().WithMessage(localizer["Please provide", localizer["Username"]])
                 .MaximumLength(255).WithMessage(localizer["Your input cannot be more than 255 characters"]);
@@ -89,5 +97,10 @@ public class UserValidator : AbstractValidator<UserDTO>
 
         RuleFor(x => x.CompanyBranchID)
             .NotNull().WithMessage(localizer["Please select", localizer["Company Branch"]]);
+    }
+
+    private bool HaveRequiredUniqueChars(string password)
+    {
+        return password.Distinct().Count() >= 3;
     }
 }
