@@ -5,9 +5,9 @@ namespace ShiftSoftware.ShiftIdentity.Core;
 
 public class PasswordGenerator
 {
-    private const string Lowercase = "abcdefghijklmnopqrstuvwxyz";
-    private const string Uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    private const string Digits = "0123456789";
+    private const string Lowercase = "abcdefghjkmnpqrstuvwxyz";
+    private const string Uppercase = "ABCDEFGHJKMNPQRSTUVWXYZ";
+    private const string Digits = "23456789";
     private const string SpecialChars = "!@#$%^&*()_-+=[]{}|;:,.<>?";
 
     public static string GeneratePassword(int length)
