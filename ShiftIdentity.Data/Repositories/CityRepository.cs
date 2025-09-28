@@ -18,6 +18,7 @@ public class CityRepository : ShiftRepository<ShiftIdentityDbContext, City, City
     public CityRepository(
         ShiftIdentityDbContext db,
         RegionRepository regionRepo,
+        ShiftIdentityDefaultDataLevelAccessOptions shiftIdentityDefaultDataLevelAccessOptions,
         ShiftIdentityFeatureLocking shiftIdentityFeatureLocking,
         ShiftIdentityLocalizer Loc
     ) : base(db, x => x.IncludeRelatedEntitiesWithFindAsync(y => y.Include(z => z.Region).ThenInclude(z=> z.Country)))
@@ -25,6 +26,7 @@ public class CityRepository : ShiftRepository<ShiftIdentityDbContext, City, City
         this.regionRepo = regionRepo;
         this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
         this.Loc = Loc;
+        this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
     }
 
     public override async ValueTask<City> UpsertAsync(City entity, CityDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null)
@@ -34,7 +36,7 @@ public class CityRepository : ShiftRepository<ShiftIdentityDbContext, City, City
 
         var oldCountryId = entity.CountryID;
 
-        entity.CountryID = (await this.regionRepo.FindAsync(dto.Region.Value.ToLong()))?.CountryID;
+        entity.CountryID = (await this.regionRepo.FindAsync(dto.Region.Value.ToLong(), disableDefaultDataLevelAccess: true, disableGlobalFilters: true))?.CountryID;
 
         if (actionType == ActionTypes.Update)
             if (entity.CountryID != oldCountryId && oldCountryId is not null)

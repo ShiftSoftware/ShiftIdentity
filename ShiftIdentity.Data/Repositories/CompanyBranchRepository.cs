@@ -26,6 +26,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             RegionRepository regionRepo,
             ShiftIdentityFeatureLocking shiftIdentityFeatureLocking,
             ShiftIdentityLocalizer Loc,
+            ShiftIdentityDefaultDataLevelAccessOptions shiftIdentityDefaultDataLevelAccessOptions,
             IConfiguration configuration
         ) : base(db, r =>
             r.IncludeRelatedEntitiesWithFindAsync(
@@ -42,6 +43,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
             this.Loc = Loc;
             this.configuration = configuration;
+            this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
         }
 
         public override async ValueTask<CompanyBranch> UpsertAsync(CompanyBranch entity, CompanyBranchDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null)
@@ -60,10 +62,10 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             entity.Phones = dto.Phones;
             entity.Emails = dto.Emails;
             entity.TerminationDate = dto.TerminationDate;
-            entity.RegionID = (await this.cityRepository.FindAsync(entity.CityID.Value))!.RegionID;
+            entity.RegionID = (await this.cityRepository.FindAsync(entity.CityID.Value, disableDefaultDataLevelAccess: true, disableGlobalFilters: true))!.RegionID;
 
             if (entity.RegionID is not null)
-                entity.CountryID = (await this.regionRepo.FindAsync(entity.RegionID.GetValueOrDefault()))?.CountryID;
+                entity.CountryID = (await this.regionRepo.FindAsync(entity.RegionID.GetValueOrDefault(), disableDefaultDataLevelAccess: true, disableGlobalFilters: true))?.CountryID;
 
             if (actionType == ActionTypes.Insert)
                 entity.CustomFields = dto.CustomFields?.ToDictionary(x => x.Key, x => new CustomField

@@ -10,6 +10,6 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers;
 [Route("api/[controller]")]
 public class IdentityBrandController : ShiftEntitySecureControllerAsync<BrandRepository, Brand, BrandListDTO, BrandDTO>
 {
-    public IdentityBrandController(DynamicActionFilters dynamicActionFilters) : base(ShiftIdentityActions.Brands)
+    public IdentityBrandController() : base(ShiftIdentityActions.Brands)
     { }
 }

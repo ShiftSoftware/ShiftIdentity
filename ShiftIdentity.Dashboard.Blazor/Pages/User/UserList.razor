@@ -32,10 +32,17 @@
                           Confirm
                           OnResult="AssignRandomPasswordsResponse"
                           T="UserListDTO"
-                          Endpoint="@($"{Constants.IdentityRoutePreifix}User/AssignRandomPasswords?shareWithUser={SharePasswordWithUser}")">
+                          Endpoint="@($"{Constants.IdentityRoutePreifix}User/AssignRandomPasswords?shareWithUser={SharePasswordWithUser}&passwordLength={passwordLength}")">
 
                 <DialogBodyTemplate>
                     <MudCheckBox @bind-Value="SharePasswordWithUser" Label="@Loc["Send login info to the user"]" />
+                    <MudTextField @bind-Value="passwordLength"
+                                  Label="@Loc["Password Length"]"
+                                  Immediate="true"/>
+                    <br />
+                    <MudAlert Severity="Severity.Info">
+                        @Loc["Password length should not be less that 6"]
+                    </MudAlert>
                 </DialogBodyTemplate>
                 <ChildContent>
                     @Loc["Assign Random Passwords"]
@@ -133,6 +140,7 @@
     public ShiftList<UserListDTO>? ShiftList { get; set; }
 
     private bool SharePasswordWithUser { get; set; }
+    private int passwordLength = 6;
 
     private async Task OpenImportModal(long? id)
     {

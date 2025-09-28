@@ -10,7 +10,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers;
 [Route("api/[controller]")]
 public class IdentityCompanyBranchController : ShiftEntitySecureControllerAsync<CompanyBranchRepository, CompanyBranch, CompanyBranchListDTO, CompanyBranchDTO>
 {
-    public IdentityCompanyBranchController(DynamicActionFilters dynamicActionFilters) : base(ShiftIdentityActions.CompanyBranches)
+    public IdentityCompanyBranchController() : base(ShiftIdentityActions.CompanyBranches)
     {
 
     }

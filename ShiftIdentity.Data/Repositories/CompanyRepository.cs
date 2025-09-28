@@ -16,11 +16,12 @@ public class CompanyRepository : ShiftRepository<ShiftIdentityDbContext, Company
     private readonly ShiftIdentityFeatureLocking shiftIdentityFeatureLocking;
     private readonly ShiftIdentityLocalizer Loc;
     private readonly IConfiguration configuration;
-    public CompanyRepository(ShiftIdentityDbContext db, ShiftIdentityFeatureLocking shiftIdentityFeatureLocking, ShiftIdentityLocalizer Loc, IConfiguration configuration) : base(db)
+    public CompanyRepository(ShiftIdentityDbContext db, ShiftIdentityDefaultDataLevelAccessOptions shiftIdentityDefaultDataLevelAccessOptions, ShiftIdentityFeatureLocking shiftIdentityFeatureLocking, ShiftIdentityLocalizer Loc, IConfiguration configuration) : base(db)
     {
         this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
         this.Loc = Loc;
         this.configuration = configuration;
+        this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
     }
 
     public override ValueTask<Company> UpsertAsync(Company entity, CompanyDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null)

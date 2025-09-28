@@ -11,6 +11,8 @@
 @using ShiftSoftware.ShiftBlazor.Enums
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch
+@using ShiftSoftware.ShiftIdentity.Core
+@using MudBlazor
 
 <ShiftEntityForm @bind-Mode="Mode"
                  @bind-Value="TheItem"
@@ -37,14 +39,18 @@
                   @bind-Value="TheItem.Username"
                   For="@(() => TheItem.Username)" />
 
-    <MudTextField InputType="InputType.Password"
+    <MudTextField InputType="@passwordInputType"
                   ReadOnly="@ReadOnly"
                   Disabled="@Disabled"
                   OnlyValidateIfDirty="true"
                   Label="@Loc["Password"]"
                   @bind-Value="TheItem.Password"
                   For="@(() => TheItem.Password)"
-                  HelperText="Choose a strong password" />
+                  HelperText="Choose a strong password"
+                  Adornment="Adornment.End"
+                  AdornmentIcon="@GetPasswordAdornmentIcon()"
+                  OnAdornmentClick="@OnPasswordAdornmentClick"
+                  AdornmentAriaLabel="@GetPasswordAdornmentAriaLabel()" />
 
     <MudTextField ReadOnly="@ReadOnly"
                   Disabled="@Disabled"
@@ -105,6 +111,9 @@
 
 @code {
     private bool ready = false;
+    private bool showPassword = false;
+    private InputType passwordInputType => showPassword ? InputType.Text : InputType.Password;
+
     Shared.ActionTree.ActionTree? actionTree;
 
     List<AccessTreeDTO> accessTress = new List<AccessTreeDTO>();
@@ -113,6 +122,39 @@
     {
         if (TheItem.ID == default)
             TheItem.AccessTree = "{}";
+    }
+
+    private string GetPasswordAdornmentIcon()
+    {
+        if (string.IsNullOrEmpty(TheItem.Password))
+            return Icons.Material.Filled.VpnKey;
+        else
+            return showPassword ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff;
+    }
+
+    private string GetPasswordAdornmentAriaLabel()
+    {
+        if (string.IsNullOrEmpty(TheItem.Password))
+            return "Generate Password";
+        else
+            return showPassword ? "Hide Password" : "Show Password";
+    }
+
+    private void OnPasswordAdornmentClick()
+    {
+        if (ReadOnly || Disabled)
+            return;
+
+        if (string.IsNullOrEmpty(TheItem.Password))
+        {
+            TheItem.Password = PasswordGenerator.GeneratePassword(8);
+            showPassword = true; // Hide after generating
+        }
+        else
+        {
+            showPassword = !showPassword;
+        }
+        StateHasChanged();
     }
 
     public ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO? LastSelectedAccessTree

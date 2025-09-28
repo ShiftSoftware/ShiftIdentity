@@ -1,6 +1,5 @@
 ﻿using AutoMapper;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure.Internal;
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
@@ -29,6 +28,7 @@ public class UserRepository :
     public UserRepository(ShiftIdentityDbContext db, 
         ITypeAuthService typeAuthService, 
         IMapper mapper,
+        ShiftIdentityDefaultDataLevelAccessOptions shiftIdentityDefaultDataLevelAccessOptions,
         ShiftIdentityFeatureLocking shiftIdentityFeatureLocking, 
         ShiftIdentityLocalizer Loc) : base(db, r =>
         r.IncludeRelatedEntitiesWithFindAsync(
@@ -44,6 +44,7 @@ public class UserRepository :
         this.mapper = mapper;
         this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
         this.Loc = Loc;
+        this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
     }
 
     public override async ValueTask<User> UpsertAsync(User entity, UserDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null)
@@ -64,8 +65,11 @@ public class UserRepository :
             throw new ShiftEntityException(new Message(Loc["Duplicate"], Loc["The username {0} exist", dto.Username]));
 
         //Check if the email is duplicate
-        if (await db.Users.AnyAsync(x => !x.IsDeleted && x.Email.ToLower() == (dto.Email ?? "").ToLower() && x.ID != id))
-            throw new ShiftEntityException(new Message(Loc["Duplicate"], Loc["The email {0} exist", dto.Email]));
+        if(!string.IsNullOrWhiteSpace(dto.Email))
+            if (await db.Users.AnyAsync(x => !x.IsDeleted && x.Email!.ToLower() == dto.Email.ToLower() && x.ID != id))
+                throw new ShiftEntityException(new Message(Loc["Duplicate"], Loc["The email {0} exist", dto.Email]));
+        else
+            dto.Email = null;
 
         //Check if the phone is duplicate
         string? formattedPhone = null;
@@ -216,7 +220,7 @@ public class UserRepository :
 
     public async Task<User?> ChangePasswordAsync(ChangePasswordDTO dto, long userId)
     {
-        var user = await FindAsync(userId, null);
+        var user = await FindAsync(userId, null, disableDefaultDataLevelAccess: true, disableGlobalFilters: true);
         if (user is null)
             return null;
 
@@ -239,7 +243,7 @@ public class UserRepository :
 
     public async Task<User?> UpdateUserDataAsync(UserDataDTO dto, long userId)
     {
-        var user = await FindAsync(userId, null);
+        var user = await FindAsync(userId, null, disableGlobalFilters: true, disableDefaultDataLevelAccess: true);
 
         if (user is null)
             return null;
@@ -282,7 +286,7 @@ public class UserRepository :
         return base.SaveChangesAsync();
     }
 
-    public IEnumerable<UserInfoDTO> AssignRandomPasswords(List<User> users)
+    public IEnumerable<UserInfoDTO> AssignRandomPasswords(List<User> users, int passwordLength)
     {
         var userInfos = new List<UserInfoDTO>();
 
@@ -291,7 +295,7 @@ public class UserRepository :
             if (user.BuiltIn)
                 continue;
 
-            var password = PasswordGenerator.GeneratePassword(20);
+            var password = PasswordGenerator.GeneratePassword(passwordLength);
 
             var hash = HashService.GenerateHash(password);
 

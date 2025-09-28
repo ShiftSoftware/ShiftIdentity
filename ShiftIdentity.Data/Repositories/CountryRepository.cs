@@ -22,10 +22,12 @@ public class CountryRepository : ShiftRepository<ShiftIdentityDbContext, Country
     public CountryRepository(
         ShiftIdentityDbContext db,
         ShiftIdentityLocalizer localizer,
+        ShiftIdentityDefaultDataLevelAccessOptions shiftIdentityDefaultDataLevelAccessOptions,
          ShiftIdentityFeatureLocking shiftIdentityFeatureLocking) : base(db)
     {
         this.localizer = localizer;
         this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
+        this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
     }
 
     public override ValueTask<Country> UpsertAsync(Country entity, CountryDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null)

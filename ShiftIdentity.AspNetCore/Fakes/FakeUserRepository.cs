@@ -12,7 +12,7 @@ public class FakeUserRepository : IUserRepository
     {
         this.shiftIdentityOptions = shiftIdentityOptions;
     }
-    public async Task<User?> FindAsync(long id, DateTimeOffset? asOf = null, bool disableDefaultDataLevelAccess = false)
+    public async Task<User?> FindAsync(long id, DateTimeOffset? asOf = null, bool disableDefaultDataLevelAccess = false, bool disableGlobalFilters = false)
     {
         return new User(id)
         {
@@ -56,9 +56,9 @@ public class FakeUserRepository : IUserRepository
 
     }
 
-    public IQueryable<UserListDTO> OdataList(IQueryable<User>? queryable = null)
+    public ValueTask<IQueryable<UserListDTO>> OdataList(IQueryable<User>? queryable = null)
     {
-        return new List<UserListDTO> {
+        return new ValueTask<IQueryable<UserListDTO>>(new List<UserListDTO> {
             new UserListDTO {
                 ID = shiftIdentityOptions.UserData!.ID.ToString(),
                 FullName = shiftIdentityOptions.UserData!.FullName,
@@ -67,6 +67,6 @@ public class FakeUserRepository : IUserRepository
                 ID = "2",
                 FullName = "Second",
             },
-        }.AsQueryable();
+        }.AsQueryable());
     }
 }

@@ -13,7 +13,7 @@ public class City : Profile
         CreateMap<Core.Entities.City, CityDTO>()
             .ForMember(
                     dest => dest.Region,
-                    opt => opt.MapFrom(src => new ShiftEntitySelectDTO { Value = src.Region.ID.ToString()!, Text = src.Region!.Name })
+                    opt => opt.MapFrom(src => new ShiftEntitySelectDTO { Value = src.RegionID.ToString()!, Text = src.Region!.Name })
                 )
             .ReverseMap()
             .ForMember(x => x.Region, x => x.Ignore())
@@ -33,14 +33,6 @@ public class City : Profile
                 );
 
         CreateMap<Core.Entities.City, CityModel>()
-            .ForMember(
-                dest => dest.CountryID,
-                opt => opt.MapFrom(src => (src.Region != null? src.Region.CountryID.ToString(): null))
-            )
-            .ForMember(
-                dest => dest.RegionID,
-                opt => opt.MapFrom(src => src.RegionID.ToString())
-            )
             .ForMember(
                 dest => dest.ItemType,
                 opt => opt.MapFrom(src => CountryContainerItemTypes.City)

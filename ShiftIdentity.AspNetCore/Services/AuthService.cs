@@ -92,7 +92,7 @@ public class AuthService
             return null;
         }
 
-        var user = await userRepo.FindAsync(authCode.UserID);
+        var user = await userRepo.FindAsync(authCode.UserID, disableDefaultDataLevelAccess: true, disableGlobalFilters: true);
 
         if (user is null)
         {
@@ -115,7 +115,7 @@ public class AuthService
                 return null;
 
             var userId = long.Parse(claimPrincipal?.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var user = await userRepo.FindAsync(userId, null, true);
+            var user = await userRepo.FindAsync(userId, disableDefaultDataLevelAccess: true, disableGlobalFilters: true);
 
             if(user is null || !user.IsActive || user.IsDeleted)
                 return null;

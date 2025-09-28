@@ -16,11 +16,12 @@ public class AccessTreeRepository : ShiftRepository<ShiftIdentityDbContext, Acce
     private readonly ShiftIdentityFeatureLocking shiftIdentityFeatureLocking;
     private readonly ShiftIdentityLocalizer Loc;
 
-    public AccessTreeRepository(ShiftIdentityDbContext db, ITypeAuthService typeAuthService, ShiftIdentityFeatureLocking shiftIdentityFeatureLocking, ShiftIdentityLocalizer Loc) : base(db)
+    public AccessTreeRepository(ShiftIdentityDbContext db, ShiftIdentityDefaultDataLevelAccessOptions shiftIdentityDefaultDataLevelAccessOptions, ITypeAuthService typeAuthService, ShiftIdentityFeatureLocking shiftIdentityFeatureLocking, ShiftIdentityLocalizer Loc) : base(db)
     {
         this.typeAuthService = typeAuthService;
         this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
         this.Loc = Loc;
+        this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
     }
 
     public override async ValueTask<AccessTree> UpsertAsync(AccessTree entity, AccessTreeDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null)

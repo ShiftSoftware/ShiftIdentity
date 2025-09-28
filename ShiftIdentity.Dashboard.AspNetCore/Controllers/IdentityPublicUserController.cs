@@ -22,9 +22,9 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
         [HttpGet]
         public async Task<ActionResult<ODataDTO<PublicUserListDTO>>> Get(ODataQueryOptions<PublicUserListDTO> oDataQueryOptions)
         {
-            var data = userRepository.OdataList().Select(x => new PublicUserListDTO { ID = x.ID, Name = x.FullName });
+            var data = (await userRepository.OdataList()).Select(x => new PublicUserListDTO { ID = x.ID, Name = x.FullName });
 
-            return Ok(await ODataIqueryable.GetOdataDTOFromIQueryableAsync(data, oDataQueryOptions, Request));
+            return Ok(await data.ToOdataDTO(oDataQueryOptions, Request));
         }
     }
 }
