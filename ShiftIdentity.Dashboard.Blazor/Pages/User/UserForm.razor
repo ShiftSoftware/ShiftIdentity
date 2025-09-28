@@ -109,7 +109,7 @@
 
     List<AccessTreeDTO> accessTress = new List<AccessTreeDTO>();
 
-    protected async override Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         if (TheItem.ID == default)
             TheItem.AccessTree = "{}";

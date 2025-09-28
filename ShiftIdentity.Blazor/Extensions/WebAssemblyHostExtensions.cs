@@ -58,7 +58,7 @@ public static class WebAssemblyHostExtensions
         if (storedToken is null)
             return;
 
-        var refreshToken = storedToken?.RefreshToken;
+        var refreshToken = storedToken.RefreshToken;
 
         try
         {
@@ -99,7 +99,7 @@ public static class WebAssemblyHostExtensions
     {
         var js = services.GetRequiredService<IJSRuntime>();
 
-        var visiblity = await js.InvokeAsync<string>("eval", "document.visibilityState");
-        return visiblity.ToLower() == "visible";
+        var visibility = await js.InvokeAsync<string>("eval", "document.visibilityState");
+        return visibility == "visible";
     }
 }

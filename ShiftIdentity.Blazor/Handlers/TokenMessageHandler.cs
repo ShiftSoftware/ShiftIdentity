@@ -16,7 +16,7 @@ public class TokenMessageHandler : DelegatingHandler
 
     protected override HttpResponseMessage Send(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        var token = tokenStore.GetTokenAsync().Result.Token ?? "";
+        var token = tokenStore.GetTokenAsync().Result?.Token ?? "";
         if (!string.IsNullOrWhiteSpace(token))
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
@@ -25,7 +25,7 @@ public class TokenMessageHandler : DelegatingHandler
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        var token = (await tokenStore.GetTokenAsync()).Token ?? "";
+        var token = (await tokenStore.GetTokenAsync())?.Token ?? "";
         if (!string.IsNullOrWhiteSpace(token))
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 

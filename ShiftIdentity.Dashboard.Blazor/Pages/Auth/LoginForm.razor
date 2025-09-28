@@ -66,19 +66,23 @@
     LoginDTO loginDto { get; set; } = new LoginDTO();
 
     [CascadingParameter]
-    private Task<AuthenticationState> authenticationStateTask { get; set; }
+    private Task<AuthenticationState>? authenticationStateTask { get; set; }
 
     [Parameter]
     [SupplyParameterFromQuery]
-    public string ReturnUrl { get; set; }
+    public string? ReturnUrl { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        var authState = await authenticationStateTask;
+        if (authenticationStateTask != null)
+        {
+            var authState = await authenticationStateTask;
 
-        //Return to home if user already loged-in
-        if (authState?.User?.Identity?.IsAuthenticated ?? false)
-            NavManager.NavigateTo("/");
+            //Return to home if user already loged-in
+            if (authState?.User?.Identity?.IsAuthenticated ?? false)
+                NavManager.NavigateTo("/");
+        }
+        
     }
 
     private async Task Login()

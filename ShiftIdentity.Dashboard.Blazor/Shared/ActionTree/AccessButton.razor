@@ -1,5 +1,4 @@
-﻿@using ShiftSoftware.TypeAuth.Core
-
+﻿
 <MudButton Style="@style" Class="@cssClass" Size="Size.Small" Color="@color"
            Disabled="@(!TypeAuth_LoggedInUser.Can(ActionTreeItem!.Action!, Access, ActionTreeItem.ID) || hasWildCardCard || Disabled)"
            OnClick="Bind"

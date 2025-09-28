@@ -1,11 +1,15 @@
-﻿@using Microsoft.AspNetCore.Components.Authorization
-@using Microsoft.Extensions.DependencyInjection
-@using ShiftSoftware.ShiftIdentity.Core
+﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.Extensions.DependencyInjection;
+using ShiftSoftware.ShiftIdentity.Core;
 
-@inject IServiceProvider ServiceProvider
-@inject NavigationManager NavManager
+namespace ShiftSoftware.ShiftIdentity.Blazor.Components;
 
-@code {
+public class RedirectToChangePassword : ComponentBase
+{
+    [Inject] IServiceProvider ServiceProvider { get; set; } = default!;
+    [Inject] NavigationManager NavManager { get; set; } = default!;
+
 
     ShiftIdentityBlazorOptions? Options { get; set; }
     AuthenticationStateProvider? AuthStateProvider { get; set; }
@@ -25,10 +29,10 @@
         if (authState is null || !(authState.User?.Identity?.IsAuthenticated ?? false))
             return;
 
-        bool requirePaswordChange = false;
-        bool.TryParse(authState.User?.Claims?.FirstOrDefault(c => c.Type == ShiftIdentityClaims.RequirePasswordChange)?.Value, out requirePaswordChange);
+        var requirePasswordChangeClaim = authState.User?.Claims?.FirstOrDefault(c => c.Type == ShiftIdentityClaims.RequirePasswordChange)?.Value;
+        var parseSuccess = bool.TryParse(requirePasswordChangeClaim, out bool requirePaswordChange);
 
-        if (requirePaswordChange)
+        if (parseSuccess && requirePaswordChange)
         {
             if (Options is null)
                 return;
@@ -36,8 +40,10 @@
             //Redirect to change password form
             var returnUrl = NavManager.ToBaseRelativePath(NavManager.Uri);
 
-            var queryStrings = new Dictionary<string, object?>();
-            queryStrings.Add("Enforce", true);
+            var queryStrings = new Dictionary<string, object?>
+            {
+                { "Enforce", true }
+            };
 
             //Add return-url to login page
             if (!string.IsNullOrWhiteSpace(returnUrl))

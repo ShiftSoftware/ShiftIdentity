@@ -32,9 +32,11 @@ public class ShiftIdentityService
     {
         var codeChallenge = await codeVerifierService.GenerateCodeChallengeAsync();
 
-        var queryStrings = new Dictionary<string, object?>();
-        queryStrings.Add("AppId", options.AppId);
-        queryStrings.Add("CodeChallenge", codeChallenge);
+        var queryStrings = new Dictionary<string, object?>
+        {
+            { "AppId", options.AppId },
+            { "CodeChallenge", codeChallenge }
+        };
 
         //Add return-url to login page
         if (!string.IsNullOrWhiteSpace(returnUrl))
@@ -48,7 +50,7 @@ public class ShiftIdentityService
         navManager.NavigateTo(uri, true);
     }
 
-    internal async Task GetTokenAsync(Guid authCode, string returnUrl)
+    internal async Task GetTokenAsync(Guid authCode, string? returnUrl)
     {
         var codeVerifier = await codeVerifierService.LoadCodeVerifierAsync();
 
@@ -60,9 +62,9 @@ public class ShiftIdentityService
                 CodeVerifier = codeVerifier
             });
 
-        if(response.IsSuccess)
+        if(response.IsSuccess && response.Data?.Entity is TokenDTO token)
         {
-            await tokenStore.StoreTokenAsync(response?.Data.Entity!);
+            await tokenStore.StoreTokenAsync(token);
             await codeVerifierStorage.RemoveCodeVerifierAsync();
             navManager.NavigateTo("/" + returnUrl, true);
         }

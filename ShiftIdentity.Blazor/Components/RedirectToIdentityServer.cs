@@ -1,10 +1,14 @@
-﻿@using Microsoft.AspNetCore.Components.Authorization;
-@using ShiftSoftware.ShiftIdentity.Blazor.Services;
-@inject NavigationManager NavManager
-@inject CodeVerifierService CodeVerifierService
-@inject ShiftIdentityService ShiftIdentityService
+﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
+using ShiftSoftware.ShiftIdentity.Blazor.Services;
 
-@code {
+namespace ShiftSoftware.ShiftIdentity.Blazor.Components;
+
+public class RedirectToIdentityServer : ComponentBase
+{
+    [Inject] NavigationManager NavManager { get; set; } = default!;
+    [Inject] ShiftIdentityService ShiftIdentityService { get; set; } = default!;
+
     [CascadingParameter]
     private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
 
@@ -19,4 +23,5 @@
             await ShiftIdentityService.LoginAsync(returnUrl);
         }
     }
+
 }

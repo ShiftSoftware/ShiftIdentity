@@ -13,7 +13,7 @@ public class HttpMessageHandlerService
     private readonly ShiftIdentityBlazorOptions options;
     private readonly IIdentityStore tokenStore;
     private readonly MessageService messageService;
-    private HttpClient http;
+    private readonly HttpClient http;
 
     public HttpMessageHandlerService(
         NavigationManager navManager,
@@ -36,13 +36,16 @@ public class HttpMessageHandlerService
 
         var headerToken = http.DefaultRequestHeaders?.Authorization?.Parameter;
 
-        if (headerToken is not null && headerToken != storedToken.Token)
+        if (headerToken is not null && headerToken != storedToken?.Token)
         {
             await NofityChanges();
             return null;
         }
 
-        var refreshToken = storedToken?.RefreshToken;
+        if (storedToken is null)
+            return null;
+
+        var refreshToken = storedToken.RefreshToken;
 
         using var response =await http.PostAsJsonAsync<RefreshDTO>("auth/" + "Refresh", new RefreshDTO { RefreshToken = refreshToken });
 
