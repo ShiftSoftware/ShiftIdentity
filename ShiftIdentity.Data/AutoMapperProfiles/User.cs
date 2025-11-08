@@ -27,6 +27,10 @@ public class User : Profile
             .ForMember(
                 dest => dest.LastSeen,
                 opt => opt.MapFrom(x => (x.UserLog == null || x.UserLog.LastSeen == null ? x.LastSeen : x.UserLog.LastSeen))
+            )
+            .ForMember(
+                dest => dest.AccessTrees,
+                opt => opt.MapFrom(src => src.AccessTrees.Select(y => new ShiftEntitySelectDTO { Value = y.AccessTreeID.ToString()!, Text = y.AccessTree!.Name }))
             );
 
         CreateMap<Core.Entities.User, UserDataDTO>().ReverseMap();

@@ -2,6 +2,7 @@
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
 using System;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.User;
@@ -28,4 +29,5 @@ public class UserListDTO : ShiftEntityListDTO
     public bool EmailVerified { get; set; }
     public bool IsActive { get; set; }
     public DateTimeOffset LastSeen { get; set; }
+    public IEnumerable<ShiftEntitySelectDTO> AccessTrees { get; set; } = new List<ShiftEntitySelectDTO>();
 }

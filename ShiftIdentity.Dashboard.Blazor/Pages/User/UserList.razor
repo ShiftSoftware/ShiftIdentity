@@ -18,6 +18,7 @@
            Dense
            FilterPanelDefaultOpen
            EnableFilterPanel
+           DisableFilters
            EnableSelection
            TypeAuthAction="ShiftIdentityActions.Users"
            EnableExport>
@@ -38,7 +39,7 @@
                     <MudCheckBox @bind-Value="SharePasswordWithUser" Label="@Loc["Send login info to the user"]" />
                     <MudTextField @bind-Value="passwordLength"
                                   Label="@Loc["Password Length"]"
-                                  Immediate="true"/>
+                                  Immediate="true" />
                     <br />
                     <MudAlert Severity="Severity.Info">
                         @Loc["Password length should not be less that 6"]
@@ -89,7 +90,7 @@
         <StringFilter Property="x => x.Username" Label="@Loc["Username"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" md="6" sm="12" xs="12" />
         <StringFilter Property="x => x.Phone" Label="@Loc["Phone"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" md="6" sm="12" xs="12" />
         <StringFilter Property="x => x.Email" Label="@Loc["Email"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" md="6" sm="12" xs="12" />
-        <ForeignFilter AdditionalParameters='new (){ ["GroupSelectedValues"] = false }' @ref="CompanyFilter" Property="x => x.CompanyID" Label="@Loc["Company"]" DTOType="typeof(CompanyListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Company")" lg="4" md="6" sm="12" xs="12" />
+        <ForeignFilter AdditionalParameters='new() { ["GroupSelectedValues"] = false }' @ref="CompanyFilter" Property="x => x.CompanyID" Label="@Loc["Company"]" DTOType="typeof(CompanyListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Company")" lg="4" md="6" sm="12" xs="12" />
         <ForeignFilter Property="x => x.CompanyBranchID" AutocompleteFilter="x => x.Add(CompanyFilter?.Filter)" Label="@Loc["Branch"]" DTOType="typeof(CompanyBranchListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}CompanyBranch")" lg="4" md="6" sm="12" xs="12" />
         <DateTimeFilter Property="x => x.LastSeen" Label="@Loc["Last Seen"]" lg="4" md="6" sm="12" xs="12" />
 
@@ -128,15 +129,22 @@
             </CellTemplate>
         </PropertyColumn>
         <PropertyColumn Title="@Loc["Branch"]" Property="x => x.CompanyBranch" />
-        <PropertyColumnExtended Format="F" Property="x => x.LastSeen" Title="@Loc["Last Seen"]">
+        <PropertyColumnExtended Format="F" Property="x => x.LastSeen" Title="@Loc["Last Seen"]" />
 
-        </PropertyColumnExtended>
+        <PropertyColumn Title="@Loc["Access Trees"]" Property="x => x.AccessTrees" Context="col">
+            <CellTemplate>
+                @foreach (var accessTree in col.Item!.AccessTrees)
+                {
+                    <MudChip Size="Size.Small" Color="Color.Primary">@accessTree.Text</MudChip>
+                }
+            </CellTemplate>
+        </PropertyColumn>
     </ChildContent>
 </ShiftList>
 
 @code {
 
-    public ForeignFilter<UserListDTO, string?>? CompanyFilter { get; set; } 
+    public ForeignFilter<UserListDTO, string?>? CompanyFilter { get; set; }
     public ShiftList<UserListDTO>? ShiftList { get; set; }
 
     private bool SharePasswordWithUser { get; set; }
