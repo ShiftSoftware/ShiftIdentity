@@ -67,11 +67,19 @@ public class UserRepository :
         //Check if the email is duplicate
         dto.Email = dto.Email?.Trim();
         if (!string.IsNullOrWhiteSpace(dto.Email))
+        {
             if (await db.Users.AnyAsync(x => !x.IsDeleted && x.Email!.ToLower() == dto.Email.ToLower() && x.ID != id))
+            {
                 throw new ShiftEntityException(new Message(Loc["Duplicate"], Loc["The email {0} exist", dto.Email]));
+            }
+        }
+        else
+        {
+            dto.Email = null;
+        }
 
-        //Check if the phone is duplicate
-        string? formattedPhone = null;
+            //Check if the phone is duplicate
+            string? formattedPhone = null;
         if (!string.IsNullOrWhiteSpace(dto.Phone))
         {
             if (!Core.ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(dto.Phone))
