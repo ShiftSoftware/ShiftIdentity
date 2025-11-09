@@ -11,6 +11,7 @@
                  @ref="FormContainer"
                  Endpoint="@($"{Constants.IdentityRoutePreifix}Service")"
                  Title="@Loc["Service"]"
+                 AllowSaveAsNew
                  @bind-Key="@Key"
                  TypeAuthAction="ShiftIdentityActions.Services"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.Service.ServiceDTO">

@@ -19,6 +19,7 @@
                  @ref="FormContainer"
                  Endpoint="@($"{Constants.IdentityRoutePreifix}User")"
                  Title="@Loc["User"]"
+                 AllowSaveAsNew
                  @bind-Key="@Key"
                  TypeAuthAction="ShiftIdentityActions.Users"
                  OnTaskFinished="@(()=> ready=true)"

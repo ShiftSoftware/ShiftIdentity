@@ -18,6 +18,7 @@
 <ShiftEntityForm @bind-Mode="Mode"
                  @bind-Value="TheItem"
                  @ref="FormContainer"
+                 AllowSaveAsNew
                  Endpoint="@($"{Constants.IdentityRoutePreifix}Team")"
                  Title="@Loc["Team"]"
                  @bind-Key="@Key"

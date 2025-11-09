@@ -10,6 +10,7 @@
                  @ref="FormContainer"
                  Endpoint="@($"{Constants.IdentityRoutePreifix}Country")"
                  Title="@Loc["Country"]"
+                 AllowSaveAsNew
                  @bind-Key="@Key"
                  TypeAuthAction="ShiftIdentityActions.Countries"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.Country.CountryDTO">

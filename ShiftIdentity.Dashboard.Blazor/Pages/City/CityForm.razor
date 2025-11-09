@@ -13,6 +13,7 @@
                  @ref="FormContainer"
                  Endpoint="@($"{Constants.IdentityRoutePreifix}City")"
                  Title="@Loc["City"]"
+                 AllowSaveAsNew
                  @bind-Key="@Key"
                  TypeAuthAction="ShiftIdentityActions.Cities"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.City.CityDTO">

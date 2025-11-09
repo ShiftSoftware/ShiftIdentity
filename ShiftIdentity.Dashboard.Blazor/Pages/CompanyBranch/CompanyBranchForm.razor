@@ -27,6 +27,7 @@
                  Endpoint="@($"{Constants.IdentityRoutePreifix}CompanyBranch")"
                  Title="@Loc["Company Branch"]"
                  @bind-Key="@Key"
+                 AllowSaveAsNew
                  OnTaskFinished="OnTaskFinished"
                  TypeAuthAction="ShiftIdentityActions.Companies"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchDTO">

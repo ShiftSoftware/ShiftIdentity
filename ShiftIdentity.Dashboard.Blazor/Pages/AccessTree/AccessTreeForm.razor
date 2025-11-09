@@ -12,6 +12,7 @@
                  Endpoint="@($"{Constants.IdentityRoutePreifix}AccessTree")"
                  Title="@Loc["Access Tree"]"
                  @bind-Key="@Key"
+                 AllowSaveAsNew
                  TypeAuthAction="ShiftIdentityActions.AccessTrees"
                  OnSubmit="()=> { TheItem.Tree =  actionTree!.GenerateAccessTree(); }">
 
