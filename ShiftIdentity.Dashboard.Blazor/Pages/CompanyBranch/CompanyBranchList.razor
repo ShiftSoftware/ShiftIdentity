@@ -3,6 +3,9 @@
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CompanyBranchList)}")]
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.City
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Company
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.Department
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.Service
+@using ShiftSoftware.ShiftEntity.Model.Dtos
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
 @inject ShiftIdentityLocalizer Loc
 
@@ -21,7 +24,9 @@
     <ForeignFilter Property="x => x.CityId" Label="@Loc["City"]" DTOType="typeof(CityListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}City")" lg="3" md="6" sm="12" xs="12" />
     <ForeignFilter Property="x => x.CompanyId" Label="@Loc["Company"]" DTOType="typeof(CompanyListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Company")" lg="3" md="6" sm="12" xs="12" />
     <StringFilter Property="x => x.IntegrationId" Label="@Loc["Integration ID"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="3" md="6" sm="12" xs="12" />
-
+    <ForeignFilter Property="x => x.Value" DTOType="typeof(DepartmentListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Department")" Label="@Loc["Departments"]" TProperty="string" T="ShiftEntitySelectDTO" CollectionPrefix="@(["Departments"])" lg="3" md="6" sm="12" xs="12" />
+    <ForeignFilter Property="x => x.Value" DTOType="typeof(ServiceListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Service")" Label="@Loc["Services"]" TProperty="string" T="ShiftEntitySelectDTO" CollectionPrefix="@(["Services"])" lg="3" md="6" sm="12" xs="12" />
+    
     <PropertyColumn Title="@Loc["Name"]" Property="x => x.Name" />
     <PropertyColumn Title="@Loc["Short Code"]" Property="x => x.ShortCode" />
     <PropertyColumn Title="@Loc["City"]" Property="x => x.City" />
@@ -33,6 +38,15 @@
             @foreach (var department in col.Item!.Departments)
             {
                 <MudChip Size="Size.Small" Color="Color.Primary">@department.Text</MudChip>
+            }
+        </CellTemplate>
+    </PropertyColumn>
+
+    <PropertyColumn Title="@Loc["Services"]" Property="x => x.Services" Context="col">
+        <CellTemplate>
+            @foreach (var service in col.Item!.Services)
+            {
+                <MudChip Size="Size.Small" Color="Color.Primary">@service.Text</MudChip>
             }
         </CellTemplate>
     </PropertyColumn>

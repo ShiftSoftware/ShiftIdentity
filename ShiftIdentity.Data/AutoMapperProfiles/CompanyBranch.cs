@@ -67,6 +67,10 @@ public class CompanyBranch : Profile
             .ForMember(
                     dest => dest.Departments,
                     opt => opt.MapFrom(src => src.CompanyBranchDepartments.Select(y => new ShiftEntitySelectDTO { Value = y.DepartmentID.ToString()!, Text = y.Department!.Name }))
+                )
+            .ForMember(
+                    dest => dest.Services,
+                    opt => opt.MapFrom(src => src.CompanyBranchServices.Select(y => new ShiftEntitySelectDTO { Value = y.ServiceID.ToString()!, Text = y.Service!.Name }))
                 );
 
         CreateMap<Core.Entities.CompanyBranch, CompanyBranchModel>()
