@@ -10,7 +10,7 @@ namespace ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
 [ShiftEntityKeyAndName(nameof(ID), nameof(Name))]
 public class AccessTreeDTO : ShiftEntityMixedDTO
 {
-    [JsonHashIdConverter<AccessTreeDTO>(5)]
+    [AccessTreeHashIdConverter]
     public override string? ID { get; set; }
     public string Name { get; set; } = default!;
 

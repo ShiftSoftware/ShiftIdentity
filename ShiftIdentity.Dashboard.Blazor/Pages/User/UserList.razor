@@ -5,6 +5,7 @@
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Company
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
+@using ShiftSoftware.ShiftEntity.Model.Dtos
 @inject IDialogService DialogService
 @inject HttpClient Http
 @inject MessageService MessageService
@@ -93,6 +94,8 @@
         <ForeignFilter AdditionalParameters='new() { ["GroupSelectedValues"] = false }' @ref="CompanyFilter" Property="x => x.CompanyID" Label="@Loc["Company"]" DTOType="typeof(CompanyListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Company")" lg="4" md="6" sm="12" xs="12" />
         <ForeignFilter Property="x => x.CompanyBranchID" AutocompleteFilter="x => x.Add(CompanyFilter?.Filter)" Label="@Loc["Branch"]" DTOType="typeof(CompanyBranchListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}CompanyBranch")" lg="4" md="6" sm="12" xs="12" />
         <DateTimeFilter Property="x => x.LastSeen" Label="@Loc["Last Seen"]" lg="4" md="6" sm="12" xs="12" />
+        <ForeignFilter Property="x => x.Value" DTOType="typeof(AccessTreeListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}AccessTree")" Label="@Loc["Access Trees"]" TProperty="string" T="ShiftEntitySelectDTO" CollectionPrefix="@(["AccessTrees"])" lg="3" md="6" sm="12" xs="12" />
+
 
         <PropertyColumn Title="@Loc["Name"]" Property="x => x.FullName" />
         <PropertyColumn Title="@Loc["Username"]" Property="x => x.Username" />

@@ -10,7 +10,7 @@ using ShiftSoftware.TypeAuth.Core;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
-public class AccessTreeRepository : ShiftRepository<ShiftIdentityDbContext, AccessTree, AccessTreeDTO, AccessTreeDTO>
+public class AccessTreeRepository : ShiftRepository<ShiftIdentityDbContext, AccessTree, AccessTreeListDTO, AccessTreeDTO>
 {
     private readonly ITypeAuthService typeAuthService;
     private readonly ShiftIdentityFeatureLocking shiftIdentityFeatureLocking;

@@ -9,5 +9,6 @@ public class AccessTree : Profile
     public AccessTree()
     {
         CreateMap<Core.Entities.AccessTree, AccessTreeDTO>();
+        CreateMap<Core.Entities.AccessTree, AccessTreeListDTO>();
     }
 }
