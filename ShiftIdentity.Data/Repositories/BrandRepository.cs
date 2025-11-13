@@ -18,7 +18,7 @@ public class BrandRepository : ShiftRepository<ShiftIdentityDbContext, Brand, Br
         this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
     }
 
-    public override Task SaveChangesAsync()
+    public override Task<int> SaveChangesAsync()
     {
         if (shiftIdentityFeatureLocking.BrandFeatureIsLocked)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Brand Feature is locked"]));

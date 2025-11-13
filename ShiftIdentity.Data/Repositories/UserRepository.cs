@@ -288,7 +288,7 @@ public class UserRepository :
         return user;
     }
 
-    public override Task SaveChangesAsync()
+    public override Task<int> SaveChangesAsync()
     {
         return base.SaveChangesAsync();
     }

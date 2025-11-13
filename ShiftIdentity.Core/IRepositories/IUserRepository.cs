@@ -10,6 +10,6 @@ public interface IUserRepository
 {
     Task<User?> FindAsync(long id, DateTimeOffset? asOf = null, bool disableDefaultDataLevelAccess = false, bool disableGlobalFilters = false);
     Task<User?> GetUserByUsernameAsync(string username);
-    Task SaveChangesAsync();
+    Task<int> SaveChangesAsync();
     ValueTask<IQueryable<UserListDTO>> OdataList(IQueryable<User>? queryable = null);
 }

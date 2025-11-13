@@ -46,7 +46,7 @@ public class CountryRepository : ShiftRepository<ShiftIdentityDbContext, Country
         return base.DeleteAsync(entity, isHardDelete, userId, disableDefaultDataLevelAccess);
     }
 
-    public override Task SaveChangesAsync()
+    public override Task<int> SaveChangesAsync()
     {
         if (shiftIdentityFeatureLocking.CountryFeatureIsLocked)
             throw new ShiftEntityException(new Message(localizer["Error"], localizer["Country Feature is locked"]));

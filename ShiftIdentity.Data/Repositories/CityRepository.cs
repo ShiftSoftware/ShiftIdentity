@@ -53,7 +53,7 @@ public class CityRepository : ShiftRepository<ShiftIdentityDbContext, City, City
         return base.DeleteAsync(entity, isHardDelete, userId, disableDefaultDataLevelAccess);
     }
 
-    public override Task SaveChangesAsync()
+    public override Task<int> SaveChangesAsync()
     {
         if (shiftIdentityFeatureLocking.CityFeatureIsLocked)
             throw new ShiftEntityException(new Message("Error", Loc["City Feature is locked"]));

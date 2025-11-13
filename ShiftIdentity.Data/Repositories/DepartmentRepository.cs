@@ -18,7 +18,7 @@ public class DepartmentRepository : ShiftRepository<ShiftIdentityDbContext, Depa
         this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
     }
 
-    public override Task SaveChangesAsync()
+    public override Task<int> SaveChangesAsync()
     {
         if (shiftIdentityFeatureLocking.DepartmentFeatureIsLocked)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Department Feature is locked"]));

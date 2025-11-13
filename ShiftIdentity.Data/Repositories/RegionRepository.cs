@@ -40,7 +40,7 @@ public class RegionRepository : ShiftRepository<ShiftIdentityDbContext, Region, 
         return base.DeleteAsync(entity, isHardDelete, userId, disableDefaultDataLevelAccess);
     }
 
-    public override Task SaveChangesAsync()
+    public override Task<int> SaveChangesAsync()
     {
         if (shiftIdentityFeatureLocking.RegionFeatureIsLocked)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Region Feature is locked"]));

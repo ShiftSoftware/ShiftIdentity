@@ -18,7 +18,7 @@ public class ServiceRepository : ShiftRepository<ShiftIdentityDbContext, Service
         this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
     }
 
-    public override Task SaveChangesAsync()
+    public override Task<int> SaveChangesAsync()
     {
         if (shiftIdentityFeatureLocking.ServiceFeatureIsLocked)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Service Feature is locked"]));

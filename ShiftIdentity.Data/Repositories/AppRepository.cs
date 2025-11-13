@@ -43,7 +43,7 @@ public class AppRepository :
         return await db.Apps.FirstOrDefaultAsync(x => x.AppId == appId && !x.IsDeleted);
     }
 
-    public override Task SaveChangesAsync()
+    public override Task<int> SaveChangesAsync()
     {
         if (shiftIdentityFeatureLocking.AppFeatureIsLocked)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["App Feature is locked"]));

@@ -51,9 +51,9 @@ public class FakeUserRepository : IUserRepository
         };
     }
 
-    public async Task SaveChangesAsync()
+    public async Task<int> SaveChangesAsync()
     {
-
+        return 0;
     }
 
     public ValueTask<IQueryable<UserListDTO>> OdataList(IQueryable<User>? queryable = null)
