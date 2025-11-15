@@ -23,6 +23,8 @@ public class CountryDTO : ShiftEntityViewAndUpsertDTO
 
     [Required]
     public string CallingCode { get; set; } = default!;
+
+    public List<ShiftFileDTO>? Flag { get; set; }
 }
 
 public class CountryValidator : AbstractValidator<CountryDTO> {

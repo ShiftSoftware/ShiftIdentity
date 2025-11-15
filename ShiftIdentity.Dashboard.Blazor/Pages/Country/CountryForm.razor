@@ -37,4 +37,13 @@
                   Label="@Loc["Calling Code"]"
                   @bind-Value="TheItem.CallingCode"
                   For="@(() => TheItem.CallingCode)" />
+
+    <MudItem xs="12" sm="12" lg="12" xl="12">
+        <FileUploader ShowThumbnail="true"
+                      Label="@Loc["Flag"]"
+                      For="() => TheItem.Flag"
+                      MaxFileCount="1"
+                      AcceptImages="true"
+                      @bind-Values="TheItem.Flag" />
+    </MudItem>
 </ShiftEntityForm>

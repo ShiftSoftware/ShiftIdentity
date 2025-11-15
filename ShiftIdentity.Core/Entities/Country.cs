@@ -1,4 +1,5 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
+using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.Flags;
 using System;
 using System.Collections.Generic;
@@ -20,6 +21,7 @@ public class Country : ShiftEntity<Country>, IEntityHasCountry<Country>
     public bool BuiltIn { get; set; }
     public virtual IEnumerable<Region> Regions { get; set; }
     public long? CountryID { get; set; }
+    public string? Flag { get; set; }
 
     public Country()
     {
