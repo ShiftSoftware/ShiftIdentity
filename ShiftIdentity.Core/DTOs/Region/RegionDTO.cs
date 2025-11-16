@@ -3,6 +3,7 @@ using FluentValidation;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
 using ShiftSoftware.ShiftIdentity.Core.Localization;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.Region;
@@ -20,6 +21,8 @@ public class RegionDTO : ShiftEntityViewAndUpsertDTO
     [Required]
     [CountryHashIdConverter]
     public ShiftEntitySelectDTO Country { get; set; } = default!;
+
+    public List<ShiftFileDTO>? Flag { get; set; }
 }
 
 public class RegionValidator : AbstractValidator<RegionDTO>
