@@ -5,7 +5,7 @@
 	<Import Project="..\..\s\ShiftFrameworkGlobalSettings.props" Condition="Exists('..\..\s\ShiftFrameworkGlobalSettings.props')" />
 	
 	<PropertyGroup>
-		<TargetFramework>net9.0</TargetFramework>
+		<TargetFramework>net10.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 
@@ -20,15 +20,9 @@
 		<RootNamespace>ShiftSoftware.ShiftIdentity.AzureFunctions</RootNamespace>
 	</PropertyGroup>
 
-
-
-
-
-
-
 	<ItemGroup>
-		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.11" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.11" />
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
 		<PackageReference Include="ShiftSoftware.ShiftEntity.Web" Version="$(ShiftFrameworkVersion)" Condition="!Exists('..\..\ShiftEntity\ShiftEntity.Web\ShiftEntity.Web.csproj')" />
 		<PackageReference Include="ShiftSoftware.TypeAuth.Core" Version="$(TypeAuthVersion)" Condition="!Exists('..\..\TypeAuth\TypeAuth.Core\TypeAuth.Core.csproj')" />
 		<PackageReference Include="ShiftSoftware.Azure.Functions.AspNetCore.Authorization" Version="$(AzureFunctionsAspNetCoreAuthorizationVersion)" Condition="!Exists('..\..\AzureFunctionsAspNetCoreAuthorization\ShiftSoftware.Azure.Functions.AspNetCore.Authorization\ShiftSoftware.Azure.Functions.AspNetCore.Authorization.csproj')" />
