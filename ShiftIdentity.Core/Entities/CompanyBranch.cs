@@ -27,6 +27,7 @@ public class CompanyBranch :
     public string? Latitude { get; set; }
     public string? Longitude { get; set; }
     public string? Photos { get; set; }
+    public string? MobilePhotos { get; set; }
     public string? WorkingHours { get; set; }
     public string? WorkingDays { get; set; }
     public string? IntegrationId { get; set; } = default!;

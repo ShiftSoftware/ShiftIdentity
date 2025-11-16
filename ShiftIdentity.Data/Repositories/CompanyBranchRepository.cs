@@ -146,6 +146,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             entity.Longitude = dto.Longitude;
             entity.Latitude = dto.Latitude;
             entity.Photos = JsonSerializer.Serialize(dto.Photos);
+            entity.MobilePhotos = JsonSerializer.Serialize(dto.MobilePhotos);
             entity.WorkingHours = dto.WorkingHours;
             entity.WorkingDays = dto.WorkingDays;
 
