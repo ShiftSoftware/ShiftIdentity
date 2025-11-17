@@ -14,23 +14,23 @@ public class CompanyBranch : Profile
         CreateMap<Core.Entities.CompanyBranch, CompanyBranchDTO>()
             .ForMember(
                     dest => dest.Company,
-                    opt => opt.MapFrom(src => new ShiftEntitySelectDTO { Value = src.CompanyID.ToString()!, Text = src.Company!.Name })
+                    opt => opt.MapFrom(src => new ShiftEntitySelectDTO (src.CompanyID.ToString()!, src.Company!.Name))
                 )
             .ForMember(
                     dest => dest.City,
-                    opt => opt.MapFrom(src => new ShiftEntitySelectDTO { Value = src.CityID.ToString()!, Text = src.City!.Name })
+                    opt => opt.MapFrom(src => new ShiftEntitySelectDTO (src.CityID.ToString()!, src.City!.Name))
                 )
             .ForMember(
                     dest => dest.Services,
-                    opt => opt.MapFrom(src => src.CompanyBranchServices.Select(y => new ShiftEntitySelectDTO { Value = y.ServiceID.ToString()!, Text = y.Service!.Name }))
+                    opt => opt.MapFrom(src => src.CompanyBranchServices.Select(y => new ShiftEntitySelectDTO (y.ServiceID.ToString()! , y.Service!.Name )))
                 )
             .ForMember(
                     dest => dest.Departments,
-                    opt => opt.MapFrom(src => src.CompanyBranchDepartments.Select(y => new ShiftEntitySelectDTO { Value = y.DepartmentID.ToString()!, Text = y.Department!.Name }))
+                    opt => opt.MapFrom(src => src.CompanyBranchDepartments.Select(y => new ShiftEntitySelectDTO (y.DepartmentID.ToString()!, y.Department!.Name )))
                 )
             .ForMember(
                     dest => dest.Brands,
-                    opt => opt.MapFrom(src => src.CompanyBranchBrands.Select(y => new ShiftEntitySelectDTO { Value = y.BrandID.ToString()!, Text = y.Brand!.Name }))
+                    opt => opt.MapFrom(src => src.CompanyBranchBrands.Select(y => new ShiftEntitySelectDTO (y.BrandID.ToString()!, y.Brand!.Name )))
                 )
             .ForMember(
                 dest => dest.CustomFields,
@@ -62,15 +62,15 @@ public class CompanyBranch : Profile
                 )
             .ForMember(
                     dest => dest.Brands,
-                    opt => opt.MapFrom(src => src.CompanyBranchBrands!.Select(x => new ShiftEntitySelectDTO { Value = x.BrandID.ToString() }))
+                    opt => opt.MapFrom(src => src.CompanyBranchBrands!.Select(x => new ShiftEntitySelectDTO(x.BrandID.ToString())))
                 )
             .ForMember(
                     dest => dest.Departments,
-                    opt => opt.MapFrom(src => src.CompanyBranchDepartments.Select(y => new ShiftEntitySelectDTO { Value = y.DepartmentID.ToString()!, Text = y.Department!.Name }))
+                    opt => opt.MapFrom(src => src.CompanyBranchDepartments.Select(y => new ShiftEntitySelectDTO(y.DepartmentID.ToString()!, y.Department!.Name)))
                 )
             .ForMember(
                     dest => dest.Services,
-                    opt => opt.MapFrom(src => src.CompanyBranchServices.Select(y => new ShiftEntitySelectDTO { Value = y.ServiceID.ToString()!, Text = y.Service!.Name }))
+                    opt => opt.MapFrom(src => src.CompanyBranchServices.Select(y => new ShiftEntitySelectDTO (y.ServiceID.ToString()!, y.Service!.Name)))
                 );
 
         CreateMap<Core.Entities.CompanyBranch, CompanyBranchModel>()

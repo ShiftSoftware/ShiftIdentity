@@ -13,10 +13,10 @@ public class Team : Profile
         CreateMap<Core.Entities.Team, TeamDTO>()
             .ForMember(
                     dest => dest.Company,
-                    opt => opt.MapFrom(src => new ShiftEntitySelectDTO { Value = src.CompanyID.ToString()!, Text = src.Company!.Name })
+                    opt => opt.MapFrom(src => new ShiftEntitySelectDTO (src.CompanyID.ToString()!, src.Company!.Name ))
                 )
-            .ForMember(x => x.Users, opt => opt.MapFrom(x => x.TeamUsers.Select(y => new ShiftEntitySelectDTO { Value = y.UserID.ToString()!, Text = y.User.Username })))
-            .ForMember(x => x.CompanyBranches, opt => opt.MapFrom(x => x.TeamCompanyBranches.Select(y => new ShiftEntitySelectDTO { Value = y.CompanyBranchID.ToString()!, Text = y.CompanyBranch.Name })))
+            .ForMember(x => x.Users, opt => opt.MapFrom(x => x.TeamUsers.Select(y => new ShiftEntitySelectDTO (y.UserID.ToString()!, y.User.Username ))))
+            .ForMember(x => x.CompanyBranches, opt => opt.MapFrom(x => x.TeamCompanyBranches.Select(y => new ShiftEntitySelectDTO (y.CompanyBranchID.ToString()!, y.CompanyBranch.Name ))))
             .ReverseMap()
             .ForMember(x => x.TeamUsers, m => m.MapFrom(x => x.Users.Select(s =>
                 new TeamUser

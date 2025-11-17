@@ -15,7 +15,7 @@ public class Company : Profile
         CreateMap<Core.Entities.Company, CompanyDTO>()
             .ForMember(
                     dest => dest.ParentCompany,
-                    opt => opt.MapFrom(src => new ShiftEntitySelectDTO { Value = src.ParentCompanyID.ToString()!})
+                    opt => opt.MapFrom(src => new ShiftEntitySelectDTO(src.ParentCompanyID.ToString()!))
                 )
             .ForMember(
                 dest => dest.CustomFields,
@@ -57,7 +57,7 @@ public class Company : Profile
             .ForMember(
                     dest => dest.Brands,
                     opt => opt.MapFrom(src => src.CompanyBranches!.SelectMany(x=> x.CompanyBranchBrands!).Select(x=> x.BrandID).Distinct()
-                        .Select(x => new ShiftEntitySelectDTO { Value = x.ToString() }))
+                        .Select(x => new ShiftEntitySelectDTO(x.ToString())))
                 )
             .ForMember(
                 m => m.ParentCompanyName,

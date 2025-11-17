@@ -12,11 +12,11 @@ public class User : Profile
         CreateMap<Core.Entities.User, UserDTO>()
             .ForMember(
                     dest => dest.AccessTrees,
-                    opt => opt.MapFrom(src => src.AccessTrees.Select(y => new ShiftEntitySelectDTO { Value = y.AccessTreeID.ToString(), Text = y.AccessTree.Name }))
+                    opt => opt.MapFrom(src => src.AccessTrees.Select(y => new ShiftEntitySelectDTO (y.AccessTreeID.ToString(), y.AccessTree.Name)))
                 )
             .ForMember(
                     dest => dest.CompanyBranchID,
-                    opt => opt.MapFrom(src => new ShiftEntitySelectDTO { Value = src.CompanyBranchID.ToString()!, Text = null })
+                    opt => opt.MapFrom(src => new ShiftEntitySelectDTO (src.CompanyBranchID.ToString()!))
                 );
 
         CreateMap<Core.Entities.User, UserListDTO>()
@@ -30,7 +30,7 @@ public class User : Profile
             )
             .ForMember(
                 dest => dest.AccessTrees,
-                opt => opt.MapFrom(src => src.AccessTrees.Select(y => new ShiftEntitySelectDTO { Value = y.AccessTreeID.ToString()!, Text = y.AccessTree!.Name }))
+                opt => opt.MapFrom(src => src.AccessTrees.Select(y => new ShiftEntitySelectDTO (y.AccessTreeID.ToString()!, y.AccessTree!.Name)))
             );
 
         CreateMap<Core.Entities.User, UserDataDTO>().ReverseMap();
