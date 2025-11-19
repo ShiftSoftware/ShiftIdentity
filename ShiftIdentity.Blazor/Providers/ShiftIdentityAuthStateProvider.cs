@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components.Authorization;
-using System.IdentityModel.Tokens.Jwt;
+using Microsoft.IdentityModel.JsonWebTokens;
 using System.Security.Claims;
 
 namespace ShiftSoftware.ShiftIdentity.Blazor.Providers;
@@ -19,9 +19,9 @@ public class ShiftIdentityAuthStateProvider : AuthenticationStateProvider
         var identity = new ClaimsIdentity();
         if (token is not null)
         {
-            var handler = new JwtSecurityTokenHandler();
+            var handler = new JsonWebTokenHandler();
             var jsonToken = handler.ReadToken(token);
-            var tokenS = jsonToken as JwtSecurityToken;
+            var tokenS = jsonToken as JsonWebToken;
 
             identity = new ClaimsIdentity(tokenS?.Claims, "jwt");
         }
