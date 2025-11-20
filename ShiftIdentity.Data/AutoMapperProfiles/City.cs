@@ -33,7 +33,7 @@ public class City : Profile
                 )
             .ForMember(
                     dest => dest.CountryDisplayOrder,
-                    opt => opt.MapFrom(src => src.Region!.Country != null ? src.Region!.Country.DisplayOrder : null)
+                    opt => opt.MapFrom(src => src.Region != null && src.Region.Country != null ? src.Region.Country.DisplayOrder : null)
                 )
             .ForMember(
                     dest => dest.RegionDisplayOrder,
