@@ -149,6 +149,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             entity.MobilePhotos = JsonSerializer.Serialize(dto.MobilePhotos);
             entity.WorkingHours = dto.WorkingHours;
             entity.WorkingDays = dto.WorkingDays;
+            entity.DisplayOrder = dto.DisplayOrder;
 
             //ef core may not set the entity state as Modified if only the collections are changed (CompanyBranchDepartments, CompanyBranchServices)
             if (actionType == ActionTypes.Update)
