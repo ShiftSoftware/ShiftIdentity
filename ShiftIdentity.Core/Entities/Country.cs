@@ -23,6 +23,8 @@ public class Country : ShiftEntity<Country>, IEntityHasCountry<Country>
     public long? CountryID { get; set; }
     public string? Flag { get; set; }
 
+    public int? DisplayOrder { get; set; }
+
     public Country()
     {
         Regions = new HashSet<Region>();

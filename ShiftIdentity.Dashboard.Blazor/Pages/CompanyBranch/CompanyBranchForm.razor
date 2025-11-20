@@ -116,6 +116,15 @@
                                    @bind-Date="TheItem.TerminationDate"
                                    For="@(() => TheItem.TerminationDate)" />
         </MudItem>
+
+        <MudItem xs="12" sm="6" lg="4" xl="3">
+            <MudNumericFieldExtended ReadOnly="@ReadOnly"
+                                     Disabled="@Disabled"
+                                     OnlyValidateIfDirty="true"
+                                     Label="@Loc["Display Order"]"
+                                     @bind-Value="TheItem.DisplayOrder"
+                                     For="@(() => TheItem.DisplayOrder)" />
+        </MudItem>
         
         <MudItem lg="12" md="12" sm="12" xs="12" Class="">
             <MudCard Elevation="2">

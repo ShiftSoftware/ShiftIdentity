@@ -27,4 +27,11 @@
                        TEntitySet="RegionListDTO" />
 
     <MudTextFieldExtended @bind-Value="TheItem.IntegrationId" For="() => TheItem.IntegrationId" Label="@Loc["Integration ID"]" />
+
+    <MudNumericFieldExtended ReadOnly="@ReadOnly"
+                             Disabled="@Disabled"
+                             OnlyValidateIfDirty="true"
+                             Label="@Loc["Display Order"]"
+                             @bind-Value="TheItem.DisplayOrder"
+                             For="@(() => TheItem.DisplayOrder)" />
 </ShiftEntityForm>

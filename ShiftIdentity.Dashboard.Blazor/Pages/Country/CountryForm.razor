@@ -46,4 +46,11 @@
                       AcceptImages="true"
                       @bind-Values="TheItem.Flag" />
     </MudItem>
+
+    <MudNumericFieldExtended ReadOnly="@ReadOnly"
+                             Disabled="@Disabled"
+                             OnlyValidateIfDirty="true"
+                             Label="@Loc["Display Order"]"
+                             @bind-Value="TheItem.DisplayOrder"
+                             For="@(() => TheItem.DisplayOrder)" />
 </ShiftEntityForm>

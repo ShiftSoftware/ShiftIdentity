@@ -23,6 +23,7 @@ public class RegionDTO : ShiftEntityViewAndUpsertDTO
     public ShiftEntitySelectDTO Country { get; set; } = default!;
 
     public List<ShiftFileDTO>? Flag { get; set; }
+    public int? DisplayOrder { get; set; }
 }
 
 public class RegionValidator : AbstractValidator<RegionDTO>

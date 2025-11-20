@@ -34,6 +34,7 @@ public class CompanyDTO : ShiftEntityViewAndUpsertDTO
 
     [CompanyHashIdConverter]
     public ShiftEntitySelectDTO? ParentCompany { get; set; } = default!;
+    public int? DisplayOrder { get; set; }
 
     public CompanyDTO()
     {

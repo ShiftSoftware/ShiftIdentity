@@ -37,4 +37,5 @@ public class CompanyListDTO : ShiftEntityListDTO
     public string? ParentCompanyID { get; set; }
 
     public DateTime? TerminationDate { get; set; }
+    public int? DisplayOrder { get; set; }
 }

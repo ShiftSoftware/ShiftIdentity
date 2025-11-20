@@ -19,6 +19,8 @@ public class City : ShiftEntity<City>, IEntityHasCity<City>, IEntityHasRegion<Ci
     public long? CountryID { get; set; }
     public long? CityID { get; set; }
 
+    public int? DisplayOrder { get; set; }
+
     public City()
     {
         CompanyBranches = new HashSet<CompanyBranch>();

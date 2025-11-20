@@ -119,6 +119,15 @@
                           For="@(() => TheItem.TerminationDate)" />
         </MudItem>
 
+        <MudItem xs="12" sm="6" lg="4" xl="3">
+            <MudNumericFieldExtended ReadOnly="@ReadOnly"
+                                     Disabled="@Disabled"
+                                     OnlyValidateIfDirty="true"
+                                     Label="@Loc["Display Order"]"
+                                     @bind-Value="TheItem.DisplayOrder"
+                                     For="@(() => TheItem.DisplayOrder)" />
+        </MudItem>
+
         <MudItem xs="12" sm="12" lg="12" xl="12">
             <FileUploader ShowThumbnail="true"
                           Label="@Loc["Logo"]"

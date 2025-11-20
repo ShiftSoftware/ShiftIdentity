@@ -23,4 +23,5 @@ public class RegionListDTO : ShiftEntityListDTO
 
     [CountryHashIdConverter]
     public string? CountryID { get; set; }
+    public int? DisplayOrder { get; set; }
 }

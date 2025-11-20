@@ -17,6 +17,7 @@ public class CityDTO : ShiftEntityViewAndUpsertDTO
 
     [RegionHashIdConverter]
     public ShiftEntitySelectDTO Region { get; set; } = default!;
+    public int? DisplayOrder { get; set; }
 }
 
 public class CityValidator : AbstractValidator<CityDTO>

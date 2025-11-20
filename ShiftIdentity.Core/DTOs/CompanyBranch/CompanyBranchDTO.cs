@@ -53,6 +53,7 @@ public class CompanyBranchDTO : ShiftEntityViewAndUpsertDTO
 
     [BrandHashIdConverter]
     public List<ShiftEntitySelectDTO> Brands { get; set; } = new List<ShiftEntitySelectDTO>();
+    public int? DisplayOrder { get; set; }
 
     public CompanyBranchDTO()
     {

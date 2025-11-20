@@ -25,6 +25,7 @@ public class CountryDTO : ShiftEntityViewAndUpsertDTO
     public string CallingCode { get; set; } = default!;
 
     public List<ShiftFileDTO>? Flag { get; set; }
+    public int? DisplayOrder { get; set; }
 }
 
 public class CountryValidator : AbstractValidator<CountryDTO> {

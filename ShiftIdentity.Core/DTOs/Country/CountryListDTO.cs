@@ -16,4 +16,5 @@ public class CountryListDTO : ShiftEntityListDTO
     public string? IntegrationId { get; set; }
     public string? ShortCode { get; set; }
     public string CallingCode { get; set; } = default!;
+    public int? DisplayOrder { get; set; }
 }

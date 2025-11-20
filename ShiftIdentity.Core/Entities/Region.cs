@@ -17,6 +17,7 @@ public class Region : ShiftEntity<Region>, IEntityHasCountry<Region>, IEntityHas
     public virtual Country? Country { get; set; }
     public long? RegionID { get; set; }
     public string? Flag { get; set; }
+    public int? DisplayOrder { get; set; }
 
     public virtual ICollection<CompanyBranch> CompanyBranches { get; set; }
 

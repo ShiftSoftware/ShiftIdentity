@@ -34,6 +34,8 @@ public class Company : ShiftEntity<Company>, IEntityHasCompany<Company>
     public virtual ICollection<CompanyBranch> CompanyBranches { get; set; }
     public long? CompanyID { get; set; }
 
+    public int? DisplayOrder { get; set; }
+
     public Company()
     {
         CompanyBranches = new HashSet<CompanyBranch>();

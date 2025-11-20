@@ -50,6 +50,8 @@ public class CompanyBranch :
     public long? CountryID { get; set; }
     public long? CompanyBranchID { get; set; }
 
+    public int? DisplayOrder { get; set; }
+
     public CompanyBranch()
     {
         CompanyBranchDepartments = new HashSet<CompanyBranchDepartment>();

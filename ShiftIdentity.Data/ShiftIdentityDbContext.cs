@@ -95,6 +95,7 @@ namespace ShiftSoftware.ShiftIdentity.Data
                 );
 
                 x.Property(c => c.CompanyBranchID).HasComputedColumnSql(nameof(CompanyBranch.ID));
+                x.HasIndex(c => c.DisplayOrder);
             });
 
             b.Entity<Company>(x =>
@@ -115,21 +116,25 @@ namespace ShiftSoftware.ShiftIdentity.Data
                     .OnDelete(DeleteBehavior.Restrict);
 
                 x.Property(c => c.CompanyID).HasComputedColumnSql(nameof(Company.ID));
+                x.HasIndex(c => c.DisplayOrder);
             });
 
             b.Entity<City>(x =>
             {
                 x.Property(c => c.CityID).HasComputedColumnSql(nameof(City.ID));
+                x.HasIndex(c => c.DisplayOrder);
             });
 
             b.Entity<Country>(x =>
             {
                 x.Property(c => c.CountryID).HasComputedColumnSql(nameof(Country.ID));
+                x.HasIndex(c => c.DisplayOrder);
             });
 
             b.Entity<Region>(x =>
             {
                 x.Property(c => c.RegionID).HasComputedColumnSql(nameof(Region.ID));
+                x.HasIndex(c => c.DisplayOrder);
             });
         }
 
