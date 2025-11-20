@@ -22,7 +22,8 @@ public class Region : Profile
             );
 
         CreateMap<Core.Entities.Region, RegionListDTO>()
-            .ForMember(x => x.Country, x => x.MapFrom(src => src.Country != null ? src.Country.Name : null));
+            .ForMember(x => x.Country, x => x.MapFrom(src => src.Country != null ? src.Country.Name : null))
+            .ForMember(x => x.CountryDisplayOrder, x => x.MapFrom(src => src.Country != null ? src.Country.DisplayOrder : null));
 
         CreateMap<Core.Entities.Region, RegionModel>()
             .ForMember(

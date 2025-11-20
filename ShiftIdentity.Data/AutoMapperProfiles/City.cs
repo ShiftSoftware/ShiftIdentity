@@ -30,6 +30,14 @@ public class City : Profile
             .ForMember(
                     dest => dest.Country,
                     opt => opt.MapFrom(src => src.Region!.Country!.Name)
+                )
+            .ForMember(
+                    dest => dest.CountryDisplayOrder,
+                    opt => opt.MapFrom(src => src.Region!.Country != null ? src.Region!.Country.DisplayOrder : null)
+                )
+            .ForMember(
+                    dest => dest.RegionDisplayOrder,
+                    opt => opt.MapFrom(src => src.Region != null ? src.Region.DisplayOrder : null)
                 );
 
         CreateMap<Core.Entities.City, CityModel>()

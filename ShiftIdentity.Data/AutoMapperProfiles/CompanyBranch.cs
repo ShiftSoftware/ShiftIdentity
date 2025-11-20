@@ -71,6 +71,22 @@ public class CompanyBranch : Profile
             .ForMember(
                     dest => dest.Services,
                     opt => opt.MapFrom(src => src.CompanyBranchServices.Select(y => new ShiftEntitySelectDTO (y.ServiceID.ToString()!, y.Service!.Name)))
+                )
+            .ForMember(
+                    dest => dest.CountryDisplayOrder,
+                    opt => opt.MapFrom(src => src.City != null && src.City.Region != null && src.City.Region.Country != null ? src.City.Region.Country.DisplayOrder : null)
+                )
+            .ForMember(
+                    dest => dest.RegionDisplayOrder,
+                    opt => opt.MapFrom(src => src.City != null && src.City.Region != null ? src.City.Region.DisplayOrder : null)
+                )
+            .ForMember(
+                    dest => dest.CityDisplayOrder,
+                    opt => opt.MapFrom(src => src.City != null ? src.City.DisplayOrder : null)
+                )
+            .ForMember(
+                    dest => dest.CompanyDisplayOrder,
+                    opt => opt.MapFrom(src => src.Company != null ? src.Company.DisplayOrder : null)
                 );
 
         CreateMap<Core.Entities.CompanyBranch, CompanyBranchModel>()
