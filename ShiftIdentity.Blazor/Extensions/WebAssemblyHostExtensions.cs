@@ -98,8 +98,7 @@ public static class WebAssemblyHostExtensions
     private static async Task<bool> IsTabActive(IServiceProvider services)
     {
         var js = services.GetRequiredService<IJSRuntime>();
-
-        var visibility = await js.InvokeAsync<string>("eval", "document.visibilityState");
+        var visibility = await js.GetValueAsync<string>("document.visibilityState");
         return visibility == "visible";
     }
 }
