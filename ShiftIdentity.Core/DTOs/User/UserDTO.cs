@@ -48,7 +48,7 @@ public class UserDTO : ShiftEntityViewAndUpsertDTO
 
     #endregion
 
-    [JsonHashIdConverter<AccessTreeDTO>(5)]
+    [AccessTreeHashIdConverter]
     public IEnumerable<ShiftEntitySelectDTO> AccessTrees { get; set; }
 
     public UserDTO()
