@@ -24,7 +24,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
         {
             var data = (await userRepository.OdataList()).Select(x => new PublicUserListDTO { ID = x.ID, Name = x.FullName });
 
-            return Ok(await data.ToOdataDTO(oDataQueryOptions, Request));
+            return Ok(await data.ToOdataDTO(oDataQueryOptions, Request, applySoftDeleteFilter: false));
         }
     }
 }
