@@ -30,12 +30,12 @@ public class CountryRepository : ShiftRepository<ShiftIdentityDbContext, Country
         this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
     }
 
-    public override ValueTask<Country> UpsertAsync(Country entity, CountryDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null)
+    public override ValueTask<Country> UpsertAsync(Country entity, CountryDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null, bool disableDefaultDataLevelAccess = false)
     {
         if (entity.BuiltIn)
             throw new ShiftEntityException(new Message(localizer["Error"], localizer["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
-        return base.UpsertAsync(entity, dto, actionType, userId, idempotencyKey);
+        return base.UpsertAsync(entity, dto, actionType, userId, idempotencyKey, disableDefaultDataLevelAccess);
     }
 
     public override ValueTask<Country> DeleteAsync(Country entity, bool isHardDelete = false, long? userId = null, bool disableDefaultDataLevelAccess = false)

@@ -29,7 +29,7 @@ public class CityRepository : ShiftRepository<ShiftIdentityDbContext, City, City
         this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
     }
 
-    public override async ValueTask<City> UpsertAsync(City entity, CityDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null)
+    public override async ValueTask<City> UpsertAsync(City entity, CityDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null, bool disableDefaultDataLevelAccess = false)
     {
         if (entity.BuiltIn)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
@@ -42,7 +42,7 @@ public class CityRepository : ShiftRepository<ShiftIdentityDbContext, City, City
             if (entity.CountryID != oldCountryId && oldCountryId is not null)
                 throw new ShiftEntityException(new Message(Loc["Error"], Loc["Country can not be changed after creation."]));
 
-        return await base.UpsertAsync(entity, dto, actionType, userId);
+        return await base.UpsertAsync(entity, dto, actionType, userId, idempotencyKey, disableDefaultDataLevelAccess);
     }
 
     public override ValueTask<City> DeleteAsync(City entity, bool isHardDelete = false, long? userId = null, bool disableDefaultDataLevelAccess = false)

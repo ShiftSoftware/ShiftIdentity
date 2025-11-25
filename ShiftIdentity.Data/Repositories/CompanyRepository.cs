@@ -24,7 +24,7 @@ public class CompanyRepository : ShiftRepository<ShiftIdentityDbContext, Company
         this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
     }
 
-    public override ValueTask<Company> UpsertAsync(Company entity, CompanyDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null)
+    public override ValueTask<Company> UpsertAsync(Company entity, CompanyDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null, bool disableDefaultDataLevelAccess = false)
     {
         if (entity.BuiltIn)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
@@ -72,7 +72,7 @@ public class CompanyRepository : ShiftRepository<ShiftIdentityDbContext, Company
             } while (parentCompanyId != null);
         }
 
-        var result = base.UpsertAsync(entity, dto, actionType, userId);
+        var result = base.UpsertAsync(entity, dto, actionType, userId, idempotencyKey, disableDefaultDataLevelAccess);
 
         entity.ParentCompanyID = parentCompanyId;
 

@@ -24,12 +24,12 @@ public class RegionRepository : ShiftRepository<ShiftIdentityDbContext, Region, 
         this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
     }
 
-    public override ValueTask<Region> UpsertAsync(Region entity, RegionDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null)
+    public override ValueTask<Region> UpsertAsync(Region entity, RegionDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null, bool disableDefaultDataLevelAccess = false)
     {
         if (entity.BuiltIn)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
-        return base.UpsertAsync(entity, dto, actionType, userId);
+        return base.UpsertAsync(entity, dto, actionType, userId, idempotencyKey, disableDefaultDataLevelAccess);
     }
 
     public override ValueTask<Region> DeleteAsync(Region entity, bool isHardDelete = false, long? userId = null, bool disableDefaultDataLevelAccess = false)

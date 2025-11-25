@@ -27,14 +27,14 @@ public class TeamRepository : ShiftRepository<ShiftIdentityDbContext, Team, Team
         this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
     }
 
-    public override async ValueTask<Team> UpsertAsync(Team entity, TeamDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null)
+    public override async ValueTask<Team> UpsertAsync(Team entity, TeamDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null, bool disableDefaultDataLevelAccess = false)
     {
         //Check there are any duplicate users
         if (dto.Users.GroupBy(item => item.Value).Any(group => group.Count() > 1))
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Duplicate users are not allowed."]));
 
         if (actionType == ActionTypes.Insert)
-            return await base.UpsertAsync(entity, dto, actionType, userId);
+            return await base.UpsertAsync(entity, dto, actionType, userId, idempotencyKey, disableDefaultDataLevelAccess);
 
         //entity.Update(userId);
         entity.Name = dto.Name;

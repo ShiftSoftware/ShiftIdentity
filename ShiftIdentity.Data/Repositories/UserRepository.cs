@@ -47,7 +47,7 @@ public class UserRepository :
         this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
     }
 
-    public override async ValueTask<User> UpsertAsync(User entity, UserDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null)
+    public override async ValueTask<User> UpsertAsync(User entity, UserDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null, bool disableDefaultDataLevelAccess = false)
     {
         if (shiftIdentityFeatureLocking.UserFeatureIsLocked)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["User Feature is locked"]));
