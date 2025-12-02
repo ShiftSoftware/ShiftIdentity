@@ -13,7 +13,7 @@ public class City : Profile
         CreateMap<Core.Entities.City, CityDTO>()
             .ForMember(
                     dest => dest.Region,
-                    opt => opt.MapFrom(src => new ShiftEntitySelectDTO(src.RegionID.ToString()!, src.Region!.Name))
+                    opt => opt.MapFrom(src => new ShiftEntitySelectDTO { Value = src.RegionID.ToString()!, Text = src.Region!.Name })
                 )
             .ReverseMap()
             .ForMember(x => x.Region, x => x.Ignore())

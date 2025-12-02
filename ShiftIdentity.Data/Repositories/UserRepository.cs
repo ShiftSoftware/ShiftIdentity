@@ -365,7 +365,7 @@ public class UserRepository :
                 Phone = userImport.Phone,
                 Email = userImport.Email,
                 BirthDate = userImport.BirthDate,
-                CompanyBranchID = new ShiftEntitySelectDTO (userImport.CompanyBranchID),
+                CompanyBranchID = new ShiftEntitySelectDTO { Value = userImport.CompanyBranchID },
                 Password = password,
                 IsActive = true,
             };
