@@ -24,20 +24,20 @@ public class RegionRepository : ShiftRepository<ShiftIdentityDbContext, Region, 
         this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
     }
 
-    public override ValueTask<Region> UpsertAsync(Region entity, RegionDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null, bool disableDefaultDataLevelAccess = false)
+    public override ValueTask<Region> UpsertAsync(Region entity, RegionDTO dto, ActionTypes actionType, long? userId, Guid? idempotencyKey, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
     {
         if (entity.BuiltIn)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
-        return base.UpsertAsync(entity, dto, actionType, userId, idempotencyKey, disableDefaultDataLevelAccess);
+        return base.UpsertAsync(entity, dto, actionType, userId, idempotencyKey, disableDefaultDataLevelAccess, disableGlobalFilters);
     }
 
-    public override ValueTask<Region> DeleteAsync(Region entity, bool isHardDelete = false, long? userId = null, bool disableDefaultDataLevelAccess = false)
+    public override ValueTask<Region> DeleteAsync(Region entity, bool isHardDelete, long? userId, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
     {
         if (entity.BuiltIn)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
-        return base.DeleteAsync(entity, isHardDelete, userId, disableDefaultDataLevelAccess);
+        return base.DeleteAsync(entity, isHardDelete, userId, disableDefaultDataLevelAccess, disableGlobalFilters);
     }
 
     public override Task<int> SaveChangesAsync()

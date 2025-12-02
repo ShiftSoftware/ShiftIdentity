@@ -5,12 +5,7 @@ using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Country;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.ShiftIdentity.Core.Localization;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
@@ -30,20 +25,20 @@ public class CountryRepository : ShiftRepository<ShiftIdentityDbContext, Country
         this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
     }
 
-    public override ValueTask<Country> UpsertAsync(Country entity, CountryDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null, bool disableDefaultDataLevelAccess = false)
+    public override ValueTask<Country> UpsertAsync(Country entity, CountryDTO dto, ActionTypes actionType, long? userId, Guid? idempotencyKey, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
     {
         if (entity.BuiltIn)
             throw new ShiftEntityException(new Message(localizer["Error"], localizer["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
-        return base.UpsertAsync(entity, dto, actionType, userId, idempotencyKey, disableDefaultDataLevelAccess);
+        return base.UpsertAsync(entity, dto, actionType, userId, idempotencyKey, disableDefaultDataLevelAccess, disableGlobalFilters);
     }
 
-    public override ValueTask<Country> DeleteAsync(Country entity, bool isHardDelete = false, long? userId = null, bool disableDefaultDataLevelAccess = false)
+    public override ValueTask<Country> DeleteAsync(Country entity, bool isHardDelete, long? userId, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
     {
         if (entity.BuiltIn)
             throw new ShiftEntityException(new Message(localizer["Error"], localizer["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
-        return base.DeleteAsync(entity, isHardDelete, userId, disableDefaultDataLevelAccess);
+        return base.DeleteAsync(entity, isHardDelete, userId, disableDefaultDataLevelAccess, disableGlobalFilters);
     }
 
     public override Task<int> SaveChangesAsync()

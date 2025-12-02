@@ -24,7 +24,7 @@ public class CompanyRepository : ShiftRepository<ShiftIdentityDbContext, Company
         this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
     }
 
-    public override ValueTask<Company> UpsertAsync(Company entity, CompanyDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null, bool disableDefaultDataLevelAccess = false)
+    public override ValueTask<Company> UpsertAsync(Company entity, CompanyDTO dto, ActionTypes actionType, long? userId, Guid? idempotencyKey, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
     {
         if (entity.BuiltIn)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
@@ -72,19 +72,19 @@ public class CompanyRepository : ShiftRepository<ShiftIdentityDbContext, Company
             } while (parentCompanyId != null);
         }
 
-        var result = base.UpsertAsync(entity, dto, actionType, userId, idempotencyKey, disableDefaultDataLevelAccess);
+        var result = base.UpsertAsync(entity, dto, actionType, userId, idempotencyKey, disableDefaultDataLevelAccess, disableGlobalFilters);
 
         entity.ParentCompanyID = parentCompanyId;
 
         return result;
     }
 
-    public override ValueTask<Company> DeleteAsync(Company entity, bool isHardDelete = false, long? userId = null, bool disableDefaultDataLevelAccess = false)
+    public override ValueTask<Company> DeleteAsync(Company entity, bool isHardDelete, long? userId, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
     {
         if (entity.BuiltIn)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
-        return base.DeleteAsync(entity, isHardDelete, userId, disableDefaultDataLevelAccess);
+        return base.DeleteAsync(entity, isHardDelete, userId, disableDefaultDataLevelAccess, disableGlobalFilters);
     }
 
     public override Task<int> SaveChangesAsync()

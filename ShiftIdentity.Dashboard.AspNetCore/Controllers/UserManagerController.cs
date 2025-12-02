@@ -126,7 +126,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
             var encodedId = ShiftEntityHashIdService.Encode<UserDTO>(userId);
 
             // Get the user and check if the user is not null
-            var user = await userRepo.FindAsync(userId, disableDefaultDataLevelAccess: true, disableGlobalFilters: true);
+            var user = await userRepo.FindAsync(userId, asOf: null, disableDefaultDataLevelAccess: true, disableGlobalFilters: true);
             if (user is null)
                 return BadRequest(new ShiftEntityResponse<UserDataDTO>
                 {
@@ -184,7 +184,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
             var decodedId = ShiftEntityHashIdService.Decode<UserDTO>(userId);
 
             // Get the user and check if the user is not null
-            var user = await userRepo.FindAsync(decodedId, disableDefaultDataLevelAccess: true, disableGlobalFilters: true);
+            var user = await userRepo.FindAsync(decodedId, asOf: null, disableDefaultDataLevelAccess: true, disableGlobalFilters: true);
             if (user is null)
                 return Ok("User is not found");
 
@@ -266,7 +266,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
         {
             // Get the user and check if the user is not null
             var decodedId = ShiftEntityHashIdService.Decode<UserDTO>(userId);
-            var user = await userRepo.FindAsync(decodedId, disableDefaultDataLevelAccess: true, disableGlobalFilters: true);
+            var user = await userRepo.FindAsync(decodedId, asOf: null, disableDefaultDataLevelAccess: true, disableGlobalFilters: true);
             if (user is null)
                 return NotFound(new ShiftEntityResponse<UserDataDTO>
                 {

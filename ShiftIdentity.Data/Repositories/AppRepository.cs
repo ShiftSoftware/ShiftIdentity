@@ -24,7 +24,7 @@ public class AppRepository :
         this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
     }
 
-    public override async ValueTask<App> UpsertAsync(App entity, AppDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null, bool disableDefaultDataLevelAccess = false)
+    public override async ValueTask<App> UpsertAsync(App entity, AppDTO dto, ActionTypes actionType, long? userId, Guid? idempotencyKey, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
     {
         long id = 0;
 
@@ -35,7 +35,7 @@ public class AppRepository :
         if (await db.Apps.AnyAsync(x => !x.IsDeleted && x.AppId.ToLower() == dto.AppId.ToLower() && x.ID != id))
             throw new ShiftEntityException(new Message(Loc["Duplicate"], Loc["The App ID {0} already exists.", dto.AppId]));
 
-        return await base.UpsertAsync(entity, dto, actionType, userId, idempotencyKey, disableDefaultDataLevelAccess);
+        return await base.UpsertAsync(entity, dto, actionType, userId, idempotencyKey, disableDefaultDataLevelAccess, disableGlobalFilters);
     }
 
     public async Task<App?> GetAppAsync(string appId)

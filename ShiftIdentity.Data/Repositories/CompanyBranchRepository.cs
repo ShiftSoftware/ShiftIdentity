@@ -46,7 +46,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
         }
 
-        public override async ValueTask<CompanyBranch> UpsertAsync(CompanyBranch entity, CompanyBranchDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null, bool disableDefaultDataLevelAccess = false)
+        public override async ValueTask<CompanyBranch> UpsertAsync(CompanyBranch entity, CompanyBranchDTO dto, ActionTypes actionType, long? userId, Guid? idempotencyKey, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
         {
             if (entity.BuiltIn)
                 throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
@@ -62,10 +62,10 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             entity.Phones = dto.Phones;
             entity.Emails = dto.Emails;
             entity.TerminationDate = dto.TerminationDate;
-            entity.RegionID = (await this.cityRepository.FindAsync(entity.CityID.Value, disableDefaultDataLevelAccess: true, disableGlobalFilters: true))!.RegionID;
+            entity.RegionID = (await this.cityRepository.FindAsync(entity.CityID.Value, asOf: null, disableDefaultDataLevelAccess: true, disableGlobalFilters: true))!.RegionID;
 
             if (entity.RegionID is not null)
-                entity.CountryID = (await this.regionRepo.FindAsync(entity.RegionID.GetValueOrDefault(), disableDefaultDataLevelAccess: true, disableGlobalFilters: true))?.CountryID;
+                entity.CountryID = (await this.regionRepo.FindAsync(entity.RegionID.GetValueOrDefault(), asOf: null, disableDefaultDataLevelAccess: true, disableGlobalFilters: true))?.CountryID;
 
             if (actionType == ActionTypes.Insert)
                 entity.CustomFields = dto.CustomFields?.ToDictionary(x => x.Key, x => new CustomField
@@ -178,12 +178,12 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             return entity;
         }
 
-        public override ValueTask<CompanyBranch> DeleteAsync(CompanyBranch entity, bool isHardDelete = false, long? userId = null, bool disableDefaultDataLevelAccess = false)
+        public override ValueTask<CompanyBranch> DeleteAsync(CompanyBranch entity, bool isHardDelete, long? userId, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
         {
             if (entity.BuiltIn)
                 throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
-            return base.DeleteAsync(entity, isHardDelete, userId, disableDefaultDataLevelAccess);
+            return base.DeleteAsync(entity, isHardDelete, userId, disableDefaultDataLevelAccess, disableGlobalFilters);
         }
 
         public override Task<int> SaveChangesAsync()

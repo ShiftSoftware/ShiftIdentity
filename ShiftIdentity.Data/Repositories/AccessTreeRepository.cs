@@ -24,7 +24,7 @@ public class AccessTreeRepository : ShiftRepository<ShiftIdentityDbContext, Acce
         this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
     }
 
-    public override async ValueTask<AccessTree> UpsertAsync(AccessTree entity, AccessTreeDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null, bool disableDefaultDataLevelAccess = false)
+    public override async ValueTask<AccessTree> UpsertAsync(AccessTree entity, AccessTreeDTO dto, ActionTypes actionType, long? userId, Guid? idempotencyKey, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
     {
         long id = 0;
 

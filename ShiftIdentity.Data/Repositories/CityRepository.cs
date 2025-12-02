@@ -29,28 +29,28 @@ public class CityRepository : ShiftRepository<ShiftIdentityDbContext, City, City
         this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
     }
 
-    public override async ValueTask<City> UpsertAsync(City entity, CityDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null, bool disableDefaultDataLevelAccess = false)
+    public override async ValueTask<City> UpsertAsync(City entity, CityDTO dto, ActionTypes actionType, long? userId, Guid? idempotencyKey, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
     {
         if (entity.BuiltIn)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
         var oldCountryId = entity.CountryID;
 
-        entity.CountryID = (await this.regionRepo.FindAsync(dto.Region.Value.ToLong(), disableDefaultDataLevelAccess: true, disableGlobalFilters: true))?.CountryID;
+        entity.CountryID = (await this.regionRepo.FindAsync(dto.Region.Value.ToLong(), asOf: null, disableDefaultDataLevelAccess: true, disableGlobalFilters: true))?.CountryID;
 
         if (actionType == ActionTypes.Update)
             if (entity.CountryID != oldCountryId && oldCountryId is not null)
                 throw new ShiftEntityException(new Message(Loc["Error"], Loc["Country can not be changed after creation."]));
 
-        return await base.UpsertAsync(entity, dto, actionType, userId, idempotencyKey, disableDefaultDataLevelAccess);
+        return await base.UpsertAsync(entity, dto, actionType, userId, idempotencyKey, disableDefaultDataLevelAccess, disableGlobalFilters);
     }
 
-    public override ValueTask<City> DeleteAsync(City entity, bool isHardDelete = false, long? userId = null, bool disableDefaultDataLevelAccess = false)
+    public override ValueTask<City> DeleteAsync(City entity, bool isHardDelete, long? userId, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
     {
         if (entity.BuiltIn)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
-        return base.DeleteAsync(entity, isHardDelete, userId, disableDefaultDataLevelAccess);
+        return base.DeleteAsync(entity, isHardDelete, userId, disableDefaultDataLevelAccess, disableGlobalFilters);
     }
 
     public override Task<int> SaveChangesAsync()

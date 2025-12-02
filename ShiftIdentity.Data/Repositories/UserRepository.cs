@@ -47,7 +47,7 @@ public class UserRepository :
         this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
     }
 
-    public override async ValueTask<User> UpsertAsync(User entity, UserDTO dto, ActionTypes actionType, long? userId = null, Guid? idempotencyKey = null, bool disableDefaultDataLevelAccess = false)
+    public override async ValueTask<User> UpsertAsync(User entity, UserDTO dto, ActionTypes actionType, long? userId, Guid? idempotencyKey, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
     {
         if (shiftIdentityFeatureLocking.UserFeatureIsLocked)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["User Feature is locked"]));
@@ -202,7 +202,7 @@ public class UserRepository :
         return entity;
     }
 
-    public override ValueTask<User> DeleteAsync(User entity, bool isHardDelete = false, long? userId = null, bool disableDefaultDataLevelAccess = false)
+    public override ValueTask<User> DeleteAsync(User entity, bool isHardDelete, long? userId, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
     {
         if (shiftIdentityFeatureLocking.UserFeatureIsLocked)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["User Feature is locked"]));
@@ -210,7 +210,7 @@ public class UserRepository :
         if (entity.BuiltIn)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
-        return base.DeleteAsync(entity, isHardDelete, userId, disableDefaultDataLevelAccess);
+        return base.DeleteAsync(entity, isHardDelete, userId, disableDefaultDataLevelAccess, disableGlobalFilters);
     }
 
     public async Task<User?> GetUserByUsernameAsync(string username)
@@ -370,7 +370,7 @@ public class UserRepository :
                 IsActive = true,
             };
 
-            var user = await UpsertAsync(new User(), userDto, ActionTypes.Insert);
+            var user = await UpsertAsync(new User(), userDto, ActionTypes.Insert, userId: null, idempotencyKey: null, disableDefaultDataLevelAccess: false, disableGlobalFilters: false);
             user.EmailVerified = true;
             
             if(!string.IsNullOrWhiteSpace(user.Phone))
