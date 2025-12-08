@@ -5,6 +5,7 @@ using ShiftSoftware.ShiftEntity.Model.HashIds;
 using ShiftSoftware.ShiftIdentity.Core.Localization;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -91,42 +92,54 @@ public class CompanyBranchValidator : AbstractValidator<CompanyBranchDTO>
         RuleFor(x => x.Longitude)
             .Custom((x, context) =>
             {
-                if(x is null && context.InstanceToValidate.PublishTargets is not null && context.InstanceToValidate.PublishTargets.Any())
+                if(string.IsNullOrWhiteSpace(x) && context.InstanceToValidate.PublishTargets is not null && context.InstanceToValidate.PublishTargets.Any())
                 {
                     context.AddFailure(localizer["Please provide", localizer["Longitude"]]);
                     return;
                 }
 
-                if (x is not null && !regex.IsMatch(x.ToString()))
-                {
-                    context.AddFailure(localizer["Longitude must be a decimal"]);
-                    return;
-                }
 
-                var longitude = float.Parse(x);
-                if (x is not null && longitude > 180 || longitude < -180)
-                    context.AddFailure(localizer["Longitude must be between -180 and 180"]);
+                if (!string.IsNullOrWhiteSpace(x))
+                {
+                    if (!float.TryParse(x, NumberStyles.Float, CultureInfo.InvariantCulture, out var longitude) || !regex.IsMatch(x))
+                    {
+                        context.AddFailure(localizer["Longitude must be a decimal"]);
+                        return;
+                    }
+
+                    if (longitude > 180 || longitude < -180)
+                    {
+                        context.AddFailure(localizer["Longitude must be between -180 and 180"]);
+                        return;
+                    }
+                }
             })
             .When(x => x.Longitude is not null || (x.PublishTargets is not null && x.PublishTargets.Any()));
 
         RuleFor(x => x.Latitude)
             .Custom((x, context) =>
             {
-                if (x is null && context.InstanceToValidate.PublishTargets is not null && context.InstanceToValidate.PublishTargets.Any())
+               if (string.IsNullOrWhiteSpace(x) && context.InstanceToValidate.PublishTargets is not null && context.InstanceToValidate.PublishTargets.Any())
                 {
                     context.AddFailure(localizer["Please provide", localizer["Latitude"]]);
                     return;
                 }
 
-                if (x is not null && !regex.IsMatch(x.ToString()))
-                {
-                    context.AddFailure(localizer["Latitude must be a decimal"]);
-                    return;
-                }
 
-                var latitude = float.Parse(x);
-                if (x is not null && latitude > 90 || latitude < -90)
-                    context.AddFailure(localizer["Latitude must be between -90 and 90"]);
+                if (!string.IsNullOrWhiteSpace(x))
+                {
+                    if (!float.TryParse(x, NumberStyles.Float, CultureInfo.InvariantCulture, out var latitude) || !regex.IsMatch(x))
+                    {
+                        context.AddFailure(localizer["Longitude must be a decimal"]);
+                        return;
+                    }
+
+                    if (latitude > 90 || latitude < -90)
+                    {
+                        context.AddFailure(localizer["Latitude must be between -90 and 90"]);
+                        return;
+                    }
+                }
             })
             .When(x => x.Latitude is not null || (x.PublishTargets is not null && x.PublishTargets.Any()));
            
