@@ -27,43 +27,45 @@
                  Endpoint="@($"{Constants.IdentityRoutePreifix}CompanyBranch")"
                  Title="@Loc["Company Branch"]"
                  @bind-Key="@Key"
+                 OnInvalidSubmit="OnInvalidSubmit"
                  AllowSaveAsNew
                  OnTaskFinished="OnTaskFinished"
                  TypeAuthAction="ShiftIdentityActions.Companies"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchDTO">
-    <MudGrid>
+    <MudTabs @bind-ActivePanelIndex="_activeTabIndex" Elevation="2" ApplyEffectsToContainer  KeepPanelsAlive  Position="Position.Top"  PanelClass="pa-4">
+        <MudTabPanel Text="@Loc["General"]" Icon="@Icons.Material.Filled.Settings">
+            <MudGrid>
+                <MudItem xs="12" sm="12" lg="12" xl="12">
+                    <LocalizedTextField @bind-Value="TheItem.Name" Label="@Loc["Name"]" For="() => TheItem.Name" />
+                </MudItem>
 
-        <MudItem xs="12" sm="12" lg="12" xl="12">
-            <LocalizedTextField @bind-Value="TheItem.Name" Label="@Loc["Name"]" For="() => TheItem.Name" />
-        </MudItem>
+                <MudItem xs="12" sm="6" lg="4" xl="3">
+                    <MudTextField ReadOnly="@ReadOnly"
+                                  Disabled="@Disabled"
+                                  OnlyValidateIfDirty="true"
+                                  Label="@Loc["Short Code"]"
+                                  @bind-Value="TheItem.ShortCode"
+                                  For="@(() => TheItem.ShortCode)" />
+                </MudItem>
 
-        <MudItem xs="12" sm="6" lg="4" xl="3">
-            <MudTextField ReadOnly="@ReadOnly"
-                          Disabled="@Disabled"
-                          OnlyValidateIfDirty="true"
-                          Label="@Loc["Short Code"]"
-                          @bind-Value="TheItem.ShortCode"
-                          For="@(() => TheItem.ShortCode)" />
-        </MudItem>
+                <MudItem xs="12" sm="6" lg="4" xl="3">
+                    <MudTextField ReadOnly="@ReadOnly"
+                                  Disabled="@Disabled"
+                                  OnlyValidateIfDirty="true"
+                                  Label="@Loc["Integration ID"]"
+                                  @bind-Value="TheItem.IntegrationId"
+                                  For="@(() => TheItem.IntegrationId)" />
+                </MudItem>
 
-        <MudItem xs="12" sm="6" lg="4" xl="3">
-            <MudTextField ReadOnly="@ReadOnly"
-                          Disabled="@Disabled"
-                          OnlyValidateIfDirty="true"
-                          Label="@Loc["Integration ID"]"
-                          @bind-Value="TheItem.IntegrationId"
-                          For="@(() => TheItem.IntegrationId)" />
-        </MudItem>
+                <MudItem xs="12" sm="6" lg="4" xl="3">
+                    <ShiftAutocomplete Label="@Loc["Company"]"
+                                       For="@(() => TheItem.Company)"
+                                       @bind-Value="TheItem.Company"
+                                       EntitySet="IdentityCompany"
+                                       TEntitySet="CompanyListDTO" />
+                </MudItem>
 
-        <MudItem xs="12" sm="6" lg="4" xl="3">
-            <ShiftAutocomplete Label="@Loc["Company"]"
-                               For="@(() => TheItem.Company)"
-                               @bind-Value="TheItem.Company"
-                               EntitySet="IdentityCompany"
-                               TEntitySet="CompanyListDTO" />
-        </MudItem>
-
-        @* <MudItem xs="12" sm="6" lg="4" xl="4">
+                @* <MudItem xs="12" sm="6" lg="4" xl="4">
         <ShiftAutocomplete Label="Region"
         For="@(() => TheItem.Region)"
         T="ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO"
@@ -73,289 +75,320 @@
         TEntitySet="RegionListDTO" />
         </MudItem> *@
 
-        <MudItem xs="12" sm="6" lg="4" xl="3">
-            <ShiftAutocomplete Label="@Loc["City"]"
-                               For="@(() => TheItem.City)"
-                               @bind-Value="TheItem.City"
-                               EntitySet="IdentityCity"
-                               TEntitySet="CityListDTO" />
-        </MudItem>
+                <MudItem xs="12" sm="6" lg="4" xl="3">
+                    <ShiftAutocomplete Label="@Loc["City"]"
+                                       For="@(() => TheItem.City)"
+                                       @bind-Value="TheItem.City"
+                                       EntitySet="IdentityCity"
+                                       TEntitySet="CityListDTO" />
+                </MudItem>
 
-        <MudItem xs="12" sm="6" lg="4" xl="4">
-            <MudTextField ReadOnly="@ReadOnly"
-                          Disabled="@Disabled"
-                          OnlyValidateIfDirty="true"
-                          Label="@Loc["Phone"]"
-                          @bind-Value="TheItem.Phone"
-                          For="@(() => TheItem.Phone)" />
-        </MudItem>
+              
 
-        <MudItem xs="12" sm="6" lg="4" xl="4">
-            <MudTextField ReadOnly="@ReadOnly"
-                          Disabled="@Disabled"
-                          OnlyValidateIfDirty="true"
-                          Label="@Loc["Short Phone"]"
-                          @bind-Value="TheItem.ShortPhone"
-                          For="@(() => TheItem.ShortPhone)" />
-        </MudItem>
+                <MudItem xs="12" sm="6" lg="4" xl="3">
+                    <MudDatePickerExtended ReadOnly="@ReadOnly"
+                                           Disabled="@Disabled"
+                                           Clearable="true"
+                                           Label="@Loc["TerminationDate"]"
+                                           @bind-Date="TheItem.TerminationDate"
+                                           For="@(() => TheItem.TerminationDate)" />
+                </MudItem>
 
-        <MudItem xs="12" sm="6" lg="4" xl="4">
-            <MudTextField ReadOnly="@ReadOnly"
-                          Disabled="@Disabled"
-                          OnlyValidateIfDirty="true"
-                          Label="@Loc["HQ Email"]"
-                          @bind-Value="TheItem.Email"
-                          For="@(() => TheItem.Email)" />
-        </MudItem>
+               
 
-        <MudItem xs="12" sm="6" lg="4" xl="3">
-            <MudDatePickerExtended ReadOnly="@ReadOnly"
-                                   Disabled="@Disabled"
-                                   Clearable="true"
-                                   Label="@Loc["TerminationDate"]"
-                                   @bind-Date="TheItem.TerminationDate"
-                                   For="@(() => TheItem.TerminationDate)" />
-        </MudItem>
-
-        <MudItem xs="12" sm="6" lg="4" xl="3">
-            <MudNumericFieldExtended ReadOnly="@ReadOnly"
-                                     Disabled="@Disabled"
-                                     OnlyValidateIfDirty="true"
-                                     Label="@Loc["Display Order"]"
-                                     @bind-Value="TheItem.DisplayOrder"
-                                     For="@(() => TheItem.DisplayOrder)" />
-        </MudItem>
-        
-        <MudItem lg="12" md="12" sm="12" xs="12" Class="">
-            <MudCard Elevation="2">
-                <MudCardHeader Class="pt-3 pb-3" Style="background: #efefef; border-bottom: 1px solid #e3e3e3;">
-                    <CardHeaderContent>
-                        <MudText Typo="Typo.subtitle2">@Loc["Phone Numbers"]</MudText>
-                    </CardHeaderContent>
-                </MudCardHeader>
-
-                <MudCardContent Class="pt-5 pb-5">
-                    <MudGrid Spacing="3" Justify="Justify.Center">
-                        @foreach (var line in TheItem.Phones)
-                        {
-                            <MudItem lg="11" md="11" sm="11" xs="11">
-                                <MudGrid Spacing="3" Style="align-items: baseline;">
-                                    <MudItem Class="pt-1 pb-1" lg="6" md="6" sm="6" xs="6">
-                                        <MudTextFieldExtended Label="@Loc["Phone"]"
-                                                                 @bind-Value="line.Text"
-                                                                 For="() => line.Text" />
-                                    </MudItem>
-
-                                    <MudItem Class="pt-1 pb-1" lg="6" md="6" sm="6" xs="6">
-                                        <MudSelectExtended OnlyValidateIfDirty="true"
-                                                           Label="@Loc["Tag"]"
-                                                           @bind-Value="line.Tag"
-                                                           For="@(() => line.Tag)">
-                                            @foreach (var tag in this.Options.CompanyBranchPhoneTags)
-                                            {
-                                                <MudSelectItem Value="@tag" T="string">@tag</MudSelectItem>                                                
-                                            }
-                                        </MudSelectExtended>
-                                    </MudItem>
-                                </MudGrid>
-                            </MudItem>
-
-                            @if (Mode > FormModes.Archive)
-                            {
-                                <MudItem lg="1" md="1" sm="1" xs="1">
-                                    <MudIconButton ButtonType="ButtonType.Button"
-                                                   Style="margin:10px;"
-                                                   Variant="Variant.Outlined"
-                                                   Color="Color.Error"
-                                                   Size="Size.Small"
-                                                   OnClick="@(() => TheItem.Phones.Remove(line))"
-                                                   Icon="@Icons.Material.Filled.Delete" />
-                                </MudItem>
-                            }
-                        }
-
-                        @if (Mode > FormModes.Archive)
-                        {   
-                            <MudButton Variant="Variant.Filled"
-                                        Color="Color.Info"
-                                        Style="margin:auto; margin-top:15px;"
-                                        Size="Size.Small"
-                                        OnClick="@(() => TheItem.Phones.Add(new()))"
-                                        StartIcon="@Icons.Material.Filled.Add">
-                                @Loc["Add a Phone Number"]
-                            </MudButton>
-                        }
-                    </MudGrid>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-
-        <MudItem lg="12" md="12" sm="12" xs="12" Class="">
-            <MudCard Elevation="2">
-                <MudCardHeader Class="pt-3 pb-3" Style="background: #efefef; border-bottom: 1px solid #e3e3e3;">
-                    <CardHeaderContent>
-                        <MudText Typo="Typo.subtitle2">@Loc["Email Addresses"]</MudText>
-                    </CardHeaderContent>
-                </MudCardHeader>
-
-                <MudCardContent Class="pt-5 pb-5">
-                    <MudGrid Spacing="3" Justify="Justify.Center">
-                        @foreach (var line in TheItem.Emails)
-                        {
-                            <MudItem lg="11" md="11" sm="11" xs="11">
-                                <MudGrid Spacing="3" Style="align-items: baseline;">
-                                    <MudItem Class="pt-1 pb-1" lg="6" md="6" sm="6" xs="6">
-                                        <MudTextFieldExtended Label="@Loc["Email"]"
-                                                              @bind-Value="line.Text"
-                                                              For="() => line.Text" />
-                                    </MudItem>
-
-                                    <MudItem Class="pt-1 pb-1" lg="6" md="6" sm="6" xs="6">
-                                        <MudSelectExtended OnlyValidateIfDirty="true"
-                                                           Label="@Loc["Tag"]"
-                                                           @bind-Value="line.Tag"
-                                                           For="@(() => line.Tag)">
-                                            @foreach (var tag in this.Options.CompanyBranchEmailTags)
-                                            {
-                                                <MudSelectItem Value="@tag" T="string">@tag</MudSelectItem>
-                                            }
-                                        </MudSelectExtended>
-                                    </MudItem>
-                                </MudGrid>
-                            </MudItem>
-
-                            @if (Mode > FormModes.Archive)
-                            {
-                                <MudItem lg="1" md="1" sm="1" xs="1">
-                                    <MudIconButton ButtonType="ButtonType.Button"
-                                                   Style="margin:10px;"
-                                                   Variant="Variant.Outlined"
-                                                   Color="Color.Error"
-                                                   Size="Size.Small"
-                                                   OnClick="@(() => TheItem.Emails.Remove(line))"
-                                                   Icon="@Icons.Material.Filled.Delete" />
-                                </MudItem>
-                            }
-                        }
-
-                        @if (Mode > FormModes.Archive)
-                        {
-                            <MudButton Variant="Variant.Filled"
-                                       Color="Color.Info"
-                                       Style="margin:auto; margin-top:15px;"
-                                       Size="Size.Small"
-                                       OnClick="@(() => TheItem.Emails.Add(new()))"
-                                       StartIcon="@Icons.Material.Filled.Add">
-                                @Loc["Add an Email"]
-                            </MudButton>
-                        }
-                    </MudGrid>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-
-        <MudItem xs="12" sm="12" lg="12" xl="12">
-            <LocalizedTextField @bind-Value="TheItem.WorkingHours" Label="@Loc["Standard Working Hours"]" For="() => TheItem.WorkingHours" />
-        </MudItem>
-
-        <MudItem xs="12" sm="12" lg="12" xl="12">
-            <LocalizedTextField @bind-Value="TheItem.WorkingDays" Label="@Loc["Standard Working Day"]" For="() => TheItem.WorkingDays" />
-        </MudItem>
-
-        <MudItem xs="12" sm="12" lg="12" xl="12">
-            @* <ShiftAutocomplete Label="Departments"
+                <MudItem xs="12" sm="12" lg="12" xl="12">
+                    @* <ShiftAutocomplete Label="Departments"
             @bind-Value="LastSelectedDepartment"
             TEntitySet="DepartmentListDTO"
             EntitySet="IdentityDepartment" /> *@
 
-            <ShiftAutocomplete Label="@Loc["Departments"]"
-                               QuickAddComponentType="@typeof(DepartmentForm)"
-                               TEntitySet="DepartmentListDTO"
-                               @bind-SelectedValues="TheItem.Departments"
-                               EntitySet="IdentityDepartment"
-                               MultiSelect
-                               QuickAddParameterName="@nameof(DepartmentForm.DepartmentName)" />
+                    <ShiftAutocomplete Label="@Loc["Departments"]"
+                                       QuickAddComponentType="@typeof(DepartmentForm)"
+                                       TEntitySet="DepartmentListDTO"
+                                       @bind-SelectedValues="TheItem.Departments"
+                                       EntitySet="IdentityDepartment"
+                                       MultiSelect
+                                       QuickAddParameterName="@nameof(DepartmentForm.DepartmentName)" />
 
-        </MudItem>
+                </MudItem>
 
 
-        <MudItem xs="12" sm="12" lg="12" xl="12">
-            <ShiftAutocomplete Label="@Loc["Services"]"
-                               QuickAddComponentType="@typeof(ServiceForm)"
-                               @bind-SelectedValues="TheItem.Services"
-                               TEntitySet="ServiceListDTO"
-                               EntitySet="IdentityService"
-                               MultiSelect
-                               QuickAddParameterName="@nameof(ServiceForm.ServiceName)" />
+                <MudItem xs="12" sm="12" lg="12" xl="12">
+                    <ShiftAutocomplete Label="@Loc["Services"]"
+                                       QuickAddComponentType="@typeof(ServiceForm)"
+                                       @bind-SelectedValues="TheItem.Services"
+                                       TEntitySet="ServiceListDTO"
+                                       EntitySet="IdentityService"
+                                       MultiSelect
+                                       QuickAddParameterName="@nameof(ServiceForm.ServiceName)" />
 
-        </MudItem>
+                </MudItem>
 
-        <MudItem xs="12" sm="12" lg="12" xl="12">
-            <ShiftAutocomplete Label="@Loc["Brands"]"
-                               QuickAddComponentType="@typeof(BrandForm)"
-                               @bind-SelectedValues="TheItem.Brands"
-                               TEntitySet="BrandListDTO"
-                               EntitySet="IdentityBrand"
-                               MultiSelect
-                               QuickAddParameterName="@nameof(BrandForm.BrandName)" />
-        </MudItem>
+                <MudItem xs="12" sm="12" lg="12" xl="12">
+                    <ShiftAutocomplete Label="@Loc["Brands"]"
+                                       QuickAddComponentType="@typeof(BrandForm)"
+                                       @bind-SelectedValues="TheItem.Brands"
+                                       TEntitySet="BrandListDTO"
+                                       EntitySet="IdentityBrand"
+                                       MultiSelect
+                                       QuickAddParameterName="@nameof(BrandForm.BrandName)" />
+                </MudItem>
 
-        <MudItem xs="12" sm="12" lg="12" xl="12">
-            <LocalizedTextField @bind-Value="TheItem.Address" Label="@Loc["Address"]" For="() => TheItem.Address" />
-        </MudItem>
+             
 
-        <MudItem xs="12" sm="6" lg="4" xl="4">
-            <MudTextField ReadOnly="@ReadOnly"
-                          Disabled="@Disabled"
-                          OnlyValidateIfDirty="true"
-                          Label="@Loc["Latitude"]"
-                          @bind-Value="TheItem.Latitude"
-                          For="@(() => TheItem.Latitude)" />
-        </MudItem>
+                @if (this.TheItem.CustomFields is not null && this.TheItem.CustomFields?.Count > 0)
+                {
+                    @foreach (var field in this.TheItem.CustomFields)
+                    {
+                        <MudItem xs="12" sm="6" lg="3" xl="3">
+                            <MudTextField ReadOnly="@ReadOnly"
+                                          Disabled="@Disabled"
+                                          Label="@field.Value.DisplayName"
+                                          Placeholder="@((field.Value.IsPassword && field.Value.HasValue) ? "******" : null)"
+                                          InputType="@(field.Value.IsPassword? InputType.Password: InputType.Text)"
+                                          @bind-Value="this.TheItem.CustomFields[field.Key].Value" />
+                        </MudItem>
+                    }
+                }
+            </MudGrid>
+        </MudTabPanel>
 
-        <MudItem xs="12" sm="6" lg="4" xl="4">
-            <MudTextField ReadOnly="@ReadOnly"
-                          Disabled="@Disabled"
-                          OnlyValidateIfDirty="true"
-                          Label="@Loc["Longitude"]"
-                          @bind-Value="TheItem.Longitude"
-                          For="@(() => TheItem.Longitude)" />
-        </MudItem>
+        <MudTabPanel Text="@Loc["Presentation"]" Icon="@Icons.Material.Filled.Public">
+            <MudGrid >
+                <MudItem xs="12" sm="12" lg="12" xl="12">
+                    <LocalizedTextField @bind-Value="TheItem.DisplayName" Label="@Loc["Display Name"]" For="() => TheItem.DisplayName" />
+                </MudItem>
 
-        <MudItem xs="12" sm="12" lg="12" xl="12">
-            <FileUploader ShowThumbnail="true"
-                          Label="@Loc["Photos"]"
-                          For="() => TheItem.Photos"
-                          AcceptImages="true"
-                          @bind-Values="TheItem.Photos" />
-        </MudItem>
-
-        <MudItem xs="12" sm="12" lg="12" xl="12">
-            <FileUploader ShowThumbnail="true"
-                          Label="@Loc["Mobile Photos"]"
-                          For="() => TheItem.MobilePhotos"
-                          AcceptImages="true"
-                          @bind-Values="TheItem.MobilePhotos" />
-        </MudItem>
-
-        @if (this.TheItem.CustomFields is not null && this.TheItem.CustomFields?.Count > 0)
-        {
-            @foreach (var field in this.TheItem.CustomFields)
-            {
-                <MudItem xs="12" sm="6" lg="3" xl="3">
+                <MudItem xs="12" sm="6" lg="4" xl="4">
                     <MudTextField ReadOnly="@ReadOnly"
                                   Disabled="@Disabled"
-                                  Label="@field.Value.DisplayName"
-                                  Placeholder="@((field.Value.IsPassword && field.Value.HasValue)?"******":null)"
-                                  InputType="@(field.Value.IsPassword?InputType.Password:InputType.Text)"
-                                  @bind-Value="this.TheItem.CustomFields[field.Key].Value" />
+                                  OnlyValidateIfDirty="true"
+                                  Label="@Loc["Phone"]"
+                                  @bind-Value="TheItem.Phone"
+                                  For="@(() => TheItem.Phone)" />
                 </MudItem>
-            }
-        }
-    </MudGrid>
+
+                <MudItem xs="12" sm="6" lg="4" xl="4">
+                    <MudTextField ReadOnly="@ReadOnly"
+                                  Disabled="@Disabled"
+                                  OnlyValidateIfDirty="true"
+                                  Label="@Loc["Short Phone"]"
+                                  @bind-Value="TheItem.ShortPhone"
+                                  For="@(() => TheItem.ShortPhone)" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6" lg="4" xl="4">
+                    <MudTextField ReadOnly="@ReadOnly"
+                                  Disabled="@Disabled"
+                                  OnlyValidateIfDirty="true"
+                                  Label="@Loc["HQ Email"]"
+                                  @bind-Value="TheItem.Email"
+                                  For="@(() => TheItem.Email)" />
+                </MudItem>
+
+                <MudItem xs="12" sm="12" lg="12" xl="12">
+                    <LocalizedTextField @bind-Value="TheItem.WorkingHours" Label="@Loc["Standard Working Hours"]" For="() => TheItem.WorkingHours" />
+                </MudItem>
+
+                <MudItem xs="12" sm="12" lg="12" xl="12">
+                    <LocalizedTextField @bind-Value="TheItem.WorkingDays" Label="@Loc["Standard Working Day"]" For="() => TheItem.WorkingDays" />
+                </MudItem>
+                <MudItem lg="12" md="12" sm="12" xs="12" Class="">
+                    <MudCard Elevation="2">
+                        <MudCardHeader Class="pt-3 pb-3" Style="background: #efefef; border-bottom: 1px solid #e3e3e3;">
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.subtitle2">@Loc["Phone Numbers"]</MudText>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+
+                        <MudCardContent Class="pt-5 pb-5">
+                            <MudGrid Spacing="3" Justify="Justify.Center">
+                                @foreach (var line in TheItem.Phones)
+                                {
+                                    <MudItem lg="11" md="11" sm="11" xs="11">
+                                        <MudGrid Spacing="3" Style="align-items: baseline;">
+                                            <MudItem Class="pt-1 pb-1" lg="6" md="6" sm="6" xs="6">
+                                                <MudTextFieldExtended Label="@Loc["Phone"]"
+                                                                      @bind-Value="line.Text"
+                                                                      For="() => line.Text" />
+                                            </MudItem>
+
+                                            <MudItem Class="pt-1 pb-1" lg="6" md="6" sm="6" xs="6">
+                                                <MudSelectExtended OnlyValidateIfDirty="true"
+                                                                   Label="@Loc["Tag"]"
+                                                                   @bind-Value="line.Tag"
+                                                                   For="@(() => line.Tag)">
+                                                    @foreach (var tag in this.Options.CompanyBranchPhoneTags)
+                                                    {
+                                                        <MudSelectItem Value="@tag" T="string">@tag</MudSelectItem>
+                                                    }
+                                                </MudSelectExtended>
+                                            </MudItem>
+                                        </MudGrid>
+                                    </MudItem>
+
+                                    @if (Mode > FormModes.Archive)
+                                    {
+                                        <MudItem lg="1" md="1" sm="1" xs="1">
+                                            <MudIconButton ButtonType="ButtonType.Button"
+                                                           Style="margin:10px;"
+                                                           Variant="Variant.Outlined"
+                                                           Color="Color.Error"
+                                                           Size="Size.Small"
+                                                           OnClick="@(() => TheItem.Phones.Remove(line))"
+                                                           Icon="@Icons.Material.Filled.Delete" />
+                                        </MudItem>
+                                    }
+                                }
+
+                                @if (Mode > FormModes.Archive)
+                                {
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="Color.Info"
+                                               Style="margin:auto; margin-top:15px;"
+                                               Size="Size.Small"
+                                               OnClick="@(() => TheItem.Phones.Add(new()))"
+                                               StartIcon="@Icons.Material.Filled.Add">
+                                        @Loc["Add a Phone Number"]
+                                    </MudButton>
+                                }
+                            </MudGrid>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
+                <MudItem lg="12" md="12" sm="12" xs="12" Class="">
+                    <MudCard Elevation="2">
+                        <MudCardHeader Class="pt-3 pb-3" Style="background: #efefef; border-bottom: 1px solid #e3e3e3;">
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.subtitle2">@Loc["Email Addresses"]</MudText>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+
+                        <MudCardContent Class="pt-5 pb-5">
+                            <MudGrid Spacing="3" Justify="Justify.Center">
+                                @foreach (var line in TheItem.Emails)
+                                {
+                                    <MudItem lg="11" md="11" sm="11" xs="11">
+                                        <MudGrid Spacing="3" Style="align-items: baseline;">
+                                            <MudItem Class="pt-1 pb-1" lg="6" md="6" sm="6" xs="6">
+                                                <MudTextFieldExtended Label="@Loc["Email"]"
+                                                                      @bind-Value="line.Text"
+                                                                      For="() => line.Text" />
+                                            </MudItem>
+
+                                            <MudItem Class="pt-1 pb-1" lg="6" md="6" sm="6" xs="6">
+                                                <MudSelectExtended OnlyValidateIfDirty="true"
+                                                                   Label="@Loc["Tag"]"
+                                                                   @bind-Value="line.Tag"
+                                                                   For="@(() => line.Tag)">
+                                                    @foreach (var tag in this.Options.CompanyBranchEmailTags)
+                                                    {
+                                                        <MudSelectItem Value="@tag" T="string">@tag</MudSelectItem>
+                                                    }
+                                                </MudSelectExtended>
+                                            </MudItem>
+                                        </MudGrid>
+                                    </MudItem>
+
+                                    @if (Mode > FormModes.Archive)
+                                    {
+                                        <MudItem lg="1" md="1" sm="1" xs="1">
+                                            <MudIconButton ButtonType="ButtonType.Button"
+                                                           Style="margin:10px;"
+                                                           Variant="Variant.Outlined"
+                                                           Color="Color.Error"
+                                                           Size="Size.Small"
+                                                           OnClick="@(() => TheItem.Emails.Remove(line))"
+                                                           Icon="@Icons.Material.Filled.Delete" />
+                                        </MudItem>
+                                    }
+                                }
+
+                                @if (Mode > FormModes.Archive)
+                                {
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="Color.Info"
+                                               Style="margin:auto; margin-top:15px;"
+                                               Size="Size.Small"
+                                               OnClick="@(() => TheItem.Emails.Add(new()))"
+                                               StartIcon="@Icons.Material.Filled.Add">
+                                        @Loc["Add an Email"]
+                                    </MudButton>
+                                }
+                            </MudGrid>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                <MudItem xs="12" sm="12" lg="12" xl="12">
+                    <LocalizedTextField @bind-Value="TheItem.Address" Label="@Loc["Address"]" For="() => TheItem.Address" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6" lg="4" xl="4">
+                    <MudTextField ReadOnly="@ReadOnly"
+                                  Disabled="@Disabled"
+                                  OnlyValidateIfDirty="true"
+                                  Label="@Loc["Latitude"]"
+                                  @bind-Value="TheItem.Latitude"
+                                  For="@(() => TheItem.Latitude)" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6" lg="4" xl="4">
+                    <MudTextField ReadOnly="@ReadOnly"
+                                  Disabled="@Disabled"
+                                  OnlyValidateIfDirty="true"
+                                  Label="@Loc["Longitude"]"
+                                  @bind-Value="TheItem.Longitude"
+                                  For="@(() => TheItem.Longitude)" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6" lg="4" xl="4">
+                    <MudSelectExtended 
+                        T="PublishTarget"
+                        ReadOnly="@ReadOnly"
+                        Disabled="@Disabled"
+                        OnlyValidateIfDirty="true"
+                        Label="@Loc["Publish Targets"]"
+                        @bind-SelectedValues="TheItem.PublishTargets"
+                        MultiSelection="true"
+                        SelectAll
+                        SelectAllText="@Loc["Select All"]"
+                    >
+                        @foreach (var target in Enum.GetValues<PublishTarget>())
+                        {
+                            <MudSelectItem T="PublishTarget" Value="@(target)">@Loc[target.Describe()]</MudSelectItem>
+                        }
+                    </MudSelectExtended>
+                </MudItem>
+
+                <MudItem xs="12" sm="12" lg="12" xl="12">
+                    <FileUploader ShowThumbnail="true"
+                                  Label="@Loc["Photos"]"
+                                  For="() => TheItem.Photos"
+                                  AcceptImages="true"
+                                  @bind-Values="TheItem.Photos" />
+                </MudItem>
+
+                <MudItem xs="12" sm="12" lg="12" xl="12">
+                    <FileUploader ShowThumbnail="true"
+                                  Label="@Loc["Mobile Photos"]"
+                                  For="() => TheItem.MobilePhotos"
+                                  AcceptImages="true"
+                                  @bind-Values="TheItem.MobilePhotos" />
+                </MudItem>
+
+
+              
+            </MudGrid>
+
+        </MudTabPanel>
+    </MudTabs>
+    
 </ShiftEntityForm>
 
 @code {
+    private int _activeTabIndex = 0;
+
     protected override Task OnInitializedAsync()
     {
         this.SetCustomFiles();
@@ -368,6 +401,22 @@
         this.SetCustomFiles();
     }
 
+    private void OnInvalidSubmit(ShiftEvent<EditContext> ctx)
+    {
+        if (
+            ctx.Data.GetValidationMessages(new FieldIdentifier(TheItem, nameof(TheItem.Latitude))).Any() ||
+            ctx.Data.GetValidationMessages(new FieldIdentifier(TheItem, nameof(TheItem.Longitude))).Any()
+        )
+        {
+            _activeTabIndex = 1;
+        }
+        else
+        {
+            _activeTabIndex = 0;
+        }
+
+        StateHasChanged();
+    }
     private void SetCustomFiles()
     {
         // Only keep fields that are registred in Options

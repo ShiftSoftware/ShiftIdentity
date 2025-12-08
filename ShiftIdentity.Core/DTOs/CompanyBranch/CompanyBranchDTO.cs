@@ -1,9 +1,11 @@
 ﻿using FluentValidation;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
+using ShiftSoftware.ShiftEntity.Model.Enums;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
 using ShiftSoftware.ShiftIdentity.Core.Localization;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
@@ -54,6 +56,8 @@ public class CompanyBranchDTO : ShiftEntityViewAndUpsertDTO
     [BrandHashIdConverter]
     public List<ShiftEntitySelectDTO> Brands { get; set; } = new List<ShiftEntitySelectDTO>();
     public int? DisplayOrder { get; set; }
+    public string? DisplayName { get; set; } = default!;
+    public IEnumerable<PublishTarget>? PublishTargets { get; set; } = new HashSet<PublishTarget>();
 
     public CompanyBranchDTO()
     {
@@ -87,6 +91,12 @@ public class CompanyBranchValidator : AbstractValidator<CompanyBranchDTO>
         RuleFor(x => x.Longitude)
             .Custom((x, context) =>
             {
+                if(x is null && context.InstanceToValidate.PublishTargets is not null && context.InstanceToValidate.PublishTargets.Any())
+                {
+                    context.AddFailure(localizer["Please provide", localizer["Longitude"]]);
+                    return;
+                }
+
                 if (x is not null && !regex.IsMatch(x.ToString()))
                 {
                     context.AddFailure(localizer["Longitude must be a decimal"]);
@@ -97,11 +107,17 @@ public class CompanyBranchValidator : AbstractValidator<CompanyBranchDTO>
                 if (x is not null && longitude > 180 || longitude < -180)
                     context.AddFailure(localizer["Longitude must be between -180 and 180"]);
             })
-            .When(x => x.Longitude is not null);
+            .When(x => x.Longitude is not null || (x.PublishTargets is not null && x.PublishTargets.Any()));
 
         RuleFor(x => x.Latitude)
             .Custom((x, context) =>
             {
+                if (x is null && context.InstanceToValidate.PublishTargets is not null && context.InstanceToValidate.PublishTargets.Any())
+                {
+                    context.AddFailure(localizer["Please provide", localizer["Latitude"]]);
+                    return;
+                }
+
                 if (x is not null && !regex.IsMatch(x.ToString()))
                 {
                     context.AddFailure(localizer["Latitude must be a decimal"]);
@@ -112,7 +128,7 @@ public class CompanyBranchValidator : AbstractValidator<CompanyBranchDTO>
                 if (x is not null && latitude > 90 || latitude < -90)
                     context.AddFailure(localizer["Latitude must be between -90 and 90"]);
             })
-            .When(x => x.Latitude is not null);
-            
+            .When(x => x.Latitude is not null || (x.PublishTargets is not null && x.PublishTargets.Any()));
+           
     }
 }

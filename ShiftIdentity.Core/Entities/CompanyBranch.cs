@@ -1,7 +1,8 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
-using ShiftSoftware.ShiftEntity.Model.Flags;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
+using ShiftSoftware.ShiftEntity.Model.Enums;
+using ShiftSoftware.ShiftEntity.Model.Flags;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -51,6 +52,8 @@ public class CompanyBranch :
     public long? CompanyBranchID { get; set; }
 
     public int? DisplayOrder { get; set; }
+    public string? DisplayName { get; set; } = default!;
+    public List<PublishTarget>? PublishTargets { get; set; } = new();
 
     public CompanyBranch()
     {
