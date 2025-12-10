@@ -26,7 +26,9 @@
     <StringFilter Property="x => x.IntegrationId" Label="@Loc["Integration ID"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="3" md="6" sm="12" xs="12" />
     <ForeignFilter Property="x => x.Value" DTOType="typeof(DepartmentListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Department")" Label="@Loc["Departments"]" TProperty="string" T="ShiftEntitySelectDTO" CollectionPrefix="@(["Departments"])" lg="3" md="6" sm="12" xs="12" />
     <ForeignFilter Property="x => x.Value" DTOType="typeof(ServiceListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Service")" Label="@Loc["Services"]" TProperty="string" T="ShiftEntitySelectDTO" CollectionPrefix="@(["Services"])" lg="3" md="6" sm="12" xs="12" />
-    
+    <DateTimeFilter Property="x => x.TerminationDate" Label="@Loc["TerminationDate"]" Operator="ShiftBlazor.Enums.ODataOperator.Equal" lg="3" md="6" sm="12" xs="12" />
+    <DateTimeFilter Property="x => x.CompanyTerminationDate" Label="@Loc["Company TerminationDate"]" Operator="ShiftBlazor.Enums.ODataOperator.Equal" lg="3" md="6" sm="12" xs="12" />
+
     <PropertyColumn Title="@Loc["Name"]" Property="x => x.Name" />
     <PropertyColumn Title="@Loc["Short Code"]" Property="x => x.ShortCode" />
     <PropertyColumn Title="@Loc["City"]" Property="x => x.City" />
@@ -52,4 +54,5 @@
         </CellTemplate>
     </PropertyColumn>
     <PropertyColumn Property="x => x.TerminationDate" Format="yyyy-MM-dd" Title="@Loc["TerminationDate"]" />
+    <PropertyColumn Property="x => x.CompanyTerminationDate" Format="yyyy-MM-dd" Title="@Loc["Company TerminationDate"]" />
 </ShiftList>

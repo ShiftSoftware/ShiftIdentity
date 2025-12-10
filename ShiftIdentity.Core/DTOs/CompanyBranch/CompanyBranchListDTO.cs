@@ -19,6 +19,7 @@ public class CompanyBranchListDTO : ShiftEntityListDTO
     public string? IntegrationId { get; set; }
 
     public DateTime? TerminationDate { get; set; }
+    public DateTime? CompanyTerminationDate { get; set; }
 
     [CityHashIdConverter]
     public string? CityId { get; set; }
