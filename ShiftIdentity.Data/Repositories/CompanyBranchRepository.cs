@@ -143,8 +143,8 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             entity.Email = dto.Email;
             entity.Address = dto.Address;
 
-            entity.Longitude = dto.Longitude;
-            entity.Latitude = dto.Latitude;
+            entity.Longitude = dto.Longitude.ToString();
+            entity.Latitude = dto.Latitude.ToString();
             entity.Photos = JsonSerializer.Serialize(dto.Photos);
             entity.MobilePhotos = JsonSerializer.Serialize(dto.MobilePhotos);
             entity.WorkingHours = dto.WorkingHours;

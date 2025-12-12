@@ -33,6 +33,14 @@ public class CompanyBranch : Profile
                     opt => opt.MapFrom(src => src.CompanyBranchBrands.Select(y => new ShiftEntitySelectDTO { Value = y.BrandID.ToString()!, Text = y.Brand!.Name }))
                 )
             .ForMember(
+                dest => dest.Latitude,
+                opt => opt.MapFrom(src => string.IsNullOrWhiteSpace(src.Latitude) ? (decimal?)null : decimal.Parse(src.Latitude))
+            )
+            .ForMember(
+                dest => dest.Longitude,
+                opt => opt.MapFrom(src => string.IsNullOrWhiteSpace(src.Longitude) ? (decimal?)null : decimal.Parse(src.Longitude))
+            )
+            .ForMember(
                 dest => dest.CustomFields,
                 opt => opt.MapFrom(src => src.CustomFields == null ? null : src.CustomFields
                 .ToDictionary(x => x.Key, x =>

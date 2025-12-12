@@ -32,11 +32,13 @@
                  OnTaskFinished="OnTaskFinished"
                  TypeAuthAction="ShiftIdentityActions.Companies"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchDTO">
-    <MudTabs @bind-ActivePanelIndex="_activeTabIndex" Elevation="2" ApplyEffectsToContainer  KeepPanelsAlive  Position="Position.Top"  PanelClass="pa-4">
+    <MudTabs @bind-ActivePanelIndex="_activeTabIndex" Elevation="2" ApplyEffectsToContainer KeepPanelsAlive Position="Position.Top" PanelClass="pa-4">
         <MudTabPanel Text="@Loc["General"]" Icon="@Icons.Material.Filled.Settings">
             <MudGrid>
                 <MudItem xs="12" sm="12" lg="12" xl="12">
-                    <LocalizedTextField @bind-Value="TheItem.Name" Label="@Loc["Name"]" For="() => TheItem.Name" />
+                    <LocalizedTextField 
+                        @bind-Value="TheItem.Name" 
+                        Label="@Loc["Name"]" For="() => TheItem.Name" />
                 </MudItem>
 
                 <MudItem xs="12" sm="6" lg="4" xl="3">
@@ -45,7 +47,8 @@
                                   OnlyValidateIfDirty="true"
                                   Label="@Loc["Short Code"]"
                                   @bind-Value="TheItem.ShortCode"
-                                  For="@(() => TheItem.ShortCode)" />
+                                  For="@(() => TheItem.ShortCode)"
+                                 />
                 </MudItem>
 
                 <MudItem xs="12" sm="6" lg="4" xl="3">
@@ -54,7 +57,8 @@
                                   OnlyValidateIfDirty="true"
                                   Label="@Loc["Integration ID"]"
                                   @bind-Value="TheItem.IntegrationId"
-                                  For="@(() => TheItem.IntegrationId)" />
+                                  For="@(() => TheItem.IntegrationId)"
+                                  />
                 </MudItem>
 
                 <MudItem xs="12" sm="6" lg="4" xl="3">
@@ -62,7 +66,8 @@
                                        For="@(() => TheItem.Company)"
                                        @bind-Value="TheItem.Company"
                                        EntitySet="IdentityCompany"
-                                       TEntitySet="CompanyListDTO" />
+                                       TEntitySet="CompanyListDTO"
+                                        />
                 </MudItem>
 
                 @* <MudItem xs="12" sm="6" lg="4" xl="4">
@@ -80,10 +85,11 @@
                                        For="@(() => TheItem.City)"
                                        @bind-Value="TheItem.City"
                                        EntitySet="IdentityCity"
-                                       TEntitySet="CityListDTO" />
+                                       TEntitySet="CityListDTO"
+                                       />
                 </MudItem>
 
-              
+
 
                 <MudItem xs="12" sm="6" lg="4" xl="3">
                     <MudDatePickerExtended ReadOnly="@ReadOnly"
@@ -94,7 +100,7 @@
                                            For="@(() => TheItem.TerminationDate)" />
                 </MudItem>
 
-               
+
 
                 <MudItem xs="12" sm="12" lg="12" xl="12">
                     @* <ShiftAutocomplete Label="Departments"
@@ -108,7 +114,8 @@
                                        @bind-SelectedValues="TheItem.Departments"
                                        EntitySet="IdentityDepartment"
                                        MultiSelect
-                                       QuickAddParameterName="@nameof(DepartmentForm.DepartmentName)" />
+                                       QuickAddParameterName="@nameof(DepartmentForm.DepartmentName)"
+                                       />
 
                 </MudItem>
 
@@ -120,7 +127,8 @@
                                        TEntitySet="ServiceListDTO"
                                        EntitySet="IdentityService"
                                        MultiSelect
-                                       QuickAddParameterName="@nameof(ServiceForm.ServiceName)" />
+                                       QuickAddParameterName="@nameof(ServiceForm.ServiceName)" 
+                                    />
 
                 </MudItem>
 
@@ -131,10 +139,11 @@
                                        TEntitySet="BrandListDTO"
                                        EntitySet="IdentityBrand"
                                        MultiSelect
-                                       QuickAddParameterName="@nameof(BrandForm.BrandName)" />
+                                       QuickAddParameterName="@nameof(BrandForm.BrandName)" 
+                                    />
                 </MudItem>
 
-             
+
 
                 @if (this.TheItem.CustomFields is not null && this.TheItem.CustomFields?.Count > 0)
                 {
@@ -154,9 +163,64 @@
         </MudTabPanel>
 
         <MudTabPanel Text="@Loc["Presentation"]" Icon="@Icons.Material.Filled.Public">
-            <MudGrid >
+            <MudGrid>
+
+                <MudItem xs="12" sm="6" lg="4" xl="4">
+                    <MudSelectExtended T="PublishTarget"
+                                       ReadOnly="@ReadOnly"
+                                       Disabled="@Disabled"
+                                       OnlyValidateIfDirty="true"
+                                       Label="@Loc["Publish Targets"]"
+                                       @bind-SelectedValues="TheItem.PublishTargets"
+                                       MultiSelection="true"
+                                       SelectAll
+                                       Adornment="Adornment.Start"
+                                       AdornmentIcon="@Icons.Material.Filled.Publish"
+                                       SelectAllText="@Loc["Select All"]">
+                        @foreach (var target in Enum.GetValues<PublishTarget>())
+                        {
+                            <MudSelectItem T="PublishTarget" Value="@(target)">@Loc[target.Describe()]</MudSelectItem>
+                        }
+                    </MudSelectExtended>
+                </MudItem>
+
+                <MudItem xs="12" sm="6" lg="4" xl="4">
+                    <MudNumericFieldExtended ReadOnly="@ReadOnly"
+                                             Disabled="@Disabled"
+                                             Min="-90"
+                                             Max="90"
+                                             Step="0.000001M"
+                                             Format="F6"
+                                             Adornment="Adornment.Start"
+                                             AdornmentIcon="@Icons.Material.Filled.MyLocation"
+                                             OnlyValidateIfDirty="true"
+                                             Label="@Loc["Latitude"]"
+                                             @bind-Value="TheItem.Latitude"
+                                             For="@(() => TheItem.Latitude)" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6" lg="4" xl="4">
+                    <MudNumericFieldExtended ReadOnly="@ReadOnly"
+                                             Disabled="@Disabled"
+                                             OnlyValidateIfDirty="true"
+                                             Label="@Loc["Longitude"]"
+                                             @bind-Value="TheItem.Longitude"
+                                             For="@(() => TheItem.Longitude)"
+                                             Min="-180"
+                                             Max="180"
+                                             Step="0.000001M"
+                                             Format="F6"
+                                             Adornment="Adornment.Start"
+                                             AdornmentIcon="@Icons.Material.Filled.MyLocation"
+                                             />
+                </MudItem>
+
                 <MudItem xs="12" sm="12" lg="12" xl="12">
-                    <LocalizedTextField @bind-Value="TheItem.DisplayName" Label="@Loc["Display Name"]" For="() => TheItem.DisplayName" />
+                    <LocalizedTextField @bind-Value="TheItem.DisplayName"
+                                        Label="@Loc["Display Name"]"
+                                        For="() => TheItem.DisplayName"
+                                        Adornment="Adornment.Start"
+                                        AdornmentIcon="@Icons.Material.Filled.Title" />
                 </MudItem>
 
                 <MudItem xs="12" sm="6" lg="4" xl="4">
@@ -165,7 +229,9 @@
                                   OnlyValidateIfDirty="true"
                                   Label="@Loc["Phone"]"
                                   @bind-Value="TheItem.Phone"
-                                  For="@(() => TheItem.Phone)" />
+                                  For="@(() => TheItem.Phone)"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Phone" />
                 </MudItem>
 
                 <MudItem xs="12" sm="6" lg="4" xl="4">
@@ -174,7 +240,9 @@
                                   OnlyValidateIfDirty="true"
                                   Label="@Loc["Short Phone"]"
                                   @bind-Value="TheItem.ShortPhone"
-                                  For="@(() => TheItem.ShortPhone)" />
+                                  For="@(() => TheItem.ShortPhone)"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.SettingsPhone" />
                 </MudItem>
 
                 <MudItem xs="12" sm="6" lg="4" xl="4">
@@ -183,16 +251,36 @@
                                   OnlyValidateIfDirty="true"
                                   Label="@Loc["HQ Email"]"
                                   @bind-Value="TheItem.Email"
-                                  For="@(() => TheItem.Email)" />
+                                  For="@(() => TheItem.Email)"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Email" />
                 </MudItem>
 
                 <MudItem xs="12" sm="12" lg="12" xl="12">
-                    <LocalizedTextField @bind-Value="TheItem.WorkingHours" Label="@Loc["Standard Working Hours"]" For="() => TheItem.WorkingHours" />
+                    <LocalizedTextField @bind-Value="TheItem.WorkingHours" Label="@Loc["Standard Working Hours"]" For="() => TheItem.WorkingHours" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Schedule" />
                 </MudItem>
 
                 <MudItem xs="12" sm="12" lg="12" xl="12">
-                    <LocalizedTextField @bind-Value="TheItem.WorkingDays" Label="@Loc["Standard Working Day"]" For="() => TheItem.WorkingDays" />
+                    <LocalizedTextField @bind-Value="TheItem.WorkingDays" Label="@Loc["Standard Working Day"]" For="() => TheItem.WorkingDays" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.CalendarToday" />
                 </MudItem>
+
+                <MudItem xs="12" sm="12" lg="12" xl="12">
+                    <LocalizedTextField @bind-Value="TheItem.Address" Label="@Loc["Address"]" For="() => TheItem.Address" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.LocationOn" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6" lg="4" xl="4">
+                    <MudNumericFieldExtended ReadOnly="@ReadOnly"
+                                             Disabled="@Disabled"
+                                             OnlyValidateIfDirty="true"
+                                             Label="@Loc["Display Order"]"
+                                             @bind-Value="TheItem.DisplayOrder"
+                                             For="@(() => TheItem.DisplayOrder)"
+                                             Min="0"
+                                             Adornment="Adornment.Start"
+                                             AdornmentIcon="@Icons.Material.Filled.FormatListNumbered"
+                                             />
+                </MudItem>
+
                 <MudItem lg="12" md="12" sm="12" xs="12" Class="">
                     <MudCard Elevation="2">
                         <MudCardHeader Class="pt-3 pb-3" Style="background: #efefef; border-bottom: 1px solid #e3e3e3;">
@@ -210,14 +298,18 @@
                                             <MudItem Class="pt-1 pb-1" lg="6" md="6" sm="6" xs="6">
                                                 <MudTextFieldExtended Label="@Loc["Phone"]"
                                                                       @bind-Value="line.Text"
-                                                                      For="() => line.Text" />
+                                                                      For="() => line.Text"
+                                                                      Adornment="Adornment.Start"
+                                                                      AdornmentIcon="@Icons.Material.Filled.Phone" />
                                             </MudItem>
 
                                             <MudItem Class="pt-1 pb-1" lg="6" md="6" sm="6" xs="6">
                                                 <MudSelectExtended OnlyValidateIfDirty="true"
                                                                    Label="@Loc["Tag"]"
                                                                    @bind-Value="line.Tag"
-                                                                   For="@(() => line.Tag)">
+                                                                   For="@(() => line.Tag)"
+                                                                   Adornment="Adornment.Start"
+                                                                   AdornmentIcon="@Icons.Material.Filled.Tag">
                                                     @foreach (var tag in this.Options.CompanyBranchPhoneTags)
                                                     {
                                                         <MudSelectItem Value="@tag" T="string">@tag</MudSelectItem>
@@ -274,14 +366,18 @@
                                             <MudItem Class="pt-1 pb-1" lg="6" md="6" sm="6" xs="6">
                                                 <MudTextFieldExtended Label="@Loc["Email"]"
                                                                       @bind-Value="line.Text"
-                                                                      For="() => line.Text" />
+                                                                      For="() => line.Text"
+                                                                      Adornment="Adornment.Start"
+                                                                      AdornmentIcon="@Icons.Material.Filled.Email" />
                                             </MudItem>
 
                                             <MudItem Class="pt-1 pb-1" lg="6" md="6" sm="6" xs="6">
                                                 <MudSelectExtended OnlyValidateIfDirty="true"
                                                                    Label="@Loc["Tag"]"
                                                                    @bind-Value="line.Tag"
-                                                                   For="@(() => line.Tag)">
+                                                                   For="@(() => line.Tag)"
+                                                                   Adornment="Adornment.Start"
+                                                                   AdornmentIcon="@Icons.Material.Filled.Tag">
                                                     @foreach (var tag in this.Options.CompanyBranchEmailTags)
                                                     {
                                                         <MudSelectItem Value="@tag" T="string">@tag</MudSelectItem>
@@ -320,46 +416,6 @@
                         </MudCardContent>
                     </MudCard>
                 </MudItem>
-                <MudItem xs="12" sm="12" lg="12" xl="12">
-                    <LocalizedTextField @bind-Value="TheItem.Address" Label="@Loc["Address"]" For="() => TheItem.Address" />
-                </MudItem>
-
-                <MudItem xs="12" sm="6" lg="4" xl="4">
-                    <MudTextField ReadOnly="@ReadOnly"
-                                  Disabled="@Disabled"
-                                  OnlyValidateIfDirty="true"
-                                  Label="@Loc["Latitude"]"
-                                  @bind-Value="TheItem.Latitude"
-                                  For="@(() => TheItem.Latitude)" />
-                </MudItem>
-
-                <MudItem xs="12" sm="6" lg="4" xl="4">
-                    <MudTextField ReadOnly="@ReadOnly"
-                                  Disabled="@Disabled"
-                                  OnlyValidateIfDirty="true"
-                                  Label="@Loc["Longitude"]"
-                                  @bind-Value="TheItem.Longitude"
-                                  For="@(() => TheItem.Longitude)" />
-                </MudItem>
-
-                <MudItem xs="12" sm="6" lg="4" xl="4">
-                    <MudSelectExtended 
-                        T="PublishTarget"
-                        ReadOnly="@ReadOnly"
-                        Disabled="@Disabled"
-                        OnlyValidateIfDirty="true"
-                        Label="@Loc["Publish Targets"]"
-                        @bind-SelectedValues="TheItem.PublishTargets"
-                        MultiSelection="true"
-                        SelectAll
-                        SelectAllText="@Loc["Select All"]"
-                    >
-                        @foreach (var target in Enum.GetValues<PublishTarget>())
-                        {
-                            <MudSelectItem T="PublishTarget" Value="@(target)">@Loc[target.Describe()]</MudSelectItem>
-                        }
-                    </MudSelectExtended>
-                </MudItem>
 
                 <MudItem xs="12" sm="12" lg="12" xl="12">
                     <FileUploader ShowThumbnail="true"
@@ -378,12 +434,12 @@
                 </MudItem>
 
 
-              
+
             </MudGrid>
 
         </MudTabPanel>
     </MudTabs>
-    
+
 </ShiftEntityForm>
 
 @code {

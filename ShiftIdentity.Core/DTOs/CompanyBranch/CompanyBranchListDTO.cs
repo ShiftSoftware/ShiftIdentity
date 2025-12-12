@@ -1,5 +1,6 @@
 ﻿using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
+using ShiftSoftware.ShiftEntity.Model.Enums;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
 using System;
 using System.Collections.Generic;
@@ -15,6 +16,7 @@ public class CompanyBranchListDTO : ShiftEntityListDTO
 
     [JsonConverter(typeof(LocalizedTextJsonConverter))]
     public string? Name { get; set; }
+    public string? DisplayName { get; set; }
     public string? ShortCode { get; set; }
     public string? IntegrationId { get; set; }
 
@@ -45,6 +47,7 @@ public class CompanyBranchListDTO : ShiftEntityListDTO
     [ServiceHashIdConverter]
     public IEnumerable<ShiftEntitySelectDTO> Services { get; set; } = new List<ShiftEntitySelectDTO>();
 
+    public IEnumerable<PublishTarget>? PublishTargets { get; set; } = new HashSet<PublishTarget>();
 
     [BrandHashIdConverter]
     public List<ShiftEntitySelectDTO> Brands { get; set; } = new List<ShiftEntitySelectDTO>();
