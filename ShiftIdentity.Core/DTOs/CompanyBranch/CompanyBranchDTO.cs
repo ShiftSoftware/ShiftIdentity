@@ -69,7 +69,7 @@ public class CompanyBranchDTO : ShiftEntityViewAndUpsertDTO
 public class CompanyBranchValidator : AbstractValidator<CompanyBranchDTO>
 {
     public CompanyBranchValidator(ShiftIdentityLocalizer localizer)
-    {
+   {
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage(localizer["Please enter a name"]);
 
@@ -86,55 +86,33 @@ public class CompanyBranchValidator : AbstractValidator<CompanyBranchDTO>
         //            context.AddFailure(localizer["Invalid Phone Number"]);
         //    });
 
-        var pattern = @"^-?\d+(\.\d+)?$";
-        var regex = new Regex(pattern);
 
         RuleFor(x => x.Longitude)
-            .Custom((longitude, context) =>
-            {
-                if(!longitude.HasValue && context.InstanceToValidate.PublishTargets is not null && context.InstanceToValidate.PublishTargets.Any())
-                {
-                    context.AddFailure(localizer["Please provide", localizer["Longitude"]]);
-                    return;
-                }
-
-
-                if (longitude.HasValue)
-                {
-                    if (longitude > 180 || longitude < -180)
-                    {
-                        context.AddFailure(localizer["Longitude must be between -180 and 180"]);
-                        return;
-                    }
-                }
-            })
-            .When(x => x.Longitude is not null || (x.PublishTargets is not null && x.PublishTargets.Any()));
+            .NotNull()
+            .When(x => x.PublishTargets!.Any())
+            .WithMessage(localizer["Please provide", localizer["Longitude"]])
+            .NotEmpty()
+            .When(x => x.PublishTargets!.Any())
+            .WithMessage(localizer["Please provide", localizer["Longitude"]])
+            .ExclusiveBetween(-180, 180)
+            .When(x => x.Longitude.HasValue || x.PublishTargets!.Any())
+            .WithMessage(localizer["Longitude must be between -180 and 180"]);
+            
 
         RuleFor(x => x.Latitude)
-            .Custom((latitude, context) =>
-            {
-               if (!latitude.HasValue && context.InstanceToValidate.PublishTargets is not null && context.InstanceToValidate.PublishTargets.Any())
-                {
-                    context.AddFailure(localizer["Please provide", localizer["Latitude"]]);
-                    return;
-                }
-
-
-                if (latitude.HasValue)
-                {
-                  
-                    if (latitude > 90 || latitude < -90)
-                    {
-                        context.AddFailure(localizer["Latitude must be between -90 and 90"]);
-                        return;
-                    }
-                }
-            })
-            .When(x => x.Latitude is not null || (x.PublishTargets is not null && x.PublishTargets.Any()));
+            .NotNull()
+            .When(x => x.PublishTargets!.Any())
+            .WithMessage(localizer["Please provide", localizer["Longitude"]])
+            .NotEmpty()
+            .When(x => x.PublishTargets!.Any())
+            .WithMessage(localizer["Please provide", localizer["Latitude"]])
+            .ExclusiveBetween(-90, 90)
+            .When(x => x.Longitude.HasValue || x.PublishTargets!.Any())
+            .WithMessage(localizer["Latitude must be between -90 and 90"]);;
 
         RuleFor(x=> x.DisplayName)
             .NotEmpty()
-            .When(x=> x.PublishTargets is not null && x.PublishTargets.Any())
+            .When(x=> x.PublishTargets!.Any())
             .WithMessage(localizer["Please provide", localizer["Display Name"]]);
 
 
