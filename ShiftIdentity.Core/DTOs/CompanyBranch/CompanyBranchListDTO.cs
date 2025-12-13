@@ -16,6 +16,7 @@ public class CompanyBranchListDTO : ShiftEntityListDTO
 
     [JsonConverter(typeof(LocalizedTextJsonConverter))]
     public string? Name { get; set; }
+    [JsonConverter(typeof(LocalizedTextJsonConverter))]
     public string? DisplayName { get; set; }
     public string? ShortCode { get; set; }
     public string? IntegrationId { get; set; }
