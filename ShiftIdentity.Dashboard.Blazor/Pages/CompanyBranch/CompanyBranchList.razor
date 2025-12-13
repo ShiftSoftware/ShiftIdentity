@@ -67,6 +67,18 @@
             }
         </CellTemplate>
     </PropertyColumn>
+
+    <PropertyColumnExtended Title="@Loc["Publish Targets"]" Property="x => x.PublishTargets" Context="col">
+        <CellTemplate>
+            @if(col.Item.PublishTargets != null && col.Item.PublishTargets.Any()) 
+            {
+                @foreach (var target in col.Item!.PublishTargets)
+                {
+                    <MudChip Size="Size.Small" Color="Color.Primary">@target.Describe()</MudChip>
+                }
+            }
+        </CellTemplate>
+    </PropertyColumnExtended>
     <PropertyColumn Property="x => x.TerminationDate" Format="yyyy-MM-dd" Title="@Loc["TerminationDate"]" />
     <PropertyColumn Property="x => x.CompanyTerminationDate" Format="yyyy-MM-dd" Title="@Loc["Company TerminationDate"]" />
 </ShiftList>
