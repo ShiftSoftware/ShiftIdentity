@@ -187,6 +187,14 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             return base.DeleteAsync(entity, isHardDelete, userId, disableDefaultDataLevelAccess, disableGlobalFilters);
         }
 
+        public override ValueTask<IQueryable<CompanyBranchListDTO>> ApplyPostODataProcessing(IQueryable<CompanyBranchListDTO> queryable)
+        {
+            if (!queryable.HasWhereOnProperty(x => x.TerminationDate) && !queryable.HasWhereOnProperty(x => x.CompanyTerminationDate))
+                queryable = queryable.Where(x => x.TerminationDate == null && x.CompanyTerminationDate == null);
+
+            return new(queryable);
+        }
+
         public override Task<int> SaveChangesAsync()
         {
             if (shiftIdentityFeatureLocking.CompanyBranchFeatureIsLocked)

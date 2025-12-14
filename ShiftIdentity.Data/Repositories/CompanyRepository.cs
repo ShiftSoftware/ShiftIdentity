@@ -8,6 +8,7 @@ using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.ShiftIdentity.Core.Localization;
 using System.Net;
+using System.Linq;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
@@ -85,6 +86,14 @@ public class CompanyRepository : ShiftRepository<ShiftIdentityDbContext, Company
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
         return base.DeleteAsync(entity, isHardDelete, userId, disableDefaultDataLevelAccess, disableGlobalFilters);
+    }
+
+    public override ValueTask<IQueryable<CompanyListDTO>> ApplyPostODataProcessing(IQueryable<CompanyListDTO> queryable)
+    {
+        if(!queryable.HasWhereOnProperty(x => x.TerminationDate))
+            queryable = queryable.Where(x => x.TerminationDate == null);
+
+        return new (queryable);
     }
 
     public override Task<int> SaveChangesAsync()
