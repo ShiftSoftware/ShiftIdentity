@@ -22,11 +22,11 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.0" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.0" PrivateAssets="all" />
-		<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.1" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.1" PrivateAssets="all" />
+		<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.1" />
 		<PackageReference Include="ShiftSoftware.ShiftBlazor" Version="$(ShiftFrameworkVersion)" Condition="!Exists('..\..\ShiftBlazor\ShiftBlazor\ShiftBlazor.csproj')" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.0" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.1" />
 		<PackageReference Include="ShiftSoftware.TypeAuth.Blazor" Version="$(TypeAuthVersion)" Condition="!Exists('..\..\TypeAuth\TypeAuth.Blazor\TypeAuth.Blazor.csproj')" />
 	</ItemGroup>
 
