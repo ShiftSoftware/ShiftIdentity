@@ -38,7 +38,7 @@ internal class IdentityLocalStorageService : IIdentityStore
         if (tokenDto == null || string.IsNullOrWhiteSpace(tokenDto.Token))
             return null;
 
-        if (JwtUtils.IsExpired(tokenDto.Token, 5)) // 5 seconds early refresh
+        if (JwtUtils.IsExpired(tokenDto.Token, 10)) // 10 seconds early refresh
         {
             tokenDto = await tokenRefreshService.RefreshTokenAsync(tokenDto.RefreshToken);
             if (tokenDto is not null)
