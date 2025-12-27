@@ -1,7 +1,10 @@
 ﻿using Blazored.LocalStorage;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using ShiftSoftware.ShiftIdentity.Blazor.Handlers;
 using ShiftSoftware.ShiftIdentity.Blazor.Providers;
 using ShiftSoftware.ShiftIdentity.Blazor.Services;
@@ -25,7 +28,15 @@ public static class IServiceCollectionExtensions
         services.TryAddScoped<CodeVerifierService>();
         services.TryAddScoped<ShiftIdentityService>();
         services.TryAddScoped<IShiftIdentityProvider, ShiftIdentityProvider>();
+
+        // Register a dedicated HttpClient for HttpMessageHandlerService to avoid DI loop
+        services.AddScoped<ShiftIdentityHttpClient>(sp =>
+        {
+            var options = sp.GetRequiredService<ShiftIdentityBlazorOptions>();
+            return new ShiftIdentityHttpClient { BaseAddress = new Uri(options.BaseUrl) };
+        });
         services.TryAddScoped<HttpMessageHandlerService>();
+
         services.AddTransient<TokenMessageHandlerWithAutoRefresh>();
         services.TryAddScoped<IIdentityStore, IdentityLocalStorageService>();
         services.AddScoped<MessageService>();
@@ -40,7 +51,6 @@ public static class IServiceCollectionExtensions
             services.AddTransient(x => new ShiftIdentityLocalizer(x, typeof(Resource)));
         else
             services.AddTransient(x => new ShiftIdentityLocalizer(x, localizationResource));
-
 
         return services;
     }

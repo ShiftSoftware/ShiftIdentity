@@ -20,6 +20,7 @@ public class HttpMessageHandlerService
         ShiftIdentityBlazorOptions options,
         IIdentityStore tokenStore,
         MessageService messageService,
+        ShiftIdentityHttpClient httpClient, // Use the dedicated type
         AuthenticationStateProvider? authStateProvider = null)
     {
         this.authStateProvider = authStateProvider;
@@ -27,7 +28,7 @@ public class HttpMessageHandlerService
         this.options = options;
         this.tokenStore = tokenStore;
         this.messageService = messageService;
-        http = new HttpClient() { BaseAddress = new Uri(options.BaseUrl) };
+        this.http = httpClient;
     }
 
     public async Task<bool?> RefreshAsync()
