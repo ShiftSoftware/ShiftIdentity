@@ -28,6 +28,7 @@ public static class IServiceCollectionExtensions
         services.TryAddScoped<CodeVerifierService>();
         services.TryAddScoped<ShiftIdentityService>();
         services.TryAddScoped<IShiftIdentityProvider, ShiftIdentityProvider>();
+        services.TryAddScoped<TokenRefreshService>();
 
         // Register a dedicated HttpClient for HttpMessageHandlerService to avoid DI loop
         services.AddScoped<ShiftIdentityHttpClient>(sp =>

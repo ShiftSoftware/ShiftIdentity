@@ -13,14 +13,14 @@ public class HttpMessageHandlerService
     private readonly ShiftIdentityBlazorOptions options;
     private readonly IIdentityStore tokenStore;
     private readonly MessageService messageService;
-    private readonly HttpClient http;
+    private readonly TokenRefreshService tokenRefreshService;
 
     public HttpMessageHandlerService(
         NavigationManager navManager,
         ShiftIdentityBlazorOptions options,
         IIdentityStore tokenStore,
         MessageService messageService,
-        ShiftIdentityHttpClient httpClient, // Use the dedicated type
+        TokenRefreshService tokenRefreshService,
         AuthenticationStateProvider? authStateProvider = null)
     {
         this.authStateProvider = authStateProvider;
@@ -28,34 +28,24 @@ public class HttpMessageHandlerService
         this.options = options;
         this.tokenStore = tokenStore;
         this.messageService = messageService;
-        this.http = httpClient;
+        this.tokenRefreshService = tokenRefreshService;
     }
 
     public async Task<bool?> RefreshAsync()
     {
         var storedToken = await tokenStore.GetTokenAsync();
 
-        var headerToken = http.DefaultRequestHeaders?.Authorization?.Parameter;
-
-        if (headerToken is not null && headerToken != storedToken?.Token)
-        {
-            await NofityChanges();
-            return null;
-        }
-
         if (storedToken is null)
             return null;
 
         var refreshToken = storedToken.RefreshToken;
 
-        using var response =await http.PostAsJsonAsync<RefreshDTO>("auth/" + "Refresh", new RefreshDTO { RefreshToken = refreshToken });
+        var result = await tokenRefreshService.RefreshTokenAsync(refreshToken);
 
-        if (response.IsSuccessStatusCode)
+        if (result is not null)
         {
-            var result = await response.Content.ReadFromJsonAsync<ShiftEntityResponse<TokenDTO>>();
-
             //Store new token
-            await tokenStore.StoreTokenAsync(result?.Entity!);
+            await tokenStore.StoreTokenAsync(result);
 
             //Remove warning message if exists
             await messageService.RemoveWarningMessageAsync();
