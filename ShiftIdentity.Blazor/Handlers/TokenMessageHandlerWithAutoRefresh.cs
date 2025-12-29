@@ -32,7 +32,7 @@ public class TokenMessageHandlerWithAutoRefresh : DelegatingHandler
                 var success = await httpMessageHandlerService.RefreshAsync();
 
                 if (!success.GetValueOrDefault())
-                    throw new AuthenticationException("Token refresh failed.");
+                    throw new InvalidOperationException("Token refresh failed.");
             });
 
         _policy = Policy
@@ -43,7 +43,7 @@ public class TokenMessageHandlerWithAutoRefresh : DelegatingHandler
                 var success = await httpMessageHandlerService.RefreshAsync();
 
                 if (!success.GetValueOrDefault())
-                    throw new AuthenticationException("Token refresh failed.");
+                    throw new InvalidOperationException("Token refresh failed.");
             });
     }
 
