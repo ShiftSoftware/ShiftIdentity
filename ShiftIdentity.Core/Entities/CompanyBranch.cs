@@ -53,6 +53,8 @@ public class CompanyBranch :
 
     public int? DisplayOrder { get; set; }
     public string? DisplayName { get; set; } = default!;
+    public string? Description { get; set; }
+    public string? WebsiteURL { get; set; }
     public List<PublishTarget>? PublishTargets { get; set; } = new();
 
     public CompanyBranch()

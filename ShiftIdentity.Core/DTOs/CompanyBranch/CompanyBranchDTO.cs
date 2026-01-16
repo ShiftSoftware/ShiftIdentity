@@ -58,6 +58,8 @@ public class CompanyBranchDTO : ShiftEntityViewAndUpsertDTO
     public List<ShiftEntitySelectDTO> Brands { get; set; } = new List<ShiftEntitySelectDTO>();
     public int? DisplayOrder { get; set; }
     public string? DisplayName { get; set; } = default!;
+    public string? Description { get; set; }
+    public string? WebsiteURL { get; set; }
     public IEnumerable<PublishTarget>? PublishTargets { get; set; } = new HashSet<PublishTarget>();
 
     public CompanyBranchDTO()
@@ -115,6 +117,14 @@ public class CompanyBranchValidator : AbstractValidator<CompanyBranchDTO>
             .When(x=> x.PublishTargets!.Any())
             .WithMessage(localizer["Please provide", localizer["Display Name"]]);
 
+        RuleFor(x => x.Description)
+          .NotEmpty()
+          .When(x => x.PublishTargets!.Any())
+          .WithMessage(localizer["Please provide", localizer["Description"]]);
 
+        RuleFor(x => x.WebsiteURL)
+         .Must(x => Uri.IsWellFormedUriString(x, UriKind.Absolute))
+         .When(x=> !string.IsNullOrWhiteSpace(x.WebsiteURL))
+         .WithMessage(localizer["URL is not valid."]);
     }
 }

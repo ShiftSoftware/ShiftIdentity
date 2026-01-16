@@ -36,9 +36,8 @@
         <MudTabPanel Text="@Loc["General"]" Icon="@Icons.Material.Filled.Settings">
             <MudGrid>
                 <MudItem xs="12" sm="12" lg="12" xl="12">
-                    <LocalizedTextField 
-                        @bind-Value="TheItem.Name" 
-                        Label="@Loc["Name"]" For="() => TheItem.Name" />
+                    <LocalizedTextField @bind-Value="TheItem.Name"
+                                        Label="@Loc["Name"]" For="() => TheItem.Name" />
                 </MudItem>
 
                 <MudItem xs="12" sm="6" lg="4" xl="3">
@@ -47,8 +46,7 @@
                                   OnlyValidateIfDirty="true"
                                   Label="@Loc["Short Code"]"
                                   @bind-Value="TheItem.ShortCode"
-                                  For="@(() => TheItem.ShortCode)"
-                                 />
+                                  For="@(() => TheItem.ShortCode)" />
                 </MudItem>
 
                 <MudItem xs="12" sm="6" lg="4" xl="3">
@@ -57,8 +55,7 @@
                                   OnlyValidateIfDirty="true"
                                   Label="@Loc["Integration ID"]"
                                   @bind-Value="TheItem.IntegrationId"
-                                  For="@(() => TheItem.IntegrationId)"
-                                  />
+                                  For="@(() => TheItem.IntegrationId)" />
                 </MudItem>
 
                 <MudItem xs="12" sm="6" lg="4" xl="3">
@@ -66,8 +63,7 @@
                                        For="@(() => TheItem.Company)"
                                        @bind-Value="TheItem.Company"
                                        EntitySet="IdentityCompany"
-                                       TEntitySet="CompanyListDTO"
-                                        />
+                                       TEntitySet="CompanyListDTO" />
                 </MudItem>
 
                 @* <MudItem xs="12" sm="6" lg="4" xl="4">
@@ -85,8 +81,7 @@
                                        For="@(() => TheItem.City)"
                                        @bind-Value="TheItem.City"
                                        EntitySet="IdentityCity"
-                                       TEntitySet="CityListDTO"
-                                       />
+                                       TEntitySet="CityListDTO" />
                 </MudItem>
 
 
@@ -114,8 +109,7 @@
                                        @bind-SelectedValues="TheItem.Departments"
                                        EntitySet="IdentityDepartment"
                                        MultiSelect
-                                       QuickAddParameterName="@nameof(DepartmentForm.DepartmentName)"
-                                       />
+                                       QuickAddParameterName="@nameof(DepartmentForm.DepartmentName)" />
 
                 </MudItem>
 
@@ -127,8 +121,7 @@
                                        TEntitySet="ServiceListDTO"
                                        EntitySet="IdentityService"
                                        MultiSelect
-                                       QuickAddParameterName="@nameof(ServiceForm.ServiceName)" 
-                                    />
+                                       QuickAddParameterName="@nameof(ServiceForm.ServiceName)" />
 
                 </MudItem>
 
@@ -139,8 +132,7 @@
                                        TEntitySet="BrandListDTO"
                                        EntitySet="IdentityBrand"
                                        MultiSelect
-                                       QuickAddParameterName="@nameof(BrandForm.BrandName)" 
-                                    />
+                                       QuickAddParameterName="@nameof(BrandForm.BrandName)" />
                 </MudItem>
 
 
@@ -211,8 +203,7 @@
                                              Step="0.000001M"
                                              Format="F6"
                                              Adornment="Adornment.Start"
-                                             AdornmentIcon="@Icons.Material.Filled.MyLocation"
-                                             />
+                                             AdornmentIcon="@Icons.Material.Filled.MyLocation" />
                 </MudItem>
 
                 <MudItem xs="12" sm="12" lg="12" xl="12">
@@ -221,6 +212,15 @@
                                         For="() => TheItem.DisplayName"
                                         Adornment="Adornment.Start"
                                         AdornmentIcon="@Icons.Material.Filled.Title" />
+                </MudItem>
+
+                 <MudItem xs="12" >
+                    <LocalizedTextField OnlyValidateIfDirty="true"
+                                        Label="@Loc["Description"]"
+                                        @bind-Value="TheItem.Description"
+                                        For="@(() => TheItem.Description)"
+                                        Adornment="Adornment.Start"
+                                        AdornmentIcon="@Icons.Material.Filled.Description" />
                 </MudItem>
 
                 <MudItem xs="12" sm="6" lg="4" xl="4">
@@ -277,8 +277,20 @@
                                              For="@(() => TheItem.DisplayOrder)"
                                              Min="0"
                                              Adornment="Adornment.Start"
-                                             AdornmentIcon="@Icons.Material.Filled.FormatListNumbered"
-                                             />
+                                             AdornmentIcon="@Icons.Material.Filled.FormatListNumbered" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6" lg="4" xl="4">
+                    <MudTextFieldExtended ReadOnly="@ReadOnly"
+                                          Disabled="@Disabled"
+                                          InputMode="InputMode.url"
+                                          InputType="InputType.Url"
+                                          OnlyValidateIfDirty="true"
+                                          Label="@Loc["Website URL"]"
+                                          @bind-Value="TheItem.WebsiteURL"
+                                          For="@(() => TheItem.WebsiteURL)"
+                                          Adornment="Adornment.Start"
+                                          AdornmentIcon="@Icons.Material.Filled.Link" />
                 </MudItem>
 
                 <MudItem lg="12" md="12" sm="12" xs="12" Class="">
