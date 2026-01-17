@@ -280,19 +280,6 @@
                                              AdornmentIcon="@Icons.Material.Filled.FormatListNumbered" />
                 </MudItem>
 
-                <MudItem xs="12" sm="6" lg="4" xl="4">
-                    <MudTextFieldExtended ReadOnly="@ReadOnly"
-                                          Disabled="@Disabled"
-                                          InputMode="InputMode.url"
-                                          InputType="InputType.Url"
-                                          OnlyValidateIfDirty="true"
-                                          Label="@Loc["Website URL"]"
-                                          @bind-Value="TheItem.WebsiteURL"
-                                          For="@(() => TheItem.WebsiteURL)"
-                                          Adornment="Adornment.Start"
-                                          AdornmentIcon="@Icons.Material.Filled.Link" />
-                </MudItem>
-
                 <MudItem lg="12" md="12" sm="12" xs="12" Class="">
                     <MudCard Elevation="2">
                         <MudCardHeader Class="pt-3 pb-3" Style="background: #efefef; border-bottom: 1px solid #e3e3e3;">
