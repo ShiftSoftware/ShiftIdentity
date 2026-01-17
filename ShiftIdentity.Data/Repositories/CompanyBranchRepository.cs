@@ -151,6 +151,8 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             entity.WorkingDays = dto.WorkingDays;
             entity.DisplayName = dto.DisplayName;
             entity.DisplayOrder = dto.DisplayOrder;
+            entity.Description = dto.Description;
+            entity.WebsiteURL = dto.WebsiteURL;
             entity.PublishTargets = dto.PublishTargets?.ToList();
             //ef core may not set the entity state as Modified if only the collections are changed (CompanyBranchDepartments, CompanyBranchServices)
             if (actionType == ActionTypes.Update)
