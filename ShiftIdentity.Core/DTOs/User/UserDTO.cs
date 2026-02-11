@@ -48,6 +48,8 @@ public class UserDTO : ShiftEntityViewAndUpsertDTO
 
     #endregion
 
+    public string? IntegrationId { get; set; }
+
     [AccessTreeHashIdConverter]
     public IEnumerable<ShiftEntitySelectDTO> AccessTrees { get; set; }
 

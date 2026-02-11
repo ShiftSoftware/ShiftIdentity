@@ -21,6 +21,8 @@ public class User : ShiftEntity<User>,
     [MaxLength(255)]
     public string Username { get; set; } = default!;
 
+    public string? IntegrationId { get; set; }
+
     public byte[] PasswordHash { get; set; } = default!;
 
     public byte[] Salt { get; set; } = default!;

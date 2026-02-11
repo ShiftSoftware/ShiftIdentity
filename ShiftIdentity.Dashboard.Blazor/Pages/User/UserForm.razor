@@ -40,6 +40,13 @@
                   @bind-Value="TheItem.Username"
                   For="@(() => TheItem.Username)" />
 
+    <MudTextField ReadOnly="@ReadOnly"
+                  Disabled="@Disabled"
+                  OnlyValidateIfDirty="true"
+                  Label="@Loc["Integration Id"]"
+                  @bind-Value="TheItem.IntegrationId"
+                  For="@(() => TheItem.IntegrationId)" />
+
     <MudTextField InputType="@passwordInputType"
                   ReadOnly="@ReadOnly"
                   Disabled="@Disabled"

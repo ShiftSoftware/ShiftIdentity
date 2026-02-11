@@ -53,6 +53,7 @@ namespace ShiftSoftware.ShiftIdentity.Data
             b.Entity<User>(x =>
             {
                 x.HasIndex(x => x.Username).IsUnique().HasFilter($"{nameof(User.IsDeleted)} = 0");
+                x.HasIndex(x => x.IntegrationId).IsUnique().HasFilter($"{nameof(User.IsDeleted)} = 0 AND {nameof(User.IntegrationId)} is not null");
                 x.HasIndex(x => x.Email).IsUnique().HasFilter($"{nameof(User.IsDeleted)} = 0 AND {nameof(User.Email)} is not null");
                 x.HasIndex(x => x.Phone).IsUnique().HasFilter($"{nameof(User.IsDeleted)} = 0 AND {nameof(User.Phone)} is not null");
             });

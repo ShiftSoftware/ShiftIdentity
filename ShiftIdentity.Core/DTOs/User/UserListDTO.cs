@@ -23,6 +23,7 @@ public class UserListDTO : ShiftEntityListDTO
 
     public string FullName { get; set; } = default!;
     public string Username { get; set; } = default!;
+    public string? IntegrationId { get; set; }
     public string? Phone { get; set; }
     public bool PhoneVerified { get; set; }
     public string? Email { get; set; }

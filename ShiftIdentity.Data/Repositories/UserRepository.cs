@@ -64,6 +64,13 @@ public class UserRepository :
         if (await db.Users.AnyAsync(x => !x.IsDeleted && x.Username.ToLower() == dto.Username.ToLower() && x.ID != id))
             throw new ShiftEntityException(new Message(Loc["Duplicate"], Loc["The username {0} exist", dto.Username]));
 
+        if (!string.IsNullOrWhiteSpace(dto.IntegrationId))
+        {
+            //Check if the username is duplicate
+            if (await db.Users.AnyAsync(x => !x.IsDeleted && x.IntegrationId != null && x.IntegrationId.ToLower() == dto.IntegrationId.ToLower() && x.ID != id))
+                throw new ShiftEntityException(new Message(Loc["Duplicate"], Loc["The Integration ID {0} already exists", dto.IntegrationId]));
+        }
+
         //Check if the email is duplicate
         dto.Email = dto.Email?.Trim();
         if (!string.IsNullOrWhiteSpace(dto.Email))
@@ -98,6 +105,7 @@ public class UserRepository :
         }
 
         entity.Username = dto.Username;
+        entity.IntegrationId = string.IsNullOrWhiteSpace(dto.IntegrationId) ? null : dto.IntegrationId;
         entity.IsActive = dto.IsActive;
         entity.Email = dto.Email;
         entity.FullName = dto.FullName;

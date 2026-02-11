@@ -89,6 +89,7 @@
 
         <StringFilter Property="x => x.FullName" Label="@Loc["Name"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" md="6" sm="12" xs="12" />
         <StringFilter Property="x => x.Username" Label="@Loc["Username"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" md="6" sm="12" xs="12" />
+        <StringFilter Property="x => x.IntegrationId" Label="@Loc["Integration Id"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" md="6" sm="12" xs="12" />
         <StringFilter Property="x => x.Phone" Label="@Loc["Phone"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" md="6" sm="12" xs="12" />
         <StringFilter Property="x => x.Email" Label="@Loc["Email"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" md="6" sm="12" xs="12" />
         <ForeignFilter AdditionalParameters='new() { ["GroupSelectedValues"] = false }' @ref="CompanyFilter" Property="x => x.CompanyID" Label="@Loc["Company"]" DTOType="typeof(CompanyListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Company")" lg="4" md="6" sm="12" xs="12" />
@@ -99,6 +100,7 @@
 
         <PropertyColumn Title="@Loc["Name"]" Property="x => x.FullName" />
         <PropertyColumn Title="@Loc["Username"]" Property="x => x.Username" />
+        <PropertyColumn Title="@Loc["Integration Id"]" Property="x => x.IntegrationId" />
         <PropertyColumn Title="@Loc["Phone"]" Property="x => x.Phone">
             <CellTemplate Context="cel">
                 <MudPaper Elevation="0" Class="d-flex align-items-center p-2">
