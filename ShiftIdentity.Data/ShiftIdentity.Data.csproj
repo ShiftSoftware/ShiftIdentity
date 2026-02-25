@@ -30,6 +30,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="ShiftSoftware.ShiftEntity.EFCore" Version="$(ShiftFrameworkVersion)" Condition="!Exists('..\..\ShiftEntity\ShiftEntity.EFCore\ShiftEntity.EFCore.csproj')" />
+		<PackageReference Include="Microsoft.Azure.Cosmos" Version="3.57.0" />
 	</ItemGroup>
 
 </Project>
