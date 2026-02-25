@@ -175,7 +175,7 @@ public class IdentityReferenceCosmosDataService<TCosmosClient>(
     {
         var resolver = IdValueResolvers.GetOrAdd(typeof(TModel), type =>
         {
-            var property = type.GetProperty("id", BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase)
+            var property = type.GetProperty("id", BindingFlags.Instance | BindingFlags.Public)
                 ?? type.GetProperty("ID", BindingFlags.Instance | BindingFlags.Public)
                 ?? type.GetProperty("Id", BindingFlags.Instance | BindingFlags.Public);
 
