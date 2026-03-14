@@ -19,6 +19,7 @@ public class ShiftIdentityActions
     public readonly static ReadWriteDeleteAction Services = new ReadWriteDeleteAction("Services");
     public readonly static ReadWriteDeleteAction Companies = new ReadWriteDeleteAction("Companies");
     public readonly static ReadWriteDeleteAction CompanyBranches = new ReadWriteDeleteAction("Company Branches");
+    public readonly static ReadWriteDeleteAction CompanyCalendars = new ReadWriteDeleteAction("Company Calendars");
 
     public readonly static BooleanAction PullLiveData = new BooleanAction("Pull Live Data");
 

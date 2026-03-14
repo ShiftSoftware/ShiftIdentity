@@ -14,4 +14,5 @@ public class ShiftIdentityFeatureLocking
     public bool AccessTreeFeatureIsLocked { get; set; }
     public bool UserFeatureIsLocked { get; set; }
     public bool TeamFeatureIsLocked { get; set; }
+    public bool CompanyCalendarFeatureIsLocked { get; set; }
 }

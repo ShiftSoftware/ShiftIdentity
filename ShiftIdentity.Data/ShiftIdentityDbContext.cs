@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
@@ -41,6 +42,8 @@ namespace ShiftSoftware.ShiftIdentity.Data
         public DbSet<TeamCompanyBranch> TeamCompanyBranches { get; set; }
         public DbSet<Brand> Brands { get; set; }
         public DbSet<Country> Countries { get; set; }
+        public DbSet<CompanyCalendar> CompanyCalendars { get; set; }
+        public DbSet<CompanyCalendarBranch> CompanyCalendarBranches { get; set; }
 
         protected override void OnModelCreating(ModelBuilder b)
         {
@@ -136,6 +139,36 @@ namespace ShiftSoftware.ShiftIdentity.Data
             {
                 x.Property(c => c.RegionID).HasComputedColumnSql(nameof(Region.ID));
                 x.HasIndex(c => c.DisplayOrder);
+            });
+
+            var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = null };
+
+            var shiftGroupsConverter = new ValueConverter<List<CompanyCalendarShiftGroup>, string>(
+                v => JsonSerializer.Serialize(v, jsonOptions),
+                v => JsonSerializer.Deserialize<List<CompanyCalendarShiftGroup>>(v, jsonOptions) ?? new List<CompanyCalendarShiftGroup>()
+            );
+
+            var weekendGroupsConverter = new ValueConverter<List<CompanyCalendarWeekendGroup>, string>(
+                v => JsonSerializer.Serialize(v, jsonOptions),
+                v => JsonSerializer.Deserialize<List<CompanyCalendarWeekendGroup>>(v, jsonOptions) ?? new List<CompanyCalendarWeekendGroup>()
+            );
+
+            b.Entity<CompanyCalendar>(x =>
+            {
+                x.Property(d => d.ShiftGroups)
+                    .HasConversion(shiftGroupsConverter)
+                    .HasColumnType("nvarchar(max)");
+
+                x.Property(d => d.WeekendGroups)
+                    .HasConversion(weekendGroupsConverter)
+                    .HasColumnType("nvarchar(max)");
+
+                x.HasMany(d => d.Branches)
+                    .WithOne(cb => cb.CompanyCalendar)
+                    .HasForeignKey(cb => cb.CompanyCalendarID)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                x.HasIndex(d => new { d.StartDate, d.EndDate, d.CompanyID, d.IsDeleted });
             });
         }
 

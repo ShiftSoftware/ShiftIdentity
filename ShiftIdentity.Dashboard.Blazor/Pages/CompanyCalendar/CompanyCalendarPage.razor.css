@@ -1,0 +1,32 @@
+::deep .work-event,
+::deep .work-event .fc-event-main {
+    background-color: #e0e0e0 !important;
+    color: #333 !important;
+    border: none !important;
+    font-size: 0.8rem;
+}
+
+::deep .weekend-event,
+::deep .weekend-event .fc-event-main {
+    background-color: #1976d2 !important;
+    color: #fff !important;
+    border: none !important;
+    font-size: 0.8rem;
+}
+
+::deep .holiday-event,
+::deep .holiday-event .fc-event-main {
+    background-color: #388e3c !important;
+    color: #fff !important;
+    border: none !important;
+    font-size: 0.8rem;
+}
+
+::deep .inactive-event,
+::deep .inactive-event .fc-event-main {
+    background-color: #d32f2f !important;
+    color: #fff !important;
+    border: none !important;
+    opacity: 0.6;
+    font-size: 0.8rem;
+}

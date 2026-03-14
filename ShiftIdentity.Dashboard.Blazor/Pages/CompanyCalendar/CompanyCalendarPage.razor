@@ -1,0 +1,58 @@
+@attribute [Authorize]
+@layout Shared.DefaultLayout
+@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CompanyCalendarPage)}")]
+@inject ShiftIdentityLocalizer Loc
+
+<MudPaper Elevation="0" Class="pa-4" Style="height: calc(100vh - 64px); display: flex; flex-direction: column;">
+
+    @* Filter Bar *@
+    <MudStack Row AlignItems="AlignItems.Center" Class="mb-3" Spacing="3">
+        <MudItem Style="min-width: 280px;">
+            <ShiftAutocomplete Label="@Loc["Company"]"
+                               TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Company.CompanyListDTO"
+                               EntitySet="@($"{Constants.IdentityRoutePreifix}Company")"
+                               Value="_selectedCompany"
+                               ValueChanged="OnCompanyChanged" />
+        </MudItem>
+
+        <MudItem Style="min-width: 280px;">
+            <ShiftAutocomplete Label="@Loc["Branch"]"
+                               TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO"
+                               EntitySet="@($"{Constants.IdentityRoutePreifix}CompanyBranch")"
+                               Disabled="_selectedCompany?.Value is null"
+                               Filter="x => x.Add(f => { f.Field = nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO.CompanyId); f.Value = _selectedCompany?.Value; })"
+                               Value="_selectedBranch"
+                               ValueChanged="OnBranchChanged" />
+        </MudItem>
+
+        <MudItem Style="min-width: 280px;">
+            <ShiftAutocomplete Label="@Loc["Department"]"
+                               TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentListDTO"
+                               EntitySet="@($"{Constants.IdentityRoutePreifix}Department")"
+                               Disabled="_selectedCompany?.Value is null"
+                               Value="_selectedDepartment"
+                               ValueChanged="OnDepartmentChanged" />
+        </MudItem>
+    </MudStack>
+
+    @* Calendar *@
+    <div style="flex: 1; position: relative; min-height: 0;">
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate Color="Color.Primary" Style="position: absolute; top: 0; left: 0; right: 0; z-index: 10;" />
+        }
+
+        @if (_selectedCompany?.Value is null)
+        {
+            <MudStack Justify="Justify.Center" AlignItems="AlignItems.Center" Style="height: 100%;">
+                <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Large" Color="Color.Default" />
+                <MudText Typo="Typo.h6" Color="Color.Default">@Loc["Select a company to view the calendar"]</MudText>
+            </MudStack>
+        }
+        else
+        {
+            <div id="fc-company-calendar" style="height: 100%;"></div>
+        }
+    </div>
+
+</MudPaper>

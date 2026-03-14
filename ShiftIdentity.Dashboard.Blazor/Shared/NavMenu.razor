@@ -10,6 +10,7 @@
 @using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.Brand
 @using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.Country
 @using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.Team
+@using Pages.CompanyCalendar
 
 @inject ShiftIdentityDashboardBlazorOptions ShiftIdentityDashboardBlazorOptions
 @inject ITypeAuthService TypeAuthService
@@ -55,6 +56,16 @@
                           Match="NavLinkMatch.All"
                           Icon="@Icons.Material.Outlined.AddBusiness"
                           TypeAuthAction="ShiftIdentityActions.CompanyBranches">@Loc["Branches"]</AuthorizedMudNavLink>
+
+    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(CompanyCalendarPage)}")"
+                          Match="NavLinkMatch.All"
+                          Icon="@Icons.Material.Outlined.CalendarMonth"
+                          TypeAuthAction="ShiftIdentityActions.CompanyCalendars">@Loc["Calendar"]</AuthorizedMudNavLink>
+
+    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(CompanyCalendarList)}")"
+                          Match="NavLinkMatch.All"
+                          Icon="@Icons.Material.Outlined.EditCalendar"
+                          TypeAuthAction="ShiftIdentityActions.CompanyCalendars">@Loc["Calendar Entries"]</AuthorizedMudNavLink>
 
     @if (ShiftIdentityDashboardBlazorOptions.ShiftIdentityHostingType == ShiftIdentityHostingTypes.External)
     {

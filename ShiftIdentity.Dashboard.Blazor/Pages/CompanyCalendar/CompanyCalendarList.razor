@@ -1,0 +1,31 @@
+@attribute [Authorize]
+@layout Shared.DefaultLayout
+@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CompanyCalendarList)}")]
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.Company
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyCalendar
+@inject ShiftIdentityLocalizer Loc
+
+<ShiftList EntitySet="@($"{Constants.IdentityRoutePreifix}CompanyCalendar")"
+           Title="@Loc["Company Calendar Entries"]"
+           T="CompanyCalendarListDTO"
+           Dense
+           ComponentType="typeof(CompanyCalendarForm)"
+           ShowIDColumn="true"
+           TypeAuthAction="ShiftIdentityActions.CompanyCalendars"
+           EnableExport>
+
+    <PropertyColumn Property="x => x.Title" Title="@Loc["Title"]" />
+    <PropertyColumn Property="x => x.EntryType" Title="@Loc["Type"]" />
+    <PropertyColumn Property="x => x.StartDate" Title="@Loc["Start Date"]" Format="yyyy-MM-dd" />
+    <PropertyColumn Property="x => x.EndDate" Title="@Loc["End Date"]" Format="yyyy-MM-dd" />
+    <PropertyColumn Property="x => x.Priority" Title="@Loc["Priority"]" />
+
+    <ForeignColumn Title="@Loc["Company"]"
+                   T="CompanyCalendarListDTO"
+                   Filterable="false"
+                   CellClass="whitespace-nowrap"
+                   TEntity="CompanyListDTO"
+                   EntitySet="@($"{Constants.IdentityRoutePreifix}Company")"
+                   TProperty="string"
+                   Property="x => x.CompanyID" />
+</ShiftList>
