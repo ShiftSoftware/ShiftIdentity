@@ -105,6 +105,24 @@ public class CalendarService
         DateTime dateCursor,
         long branchId)
     {
+        if (calendar.EntryType == CalendarEntryType.Holiday && calendar.ShiftGroups.Count == 0)
+        {
+            entries.Add(new CalendarEntryDTO
+            {
+                CalendarId = calendar.Id,
+                CalendarTitle = calendar.Title,
+                StartDate = dateCursor.Date,
+                EndDate = dateCursor.Date,
+                Status = CalendarEntryStatus.Holiday,
+                CompanyId = calendar.CompanyId,
+                BranchId = branchId,
+                DepartmentId = 0,
+                Priority = calendar.Priority,
+                EntryType = calendar.EntryType,
+            });
+            return;
+        }
+
         foreach (var shiftGroup in calendar.ShiftGroups)
         {
             if (shiftGroup.Days != null && !shiftGroup.Days.Contains((int)dateCursor.DayOfWeek))
@@ -232,9 +250,16 @@ public class CalendarService
             {
                 foreach (var branchGroup in companyGroup.GroupBy(x => x.BranchId))
                 {
-                    foreach (var deptGroup in branchGroup.GroupBy(x => x.DepartmentId))
+                    var branchEntries = branchGroup.ToList();
+                    var branchWideEntries = branchEntries.Where(x => x.DepartmentId == 0).ToList();
+
+                    foreach (var deptGroup in branchEntries.GroupBy(x => x.DepartmentId))
                     {
                         var groupEntries = deptGroup.ToList();
+
+                        var entriesToCheck = deptGroup.Key == 0
+                            ? groupEntries
+                            : groupEntries.Concat(branchWideEntries).ToList();
 
                         foreach (var entry in groupEntries)
                         {
@@ -242,10 +267,10 @@ public class CalendarService
                                 continue;
 
                             bool suppressed =
-                                groupEntries.Any(x =>
+                                entriesToCheck.Any(x =>
                                     (x.Status == CalendarEntryStatus.Holiday && x.Priority >= entry.Priority) ||
                                     (x.Status == CalendarEntryStatus.WorkPeriod && x.Priority > entry.Priority)) ||
-                                groupEntries.Any(x =>
+                                entriesToCheck.Any(x =>
                                     x.Status == CalendarEntryStatus.Weekend && x.Priority >= entry.Priority);
 
                             if (suppressed)

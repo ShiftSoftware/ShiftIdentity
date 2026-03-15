@@ -1,0 +1,93 @@
+/* Calendar cell layout */
+::deep .calendar-cell {
+    vertical-align: top;
+    padding: 4px 4px !important;
+    cursor: pointer;
+    height: 65px;
+    border: 1px solid var(--mud-palette-table-lines);
+    transition: background-color 0.15s;
+}
+
+::deep .calendar-cell:hover {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+::deep .calendar-cell.other-month {
+    opacity: 0.4;
+}
+
+::deep .calendar-cell.today-cell {
+    background-color: rgba(25, 118, 210, 0.04);
+}
+
+/* Day number */
+::deep .day-number {
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-bottom: 2px;
+    color: var(--mud-palette-text-primary);
+}
+
+::deep .day-number.today-badge {
+    display: inline-block;
+    background-color: var(--mud-palette-primary);
+    color: #fff;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    line-height: 24px;
+    text-align: center;
+}
+
+/* Events container */
+::deep .events-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow: hidden;
+}
+
+/* Event chips — shared */
+::deep .event-chip {
+    font-size: 0.7rem;
+    line-height: 1.2;
+    padding: 1px 4px;
+    border-radius: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+}
+
+::deep .event-chip:hover {
+    filter: brightness(0.9);
+}
+
+/* Status colours — matching FullCalendar view */
+::deep .chip-work {
+    background-color: #e0e0e0;
+    color: #333;
+}
+
+::deep .chip-weekend {
+    background-color: #1976d2;
+    color: #fff;
+}
+
+::deep .chip-holiday {
+    background-color: #388e3c;
+    color: #fff;
+}
+
+::deep .chip-inactive {
+    background-color: #d32f2f;
+    color: #fff;
+    opacity: 0.6;
+}
+
+/* "+N more" label */
+::deep .more-label {
+    font-size: 0.65rem;
+    color: var(--mud-palette-text-secondary);
+    padding-left: 2px;
+}
