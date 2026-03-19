@@ -107,6 +107,7 @@
                                            MultiSelection
                                            SelectedValues="shiftGroup.Days ?? new List<int>()"
                                            SelectedValuesChanged="v => shiftGroup.Days = v?.ToList()"
+                                           ToStringFunc="DayOfWeekToString"
                                            Variant="Variant.Text"
                                            AnchorOrigin="Origin.BottomCenter">
                                     <MudSelectItem T="int" Value="0">@Loc["Sunday"]</MudSelectItem>
@@ -155,162 +156,98 @@
                             </MudGrid>
                         </FieldBody>
                     </MultiItemField>
-                </MudStack>                
+                </MudStack>
             </FieldBody>
         </MultiItemField>
 
 
         @* ── Workday-specific: Weekend Groups ── *@
         <MudDivider Class="my-4" />
-        <MudText Typo="Typo.h6" Class="mb-2">@Loc["Weekend Groups"]</MudText>
 
-        @for (int wg = 0; wg < TheItem.WeekendGroups.Count; wg++)
-        {
-            var wgIndex = wg;
-            var weekendGroup = TheItem.WeekendGroups[wgIndex];
+        <MultiItemField DisableCounter DisableDragAndDrop="false" DisableReorder ControlVariant="Variant.Filled" @bind-Value="TheItem.WeekendGroups" T="CompanyCalendarWeekendGroupDTO">
+            <FieldHeader Context="HeaderContext">
+                <MudText Typo="Typo.h6" Class="mb-2">@Loc["Weekend Groups"]</MudText>
+            </FieldHeader>
 
-            <MudCard Elevation="2" Class="mb-3">
-                <MudCardHeader Class="pt-1 pb-1 background-gray">
-                    <CardHeaderContent>
-                        <MudText Typo="Typo.subtitle2">@Loc["Weekend Group"] @(wgIndex + 1)</MudText>
-                    </CardHeaderContent>
-                    <CardHeaderActions>
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                       Color="Color.Error"
-                                       Size="Size.Small"
-                                       OnClick="() => TheItem.WeekendGroups.RemoveAt(wgIndex)" />
-                    </CardHeaderActions>
-                </MudCardHeader>
-                <MudCardContent Class="pt-2 pb-2">
-                    <MudGrid Spacing="2">
-                        @* Departments *@
-                        <MudItem xs="12" md="6">
-                            <MudText Typo="Typo.subtitle2" Class="mb-1">@Loc["Departments"]</MudText>
-                            @for (int d = 0; d < weekendGroup.Departments.Count; d++)
-                            {
-                                var dIdx = d;
-                                <MudGrid Spacing="1" Class="mb-1" Style="align-items: baseline;">
-                                    <MudItem xs="10">
-                                        <ShiftAutocomplete Label="@Loc["Department"]"
-                                                           TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentListDTO"
-                                                           EntitySet="@($"{Constants.IdentityRoutePreifix}Department")"
-                                                           Value="weekendGroup.Departments[dIdx]"
-                                                           ValueChanged="v => { if (v != null) weekendGroup.Departments[dIdx] = v; }" />
-                                    </MudItem>
-                                    <MudItem xs="2">
-                                        <MudIconButton Icon="@Icons.Material.Filled.RemoveCircleOutline"
-                                                       Color="Color.Error"
-                                                       Size="Size.Small"
-                                                       OnClick="() => weekendGroup.Departments.RemoveAt(dIdx)" />
-                                    </MudItem>
-                                </MudGrid>
-                            }
-                            <MudButton StartIcon="@Icons.Material.Filled.Add"
-                                       Size="Size.Small"
-                                       Variant="Variant.Text"
-                                       OnClick="() => weekendGroup.Departments.Add(new ShiftEntitySelectDTO())">
-                                @Loc["Add Department"]
-                            </MudButton>
-                        </MudItem>
-
-                        @* Brands *@
-                        <MudItem xs="12" md="6">
-                            <MudText Typo="Typo.subtitle2" Class="mb-1">@Loc["Brands"]</MudText>
-                            @for (int b = 0; b < weekendGroup.Brands.Count; b++)
-                            {
-                                var bIdx = b;
-                                <MudGrid Spacing="1" Class="mb-1" Style="align-items: baseline;">
-                                    <MudItem xs="10">
-                                        <ShiftAutocomplete Label="@Loc["Brand"]"
-                                                           TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Brand.BrandListDTO"
-                                                           EntitySet="@($"{Constants.IdentityRoutePreifix}Brand")"
-                                                           Value="weekendGroup.Brands[bIdx]"
-                                                           ValueChanged="v => { if (v != null) weekendGroup.Brands[bIdx] = v; }" />
-                                    </MudItem>
-                                    <MudItem xs="2">
-                                        <MudIconButton Icon="@Icons.Material.Filled.RemoveCircleOutline"
-                                                       Color="Color.Error"
-                                                       Size="Size.Small"
-                                                       OnClick="() => weekendGroup.Brands.RemoveAt(bIdx)" />
-                                    </MudItem>
-                                </MudGrid>
-                            }
-                            <MudButton StartIcon="@Icons.Material.Filled.Add"
-                                       Size="Size.Small"
-                                       Variant="Variant.Text"
-                                       OnClick="() => weekendGroup.Brands.Add(new ShiftEntitySelectDTO())">
-                                @Loc["Add Brand"]
-                            </MudButton>
-                        </MudItem>
-                    </MudGrid>
-
-                    <MudText Typo="Typo.subtitle2" Class="mb-1 mt-3">@Loc["Weekend Rules"]</MudText>
-                    @for (int wr = 0; wr < weekendGroup.Weekends.Count; wr++)
-                    {
-                        var wrIndex = wr;
-                        var rule = weekendGroup.Weekends[wrIndex];
-
-                        <MudGrid Spacing="2" Class="mb-1" Style="align-items: baseline;">
-                            <MudItem xs="3">
-                                <MudSelect T="int"
-                                           Label="@Loc["Day"]"
-                                           @bind-Value="rule.Day"
-                                           Variant="Variant.Outlined"
-                                           Margin="Margin.Dense"
-                                           AnchorOrigin="Origin.BottomCenter">
-                                    <MudSelectItem T="int" Value="0">@Loc["Sunday"]</MudSelectItem>
-                                    <MudSelectItem T="int" Value="1">@Loc["Monday"]</MudSelectItem>
-                                    <MudSelectItem T="int" Value="2">@Loc["Tuesday"]</MudSelectItem>
-                                    <MudSelectItem T="int" Value="3">@Loc["Wednesday"]</MudSelectItem>
-                                    <MudSelectItem T="int" Value="4">@Loc["Thursday"]</MudSelectItem>
-                                    <MudSelectItem T="int" Value="5">@Loc["Friday"]</MudSelectItem>
-                                    <MudSelectItem T="int" Value="6">@Loc["Saturday"]</MudSelectItem>
-                                </MudSelect>
+            <FieldBody Context="weekendGroup">
+                <MudStack Class="pa-1" Spacing="0">
+                    <MudPaper Elevation="2" Class="pa-3" Style="background-color: #f2f2f2a1;">
+                        <MudGrid Spacing="2">
+                            <MudItem xs="12" md="6">
+                                <ShiftAutocomplete Label="@Loc["Department"]"
+                                                   TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentListDTO"
+                                                   EntitySet="@($"{Constants.IdentityRoutePreifix}Department")"
+                                                   MultiSelect
+                                                   @bind-SelectedValues="weekendGroup.Departments" />
                             </MudItem>
-                            <MudItem xs="3">
-                                <MudNumericFieldExtended T="int"
-                                                         Label="@Loc["Repeat Every N Weeks"]"
-                                                         @bind-Value="rule.Repeat"
-                                                         Variant="Variant.Outlined"
-                                                         Margin="Margin.Dense"
-                                                         Min="1" />
-                            </MudItem>
-                            <MudItem xs="3">
-                                <MudNumericFieldExtended T="int"
-                                                         Label="@Loc["Skip Cycles"]"
-                                                         @bind-Value="rule.Skip"
-                                                         Variant="Variant.Outlined"
-                                                         Margin="Margin.Dense"
-                                                         Min="0" />
-                            </MudItem>
-                            <MudItem xs="1">
-                                <MudIconButton Icon="@Icons.Material.Filled.RemoveCircleOutline"
-                                               Color="Color.Error"
-                                               Size="Size.Small"
-                                               OnClick="() => weekendGroup.Weekends.RemoveAt(wrIndex)" />
+
+                            <MudItem xs="12" md="6">
+                                <ShiftAutocomplete Label="@Loc["Brand"]"
+                                                   TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Brand.BrandListDTO"
+                                                   EntitySet="@($"{Constants.IdentityRoutePreifix}Brand")"
+                                                   MultiSelect
+                                                   @bind-SelectedValues="weekendGroup.Brands" />
                             </MudItem>
                         </MudGrid>
-                    }
-                    <MudButton StartIcon="@Icons.Material.Filled.Add"
-                               Size="Size.Small"
-                               Variant="Variant.Text"
-                               OnClick="() => weekendGroup.Weekends.Add(new CompanyCalendarWeekendRuleItemDTO { Repeat = 1 })">
-                        @Loc["Add Weekend Rule"]
-                    </MudButton>
-                </MudCardContent>
-            </MudCard>
-        }
+                    </MudPaper>
 
-        <MudButton StartIcon="@Icons.Material.Filled.Add"
-                   Variant="Variant.Outlined"
-                   Color="Color.Primary"
-                   OnClick="() => TheItem.WeekendGroups.Add(new CompanyCalendarWeekendGroupDTO())">
-            @Loc["Add Weekend Group"]
-        </MudButton>
+                    <MultiItemField DisableCounter Style="background-color:#f2f2f2a1;" DisableDragAndDrop="false" DisableReorder ControlVariant="Variant.Filled" Title="@Loc["Weekend Rules"]" @bind-Value="weekendGroup.Weekends" T="CompanyCalendarWeekendRuleItemDTO">
+                        <FieldBody Context="rule">
+                            <MudGrid Spacing="2" Class="mb-1" Style="align-items: baseline;">
+                                <MudItem xs="4">
+                                    <MudSelect T="int"
+                                               Label="@Loc["Day"]"
+                                               @bind-Value="rule.Day"
+                                               Variant="Variant.Outlined"
+                                               Margin="Margin.Dense"
+                                               AnchorOrigin="Origin.BottomCenter">
+                                        <MudSelectItem T="int" Value="0">@Loc["Sunday"]</MudSelectItem>
+                                        <MudSelectItem T="int" Value="1">@Loc["Monday"]</MudSelectItem>
+                                        <MudSelectItem T="int" Value="2">@Loc["Tuesday"]</MudSelectItem>
+                                        <MudSelectItem T="int" Value="3">@Loc["Wednesday"]</MudSelectItem>
+                                        <MudSelectItem T="int" Value="4">@Loc["Thursday"]</MudSelectItem>
+                                        <MudSelectItem T="int" Value="5">@Loc["Friday"]</MudSelectItem>
+                                        <MudSelectItem T="int" Value="6">@Loc["Saturday"]</MudSelectItem>
+                                    </MudSelect>
+                                </MudItem>
+                                <MudItem xs="4">
+                                    <MudNumericFieldExtended T="int"
+                                                             Label="@Loc["Repeat Every N Weeks"]"
+                                                             @bind-Value="rule.Repeat"
+                                                             Variant="Variant.Outlined"
+                                                             Margin="Margin.Dense"
+                                                             Min="1" />
+                                </MudItem>
+                                <MudItem xs="4">
+                                    <MudNumericFieldExtended T="int"
+                                                             Label="@Loc["Skip Cycles"]"
+                                                             @bind-Value="rule.Skip"
+                                                             Variant="Variant.Outlined"
+                                                             Margin="Margin.Dense"
+                                                             Min="0" />
+                                </MudItem>
+                            </MudGrid>
+                        </FieldBody>
+                    </MultiItemField>
+                </MudStack>
+            </FieldBody>
+        </MultiItemField>
     }
 
 </ShiftEntityForm>
 
 @code {
     private static TimeSpan? TicksToTimeSpan(long ticks) => ticks > 0 ? new TimeSpan(ticks) : null;
+
+    private string DayOfWeekToString(int day) => day switch
+    {
+        0 => Loc["Sun"],
+        1 => Loc["Mon"],
+        2 => Loc["Tue"],
+        3 => Loc["Wed"],
+        4 => Loc["Thu"],
+        5 => Loc["Fri"],
+        6 => Loc["Sat"],
+        _ => day.ToString()
+    };
 }
