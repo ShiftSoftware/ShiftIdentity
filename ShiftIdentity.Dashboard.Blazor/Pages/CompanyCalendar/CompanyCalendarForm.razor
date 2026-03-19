@@ -16,251 +16,149 @@
                  TypeAuthAction="ShiftIdentityActions.CompanyCalendars"
                  @bind-Key="@Key">
 
-    <MudGrid Spacing="3">
-        <MudItem xs="12" md="6">
-            <MudTextFieldExtended OnlyValidateIfDirty="true"
-                                  Label="@Loc["Title"]"
-                                  @bind-Value="TheItem.Title"
-                                  For="@(() => TheItem.Title)" />
-        </MudItem>
+    <MudCard Elevation="3">
+        <MudCardHeader>
+            <MudText Typo="Typo.h6" Class="mb-2">@Loc["General"]</MudText>
+        </MudCardHeader>
 
-        <MudItem xs="12" md="6">
-            <MudSelect T="CalendarEntryType?"
-                       Label="@Loc["Entry Type"]"
-                       @bind-Value="TheItem.EntryType"
-                       For="@(() => TheItem.EntryType)"
-                       Variant="Variant.Outlined"
-                       AnchorOrigin="Origin.BottomCenter">
-                <MudSelectItem T="CalendarEntryType?" Value="CalendarEntryType.Workday">@Loc["Workday"]</MudSelectItem>
-                <MudSelectItem T="CalendarEntryType?" Value="CalendarEntryType.Holiday">@Loc["Holiday"]</MudSelectItem>
-            </MudSelect>
-        </MudItem>
+        <MudCardContent>
+            <MudGrid Spacing="3">
+                <MudItem xs="12" md="6">
+                    <MudTextFieldExtended OnlyValidateIfDirty="true"
+                                          Label="@Loc["Title"]"
+                                          @bind-Value="TheItem.Title"
+                                          For="@(() => TheItem.Title)" />
+                </MudItem>
 
-        <MudItem xs="12" md="4">
-            <MudDatePickerExtended Label="@Loc["Start Date"]"
-                                   @bind-Date="TheItem.StartDate"
-                                   For="@(() => TheItem.StartDate)" />
-        </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudSelect T="CalendarEntryType?"
+                               Label="@Loc["Entry Type"]"
+                               @bind-Value="TheItem.EntryType"
+                               For="@(() => TheItem.EntryType)"
+                               Variant="Variant.Text">
+                        <MudSelectItem T="CalendarEntryType?" Value="CalendarEntryType.Workday">@Loc["Workday"]</MudSelectItem>
+                        <MudSelectItem T="CalendarEntryType?" Value="CalendarEntryType.Holiday">@Loc["Holiday"]</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
 
-        <MudItem xs="12" md="4">
-            <MudDatePickerExtended Label="@Loc["End Date"]"
-                                   @bind-Date="TheItem.EndDate"
-                                   For="@(() => TheItem.EndDate)" />
-        </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudDatePickerExtended Label="@Loc["Start Date"]"
+                                           @bind-Date="TheItem.StartDate"
+                                           For="@(() => TheItem.StartDate)" />
+                </MudItem>
 
-        <MudItem xs="12" md="4">
-            <MudNumericFieldExtended T="int"
-                                     Label="@Loc["Priority"]"
-                                     @bind-Value="TheItem.Priority"
-                                     For="@(() => TheItem.Priority)"
-                                     Min="0" />
-        </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudDatePickerExtended Label="@Loc["End Date"]"
+                                           @bind-Date="TheItem.EndDate"
+                                           For="@(() => TheItem.EndDate)" />
+                </MudItem>
 
-        <MudItem xs="12" md="6">
-            <ShiftAutocomplete Label="@Loc["Company"]"
-                               TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Company.CompanyListDTO"
-                               EntitySet="@($"{Constants.IdentityRoutePreifix}Company")"
-                               For="() => TheItem.Company"
-                               @bind-Value="TheItem.Company" />
-        </MudItem>
-    </MudGrid>
+                <MudItem xs="12" md="4">
+                    <MudNumericFieldExtended T="int"
+                                             Label="@Loc["Priority"]"
+                                             @bind-Value="TheItem.Priority"
+                                             For="@(() => TheItem.Priority)"
+                                             Min="0" />
+                </MudItem>
 
-    @* ── Branches ── *@
-    <MudDivider Class="my-4" />
-    <MudText Typo="Typo.h6" Class="mb-2">@Loc["Branches"]</MudText>
+                <MudItem xs="12" md="6">
+                    <ShiftAutocomplete Label="@Loc["Company"]"
+                                       TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Company.CompanyListDTO"
+                                       EntitySet="@($"{Constants.IdentityRoutePreifix}Company")"
+                                       For="() => TheItem.Company"
+                                       @bind-Value="TheItem.Company" />
+                </MudItem>
 
-    @for (int i = 0; i < TheItem.Branches.Count; i++)
-    {
-        var idx = i;
+                <MudItem xs="12" md="6">
+                    <ShiftAutocomplete Label="@Loc["Branches"]"
+                                       TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO"
+                                       EntitySet="@($"{Constants.IdentityRoutePreifix}CompanyBranch")"
+                                       MultiSelect
+                                       @bind-SelectedValues="TheItem.Branches" />
+                </MudItem>
+            </MudGrid>
+        </MudCardContent>
+    </MudCard>
 
-        <MudGrid Spacing="2" Class="mb-1" Style="align-items: baseline;">
-            <MudItem xs="10">
-                <ShiftAutocomplete Label="@Loc["Branch"]"
-                                   TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO"
-                                   EntitySet="@($"{Constants.IdentityRoutePreifix}CompanyBranch")"
-                                   Disabled="TheItem.Company?.Value is null"
-                                   Filter="x => x.Add(f => { f.Field = nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO.CompanyId); f.Value = TheItem?.Company?.Value; })"
-                                   Value="TheItem.Branches[idx]"
-                                   ValueChanged="v => { if (v != null) TheItem.Branches[idx] = v; }" />
-            </MudItem>
-            <MudItem xs="2">
-                <MudIconButton Icon="@Icons.Material.Filled.RemoveCircleOutline"
-                               Color="Color.Error"
-                               Size="Size.Small"
-                               OnClick="() => TheItem.Branches.RemoveAt(idx)" />
-            </MudItem>
-        </MudGrid>
-    }
-
-    <MudButton StartIcon="@Icons.Material.Filled.Add"
-               Size="Size.Small"
-               Variant="Variant.Outlined"
-               Color="Color.Primary"
-               Class="mb-4"
-               Disabled="TheItem.Company?.Value is null"
-               OnClick="() => TheItem.Branches.Add(new ShiftEntitySelectDTO())">
-        @Loc["Add Branch"]
-    </MudButton>
-
-    @* ── Workday-specific: Shift Groups ── *@
     @if (TheItem.EntryType == CalendarEntryType.Workday)
     {
         <MudDivider Class="my-4" />
-        <MudText Typo="Typo.h6" Class="mb-2">@Loc["Shift Groups"]</MudText>
 
-        @for (int sg = 0; sg < TheItem.ShiftGroups.Count; sg++)
-        {
-            var sgIndex = sg;
-            var shiftGroup = TheItem.ShiftGroups[sgIndex];
+        <MultiItemField DisableCounter DisableDragAndDrop="false" DisableReorder ControlVariant="Variant.Filled" @bind-Value="TheItem.ShiftGroups" T="CompanyCalendarShiftGroupDTO">
+            <FieldHeader Context="HeaderContext">
+                <MudText Typo="Typo.h6" Class="mb-2">@Loc["Shift Groups"]</MudText>
+            </FieldHeader>
 
-            <MudCard Elevation="2" Class="mb-3">
-                <MudCardHeader Class="pt-1 pb-1 background-gray">
-                    <CardHeaderContent>
-                        <MudText Typo="Typo.subtitle2">@Loc["Shift Group"] @(sgIndex + 1)</MudText>
-                    </CardHeaderContent>
-                    <CardHeaderActions>
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                       Color="Color.Error"
-                                       Size="Size.Small"
-                                       OnClick="() => TheItem.ShiftGroups.RemoveAt(sgIndex)" />
-                    </CardHeaderActions>
-                </MudCardHeader>
-                <MudCardContent Class="pt-2 pb-2">
-                    <MudGrid Spacing="2">
-                        <MudItem xs="12" md="4">
-                            <MudSelect T="int"
-                                       Label="@Loc["Days of Week"]"
-                                       MultiSelection
-                                       SelectedValues="shiftGroup.Days ?? new List<int>()"
-                                       SelectedValuesChanged="v => shiftGroup.Days = v?.ToList()"
-                                       Variant="Variant.Outlined"
-                                       AnchorOrigin="Origin.BottomCenter">
-                                <MudSelectItem T="int" Value="0">@Loc["Sunday"]</MudSelectItem>
-                                <MudSelectItem T="int" Value="1">@Loc["Monday"]</MudSelectItem>
-                                <MudSelectItem T="int" Value="2">@Loc["Tuesday"]</MudSelectItem>
-                                <MudSelectItem T="int" Value="3">@Loc["Wednesday"]</MudSelectItem>
-                                <MudSelectItem T="int" Value="4">@Loc["Thursday"]</MudSelectItem>
-                                <MudSelectItem T="int" Value="5">@Loc["Friday"]</MudSelectItem>
-                                <MudSelectItem T="int" Value="6">@Loc["Saturday"]</MudSelectItem>
-                            </MudSelect>
-                        </MudItem>
+            <FieldBody Context="shiftGroup">
+                <MudStack Class="pa-1" Spacing="0">
+                    <MudPaper Elevation="2" Class="pa-3" Style="background-color: #f2f2f2a1;">
+                        <MudGrid Spacing="2">
+                            <MudItem xs="12">
+                                <ShiftAutocomplete Label="@Loc["Department"]"
+                                                   TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentListDTO"
+                                                   EntitySet="@($"{Constants.IdentityRoutePreifix}Department")"
+                                                   MultiSelect
+                                                   @bind-SelectedValues="shiftGroup.Departments" />
+                            </MudItem>
+                    
+                            <MudItem xs="12" md="6">
+                                <MudSelect T="int"
+                                           Label="@Loc["Days of Week"]"
+                                           MultiSelection
+                                           SelectedValues="shiftGroup.Days ?? new List<int>()"
+                                           SelectedValuesChanged="v => shiftGroup.Days = v?.ToList()"
+                                           Variant="Variant.Text"
+                                           AnchorOrigin="Origin.BottomCenter">
+                                    <MudSelectItem T="int" Value="0">@Loc["Sunday"]</MudSelectItem>
+                                    <MudSelectItem T="int" Value="1">@Loc["Monday"]</MudSelectItem>
+                                    <MudSelectItem T="int" Value="2">@Loc["Tuesday"]</MudSelectItem>
+                                    <MudSelectItem T="int" Value="3">@Loc["Wednesday"]</MudSelectItem>
+                                    <MudSelectItem T="int" Value="4">@Loc["Thursday"]</MudSelectItem>
+                                    <MudSelectItem T="int" Value="5">@Loc["Friday"]</MudSelectItem>
+                                    <MudSelectItem T="int" Value="6">@Loc["Saturday"]</MudSelectItem>
+                                </MudSelect>
+                            </MudItem>
 
-                        @* Departments *@
-                        <MudItem xs="12" md="4">
-                            <MudText Typo="Typo.subtitle2" Class="mb-1">@Loc["Departments"]</MudText>
-                            @for (int d = 0; d < shiftGroup.Departments.Count; d++)
-                            {
-                                var dIdx = d;
-                                <MudGrid Spacing="1" Class="mb-1" Style="align-items: baseline;">
-                                    <MudItem xs="10">
-                                        <ShiftAutocomplete Label="@Loc["Department"]"
-                                                           TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentListDTO"
-                                                           EntitySet="@($"{Constants.IdentityRoutePreifix}Department")"
-                                                           Value="shiftGroup.Departments[dIdx]"
-                                                           ValueChanged="v => { if (v != null) shiftGroup.Departments[dIdx] = v; }" />
-                                    </MudItem>
-                                    <MudItem xs="2">
-                                        <MudIconButton Icon="@Icons.Material.Filled.RemoveCircleOutline"
-                                                       Color="Color.Error"
-                                                       Size="Size.Small"
-                                                       OnClick="() => shiftGroup.Departments.RemoveAt(dIdx)" />
-                                    </MudItem>
-                                </MudGrid>
-                            }
-                            <MudButton StartIcon="@Icons.Material.Filled.Add"
-                                       Size="Size.Small"
-                                       Variant="Variant.Text"
-                                       OnClick="() => shiftGroup.Departments.Add(new ShiftEntitySelectDTO())">
-                                @Loc["Add Department"]
-                            </MudButton>
-                        </MudItem>
+                            <MudItem xs="12" md="6">
+                                <ShiftAutocomplete Label="@Loc["Brand"]"
+                                                   TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Brand.BrandListDTO"
+                                                   EntitySet="@($"{Constants.IdentityRoutePreifix}Brand")"
+                                                   MultiSelect
+                                                   @bind-SelectedValues="shiftGroup.Brands" />
+                            </MudItem>
+                        </MudGrid>
+                    </MudPaper>
 
-                        @* Brands *@
-                        <MudItem xs="12" md="4">
-                            <MudText Typo="Typo.subtitle2" Class="mb-1">@Loc["Brands"]</MudText>
-                            @for (int b = 0; b < shiftGroup.Brands.Count; b++)
-                            {
-                                var bIdx = b;
-                                <MudGrid Spacing="1" Class="mb-1" Style="align-items: baseline;">
-                                    <MudItem xs="10">
-                                        <ShiftAutocomplete Label="@Loc["Brand"]"
-                                                           TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Brand.BrandListDTO"
-                                                           EntitySet="@($"{Constants.IdentityRoutePreifix}Brand")"
-                                                           Value="shiftGroup.Brands[bIdx]"
-                                                           ValueChanged="v => { if (v != null) shiftGroup.Brands[bIdx] = v; }" />
-                                    </MudItem>
-                                    <MudItem xs="2">
-                                        <MudIconButton Icon="@Icons.Material.Filled.RemoveCircleOutline"
-                                                       Color="Color.Error"
-                                                       Size="Size.Small"
-                                                       OnClick="() => shiftGroup.Brands.RemoveAt(bIdx)" />
-                                    </MudItem>
-                                </MudGrid>
-                            }
-                            <MudButton StartIcon="@Icons.Material.Filled.Add"
-                                       Size="Size.Small"
-                                       Variant="Variant.Text"
-                                       OnClick="() => shiftGroup.Brands.Add(new ShiftEntitySelectDTO())">
-                                @Loc["Add Brand"]
-                            </MudButton>
-                        </MudItem>
+                    <MultiItemField DisableCounter Style="background-color:#f2f2f2a1;" DisableDragAndDrop="false" DisableReorder ControlVariant="Variant.Filled" Title="@Loc["Shifts"]" @bind-Value="shiftGroup.Shifts" T="CompanyCalendarShiftItemDTO">
+                        <FieldBody Context="shift">
+                            <MudGrid Spacing="2" Class="mb-1" Style="align-items: baseline;">
+                                <MudItem xs="4">
+                                    <MudTextFieldExtended Label="@Loc["Shift Title"]"
+                                                          @bind-Value="shift.Title"
+                                                          Variant="Variant.Outlined"
+                                                          Margin="Margin.Dense" />
+                                </MudItem>
+                                <MudItem xs="4">
+                                    <MudTimePicker Label="@Loc["Start Time"]"
+                                                   Time="TicksToTimeSpan(shift.StartTimeTicks)"
+                                                   TimeChanged="t => shift.StartTimeTicks = t?.Ticks ?? 0"
+                                                   Variant="Variant.Outlined"
+                                                   Margin="Margin.Dense" />
+                                </MudItem>
+                                <MudItem xs="4">
+                                    <MudTimePicker Label="@Loc["End Time"]"
+                                                   Time="TicksToTimeSpan(shift.EndTimeTicks)"
+                                                   TimeChanged="t => shift.EndTimeTicks = t?.Ticks ?? 0"
+                                                   Variant="Variant.Outlined"
+                                                   Margin="Margin.Dense" />
+                                </MudItem>
+                            </MudGrid>
+                        </FieldBody>
+                    </MultiItemField>
+                </MudStack>                
+            </FieldBody>
+        </MultiItemField>
 
-                        @* Shifts *@
-                        <MudItem xs="12">
-                            <MudText Typo="Typo.subtitle2" Class="mb-1">@Loc["Shifts"]</MudText>
-                            @for (int sh = 0; sh < shiftGroup.Shifts.Count; sh++)
-                            {
-                                var shIndex = sh;
-                                var shift = shiftGroup.Shifts[shIndex];
-
-                                <MudGrid Spacing="2" Class="mb-1" Style="align-items: baseline;">
-                                    <MudItem xs="3">
-                                        <MudTextFieldExtended Label="@Loc["Shift Title"]"
-                                                              @bind-Value="shift.Title"
-                                                              Variant="Variant.Outlined"
-                                                              Margin="Margin.Dense" />
-                                    </MudItem>
-                                    <MudItem xs="3">
-                                        <MudTimePicker Label="@Loc["Start Time"]"
-                                                       Time="TicksToTimeSpan(shift.StartTimeTicks)"
-                                                       TimeChanged="t => shift.StartTimeTicks = t?.Ticks ?? 0"
-                                                       Variant="Variant.Outlined"
-                                                       Margin="Margin.Dense" />
-                                    </MudItem>
-                                    <MudItem xs="3">
-                                        <MudTimePicker Label="@Loc["End Time"]"
-                                                       Time="TicksToTimeSpan(shift.EndTimeTicks)"
-                                                       TimeChanged="t => shift.EndTimeTicks = t?.Ticks ?? 0"
-                                                       Variant="Variant.Outlined"
-                                                       Margin="Margin.Dense" />
-                                    </MudItem>
-                                    <MudItem xs="1">
-                                        <MudIconButton Icon="@Icons.Material.Filled.RemoveCircleOutline"
-                                                       Color="Color.Error"
-                                                       Size="Size.Small"
-                                                       OnClick="() => shiftGroup.Shifts.RemoveAt(shIndex)" />
-                                    </MudItem>
-                                </MudGrid>
-                            }
-                            <MudButton StartIcon="@Icons.Material.Filled.Add"
-                                       Size="Size.Small"
-                                       Variant="Variant.Text"
-                                       OnClick="() => shiftGroup.Shifts.Add(new CompanyCalendarShiftItemDTO())">
-                                @Loc["Add Shift"]
-                            </MudButton>
-                        </MudItem>
-                    </MudGrid>
-                </MudCardContent>
-            </MudCard>
-        }
-
-        <MudButton StartIcon="@Icons.Material.Filled.Add"
-                   Variant="Variant.Outlined"
-                   Color="Color.Primary"
-                   Class="mb-4"
-                   OnClick="() => TheItem.ShiftGroups.Add(new CompanyCalendarShiftGroupDTO())">
-            @Loc["Add Shift Group"]
-        </MudButton>
 
         @* ── Workday-specific: Weekend Groups ── *@
         <MudDivider Class="my-4" />
