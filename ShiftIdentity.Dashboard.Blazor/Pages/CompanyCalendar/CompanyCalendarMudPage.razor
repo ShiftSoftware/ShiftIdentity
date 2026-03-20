@@ -91,7 +91,7 @@
                                     @day.Date.Day
                                 </div>
                                 <div class="events-container">
-                                    @if (_loading && day.IsCurrentMonth)
+                                    @if (_showSkeleton && day.IsCurrentMonth)
                                     {
                                         <div class="skeleton-bar" style="width: 100%;"></div>
                                         <div class="skeleton-bar" style="width: 100%;"></div>

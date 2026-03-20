@@ -17,11 +17,14 @@ public partial class CompanyCalendarMudPage : IDisposable
 
     private const string StorageKey = "CompanyCalendar_Preferences";
     private const int MonthNavDebounceMs = 300;
+    private const int SkeletonDelayMs = 250;
 
     private bool _loading;
+    private bool _showSkeleton;
     private DateTime _currentMonth = new(DateTime.Today.Year, DateTime.Today.Month, 1);
     private CancellationTokenSource? _loadCts;
     private Timer? _debounceTimer;
+    private Timer? _skeletonTimer;
 
     private ShiftEntitySelectDTO? _selectedCompany;
     private ShiftEntitySelectDTO? _selectedBranch;
@@ -135,7 +138,18 @@ public partial class CompanyCalendarMudPage : IDisposable
         var cts = _loadCts = new CancellationTokenSource();
 
         _loading = true;
-        StateHasChanged();
+        _skeletonTimer?.Dispose();
+        _skeletonTimer = new Timer(_ =>
+        {
+            InvokeAsync(() =>
+            {
+                if (_loading)
+                {
+                    _showSkeleton = true;
+                    StateHasChanged();
+                }
+            });
+        }, null, SkeletonDelayMs, Timeout.Infinite);
 
         try
         {
@@ -178,6 +192,8 @@ public partial class CompanyCalendarMudPage : IDisposable
             if (cts == _loadCts)
             {
                 _loading = false;
+                _showSkeleton = false;
+                _skeletonTimer?.Dispose();
                 StateHasChanged();
             }
         }
@@ -336,6 +352,7 @@ public partial class CompanyCalendarMudPage : IDisposable
     public void Dispose()
     {
         _debounceTimer?.Dispose();
+        _skeletonTimer?.Dispose();
         _loadCts?.Cancel();
         _loadCts?.Dispose();
     }
