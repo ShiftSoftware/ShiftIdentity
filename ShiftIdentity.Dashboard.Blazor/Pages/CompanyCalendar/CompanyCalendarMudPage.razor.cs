@@ -37,6 +37,11 @@ public partial class CompanyCalendarMudPage : IDisposable
     private List<CalendarDay[]> _weeks = new();
     private string[] _dayHeaders = Array.Empty<string>();
 
+    // Drag-to-select state
+    private DateTime? _dragStart;
+    private DateTime? _dragEnd;
+    private bool _isDragging;
+
     protected override async Task OnInitializedAsync()
     {
         BuildDayHeaders();
@@ -259,17 +264,74 @@ public partial class CompanyCalendarMudPage : IDisposable
 
     #endregion
 
-    #region Navigation
+    #region Navigation & Selection
 
-    private void OnDayClicked(DateTime date)
+    private void OnCellPointerDown(DateTime date)
     {
+        _dragStart = date;
+        _dragEnd = date;
+        _isDragging = true;
     }
 
-    private async Task OnEventClicked(long calendarId)
+    private void OnCellPointerEnter(DateTime date)
     {
-        var dialogReference = await DialogService.Open<CompanyCalendarForm>(
-            parameters: new() { { "key", calendarId.ToString() } }
-        );
+        if (_isDragging)
+        {
+            _dragEnd = date;
+        }
+    }
+
+    private async Task OnCellPointerUp(DateTime date)
+    {
+        if (!_isDragging)
+            return;
+
+        _isDragging = false;
+        var start = _dragStart!.Value;
+        var end = date;
+
+        // Normalize so start <= end
+        if (end < start)
+            (start, end) = (end, start);
+
+        _dragStart = null;
+        _dragEnd = null;
+
+        await OpenFormDialog(startDate: start, endDate: end);
+    }
+
+    private void CancelDrag()
+    {
+        _isDragging = false;
+        _dragStart = null;
+        _dragEnd = null;
+    }
+
+    private bool IsInDragRange(DateTime date)
+    {
+        if (!_isDragging || _dragStart is null || _dragEnd is null)
+            return false;
+
+        var rangeStart = _dragStart.Value <= _dragEnd.Value ? _dragStart.Value : _dragEnd.Value;
+        var rangeEnd = _dragStart.Value <= _dragEnd.Value ? _dragEnd.Value : _dragStart.Value;
+
+        return date >= rangeStart && date <= rangeEnd;
+    }
+
+    private async Task OpenFormDialog(long? calendarId = null, DateTime? startDate = null, DateTime? endDate = null)
+    {
+        var parameters = new Dictionary<string, object>();
+
+        if (calendarId is not null)
+            parameters["key"] = calendarId.Value.ToString();
+
+        if (startDate is not null)
+            parameters[nameof(CompanyCalendarForm.InitialStartDate)] = startDate.Value;
+
+        if (endDate is not null)
+            parameters[nameof(CompanyCalendarForm.InitialEndDate)] = endDate.Value;
+
+        var dialogReference = await DialogService.Open<CompanyCalendarForm>(parameters: parameters);
 
         if (!(dialogReference?.Canceled ?? false) && dialogReference?.Data is not null)
         {
@@ -277,6 +339,11 @@ public partial class CompanyCalendarMudPage : IDisposable
             BuildWeeks();
             ScheduleDebouncedLoad();
         }
+    }
+
+    private async Task OnEventClicked(long calendarId)
+    {
+        await OpenFormDialog(calendarId: calendarId);
     }
 
     #endregion

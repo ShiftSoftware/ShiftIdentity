@@ -139,6 +139,16 @@
     opacity: 0.6;
 }
 
+/* Drag-to-select */
+::deep .calendar-cell.drag-selected {
+    background-color: rgba(25, 118, 210, 0.12) !important;
+}
+
+.calendar-body.is-dragging {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
 /* Skeleton loading bars */
 ::deep .skeleton-bar {
     height: 14px;

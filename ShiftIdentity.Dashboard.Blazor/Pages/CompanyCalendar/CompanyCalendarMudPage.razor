@@ -69,7 +69,8 @@
     </div>
 
     @* ── Calendar grid (fills remaining space, scrolls if needed) ── *@
-    <div class="calendar-body" style="--week-count: @_weeks.Count;">
+    <div class="calendar-body @(_isDragging ? "is-dragging" : "")" style="--week-count: @_weeks.Count;"
+         @onpointerleave="CancelDrag">
         <MudSimpleTable Dense Style="width: 100%; table-layout: fixed; background-color: #f3f3f382;">
             <thead>
                 <tr>
@@ -85,8 +86,10 @@
                     <tr>
                         @foreach (var day in week)
                         {
-                            <td class="calendar-cell @(day.IsCurrentMonth ? "" : "other-month") @(day.IsToday ? "today-cell" : "")"
-                                @onclick="() => OnDayClicked(day.Date)">
+                            <td class="calendar-cell @(day.IsCurrentMonth ? "" : "other-month") @(day.IsToday ? "today-cell" : "") @(IsInDragRange(day.Date) ? "drag-selected" : "")"
+                                @onpointerdown="() => OnCellPointerDown(day.Date)"
+                                @onpointerenter="() => OnCellPointerEnter(day.Date)"
+                                @onpointerup="() => OnCellPointerUp(day.Date)">
                                 <div class="day-number">
                                     @day.Date.Day
                                 </div>
@@ -103,7 +106,8 @@
                                             <MudTooltip Text="@evt.ExtendedProps?.CalendarTitle">
                                                 <div class="event-chip @GetEventCssClass(evt)"
                                                      @onclick="() => OnEventClicked(evt.Id)"
-                                                     @onclick:stopPropagation="true">
+                                                     @onclick:stopPropagation="true"
+                                                     @onpointerdown:stopPropagation="true">
                                                     @evt.Title
                                                 </div>
                                             </MudTooltip>
