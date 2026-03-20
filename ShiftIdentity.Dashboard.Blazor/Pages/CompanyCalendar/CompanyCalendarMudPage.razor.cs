@@ -2,14 +2,10 @@ using Microsoft.AspNetCore.Components;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyCalendar;
+using ShiftSoftware.ShiftIdentity.Core.DTOs.Department;
 using ShiftSoftware.ShiftIdentity.Core.Enums;
-using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Net.Http;
 using System.Net.Http.Json;
-using System.Threading.Tasks;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.CompanyCalendar;
 
@@ -23,16 +19,24 @@ public partial class CompanyCalendarMudPage
 
     private ShiftEntitySelectDTO? _selectedCompany;
     private ShiftEntitySelectDTO? _selectedBranch;
-    private ShiftEntitySelectDTO? _selectedDepartment;
+
+    // Department toggle group
+    private List<ShiftEntitySelectDTO> _departments = new();
+    private string? _selectedDepartmentId;
 
     private List<CalendarEventDTO> _events = new();
     private List<CalendarDay[]> _weeks = new();
     private string[] _dayHeaders = Array.Empty<string>();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         BuildDayHeaders();
+        
         BuildWeeks();
+        
+        await LoadDepartments();
+
+        await base.OnInitializedAsync();
     }
 
     #region Month Navigation
@@ -70,7 +74,9 @@ public partial class CompanyCalendarMudPage
         BuildWeeks();
 
         if (company?.Value is not null)
+        {
             await LoadEvents();
+        }
     }
 
     private async Task OnBranchChanged(ShiftEntitySelectDTO? branch)
@@ -79,15 +85,45 @@ public partial class CompanyCalendarMudPage
         await LoadEvents();
     }
 
-    private async Task OnDepartmentChanged(ShiftEntitySelectDTO? department)
+    private async Task OnDepartmentToggled(string? departmentId)
     {
-        _selectedDepartment = department;
+        _selectedDepartmentId = departmentId;
         await LoadEvents();
     }
 
     #endregion
 
     #region Data Loading
+
+    private async Task LoadDepartments()
+    {
+        try
+        {
+            var url = $"{Constants.IdentityRoutePreifix}Department?$select=ID,Name";
+            var response = await Http.GetAsync(url);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var odata = await response.Content.ReadFromJsonAsync<ODataResponse<DepartmentListDTO>>();
+                if (odata?.Value is not null)
+                {
+                    _departments = odata.Value
+                        .Select(d => new ShiftEntitySelectDTO { Value = d.ID ?? "", Text = d.Name })
+                        .ToList();
+
+                    // Auto-select the first department
+                    if (_departments.Count > 0)
+                        _selectedDepartmentId = _departments[0].Value;
+                }
+            }
+        }
+        catch
+        {
+            // Silently handle — departments will show as empty
+        }
+
+        StateHasChanged();
+    }
 
     private async Task LoadEvents()
     {
@@ -110,8 +146,8 @@ public partial class CompanyCalendarMudPage
                 ViewBranchHashIds = _selectedBranch?.Value is not null
                     ? new List<string> { _selectedBranch.Value }
                     : null,
-                ViewDepartmentHashIds = _selectedDepartment?.Value is not null
-                    ? new List<string> { _selectedDepartment.Value }
+                ViewDepartmentHashIds = _selectedDepartmentId is not null
+                    ? new List<string> { _selectedDepartmentId }
                     : null,
             };
 
@@ -226,6 +262,11 @@ public partial class CompanyCalendarMudPage
         public bool IsCurrentMonth { get; set; }
         public bool IsToday { get; set; }
         public List<CalendarEventDTO> Events { get; set; } = new();
+    }
+
+    private class ODataResponse<T>
+    {
+        public List<T>? Value { get; set; }
     }
 
     #endregion

@@ -6,107 +6,118 @@
 @using ShiftSoftware.ShiftIdentity.Core.Enums
 @inject ShiftIdentityLocalizer Loc
 
-@* Toolbar: month nav + filters + actions *@
-<MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-2 flex-wrap" Spacing="2">
+<div class="calendar-layout">
 
-    <MudStack Row Spacing="2">
-        <MudItem Style="min-width: 200px;">
-            <ShiftAutocomplete Label="@Loc["Company"]"
-                               TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Company.CompanyListDTO"
-                               EntitySet="@($"{Constants.IdentityRoutePreifix}Company")"
-                               Value="_selectedCompany"
-                               ValueChanged="OnCompanyChanged" />
-        </MudItem>
-        <MudItem Style="min-width: 200px;">
-            <ShiftAutocomplete Label="@Loc["Branch"]"
-                               TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO"
-                               EntitySet="@($"{Constants.IdentityRoutePreifix}CompanyBranch")"
-                               Disabled="_selectedCompany?.Value is null"
-                               Filter="x => x.Add(f => { f.Field = nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO.CompanyId); f.Value = _selectedCompany?.Value; })"
-                               Value="_selectedBranch"
-                               ValueChanged="OnBranchChanged" />
-        </MudItem>
-        <MudItem Style="min-width: 200px;">
-            <ShiftAutocomplete Label="@Loc["Department"]"
-                               TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentListDTO"
-                               EntitySet="@($"{Constants.IdentityRoutePreifix}Department")"
-                               Disabled="_selectedCompany?.Value is null"
-                               Value="_selectedDepartment"
-                               ValueChanged="OnDepartmentChanged" />
-        </MudItem>
-    </MudStack>
+    @* ── Top toolbar: Company, Branch, Month navigation ── *@
+    <div class="calendar-top-bar">
+        <MudStack Row AlignItems="AlignItems.End" Justify="Justify.SpaceBetween"  Class="flex-wrap" Spacing="8">
+            <MudStack Row Spacing="2" Style="flex: 1;">
+                <ShiftAutocomplete Label="@Loc["Company"]"
+                                   TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Company.CompanyListDTO"
+                                   EntitySet="@($"{Constants.IdentityRoutePreifix}Company")"
+                                   Value="_selectedCompany"
+                                   ValueChanged="OnCompanyChanged" />
+                
+                <ShiftAutocomplete Label="@Loc["Branch"]"
+                                   TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO"
+                                   EntitySet="@($"{Constants.IdentityRoutePreifix}CompanyBranch")"
+                                   Disabled="_selectedCompany?.Value is null"
+                                   Filter="x => x.Add(f => { f.Field = nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO.CompanyId); f.Value = _selectedCompany?.Value; })"
+                                   Value="_selectedBranch"
+                                   ValueChanged="OnBranchChanged" />
+            </MudStack>
 
-    @* <MudButton Variant="Variant.Text" Size="Size.Small"
-                       OnClick="GoToToday"
-                       Disabled="_selectedCompany?.Value is null">
-                @Loc["Today"]
-            </MudButton> *@
+            <MudStack Row>
+                <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
+                               OnClick="PreviousMonth"
+                               Variant="Variant.Filled"
+                               Size="Size.Small"
+                               Color="Color.Primary" />
+                <MudText Typo="Typo.subtitle1" Style="min-width: 120px; text-align: center;">
+                    @_currentMonth.ToString("MMMM yyyy")
+                </MudText>
+                <MudIconButton Icon="@Icons.Material.Filled.ChevronRight"
+                               Size="Size.Small"
+                               OnClick="NextMonth"
+                               Variant="Variant.Filled"
+                               Color="Color.Primary" />
+            </MudStack>
+        </MudStack>
 
-    <div style="display: flex; align-self:end;">
-        <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
-                       OnClick="PreviousMonth"
-                       Variant="Variant.Filled"
-                       Size="Size.Small"
-                       Color="Color.Primary" />
-        <MudText Typo="Typo.subtitle1" Style="min-width: 120px; text-align: center;">
-            @_currentMonth.ToString("MMMM yyyy")
-        </MudText>
-        <MudIconButton Icon="@Icons.Material.Filled.ChevronRight"
-                       Size="Size.Small"
-                       OnClick="NextMonth"
-                       Variant="Variant.Filled"
-                       Color="Color.Primary" />
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate Color="Color.Primary" Class="mt-1" />
+        }
     </div>
-        
-</MudStack>
 
-
-@if (_loading)
-{
-    <MudProgressLinear Indeterminate Color="Color.Primary" />
-}
-
-@* Calendar Grid *@
-<div>
-    <MudSimpleTable Dense Style="width: 100%; table-layout: fixed;">
-        <thead>
-            <tr>
-                @foreach (var dayName in _dayHeaders)
-                {
-                    <th class="text-center" style="width: 14.28%; padding: 6px 4px; font-weight: 600;">@dayName</th>
-                }
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var week in _weeks)
-            {
+    @* ── Calendar grid (fills remaining space, scrolls if needed) ── *@
+    <div class="calendar-body" style="--week-count: @_weeks.Count;">
+        <MudSimpleTable Dense Style="width: 100%; table-layout: fixed; background-color: #f3f3f382;">
+            <thead>
                 <tr>
-                    @foreach (var day in week)
+                    @foreach (var dayName in _dayHeaders)
                     {
-                        <td class="calendar-cell @(day.IsCurrentMonth ? "" : "other-month") @(day.IsToday ? "today-cell" : "")"
-                            @onclick="() => OnDayClicked(day.Date)">
-                            <div class="day-number">
-                                @day.Date.Day
-                            </div>
-                            <div class="events-container">
-                                @foreach (var evt in day.Events.Take(3))
-                                {
-                                    <div class="event-chip @GetEventCssClass(evt)"
-                                         @onclick="() => OnEventClicked(evt.Id)"
-                                         @onclick:stopPropagation="true"
-                                         title="@evt.ExtendedProps?.CalendarTitle">
-                                        @evt.Title
-                                    </div>
-                                }
-                                @if (day.Events.Count > 3)
-                                {
-                                    <div class="more-label">+@(day.Events.Count - 3) @Loc["more"]</div>
-                                }
-                            </div>
-                        </td>
+                        <th class="text-center" style="width: 14.28%; padding: 6px 4px; font-weight: 600;">@dayName</th>
                     }
                 </tr>
+            </thead>
+            <tbody>
+                @foreach (var week in _weeks)
+                {
+                    <tr>
+                        @foreach (var day in week)
+                        {
+                            <td class="calendar-cell @(day.IsCurrentMonth ? "" : "other-month") @(day.IsToday ? "today-cell" : "")"
+                                @onclick="() => OnDayClicked(day.Date)">
+                                <div class="day-number">
+                                    @day.Date.Day
+                                </div>
+                                <div class="events-container">
+                                    @foreach (var evt in day.Events.Take(3))
+                                    {
+                                        <div class="event-chip @GetEventCssClass(evt)"
+                                             @onclick="() => OnEventClicked(evt.Id)"
+                                             @onclick:stopPropagation="true"
+                                             title="@evt.ExtendedProps?.CalendarTitle">
+                                            @evt.Title
+                                        </div>
+                                    }
+                                    @if (day.Events.Count > 3)
+                                    {
+                                        <div class="more-label">+@(day.Events.Count - 3) @Loc["more"]</div>
+                                    }
+                                </div>
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    </div>
+
+    @* ── Bottom toolbar: Department toggle group ── *@
+    <div class="calendar-bottom-bar">
+        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.End" Spacing="8">
+            <MudText Style="flex:1" Typo="Typo.subtitle2">
+                @Loc["Department"]:
+            </MudText>
+
+            @if (_departments.Count > 0)
+            {
+                <MudToggleGroup T="string" Value="_selectedDepartmentId" ValueChanged="OnDepartmentToggled"
+                                SelectionMode="SelectionMode.SingleSelection"
+                                Size="Size.Small"
+                                Color="Color.Primary" Outlined FixedContent>
+                    @foreach (var dept in _departments)
+                    {
+                        <MudToggleItem T="string" Value="@dept.Value">@dept.Text</MudToggleItem>
+                    }
+                </MudToggleGroup>
             }
-        </tbody>
-    </MudSimpleTable>
+            else
+            {
+                <MudProgressLinear Style="align-self: center; margin-top: 0 !important;" Indeterminate Color="Color.Primary" Class="mt-1" />
+            }
+        </MudStack>
+    </div>
 </div>

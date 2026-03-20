@@ -1,12 +1,65 @@
+/* Full-height layout: top bar + calendar + bottom bar */
+.calendar-layout {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 112px + 32px); /* viewport minus app bar (64px) + container padding (48px) + 32px negative margin */
+    margin-top: -16px;
+    margin-bottom: -16px;
+    margin-left: -12px;
+    margin-right: -12px;
+}
+
+.calendar-top-bar {
+    background-color: #f3f3f382;
+    margin-bottom: 8px;
+    padding: 5px 10px;
+    border: 1px solid var(--mud-palette-table-lines);
+    border-radius: 5px;
+}
+
+.calendar-bottom-bar {
+    background-color: #f3f3f382;
+    margin-top: 8px;
+    padding: 5px 10px;
+    border: 1px solid var(--mud-palette-table-lines);
+    border-radius: 5px;
+}
+
+.calendar-body {
+    flex: 1;
+    min-height: 0; /* allow shrinking below content size */
+    overflow: auto;
+}
+
+/* Propagate height through MudSimpleTable wrappers */
+::deep .calendar-body .mud-table,
+::deep .calendar-body .mud-table-container,
+::deep .calendar-body .mud-table-container > table {
+    height: 100%;
+    border-radius:0;
+    padding:0;
+}
+
+::deep .calendar-body .mud-table-container > table > tbody > tr {
+    height: calc(100% / var(--week-count, 5));
+}
+
 /* Calendar cell layout */
 ::deep .calendar-cell {
     vertical-align: top;
     padding: 4px 4px !important;
     cursor: pointer;
-    height: 65px;
-    border: 1px solid var(--mud-palette-table-lines);
+    border: 1px solid var(--mud-palette-table-lines) !important;
     transition: background-color 0.15s;
 }
+
+::deep tr th {
+    border: 1px solid var(--mud-palette-table-lines) !important;
+}
+
+    ::deep .mud-container {
+        padding: 0 !important;
+    }
 
 ::deep .calendar-cell:hover {
     background-color: var(--mud-palette-action-default-hover);
