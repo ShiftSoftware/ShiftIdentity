@@ -237,6 +237,8 @@
 @code {
     [Parameter] public DateTime? InitialStartDate { get; set; }
     [Parameter] public DateTime? InitialEndDate { get; set; }
+    [Parameter] public ShiftEntitySelectDTO? InitialCompany { get; set; }
+    [Parameter] public List<ShiftEntitySelectDTO>? InitialBranches { get; set; }
 
     protected override void OnInitialized()
     {
@@ -245,6 +247,12 @@
 
         if (InitialEndDate is not null)
             TheItem.EndDate = InitialEndDate;
+
+        if (InitialCompany is not null)
+            TheItem.Company = InitialCompany;
+
+        if (InitialBranches is not null)
+            TheItem.Branches = InitialBranches;
     }
 
     private static TimeSpan? TicksToTimeSpan(long ticks) => ticks > 0 ? new TimeSpan(ticks) : null;

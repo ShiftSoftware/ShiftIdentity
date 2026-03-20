@@ -323,13 +323,23 @@ public partial class CompanyCalendarMudPage : IDisposable
         var parameters = new Dictionary<string, object>();
 
         if (calendarId is not null)
+        {
             parameters["key"] = calendarId.Value.ToString();
+        }
+        else
+        {
+            if (startDate is not null)
+                parameters[nameof(CompanyCalendarForm.InitialStartDate)] = startDate.Value;
 
-        if (startDate is not null)
-            parameters[nameof(CompanyCalendarForm.InitialStartDate)] = startDate.Value;
+            if (endDate is not null)
+                parameters[nameof(CompanyCalendarForm.InitialEndDate)] = endDate.Value;
 
-        if (endDate is not null)
-            parameters[nameof(CompanyCalendarForm.InitialEndDate)] = endDate.Value;
+            if (_selectedCompany is not null)
+                parameters[nameof(CompanyCalendarForm.InitialCompany)] = _selectedCompany;
+
+            if (_selectedBranch is not null)
+                parameters[nameof(CompanyCalendarForm.InitialBranches)] = new List<ShiftEntitySelectDTO> { _selectedBranch };
+        }
 
         var dialogReference = await DialogService.Open<CompanyCalendarForm>(parameters: parameters);
 
