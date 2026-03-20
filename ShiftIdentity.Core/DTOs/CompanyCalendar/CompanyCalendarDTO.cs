@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftIdentity.Core.Enums;
 
@@ -52,6 +53,20 @@ public class CompanyCalendarShiftItemDTO
     public string Title { get; set; } = "";
     public long StartTimeTicks { get; set; }
     public long EndTimeTicks { get; set; }
+
+    [JsonIgnore]
+    public TimeSpan? StartTime
+    {
+        get => StartTimeTicks > 0 ? new TimeSpan(StartTimeTicks) : null;
+        set => StartTimeTicks = value?.Ticks ?? 0;
+    }
+
+    [JsonIgnore]
+    public TimeSpan? EndTime
+    {
+        get => EndTimeTicks > 0 ? new TimeSpan(EndTimeTicks) : null;
+        set => EndTimeTicks = value?.Ticks ?? 0;
+    }
 }
 
 public class CompanyCalendarWeekendGroupDTO

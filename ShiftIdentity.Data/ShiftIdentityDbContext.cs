@@ -148,20 +148,34 @@ namespace ShiftSoftware.ShiftIdentity.Data
                 v => JsonSerializer.Deserialize<List<CompanyCalendarShiftGroup>>(v, jsonOptions) ?? new List<CompanyCalendarShiftGroup>()
             );
 
+            var shiftGroupsComparer = new ValueComparer<List<CompanyCalendarShiftGroup>>(
+                (a, b) => JsonSerializer.Serialize(a, jsonOptions) == JsonSerializer.Serialize(b, jsonOptions),
+                v => JsonSerializer.Serialize(v, jsonOptions).GetHashCode(),
+                v => JsonSerializer.Deserialize<List<CompanyCalendarShiftGroup>>(JsonSerializer.Serialize(v, jsonOptions), jsonOptions)!
+            );
+
             var weekendGroupsConverter = new ValueConverter<List<CompanyCalendarWeekendGroup>, string>(
                 v => JsonSerializer.Serialize(v, jsonOptions),
                 v => JsonSerializer.Deserialize<List<CompanyCalendarWeekendGroup>>(v, jsonOptions) ?? new List<CompanyCalendarWeekendGroup>()
+            );
+
+            var weekendGroupsComparer = new ValueComparer<List<CompanyCalendarWeekendGroup>>(
+                (a, b) => JsonSerializer.Serialize(a, jsonOptions) == JsonSerializer.Serialize(b, jsonOptions),
+                v => JsonSerializer.Serialize(v, jsonOptions).GetHashCode(),
+                v => JsonSerializer.Deserialize<List<CompanyCalendarWeekendGroup>>(JsonSerializer.Serialize(v, jsonOptions), jsonOptions)!
             );
 
             b.Entity<CompanyCalendar>(x =>
             {
                 x.Property(d => d.ShiftGroups)
                     .HasConversion(shiftGroupsConverter)
-                    .HasColumnType("nvarchar(max)");
+                    .HasColumnType("nvarchar(max)")
+                    .Metadata.SetValueComparer(shiftGroupsComparer);
 
                 x.Property(d => d.WeekendGroups)
                     .HasConversion(weekendGroupsConverter)
-                    .HasColumnType("nvarchar(max)");
+                    .HasColumnType("nvarchar(max)")
+                    .Metadata.SetValueComparer(weekendGroupsComparer);
 
                 x.HasMany(d => d.Branches)
                     .WithOne(cb => cb.CompanyCalendar)

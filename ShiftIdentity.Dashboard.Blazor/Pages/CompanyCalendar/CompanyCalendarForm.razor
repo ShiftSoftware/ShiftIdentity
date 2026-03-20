@@ -138,15 +138,13 @@
                                 </MudItem>
                                 <MudItem xs="4">
                                     <MudTimePicker Label="@Loc["Start Time"]"
-                                                   Time="TicksToTimeSpan(shift.StartTimeTicks)"
-                                                   TimeChanged="t => shift.StartTimeTicks = t?.Ticks ?? 0"
+                                                   @bind-Time="shift.StartTime"
                                                    Variant="Variant.Outlined"
                                                    Margin="Margin.Dense" />
                                 </MudItem>
                                 <MudItem xs="4">
                                     <MudTimePicker Label="@Loc["End Time"]"
-                                                   Time="TicksToTimeSpan(shift.EndTimeTicks)"
-                                                   TimeChanged="t => shift.EndTimeTicks = t?.Ticks ?? 0"
+                                                   @bind-Time="shift.EndTime"
                                                    Variant="Variant.Outlined"
                                                    Margin="Margin.Dense" />
                                 </MudItem>
@@ -255,8 +253,6 @@
         if (InitialBranches is not null)
             TheItem.Branches = InitialBranches;
     }
-
-    private static TimeSpan? TicksToTimeSpan(long ticks) => ticks > 0 ? new TimeSpan(ticks) : null;
 
     private string DayOfWeekToString(int day) => day switch
     {
