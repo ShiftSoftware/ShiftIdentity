@@ -20,6 +20,8 @@ public class ShiftIdentityDashboardBlazorOptions
 
     public ShiftIdentityDashboardRoutes DashboardRoutes { get; set; } = new ShiftIdentityDashboardRoutes();
 
+    public DayOfWeek WeekStart { get; set; } = DayOfWeek.Saturday;
+
     public Func<Task>? DynamicTypeAuthActionExpander { get; set; }
 
     public ShiftIdentityDashboardBlazorOptions AddCompanyBranchPhoneTag(string tag)

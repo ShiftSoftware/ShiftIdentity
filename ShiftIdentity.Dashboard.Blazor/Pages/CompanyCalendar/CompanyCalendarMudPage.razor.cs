@@ -16,6 +16,7 @@ public partial class CompanyCalendarMudPage : IDisposable
     [Inject] private HttpClient Http { get; set; } = default!;
     [Inject] private ShiftModal DialogService { get; set; } = default!;
     [Inject] private ILocalStorageService LocalStorage { get; set; } = default!;
+    [Inject] private ShiftIdentityDashboardBlazorOptions Options { get; set; } = default!;
 
     private const string StorageKey = "CompanyCalendar_Preferences";
     private const int MonthNavDebounceMs = 300;
@@ -213,7 +214,7 @@ public partial class CompanyCalendarMudPage : IDisposable
     private void BuildDayHeaders()
     {
         var culture = CultureInfo.CurrentCulture;
-        var firstDay = culture.DateTimeFormat.FirstDayOfWeek;
+        var firstDay = Options.WeekStart;
         _dayHeaders = Enumerable.Range(0, 7)
             .Select(i => culture.DateTimeFormat.AbbreviatedDayNames[((int)firstDay + i) % 7])
             .ToArray();
@@ -221,8 +222,7 @@ public partial class CompanyCalendarMudPage : IDisposable
 
     private void BuildWeeks()
     {
-        var culture = CultureInfo.CurrentCulture;
-        var firstDayOfWeek = culture.DateTimeFormat.FirstDayOfWeek;
+        var firstDayOfWeek = Options.WeekStart;
 
         var firstOfMonth = _currentMonth;
         var daysInMonth = DateTime.DaysInMonth(firstOfMonth.Year, firstOfMonth.Month);

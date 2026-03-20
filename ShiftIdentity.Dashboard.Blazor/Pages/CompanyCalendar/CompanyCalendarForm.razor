@@ -7,6 +7,7 @@
 
 @inherits ShiftForm<CompanyCalendarForm, CompanyCalendarDTO>
 @inject ShiftIdentityLocalizer Loc
+@inject ShiftIdentityDashboardBlazorOptions Options
 
 <ShiftEntityForm @bind-Mode="Mode"
                  @bind-Value="TheItem"
@@ -109,13 +110,10 @@
                                            SelectedValuesChanged="v => shiftGroup.Days = v?.ToList()"
                                            ToStringFunc="DayOfWeekToString"
                                            Variant="Variant.Text">
-                                    <MudSelectItem T="int" Value="0">@Loc["Sunday"]</MudSelectItem>
-                                    <MudSelectItem T="int" Value="1">@Loc["Monday"]</MudSelectItem>
-                                    <MudSelectItem T="int" Value="2">@Loc["Tuesday"]</MudSelectItem>
-                                    <MudSelectItem T="int" Value="3">@Loc["Wednesday"]</MudSelectItem>
-                                    <MudSelectItem T="int" Value="4">@Loc["Thursday"]</MudSelectItem>
-                                    <MudSelectItem T="int" Value="5">@Loc["Friday"]</MudSelectItem>
-                                    <MudSelectItem T="int" Value="6">@Loc["Saturday"]</MudSelectItem>
+                                    @foreach (var d in _orderedDays)
+                                    {
+                                        <MudSelectItem T="int" Value="d">@DayOfWeekToString(d)</MudSelectItem>
+                                    }
                                 </MudSelect>
                             </MudItem>
 
@@ -199,13 +197,10 @@
                                                @bind-Value="rule.Day"
                                                Variant="Variant.Outlined"
                                                Margin="Margin.Dense">
-                                        <MudSelectItem T="int" Value="0">@Loc["Sunday"]</MudSelectItem>
-                                        <MudSelectItem T="int" Value="1">@Loc["Monday"]</MudSelectItem>
-                                        <MudSelectItem T="int" Value="2">@Loc["Tuesday"]</MudSelectItem>
-                                        <MudSelectItem T="int" Value="3">@Loc["Wednesday"]</MudSelectItem>
-                                        <MudSelectItem T="int" Value="4">@Loc["Thursday"]</MudSelectItem>
-                                        <MudSelectItem T="int" Value="5">@Loc["Friday"]</MudSelectItem>
-                                        <MudSelectItem T="int" Value="6">@Loc["Saturday"]</MudSelectItem>
+                                        @foreach (var d in _orderedDays)
+                                        {
+                                            <MudSelectItem T="int" Value="d">@DayOfWeekToString(d)</MudSelectItem>
+                                        }
                                     </MudSelect>
                                 </MudItem>
                                 <MudItem xs="4">
@@ -240,8 +235,14 @@
     [Parameter] public ShiftEntitySelectDTO? InitialCompany { get; set; }
     [Parameter] public List<ShiftEntitySelectDTO>? InitialBranches { get; set; }
 
+    private int[] _orderedDays = Array.Empty<int>();
+
     protected override void OnInitialized()
     {
+        _orderedDays = Enumerable.Range(0, 7)
+            .Select(i => ((int)Options.WeekStart + i) % 7)
+            .ToArray();
+
         if (InitialStartDate is not null)
             TheItem.StartDate = InitialStartDate;
 
