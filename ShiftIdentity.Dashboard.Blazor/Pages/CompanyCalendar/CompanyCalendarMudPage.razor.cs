@@ -1,5 +1,7 @@
 using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components;
+using MudBlazor;
+using ShiftSoftware.ShiftBlazor.Services;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyCalendar;
@@ -12,7 +14,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.CompanyCalendar;
 public partial class CompanyCalendarMudPage : IDisposable
 {
     [Inject] private HttpClient Http { get; set; } = default!;
-    [Inject] private NavigationManager Nav { get; set; } = default!;
+    [Inject] private ShiftModal DialogService { get; set; } = default!;
     [Inject] private ILocalStorageService LocalStorage { get; set; } = default!;
 
     private const string StorageKey = "CompanyCalendar_Preferences";
@@ -261,17 +263,20 @@ public partial class CompanyCalendarMudPage : IDisposable
 
     private void OnDayClicked(DateTime date)
     {
-        Nav.NavigateTo($"{Constants.IdentityRoutePreifix}/{nameof(CompanyCalendarForm)}");
     }
 
-    private void OnEventClicked(long calendarId)
+    private async Task OnEventClicked(long calendarId)
     {
-        Nav.NavigateTo($"{Constants.IdentityRoutePreifix}/{nameof(CompanyCalendarForm)}/{calendarId}");
-    }
+        var dialogReference = await DialogService.Open<CompanyCalendarForm>(
+            parameters: new() { { "key", calendarId.ToString() } }
+        );
 
-    private void NavigateToNewEntry()
-    {
-        Nav.NavigateTo($"{Constants.IdentityRoutePreifix}/{nameof(CompanyCalendarForm)}");
+        if (!(dialogReference?.Canceled ?? false) && dialogReference?.Data is not null)
+        {
+            _events.Clear();
+            BuildWeeks();
+            ScheduleDebouncedLoad();
+        }
     }
 
     #endregion

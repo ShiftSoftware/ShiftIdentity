@@ -100,12 +100,13 @@
                                     {
                                         @foreach (var evt in day.Events.Take(3))
                                         {
-                                            <div class="event-chip @GetEventCssClass(evt)"
-                                                 @onclick="() => OnEventClicked(evt.Id)"
-                                                 @onclick:stopPropagation="true"
-                                                 title="@evt.ExtendedProps?.CalendarTitle">
-                                                @evt.Title
-                                            </div>
+                                            <MudTooltip Text="@evt.ExtendedProps?.CalendarTitle">
+                                                <div class="event-chip @GetEventCssClass(evt)"
+                                                     @onclick="() => OnEventClicked(evt.Id)"
+                                                     @onclick:stopPropagation="true">
+                                                    @evt.Title
+                                                </div>
+                                            </MudTooltip>
                                         }
                                         @if (day.Events.Count > 3)
                                         {
