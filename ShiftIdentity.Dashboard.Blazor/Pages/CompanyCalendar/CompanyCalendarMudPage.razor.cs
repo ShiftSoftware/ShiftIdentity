@@ -1,8 +1,8 @@
+using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyCalendar;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.Department;
 using ShiftSoftware.ShiftIdentity.Core.Enums;
 using System.Globalization;
 using System.Net.Http.Json;
@@ -13,6 +13,9 @@ public partial class CompanyCalendarMudPage
 {
     [Inject] private HttpClient Http { get; set; } = default!;
     [Inject] private NavigationManager Nav { get; set; } = default!;
+    [Inject] private ILocalStorageService LocalStorage { get; set; } = default!;
+
+    private const string StorageKey = "CompanyCalendar_Preferences";
 
     private bool _loading;
     private DateTime _currentMonth = new(DateTime.Today.Year, DateTime.Today.Month, 1);
@@ -29,8 +32,9 @@ public partial class CompanyCalendarMudPage
     protected override async Task OnInitializedAsync()
     {
         BuildDayHeaders();
-
         BuildWeeks();
+
+        await RestorePreferences();
 
         await base.OnInitializedAsync();
     }
@@ -69,6 +73,8 @@ public partial class CompanyCalendarMudPage
         _events.Clear();
         BuildWeeks();
 
+        await SavePreferences();
+
         if (company?.Value is not null)
         {
             await LoadEvents();
@@ -78,18 +84,21 @@ public partial class CompanyCalendarMudPage
     private async Task OnBranchChanged(ShiftEntitySelectDTO? branch)
     {
         _selectedBranch = branch;
+        await SavePreferences();
         await LoadEvents();
     }
 
     private async Task OnBrandhChanged(ShiftEntitySelectDTO? brand)
     {
         _selectedBrand = brand;
+        await SavePreferences();
         await LoadEvents();
     }
 
     private async Task OnDepartmentChanged(ShiftEntitySelectDTO? department)
     {
         _selectedDepartment = department;
+        await SavePreferences();
         await LoadEvents();
     }
 
@@ -239,6 +248,53 @@ public partial class CompanyCalendarMudPage
     private class ODataResponse<T>
     {
         public List<T>? Value { get; set; }
+    }
+
+    #endregion
+
+    #region Preferences Persistence
+
+    private async Task SavePreferences()
+    {
+        var prefs = new CalendarPreferences
+        {
+            Company = _selectedCompany,
+            Branch = _selectedBranch,
+            Department = _selectedDepartment,
+            Brand = _selectedBrand,
+        };
+
+        await LocalStorage.SetItemAsync(StorageKey, prefs);
+    }
+
+    private async Task RestorePreferences()
+    {
+        try
+        {
+            var prefs = await LocalStorage.GetItemAsync<CalendarPreferences>(StorageKey);
+            if (prefs is null)
+                return;
+
+            _selectedCompany = prefs.Company;
+            _selectedBranch = prefs.Branch;
+            _selectedDepartment = prefs.Department;
+            _selectedBrand = prefs.Brand;
+
+            await LoadEvents();
+        }
+        catch
+        {
+            // If stored data is corrupt, just start fresh
+            await LocalStorage.RemoveItemAsync(StorageKey);
+        }
+    }
+
+    private class CalendarPreferences
+    {
+        public ShiftEntitySelectDTO? Company { get; set; }
+        public ShiftEntitySelectDTO? Branch { get; set; }
+        public ShiftEntitySelectDTO? Department { get; set; }
+        public ShiftEntitySelectDTO? Brand { get; set; }
     }
 
     #endregion
