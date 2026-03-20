@@ -66,10 +66,6 @@
             </MudStack>
         </MudStack>
 
-        @if (_loading)
-        {
-            <MudProgressLinear Indeterminate Color="Color.Primary" Class="mt-1" />
-        }
     </div>
 
     @* ── Calendar grid (fills remaining space, scrolls if needed) ── *@
@@ -95,18 +91,26 @@
                                     @day.Date.Day
                                 </div>
                                 <div class="events-container">
-                                    @foreach (var evt in day.Events.Take(3))
+                                    @if (_loading && day.IsCurrentMonth)
                                     {
-                                        <div class="event-chip @GetEventCssClass(evt)"
-                                             @onclick="() => OnEventClicked(evt.Id)"
-                                             @onclick:stopPropagation="true"
-                                             title="@evt.ExtendedProps?.CalendarTitle">
-                                            @evt.Title
-                                        </div>
+                                        <div class="skeleton-bar" style="width: 100%;"></div>
+                                        <div class="skeleton-bar" style="width: 100%;"></div>
                                     }
-                                    @if (day.Events.Count > 3)
+                                    else
                                     {
-                                        <div class="more-label">+@(day.Events.Count - 3) @Loc["more"]</div>
+                                        @foreach (var evt in day.Events.Take(3))
+                                        {
+                                            <div class="event-chip @GetEventCssClass(evt)"
+                                                 @onclick="() => OnEventClicked(evt.Id)"
+                                                 @onclick:stopPropagation="true"
+                                                 title="@evt.ExtendedProps?.CalendarTitle">
+                                                @evt.Title
+                                            </div>
+                                        }
+                                        @if (day.Events.Count > 3)
+                                        {
+                                            <div class="more-label">+@(day.Events.Count - 3) @Loc["more"]</div>
+                                        }
                                     }
                                 </div>
                             </td>
