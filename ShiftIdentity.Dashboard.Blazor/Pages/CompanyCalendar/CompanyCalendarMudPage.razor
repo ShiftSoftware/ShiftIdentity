@@ -10,15 +10,29 @@
 
     @* ── Top toolbar: Company, Branch, Month navigation ── *@
     <div class="calendar-top-bar">
-        <MudStack Row AlignItems="AlignItems.End" Justify="Justify.SpaceBetween"  Class="flex-wrap" Spacing="8">
-            <MudStack Row Spacing="2" Style="flex: 1;">
+        <MudStack Row AlignItems="AlignItems.End" Justify="Justify.SpaceBetween" Class="flex-wrap" Spacing="10">
+            <MudStack Row Spacing="4" Style="flex: 1;">
                 <ShiftAutocomplete Label="@Loc["Company"]"
+                                   Placeholder="@Loc["Company"]"
+                                   InputStyle="color:var(--mud-palette-primary);"
+                                   AdornmentColor="Color.Primary"
+                                   Clearable
+                                   AdornmentIcon="@Icons.Material.Filled.Business"
+                                   Adornment="Adornment.Start"
+                                   AdornmentSize="Size.Small"
                                    TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Company.CompanyListDTO"
                                    EntitySet="@($"{Constants.IdentityRoutePreifix}Company")"
                                    Value="_selectedCompany"
                                    ValueChanged="OnCompanyChanged" />
                 
                 <ShiftAutocomplete Label="@Loc["Branch"]"
+                                   Placeholder="@Loc["Branch"]"
+                                   InputStyle="color:var(--mud-palette-primary);"
+                                   AdornmentColor="Color.Primary"
+                                   Clearable
+                                   AdornmentIcon="@Icons.Material.Filled.AddBusiness"
+                                   Adornment="Adornment.Start"
+                                   AdornmentSize="Size.Small"
                                    TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO"
                                    EntitySet="@($"{Constants.IdentityRoutePreifix}CompanyBranch")"
                                    Disabled="_selectedCompany?.Value is null"
@@ -28,6 +42,14 @@
             </MudStack>
 
             <MudStack Row>
+                <MudButton StartIcon="@Icons.Material.Filled.Today"
+                           Color="Color.Primary"
+                           Variant="Variant.Outlined"
+                           OnClick="async () => await GoToToday()"
+                           Size="Size.Small">
+                    @Loc["Today"]
+                </MudButton>
+
                 <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
                                OnClick="PreviousMonth"
                                Variant="Variant.Filled"
@@ -97,27 +119,32 @@
 
     @* ── Bottom toolbar: Department toggle group ── *@
     <div class="calendar-bottom-bar">
-        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.End" Spacing="8">
-            <MudText Style="flex:1" Typo="Typo.subtitle2">
-                @Loc["Department"]:
-            </MudText>
+        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.End" Spacing="20">
+            <ShiftAutocomplete Label="@Loc["Department"]"
+                               Placeholder="@Loc["Department"]"
+                               InputStyle="color:var(--mud-palette-primary);"
+                               AdornmentColor="Color.Primary"
+                               Clearable
+                               AdornmentIcon="@Icons.Material.Filled.Dashboard"
+                               Adornment="Adornment.Start"
+                               AdornmentSize="Size.Small"
+                               TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentListDTO"
+                               EntitySet="@($"{Constants.IdentityRoutePreifix}Department")"
+                               Value="_selectedDepartment"
+                               ValueChanged="OnDepartmentChanged" />
 
-            @if (_departments.Count > 0)
-            {
-                <MudToggleGroup T="string" Value="_selectedDepartmentId" ValueChanged="OnDepartmentToggled"
-                                SelectionMode="SelectionMode.SingleSelection"
-                                Size="Size.Small"
-                                Color="Color.Primary" Outlined FixedContent>
-                    @foreach (var dept in _departments)
-                    {
-                        <MudToggleItem T="string" Value="@dept.Value">@dept.Text</MudToggleItem>
-                    }
-                </MudToggleGroup>
-            }
-            else
-            {
-                <MudProgressLinear Style="align-self: center; margin-top: 0 !important;" Indeterminate Color="Color.Primary" Class="mt-1" />
-            }
+            <ShiftAutocomplete Label="@Loc["Brand"]"
+                               Placeholder="@Loc["Brand"]"
+                               InputStyle="color:var(--mud-palette-primary);"
+                               AdornmentColor="Color.Primary"
+                               Clearable
+                               AdornmentIcon="@Icons.Material.Filled.LocalMall"
+                               Adornment="Adornment.Start"
+                               AdornmentSize="Size.Small"
+                               TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Brand.BrandListDTO"
+                               EntitySet="@($"{Constants.IdentityRoutePreifix}Brand")"
+                               Value="_selectedBrand"
+                               ValueChanged="OnBrandhChanged" />
         </MudStack>
     </div>
 </div>

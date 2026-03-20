@@ -19,10 +19,8 @@ public partial class CompanyCalendarMudPage
 
     private ShiftEntitySelectDTO? _selectedCompany;
     private ShiftEntitySelectDTO? _selectedBranch;
-
-    // Department toggle group
-    private List<ShiftEntitySelectDTO> _departments = new();
-    private string? _selectedDepartmentId;
+    private ShiftEntitySelectDTO? _selectedBrand;
+    private ShiftEntitySelectDTO? _selectedDepartment;
 
     private List<CalendarEventDTO> _events = new();
     private List<CalendarDay[]> _weeks = new();
@@ -31,10 +29,8 @@ public partial class CompanyCalendarMudPage
     protected override async Task OnInitializedAsync()
     {
         BuildDayHeaders();
-        
+
         BuildWeeks();
-        
-        await LoadDepartments();
 
         await base.OnInitializedAsync();
     }
@@ -85,9 +81,15 @@ public partial class CompanyCalendarMudPage
         await LoadEvents();
     }
 
-    private async Task OnDepartmentToggled(string? departmentId)
+    private async Task OnBrandhChanged(ShiftEntitySelectDTO? brand)
     {
-        _selectedDepartmentId = departmentId;
+        _selectedBrand = brand;
+        await LoadEvents();
+    }
+
+    private async Task OnDepartmentChanged(ShiftEntitySelectDTO? department)
+    {
+        _selectedDepartment = department;
         await LoadEvents();
     }
 
@@ -95,39 +97,9 @@ public partial class CompanyCalendarMudPage
 
     #region Data Loading
 
-    private async Task LoadDepartments()
-    {
-        try
-        {
-            var url = $"{Constants.IdentityRoutePreifix}Department?$select=ID,Name";
-            var response = await Http.GetAsync(url);
-
-            if (response.IsSuccessStatusCode)
-            {
-                var odata = await response.Content.ReadFromJsonAsync<ODataResponse<DepartmentListDTO>>();
-                if (odata?.Value is not null)
-                {
-                    _departments = odata.Value
-                        .Select(d => new ShiftEntitySelectDTO { Value = d.ID ?? "", Text = d.Name })
-                        .ToList();
-
-                    // Auto-select the first department
-                    if (_departments.Count > 0)
-                        _selectedDepartmentId = _departments[0].Value;
-                }
-            }
-        }
-        catch
-        {
-            // Silently handle — departments will show as empty
-        }
-
-        StateHasChanged();
-    }
-
     private async Task LoadEvents()
     {
-        if (_selectedCompany?.Value is null)
+        if (_selectedCompany?.Value is null || _selectedBranch?.Value is null || _selectedDepartment?.Value is null)
             return;
 
         _loading = true;
@@ -146,8 +118,8 @@ public partial class CompanyCalendarMudPage
                 ViewBranchHashIds = _selectedBranch?.Value is not null
                     ? new List<string> { _selectedBranch.Value }
                     : null,
-                ViewDepartmentHashIds = _selectedDepartmentId is not null
-                    ? new List<string> { _selectedDepartmentId }
+                ViewDepartmentHashIds = _selectedDepartment?.Value is not null
+                    ? new List<string> { _selectedDepartment.Value }
                     : null,
             };
 
