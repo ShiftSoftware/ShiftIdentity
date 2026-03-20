@@ -9,16 +9,19 @@ using System.Net.Http.Json;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.CompanyCalendar;
 
-public partial class CompanyCalendarMudPage
+public partial class CompanyCalendarMudPage : IDisposable
 {
     [Inject] private HttpClient Http { get; set; } = default!;
     [Inject] private NavigationManager Nav { get; set; } = default!;
     [Inject] private ILocalStorageService LocalStorage { get; set; } = default!;
 
     private const string StorageKey = "CompanyCalendar_Preferences";
+    private const int MonthNavDebounceMs = 300;
 
     private bool _loading;
     private DateTime _currentMonth = new(DateTime.Today.Year, DateTime.Today.Month, 1);
+    private CancellationTokenSource? _loadCts;
+    private Timer? _debounceTimer;
 
     private ShiftEntitySelectDTO? _selectedCompany;
     private ShiftEntitySelectDTO? _selectedBranch;
@@ -41,25 +44,40 @@ public partial class CompanyCalendarMudPage
 
     #region Month Navigation
 
-    private async Task PreviousMonth()
+    private void PreviousMonth()
     {
         _currentMonth = _currentMonth.AddMonths(-1);
+        _events.Clear();
         BuildWeeks();
-        await LoadEvents();
+        ScheduleDebouncedLoad();
     }
 
-    private async Task NextMonth()
+    private void NextMonth()
     {
         _currentMonth = _currentMonth.AddMonths(1);
+        _events.Clear();
         BuildWeeks();
-        await LoadEvents();
+        ScheduleDebouncedLoad();
     }
 
-    private async Task GoToToday()
+    private void GoToToday()
     {
         _currentMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+        _events.Clear();
         BuildWeeks();
-        await LoadEvents();
+        ScheduleDebouncedLoad();
+    }
+
+    private void ScheduleDebouncedLoad()
+    {
+        _debounceTimer?.Dispose();
+        _debounceTimer = new Timer(_ =>
+        {
+            InvokeAsync(async () =>
+            {
+                await LoadEvents();
+            });
+        }, null, MonthNavDebounceMs, Timeout.Infinite);
     }
 
     #endregion
@@ -111,6 +129,11 @@ public partial class CompanyCalendarMudPage
         if (_selectedCompany?.Value is null || _selectedBranch?.Value is null || _selectedDepartment?.Value is null)
             return;
 
+        // Cancel any in-flight request
+        _loadCts?.Cancel();
+        _loadCts?.Dispose();
+        var cts = _loadCts = new CancellationTokenSource();
+
         _loading = true;
         StateHasChanged();
 
@@ -133,19 +156,30 @@ public partial class CompanyCalendarMudPage
             };
 
             var response = await Http.PostAsJsonAsync(
-                $"{Constants.IdentityRoutePreifix}CompanyCalendar/GetCalendarEvents", filter);
+                $"{Constants.IdentityRoutePreifix}CompanyCalendar/GetCalendarEvents", filter, cts.Token);
+
+            cts.Token.ThrowIfCancellationRequested();
 
             if (response.IsSuccessStatusCode)
             {
-                _events = await response.Content.ReadFromJsonAsync<List<CalendarEventDTO>>() ?? new();
+                _events = await response.Content.ReadFromJsonAsync<List<CalendarEventDTO>>(cts.Token) ?? new();
             }
 
             BuildWeeks();
         }
+        catch (OperationCanceledException) when (cts.Token.IsCancellationRequested)
+        {
+            // A newer request superseded this one — do nothing
+            return;
+        }
         finally
         {
-            _loading = false;
-            StateHasChanged();
+            // Only update loading state if this is still the active request
+            if (cts == _loadCts)
+            {
+                _loading = false;
+                StateHasChanged();
+            }
         }
     }
 
@@ -298,4 +332,11 @@ public partial class CompanyCalendarMudPage
     }
 
     #endregion
+
+    public void Dispose()
+    {
+        _debounceTimer?.Dispose();
+        _loadCts?.Cancel();
+        _loadCts?.Dispose();
+    }
 }
