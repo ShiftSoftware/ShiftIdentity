@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
 using ShiftSoftware.ShiftEntity.Web;
 using ShiftSoftware.ShiftIdentity.Core;
+using ShiftSoftware.ShiftIdentity.Core.DTOs.Brand;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyCalendar;
@@ -55,6 +56,11 @@ public class IdentityCompanyCalendarController : ShiftEntitySecureControllerAsyn
         if (filter.ViewDepartmentHashIds is { Count: > 0 })
             filter.ViewDepartmentIds = filter.ViewDepartmentHashIds
                 .Select(ShiftEntityHashIdService.Decode<DepartmentListDTO>)
+                .ToList();
+
+        if (filter.ViewBrandHashIds is { Count: > 0 })
+            filter.ViewBrandIds = filter.ViewBrandHashIds
+                .Select(ShiftEntityHashIdService.Decode<BrandListDTO>)
                 .ToList();
     }
 

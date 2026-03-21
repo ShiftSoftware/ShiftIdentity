@@ -16,6 +16,7 @@ public class CalendarEntryDTO
     public long CompanyId { get; set; }
     public long BranchId { get; set; }
     public long DepartmentId { get; set; }
+    public long BrandId { get; set; }
     public int Priority { get; set; }
     public CalendarEntryType EntryType { get; set; }
 

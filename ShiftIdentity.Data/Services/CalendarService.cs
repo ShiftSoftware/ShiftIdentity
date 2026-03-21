@@ -117,6 +117,7 @@ public class CalendarService
                 CompanyId = calendar.CompanyId,
                 BranchId = branchId,
                 DepartmentId = 0,
+                BrandId = 0,
                 Priority = calendar.Priority,
                 EntryType = calendar.EntryType,
             });
@@ -132,33 +133,44 @@ public class CalendarService
                 ? shiftGroup.DepartmentIds
                 : new List<long> { 0 };
 
+            var brandIds = shiftGroup.BrandIds is { Count: > 0 }
+                ? shiftGroup.BrandIds
+                : new List<long> { 0 };
+
             foreach (var deptId in deptIds)
             {
                 if (filter.ViewDepartmentIds is { Count: > 0 } && !filter.ViewDepartmentIds.Contains(deptId))
                     continue;
 
-                foreach (var shift in shiftGroup.Shifts)
+                foreach (var brandId in brandIds)
                 {
-                    var startTime = TimeSpan.FromTicks(shift.StartTimeTicks);
-                    var endTime = TimeSpan.FromTicks(shift.EndTimeTicks);
+                    if (filter.ViewBrandIds is { Count: > 0 } && !filter.ViewBrandIds.Contains(brandId))
+                        continue;
 
-                    entries.Add(new CalendarEntryDTO
+                    foreach (var shift in shiftGroup.Shifts)
                     {
-                        CalendarId = calendar.Id,
-                        CalendarTitle = calendar.Title,
-                        StartDate = new DateTime(dateCursor.Year, dateCursor.Month, dateCursor.Day,
-                            startTime.Hours, startTime.Minutes, startTime.Seconds),
-                        EndDate = new DateTime(dateCursor.Year, dateCursor.Month, dateCursor.Day,
-                            endTime.Hours, endTime.Minutes, endTime.Seconds),
-                        Status = calendar.EntryType == CalendarEntryType.Holiday
-                            ? CalendarEntryStatus.Holiday
-                            : CalendarEntryStatus.WorkPeriod,
-                        CompanyId = calendar.CompanyId,
-                        BranchId = branchId,
-                        DepartmentId = deptId,
-                        Priority = calendar.Priority,
-                        EntryType = calendar.EntryType,
-                    });
+                        var startTime = TimeSpan.FromTicks(shift.StartTimeTicks);
+                        var endTime = TimeSpan.FromTicks(shift.EndTimeTicks);
+
+                        entries.Add(new CalendarEntryDTO
+                        {
+                            CalendarId = calendar.Id,
+                            CalendarTitle = calendar.Title,
+                            StartDate = new DateTime(dateCursor.Year, dateCursor.Month, dateCursor.Day,
+                                startTime.Hours, startTime.Minutes, startTime.Seconds),
+                            EndDate = new DateTime(dateCursor.Year, dateCursor.Month, dateCursor.Day,
+                                endTime.Hours, endTime.Minutes, endTime.Seconds),
+                            Status = calendar.EntryType == CalendarEntryType.Holiday
+                                ? CalendarEntryStatus.Holiday
+                                : CalendarEntryStatus.WorkPeriod,
+                            CompanyId = calendar.CompanyId,
+                            BranchId = branchId,
+                            DepartmentId = deptId,
+                            BrandId = brandId,
+                            Priority = calendar.Priority,
+                            EntryType = calendar.EntryType,
+                        });
+                    }
                 }
             }
         }
@@ -178,61 +190,74 @@ public class CalendarService
                 ? weekendGroup.DepartmentIds
                 : new List<long> { 0 };
 
+            var brandIds = weekendGroup.BrandIds is { Count: > 0 }
+                ? weekendGroup.BrandIds
+                : new List<long> { 0 };
+
             foreach (var deptId in deptIds)
             {
                 if (filter.ViewDepartmentIds is { Count: > 0 } && !filter.ViewDepartmentIds.Contains(deptId))
                     continue;
 
-                foreach (var rule in weekendGroup.Weekends)
+                foreach (var brandId in brandIds)
                 {
-                    if ((int)dateCursor.DayOfWeek != rule.Day)
+                    if (filter.ViewBrandIds is { Count: > 0 } && !filter.ViewBrandIds.Contains(brandId))
                         continue;
 
-                    var cursor = weekendCursors.FirstOrDefault(c =>
-                        c.Branch == branchId &&
-                        c.Department == deptId &&
-                        c.Day == rule.Day);
-
-                    if (cursor == null)
+                    foreach (var rule in weekendGroup.Weekends)
                     {
-                        var initialCount = 0;
+                        if ((int)dateCursor.DayOfWeek != rule.Day)
+                            continue;
 
-                        if (calendar.StartDate < filter.ViewStartDate)
-                            initialCount = CountDays(dateCursor.DayOfWeek, calendar.StartDate, filter.ViewStartDate);
+                        var cursor = weekendCursors.FirstOrDefault(c =>
+                            c.Branch == branchId &&
+                            c.Department == deptId &&
+                            c.Brand == brandId &&
+                            c.Day == rule.Day);
 
-                        if (dateCursor.DayOfWeek == filter.ViewStartDate.DayOfWeek)
-                            initialCount--;
-
-                        cursor = new WeekendCursor
+                        if (cursor == null)
                         {
-                            Branch = branchId,
-                            Department = deptId,
-                            Day = rule.Day,
-                            Count = initialCount + rule.Skip,
-                        };
+                            var initialCount = 0;
 
-                        weekendCursors.Add(cursor);
+                            if (calendar.StartDate < filter.ViewStartDate)
+                                initialCount = CountDays(dateCursor.DayOfWeek, calendar.StartDate, filter.ViewStartDate);
+
+                            if (dateCursor.DayOfWeek == filter.ViewStartDate.DayOfWeek)
+                                initialCount--;
+
+                            cursor = new WeekendCursor
+                            {
+                                Branch = branchId,
+                                Department = deptId,
+                                Brand = brandId,
+                                Day = rule.Day,
+                                Count = initialCount + rule.Skip,
+                            };
+
+                            weekendCursors.Add(cursor);
+                        }
+
+                        var weekendCount = cursor.Count;
+                        cursor.Count++;
+
+                        if (weekendCount % rule.Repeat != 0)
+                            continue;
+
+                        entries.Add(new CalendarEntryDTO
+                        {
+                            CalendarId = calendar.Id,
+                            CalendarTitle = calendar.Title,
+                            StartDate = dateCursor,
+                            EndDate = dateCursor,
+                            Status = CalendarEntryStatus.Weekend,
+                            CompanyId = calendar.CompanyId,
+                            BranchId = branchId,
+                            DepartmentId = deptId,
+                            BrandId = brandId,
+                            Priority = calendar.Priority,
+                            EntryType = calendar.EntryType,
+                        });
                     }
-
-                    var weekendCount = cursor.Count;
-                    cursor.Count++;
-
-                    if (weekendCount % rule.Repeat != 0)
-                        continue;
-
-                    entries.Add(new CalendarEntryDTO
-                    {
-                        CalendarId = calendar.Id,
-                        CalendarTitle = calendar.Title,
-                        StartDate = dateCursor,
-                        EndDate = dateCursor,
-                        Status = CalendarEntryStatus.Weekend,
-                        CompanyId = calendar.CompanyId,
-                        BranchId = branchId,
-                        DepartmentId = deptId,
-                        Priority = calendar.Priority,
-                        EntryType = calendar.EntryType,
-                    });
                 }
             }
         }
@@ -255,26 +280,38 @@ public class CalendarService
 
                     foreach (var deptGroup in branchEntries.GroupBy(x => x.DepartmentId))
                     {
-                        var groupEntries = deptGroup.ToList();
+                        var deptEntries = deptGroup.ToList();
+                        var deptWideEntries = deptEntries.Where(x => x.BrandId == 0).ToList();
 
-                        var entriesToCheck = deptGroup.Key == 0
-                            ? groupEntries
-                            : groupEntries.Concat(branchWideEntries).ToList();
+                        var deptEntriesWithBranchWide = deptGroup.Key == 0
+                            ? deptEntries
+                            : deptEntries.Concat(branchWideEntries).ToList();
 
-                        foreach (var entry in groupEntries)
+                        foreach (var brandGroup in deptEntries.GroupBy(x => x.BrandId))
                         {
-                            if (entry.Status != CalendarEntryStatus.WorkPeriod)
-                                continue;
+                            var groupEntries = brandGroup.ToList();
 
-                            bool suppressed =
-                                entriesToCheck.Any(x =>
-                                    (x.Status == CalendarEntryStatus.Holiday && x.Priority >= entry.Priority) ||
-                                    (x.Status == CalendarEntryStatus.WorkPeriod && x.Priority > entry.Priority)) ||
-                                entriesToCheck.Any(x =>
-                                    x.Status == CalendarEntryStatus.Weekend && x.Priority >= entry.Priority);
+                            var entriesToCheck = brandGroup.Key == 0
+                                ? deptEntriesWithBranchWide
+                                : groupEntries.Concat(deptWideEntries)
+                                    .Concat(deptGroup.Key == 0 ? [] : branchWideEntries)
+                                    .ToList();
 
-                            if (suppressed)
-                                entry.Status = CalendarEntryStatus.InactiveWorkPeriod;
+                            foreach (var entry in groupEntries)
+                            {
+                                if (entry.Status != CalendarEntryStatus.WorkPeriod)
+                                    continue;
+
+                                bool suppressed =
+                                    entriesToCheck.Any(x =>
+                                        (x.Status == CalendarEntryStatus.Holiday && x.Priority >= entry.Priority) ||
+                                        (x.Status == CalendarEntryStatus.WorkPeriod && x.Priority > entry.Priority)) ||
+                                    entriesToCheck.Any(x =>
+                                        x.Status == CalendarEntryStatus.Weekend && x.Priority >= entry.Priority);
+
+                                if (suppressed)
+                                    entry.Status = CalendarEntryStatus.InactiveWorkPeriod;
+                            }
                         }
                     }
                 }
@@ -303,6 +340,7 @@ public class CalendarService
     {
         public long Branch { get; set; }
         public long Department { get; set; }
+        public long Brand { get; set; }
         public int Day { get; set; }
         public int Count { get; set; }
     }

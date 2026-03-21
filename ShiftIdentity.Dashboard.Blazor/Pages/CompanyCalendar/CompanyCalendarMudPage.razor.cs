@@ -175,6 +175,9 @@ public partial class CompanyCalendarMudPage : IDisposable
                 ViewDepartmentHashIds = _selectedDepartment?.Value is not null
                     ? new List<string> { _selectedDepartment.Value }
                     : null,
+                ViewBrandHashIds = _selectedBrand?.Value is not null
+                    ? new List<string> { _selectedBrand.Value }
+                    : null,
             };
 
             var response = await Http.PostAsJsonAsync(
