@@ -1,5 +1,4 @@
-﻿using EntityFrameworkCore.Triggered.Extensions;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using ShiftSoftware.ShiftEntity.Model.Enums;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
@@ -39,7 +38,7 @@ public class DBSeed
 
         await SeedUserAsync(country, region, company, companyBranch);
 
-        await db.SaveChangesWithoutTriggersAsync();
+        await db.SaveChangesAsync();
     }
 
     private async Task<Country> SeedCountryAsync()

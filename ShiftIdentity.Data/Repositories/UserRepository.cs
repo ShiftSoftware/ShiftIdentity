@@ -104,6 +104,10 @@ public class UserRepository :
                 throw new ShiftEntityException(new Message(Loc["Validation Error"], Loc["Password can not be empty."]));
         }
 
+        // Capture old values before mutation to reset verification flags on change
+        var oldEmail = entity.Email;
+        var oldPhone = entity.Phone;
+
         entity.Username = dto.Username;
         entity.IntegrationId = string.IsNullOrWhiteSpace(dto.IntegrationId) ? null : dto.IntegrationId;
         entity.IsActive = dto.IsActive;
@@ -111,6 +115,21 @@ public class UserRepository :
         entity.FullName = dto.FullName;
         entity.BirthDate = dto.BirthDate;
         entity.Phone = formattedPhone;
+
+        // Reset verification flags when email or phone changes (replaces ResetUserTrigger)
+        if (actionType == ActionTypes.Update)
+        {
+            if (!string.Equals(entity.Email, oldEmail, StringComparison.OrdinalIgnoreCase))
+            {
+                entity.EmailVerified = false;
+                entity.VerificationSASToken = null;
+            }
+
+            if (!string.Equals(entity.Phone, oldPhone, StringComparison.OrdinalIgnoreCase))
+            {
+                entity.PhoneVerified = false;
+            }
+        }
 
         //if (dto.CompanyBranchID != null)
         {

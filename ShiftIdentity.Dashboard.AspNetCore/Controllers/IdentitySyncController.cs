@@ -1,5 +1,4 @@
-﻿using EntityFrameworkCore.Triggered.Extensions;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using ShiftSoftware.ShiftIdentity.Core;
@@ -139,7 +138,7 @@ public class IdentitySyncController : ControllerBase
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.Countries ON");
 
             db.Countries.AddRange(liveData);
-            await db.SaveChangesWithoutTriggersAsync();
+            await db.SaveChangesAsync();
 
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.Countries OFF");
 
@@ -168,7 +167,7 @@ public class IdentitySyncController : ControllerBase
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.Regions ON");
 
             db.Regions.AddRange(liveData);
-            await db.SaveChangesWithoutTriggersAsync();
+            await db.SaveChangesAsync();
 
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.Regions OFF");
 
@@ -197,7 +196,7 @@ public class IdentitySyncController : ControllerBase
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.Cities ON");
 
             db.Cities.AddRange(liveData);
-            await db.SaveChangesWithoutTriggersAsync();
+            await db.SaveChangesAsync();
 
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.Cities OFF");
 
@@ -225,7 +224,7 @@ public class IdentitySyncController : ControllerBase
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.Brands ON");
 
             db.Brands.AddRange(liveData);
-            await db.SaveChangesWithoutTriggersAsync();
+            await db.SaveChangesAsync();
 
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.Brands OFF");
 
@@ -253,7 +252,7 @@ public class IdentitySyncController : ControllerBase
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.Departments ON");
 
             db.Departments.AddRange(liveData);
-            await db.SaveChangesWithoutTriggersAsync();
+            await db.SaveChangesAsync();
 
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.Departments OFF");
 
@@ -281,7 +280,7 @@ public class IdentitySyncController : ControllerBase
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.Services ON");
 
             db.Services.AddRange(liveData);
-            await db.SaveChangesWithoutTriggersAsync();
+            await db.SaveChangesAsync();
 
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.Services OFF");
 
@@ -310,7 +309,7 @@ public class IdentitySyncController : ControllerBase
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.Companies ON");
 
             db.Companies.AddRange(liveData);
-            await db.SaveChangesWithoutTriggersAsync();
+            await db.SaveChangesAsync();
 
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.Companies OFF");
 
@@ -339,7 +338,7 @@ public class IdentitySyncController : ControllerBase
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.CompanyBranches ON");
 
             db.CompanyBranches.AddRange(liveData);
-            await db.SaveChangesWithoutTriggersAsync();
+            await db.SaveChangesAsync();
 
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.CompanyBranches OFF");
 
@@ -367,7 +366,7 @@ public class IdentitySyncController : ControllerBase
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.AccessTrees ON");
 
             db.AccessTrees.AddRange(liveData);
-            await db.SaveChangesWithoutTriggersAsync();
+            await db.SaveChangesAsync();
 
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.AccessTrees OFF");
 
@@ -396,7 +395,7 @@ public class IdentitySyncController : ControllerBase
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.Users ON");
 
             db.Users.AddRange(liveData);
-            await db.SaveChangesWithoutTriggersAsync();
+            await db.SaveChangesAsync();
 
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.Users OFF");
 
@@ -424,7 +423,7 @@ public class IdentitySyncController : ControllerBase
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.Teams ON");
 
             db.Teams.AddRange(liveData);
-            await db.SaveChangesWithoutTriggersAsync();
+            await db.SaveChangesAsync();
 
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.Teams OFF");
 
@@ -452,7 +451,7 @@ public class IdentitySyncController : ControllerBase
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.UserAccessTrees ON");
 
             db.UserAccessTrees.AddRange(liveData);
-            await db.SaveChangesWithoutTriggersAsync();
+            await db.SaveChangesAsync();
 
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.UserAccessTrees OFF");
 
@@ -480,7 +479,7 @@ public class IdentitySyncController : ControllerBase
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.TeamUsers ON");
 
             db.TeamUsers.AddRange(liveData);
-            await db.SaveChangesWithoutTriggersAsync();
+            await db.SaveChangesAsync();
 
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.TeamUsers OFF");
 
@@ -508,7 +507,7 @@ public class IdentitySyncController : ControllerBase
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.CompanyBranchBrands ON");
 
             db.CompanyBranchBrands.AddRange(liveData);
-            await db.SaveChangesWithoutTriggersAsync();
+            await db.SaveChangesAsync();
 
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.CompanyBranchBrands OFF");
 
@@ -536,7 +535,7 @@ public class IdentitySyncController : ControllerBase
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.CompanyBranchDepartments ON");
 
             db.CompanyBranchDepartments.AddRange(liveData);
-            await db.SaveChangesWithoutTriggersAsync();
+            await db.SaveChangesAsync();
 
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.CompanyBranchDepartments OFF");
 
@@ -564,7 +563,7 @@ public class IdentitySyncController : ControllerBase
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.CompanyBranchServices ON");
 
             db.CompanyBranchServices.AddRange(liveData);
-            await db.SaveChangesWithoutTriggersAsync();
+            await db.SaveChangesAsync();
 
             await db.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT ShiftIdentity.CompanyBranchServices OFF");
 

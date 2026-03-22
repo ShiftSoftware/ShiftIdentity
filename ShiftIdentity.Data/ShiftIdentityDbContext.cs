@@ -5,7 +5,6 @@ using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
-using ShiftSoftware.ShiftIdentity.Data.Triggers;
 using System.Text.Json;
 
 namespace ShiftSoftware.ShiftIdentity.Data
@@ -188,8 +187,6 @@ namespace ShiftSoftware.ShiftIdentity.Data
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseTriggers(x=> x.AddTrigger<ResetUserTrigger>());
-
             base.OnConfiguring(optionsBuilder);
         }
     }
