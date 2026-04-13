@@ -1,6 +1,7 @@
 ﻿
 using AutoMapper;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
+using ShiftSoftware.ShiftEntity.Model.Replication.IdentityModels;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 
 namespace ShiftSoftware.ShiftIdentity.Data.AutoMapperProfiles;
@@ -31,6 +32,12 @@ public class User : Profile
             .ForMember(
                 dest => dest.AccessTrees,
                 opt => opt.MapFrom(src => src.AccessTrees.Select(y => new ShiftEntitySelectDTO { Value = y.AccessTreeID.ToString()!, Text = y.AccessTree!.Name }))
+            );
+
+        CreateMap<Core.Entities.User, UserModel>()
+            .ForMember(
+                dest => dest.id,
+                opt => opt.MapFrom(src => src.ID.ToString())
             );
 
         CreateMap<Core.Entities.User, UserDataDTO>().ReverseMap();
