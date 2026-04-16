@@ -5,7 +5,7 @@ using System.Net.Http.Json;
 
 namespace ShiftSoftware.ShiftIdentity.Blazor.Providers;
 
-internal class ShiftIdentityProvider : IShiftIdentityProvider
+public class ShiftIdentityProvider : IShiftIdentityProvider
 {
     private readonly HttpClient http;
 

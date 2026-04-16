@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+	<Import Project="..\..\ShiftTemplates\ShiftFrameworkGlobalSettings.props" Condition="Exists('..\..\ShiftTemplates\ShiftFrameworkGlobalSettings.props')" />
+
+	<!--The Azure Pipeline clones ShiftTemplates into a directory called 's' by default-->
+	<Import Project="..\..\s\ShiftFrameworkGlobalSettings.props" Condition="Exists('..\..\s\ShiftFrameworkGlobalSettings.props')" />
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<AssemblyName>ShiftSoftware.ShiftIdentity.Blazor.Server</AssemblyName>
+		<RootNamespace>ShiftSoftware.ShiftIdentity.Blazor.Server</RootNamespace>
+		<PackageId>ShiftSoftware.ShiftIdentity.Blazor.Server</PackageId>
+		<Product>Shift Identity Blazor Server</Product>
+		<Version>$(ShiftFrameworkVersion)</Version>
+		<Authors>aza.asim,Shift Software,Nahro</Authors>
+		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+		<IsPackable>True</IsPackable>
+		<PackageIcon>icon.png</PackageIcon>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.16.0" />
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.Cookies" Version="2.3.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="Images\icon.png" Pack="true" PackagePath="\" Condition="Exists('Images\icon.png')" />
+		<Folder Include="Images\" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\ShiftIdentity.AspNetCore\ShiftIdentity.AspNetCore.csproj" />
+		<ProjectReference Include="..\ShiftIdentity.Blazor\ShiftIdentity.Blazor.csproj" />
+		<ProjectReference Include="..\ShiftIdentity.Core\ShiftIdentity.Core.csproj" />
+	</ItemGroup>
+</Project>

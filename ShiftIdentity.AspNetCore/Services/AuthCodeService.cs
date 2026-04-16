@@ -22,7 +22,7 @@ public class AuthCodeService
     {
         authCodeStoreService.RemoveExpireCodes();
 
-        //The reutrn-url must be relative,
+        //The return-url must be relative,
         //that means no external return-url allowed
         if (IsAbsoluteUrl(authCodeDto.ReturnUrl!))
             return null;
@@ -62,7 +62,7 @@ public class AuthCodeService
 
         if (authCode == null)
         {
-            Console.WriteLine("authCodeStoreService.GetCode returnd null");
+            Console.WriteLine("authCodeStoreService.GetCode returned null");
             return null;
         }
 
@@ -75,7 +75,7 @@ public class AuthCodeService
         var app = await appRepo.GetAppAsync(authCode.AppId);
         if (app is null)
         {
-            Console.WriteLine("appRepo.GetAppAsync returnd null");
+            Console.WriteLine("appRepo.GetAppAsync returned null");
             return null;
         }
 
@@ -88,7 +88,7 @@ public class AuthCodeService
         var hash = HashService.SHA512GenerateHash(codeVerifier);
         if (hash.ToLower() != authCode.CodeChallenge.ToLower())
         {
-            Console.WriteLine("challange code verification failed");
+            Console.WriteLine("challenge code verification failed");
             return null;
         }
 

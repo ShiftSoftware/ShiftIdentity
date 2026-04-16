@@ -59,7 +59,7 @@ public class CompanyBranchDTO : ShiftEntityViewAndUpsertDTO
     public int? DisplayOrder { get; set; }
     public string? DisplayName { get; set; } = default!;
     public string? Description { get; set; }
-    public IReadOnlyCollection<PublishTarget>? PublishTargets { get; set; } = new HashSet<PublishTarget>();
+    public IEnumerable<PublishTarget>? PublishTargets { get; set; } = new HashSet<PublishTarget>();
 
     public CompanyBranchDTO()
     {

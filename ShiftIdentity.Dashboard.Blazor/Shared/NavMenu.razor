@@ -67,7 +67,7 @@
                           Icon="@Icons.Material.Outlined.EditCalendar"
                           TypeAuthAction="ShiftIdentityActions.CompanyCalendars">@Loc["Calendar Entries"]</AuthorizedMudNavLink>
 
-    @if (ShiftIdentityDashboardBlazorOptions.ShiftIdentityHostingType == ShiftIdentityHostingTypes.External)
+    @* @if (ShiftIdentityDashboardBlazorOptions.ShiftIdentityHostingType == ShiftIdentityHostingTypes.External) *@
     {
         <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(AppList)}")"
                               Match="NavLinkMatch.All"

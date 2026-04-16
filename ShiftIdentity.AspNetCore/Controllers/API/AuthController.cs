@@ -104,7 +104,7 @@ public class AuthController : ControllerBase
             {
                 Message = new Message
                 {
-                    Body = Loc["Failed to genearate auth-code"]
+                    Body = Loc["Failed to generate auth-code"]
                 }
             });
 
@@ -127,7 +127,7 @@ public class AuthController : ControllerBase
     /// <returns></returns>
     [HttpPost("TokenWithAppIdOnly")]
     [AllowAnonymous]
-    public async Task<IActionResult> GenereateExternalTokenWithAppIdOnly([FromBody] GenerateExternalTokenWithAppIdOnlyDTO dto)
+    public async Task<IActionResult> GenerateExternalTokenWithAppIdOnly([FromBody] GenerateExternalTokenWithAppIdOnlyDTO dto)
     {
         var token = await authService.GenrerateExternalTokenWithAppIdOnly(dto);
 
@@ -136,7 +136,7 @@ public class AuthController : ControllerBase
             {
                 Message = new Message
                 {
-                    Body = Loc["Failed to genearate token"]
+                    Body = Loc["Failed to generate token"]
                 }
             });
 

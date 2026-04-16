@@ -26,7 +26,7 @@ public class TeamDTO : ShiftEntityViewAndUpsertDTO
     [UserHashIdConverter]
     public List<ShiftEntitySelectDTO> Users { get; set; } = new List<ShiftEntitySelectDTO>();
 
-    public IReadOnlyCollection<string> Tags { get; set; } = new HashSet<string>() { };
+    public IEnumerable<string> Tags { get; set; } = new HashSet<string>() { };
 }
 
 public class TeamValidator : AbstractValidator<TeamDTO>

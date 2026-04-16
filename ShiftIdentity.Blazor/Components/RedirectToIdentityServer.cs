@@ -4,6 +4,9 @@ using ShiftSoftware.ShiftIdentity.Blazor.Services;
 
 namespace ShiftSoftware.ShiftIdentity.Blazor.Components;
 
+/// <summary>
+/// This component is only used in externalShiftIdentityHosting
+/// </summary>
 public class RedirectToIdentityServer : ComponentBase
 {
     [Inject] NavigationManager NavManager { get; set; } = default!;
