@@ -39,6 +39,71 @@ public partial class ActionTree
     [Parameter]
     public bool Disabled { get; set; }
 
+    /// <summary>
+    /// When true, the tree renders click-to-pick buttons for each action/access
+    /// instead of toggleable access checkboxes. No access-tree editing happens.
+    /// </summary>
+    [Parameter]
+    public bool PickerMode { get; set; }
+
+    [Parameter]
+    public EventCallback<ActionPickedEventArgs> OnActionPicked { get; set; }
+
+    internal async Task PickAsync(ActionTreeNode item, ShiftSoftware.TypeAuth.Core.Access access, bool anyDynamicRow)
+    {
+        var action = item.Action;
+        if (action is null)
+            return;
+
+        var isDynamicSubItem = item.IsADynamicSubItem;
+
+        var args = new ActionPickedEventArgs
+        {
+            ActionPath = action.Path!,
+            Access = access,
+            DynamicId = isDynamicSubItem ? item.ID : null,
+            AnyDynamicRow = anyDynamicRow,
+            DisplayName = BuildDisplayName(item, access, anyDynamicRow)
+        };
+
+        await OnActionPicked.InvokeAsync(args);
+    }
+
+    private static string BuildDisplayName(ActionTreeNode item, ShiftSoftware.TypeAuth.Core.Access access, bool anyDynamicRow)
+    {
+        var label = item.DisplayName ?? item.ID;
+        if (anyDynamicRow)
+            return $"{label} (any row) · {access}";
+        return $"{label} · {access}";
+    }
+
+    internal static IEnumerable<ShiftSoftware.TypeAuth.Core.Access> GetPickerAccessLevels(ActionType type) => type switch
+    {
+        ActionType.ReadWriteDelete => new[] { ShiftSoftware.TypeAuth.Core.Access.Read, ShiftSoftware.TypeAuth.Core.Access.Write, ShiftSoftware.TypeAuth.Core.Access.Delete },
+        ActionType.ReadWrite       => new[] { ShiftSoftware.TypeAuth.Core.Access.Read, ShiftSoftware.TypeAuth.Core.Access.Write },
+        ActionType.Read            => new[] { ShiftSoftware.TypeAuth.Core.Access.Read },
+        ActionType.Boolean         => new[] { ShiftSoftware.TypeAuth.Core.Access.Maximum },
+        _                          => Array.Empty<ShiftSoftware.TypeAuth.Core.Access>(),
+    };
+
+    internal static MudBlazor.Color GetAccessColor(ShiftSoftware.TypeAuth.Core.Access access) => access switch
+    {
+        ShiftSoftware.TypeAuth.Core.Access.Delete  => MudBlazor.Color.Error,
+        ShiftSoftware.TypeAuth.Core.Access.Write   => MudBlazor.Color.Warning,
+        ShiftSoftware.TypeAuth.Core.Access.Read    => MudBlazor.Color.Success,
+        ShiftSoftware.TypeAuth.Core.Access.Maximum => MudBlazor.Color.Primary,
+        _ => MudBlazor.Color.Default,
+    };
+
+    internal static string GetAccessLabel(ShiftSoftware.TypeAuth.Core.Access access) => access switch
+    {
+        ShiftSoftware.TypeAuth.Core.Access.Delete  => "Delete",
+        ShiftSoftware.TypeAuth.Core.Access.Write   => "Write",
+        ShiftSoftware.TypeAuth.Core.Access.Read    => "Read",
+        ShiftSoftware.TypeAuth.Core.Access.Maximum => "Access",
+        _ => access.ToString(),
+    };
+
     private async Task ExpandIdentityActions()
     {
         await Task.WhenAll(new List<Task>

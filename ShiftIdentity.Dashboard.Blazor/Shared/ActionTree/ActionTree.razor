@@ -64,63 +64,107 @@
 
                                 @if (item.ActionTreeItems.Count > 0)
                                 {
-                                    <div style="margin-right:5px;">
-                                        <WildCardAccessButton LoggedInUserTreeItems="LoggedInUserTreeItems_Flattened" Access="Access.Maximum"
-                                                              ActionTreeItem="item" ActionTreeItemChanged="StateHasChanged" Disabled="@(ReadOnly || Disabled)">
-                                            @Loc["Max"]
-                                        </WildCardAccessButton>
-                                    </div>
-                                    <div style="margin-right:5px;">
-                                        <WildCardAccessButton LoggedInUserTreeItems="LoggedInUserTreeItems_Flattened" Access="Access.Delete"
-                                                              ActionTreeItem="item" ActionTreeItemChanged="StateHasChanged" Disabled="@(ReadOnly || Disabled)">
-                                            @Loc["Delete"]
-                                        </WildCardAccessButton>
-                                    </div>
-                                    <div style="margin-right:5px;">
-                                        <WildCardAccessButton LoggedInUserTreeItems="LoggedInUserTreeItems_Flattened" Access="Access.Write"
-                                                              ActionTreeItem="item" ActionTreeItemChanged="StateHasChanged" Disabled="@(ReadOnly || Disabled)">
-                                            @Loc["Write"]
-                                        </WildCardAccessButton>
-                                    </div>
-                                    <div>
-                                        <WildCardAccessButton LoggedInUserTreeItems="LoggedInUserTreeItems_Flattened" Access="Access.Read"
-                                                              ActionTreeItem="item" ActionTreeItemChanged="StateHasChanged" Disabled="@(ReadOnly || Disabled)">
-                                            @Loc["Read"]
-                                        </WildCardAccessButton>
-                                    </div>
+                                    @if (PickerMode)
+                                    {
+                                        @* Only the dynamic-action parent gets "any row" picker buttons.
+                                           Pure group nodes (Action == null) render nothing in picker mode. *@
+                                        @if (item.Action is ShiftSoftware.TypeAuth.Core.Actions.DynamicAction)
+                                        {
+                                            @foreach (var access in GetPickerAccessLevels(item.Action!.Type))
+                                            {
+                                                <div style="margin-right:5px;">
+                                                    <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="@GetAccessColor(access)"
+                                                               StartIcon="@Icons.Material.Filled.Search"
+                                                               OnClick="@(() => PickAsync(item, access, anyDynamicRow: true))">
+                                                        @Loc[GetAccessLabel(access)] (@Loc["any row"])
+                                                    </MudButton>
+                                                </div>
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <div style="margin-right:5px;">
+                                            <WildCardAccessButton LoggedInUserTreeItems="LoggedInUserTreeItems_Flattened" Access="Access.Maximum"
+                                                                  ActionTreeItem="item" ActionTreeItemChanged="StateHasChanged" Disabled="@(ReadOnly || Disabled)">
+                                                @Loc["Max"]
+                                            </WildCardAccessButton>
+                                        </div>
+                                        <div style="margin-right:5px;">
+                                            <WildCardAccessButton LoggedInUserTreeItems="LoggedInUserTreeItems_Flattened" Access="Access.Delete"
+                                                                  ActionTreeItem="item" ActionTreeItemChanged="StateHasChanged" Disabled="@(ReadOnly || Disabled)">
+                                                @Loc["Delete"]
+                                            </WildCardAccessButton>
+                                        </div>
+                                        <div style="margin-right:5px;">
+                                            <WildCardAccessButton LoggedInUserTreeItems="LoggedInUserTreeItems_Flattened" Access="Access.Write"
+                                                                  ActionTreeItem="item" ActionTreeItemChanged="StateHasChanged" Disabled="@(ReadOnly || Disabled)">
+                                                @Loc["Write"]
+                                            </WildCardAccessButton>
+                                        </div>
+                                        <div>
+                                            <WildCardAccessButton LoggedInUserTreeItems="LoggedInUserTreeItems_Flattened" Access="Access.Read"
+                                                                  ActionTreeItem="item" ActionTreeItemChanged="StateHasChanged" Disabled="@(ReadOnly || Disabled)">
+                                                @Loc["Read"]
+                                            </WildCardAccessButton>
+                                        </div>
+                                    }
                                 }
                                 else
                                 {
-                                    @if (item.Action?.Type == ActionType.ReadWriteDelete)
+                                    @if (PickerMode)
                                     {
-                                        <AccessButton ActionTreeItem="item" Access="Access.Delete" TypeAuth_LoggedInUser="tAuth_LoggedInUser"
-                                                      TypeAuth_View="tAuth_View" Disabled="@(ReadOnly || Disabled)">@Loc["Delete"]</AccessButton>
+                                        @if (item.Action?.Type == ActionType.Text)
+                                        {
+                                            <MudText Typo="Typo.caption" Color="Color.Default">@Loc["Text actions are not searchable"]</MudText>
+                                        }
+                                        else if (item.Action != null)
+                                        {
+                                            @foreach (var access in GetPickerAccessLevels(item.Action.Type))
+                                            {
+                                                <div style="margin: 0 5px;">
+                                                    <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="@GetAccessColor(access)"
+                                                               StartIcon="@Icons.Material.Filled.Search"
+                                                               OnClick="@(() => PickAsync(item, access, anyDynamicRow: false))">
+                                                        @Loc[GetAccessLabel(access)]
+                                                    </MudButton>
+                                                </div>
+                                            }
+                                        }
                                     }
-
-                                    @if (item.Action?.Type == ActionType.ReadWriteDelete || item.Action?.Type == ActionType.ReadWrite)
+                                    else
                                     {
-                                        <div style="margin: 0 5px;">
-                                            <AccessButton ActionTreeItem="item" Access="Access.Write" TypeAuth_LoggedInUser="tAuth_LoggedInUser"
-                                                          TypeAuth_View="tAuth_View" Disabled="@(ReadOnly || Disabled)">@Loc["Write"]</AccessButton>
-                                        </div>
-                                    }
+                                        @if (item.Action?.Type == ActionType.ReadWriteDelete)
+                                        {
+                                            <AccessButton ActionTreeItem="item" Access="Access.Delete" TypeAuth_LoggedInUser="tAuth_LoggedInUser"
+                                                          TypeAuth_View="tAuth_View" Disabled="@(ReadOnly || Disabled)">@Loc["Delete"]</AccessButton>
+                                        }
 
-                                    @if (item.Action?.Type == ActionType.ReadWriteDelete || item.Action?.Type == ActionType.ReadWrite || item.Action?.Type == ActionType.Read)
-                                    {
-                                        <AccessButton ActionTreeItem="item" Access="Access.Read" TypeAuth_LoggedInUser="tAuth_LoggedInUser"
-                                                      TypeAuth_View="tAuth_View" Disabled="@(ReadOnly || Disabled)">@Loc["Read"]</AccessButton>
-                                    }
+                                        @if (item.Action?.Type == ActionType.ReadWriteDelete || item.Action?.Type == ActionType.ReadWrite)
+                                        {
+                                            <div style="margin: 0 5px;">
+                                                <AccessButton ActionTreeItem="item" Access="Access.Write" TypeAuth_LoggedInUser="tAuth_LoggedInUser"
+                                                              TypeAuth_View="tAuth_View" Disabled="@(ReadOnly || Disabled)">@Loc["Write"]</AccessButton>
+                                            </div>
+                                        }
 
-                                    @if (item.Action?.Type == ActionType.Boolean)
-                                    {
-                                        <AccessButton ActionTreeItem="item" Access="Access.Maximum" TypeAuth_LoggedInUser="tAuth_LoggedInUser"
-                                                      TypeAuth_View="tAuth_View" Disabled="@(ReadOnly || Disabled)" />
-                                    }
+                                        @if (item.Action?.Type == ActionType.ReadWriteDelete || item.Action?.Type == ActionType.ReadWrite || item.Action?.Type == ActionType.Read)
+                                        {
+                                            <AccessButton ActionTreeItem="item" Access="Access.Read" TypeAuth_LoggedInUser="tAuth_LoggedInUser"
+                                                          TypeAuth_View="tAuth_View" Disabled="@(ReadOnly || Disabled)">@Loc["Read"]</AccessButton>
+                                        }
 
-                                    @if (item.Action?.Type == ActionType.Text)
-                                    {
-                                        <TextAccessField ActionTreeItem="item" TypeAuth_LoggedInUser="tAuth_LoggedInUser" TypeAuth_View="tAuth_View"
-                                                         ReadOnly="ReadOnly" Disabled="Disabled" />
+                                        @if (item.Action?.Type == ActionType.Boolean)
+                                        {
+                                            <AccessButton ActionTreeItem="item" Access="Access.Maximum" TypeAuth_LoggedInUser="tAuth_LoggedInUser"
+                                                          TypeAuth_View="tAuth_View" Disabled="@(ReadOnly || Disabled)" />
+                                        }
+
+                                        @if (item.Action?.Type == ActionType.Text)
+                                        {
+                                            <TextAccessField ActionTreeItem="item" TypeAuth_LoggedInUser="tAuth_LoggedInUser" TypeAuth_View="tAuth_View"
+                                                             ReadOnly="ReadOnly" Disabled="Disabled" />
+                                        }
                                     }
                                 }
                             </div>
