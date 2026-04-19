@@ -19,7 +19,6 @@ public class CompanyCalendar :
     public CalendarEntryType EntryType { get; set; }
     public int Priority { get; set; }
     public long? CompanyID { get; set; }
-    public new DateTime? LastReplicationDate { get; set; }
 
     /// <summary>
     /// Shift configuration groups, stored as a JSON column.
