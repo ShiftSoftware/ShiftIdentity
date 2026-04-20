@@ -23,8 +23,6 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton(shiftIdentityConfiguration.ShiftIdentityFeatureLocking);
         services.TryAddSingleton(shiftIdentityConfiguration.DefaultDataLevelAccessOptions);
 
-        services.AddSingleton<AuthCodeStoreService>();
-        services.AddScoped<AuthCodeService>();
         services.AddScoped<AuthService>();
         services.AddScoped<TokenService>();
         services.AddScoped<Core.HashService>();

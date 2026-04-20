@@ -1,12 +1,9 @@
 ﻿using Microsoft.AspNetCore.Components;
 using ShiftSoftware.ShiftEntity.Model;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.Auth;
-using System.Net.Http.Headers;
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Components.Authorization;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
-using ShiftSoftware.ShiftIdentity.Core.Models;
 using ShiftSoftware.ShiftIdentity.Blazor;
 using ShiftSoftware.ShiftIdentity.Core;
 
@@ -141,11 +138,6 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services
             return new HttpResponse<ShiftEntityResponse<TokenDTO>>(
                 new ShiftEntityResponse<TokenDTO> { Entity = tokenResult.Entity },
                 HttpStatusCode.OK);
-        }
-
-        public async Task<HttpResponse<ShiftEntityResponse<AuthCodeModel>>> GenerateAuthCodeAsync(GenerateAuthCodeDTO dto)
-        {
-            return await httpService.PostAsync<ShiftEntityResponse<AuthCodeModel>, GenerateAuthCodeDTO>(url + "AuthCode", dto);
         }
 
         public async Task LogOutAsync()

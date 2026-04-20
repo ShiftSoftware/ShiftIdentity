@@ -16,7 +16,7 @@ namespace ShiftSoftware.ShiftIdentity.Blazor.Extensions;
 public static class IServiceCollectionExtensions
 {
     public static IServiceCollection AddShiftIdentity(this IServiceCollection services,
-        string appId, string baseUrl, string frontEndBaseUrl, bool noNeedAuthCode = false, Type? localizationResource = null)
+        string appId, string baseUrl, string frontEndBaseUrl, Type? localizationResource = null)
     {
         if (services == null)
         {
@@ -24,11 +24,8 @@ public static class IServiceCollectionExtensions
         }
 
         services.AddBlazoredLocalStorage();
-        services.TryAddSingleton(x => new ShiftIdentityBlazorOptions(appId, baseUrl, frontEndBaseUrl, noNeedAuthCode));
-        services.TryAddScoped<CodeVerifierService>();
-        services.TryAddScoped<ShiftIdentityService>();
+        services.TryAddSingleton(x => new ShiftIdentityBlazorOptions(appId, baseUrl, frontEndBaseUrl));
         services.TryAddScoped<IShiftIdentityProvider, ShiftIdentityProvider>();
-        services.TryAddScoped<TokenRefreshService>();
 
         // Register a dedicated HttpClient for HttpMessageHandlerService to avoid DI loop
         services.AddScoped<ShiftIdentityHttpClient>(sp =>
@@ -36,13 +33,13 @@ public static class IServiceCollectionExtensions
             var options = sp.GetRequiredService<ShiftIdentityBlazorOptions>();
             return new ShiftIdentityHttpClient { BaseAddress = new Uri(options.BaseUrl) };
         });
-        services.TryAddScoped<HttpMessageHandlerService>();
 
+        // Standalone WASM + JWT/localStorage. For Blazor Web App + cookies, use ShiftIdentity.Blazor.Server instead.
+        services.TryAddScoped<TokenRefreshService>();
+        services.TryAddScoped<HttpMessageHandlerService>();
         services.AddTransient<TokenMessageHandlerWithAutoRefresh>();
         services.TryAddScoped<IIdentityStore, IdentityLocalStorageService>();
         services.AddScoped<MessageService>();
-        services.AddScoped<CodeVerifierStorageService>();
-
         services.TryAddScoped<AuthenticationStateProvider, ShiftIdentityAuthStateProvider>();
         services.AddTransient<TokenMessageHandler>();
         services.AddAuthorizationCore();

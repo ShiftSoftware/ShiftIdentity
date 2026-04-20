@@ -13,21 +13,18 @@ public class AuthService
     private readonly IUserRepository userRepo;
     private readonly ShiftIdentityConfiguration shiftIdentityConfigurations;
     private readonly TokenService tokenService;
-    private readonly AuthCodeService authCodeService;
     private readonly ShiftIdentityLocalizer Loc;
 
     public AuthService(
         IUserRepository userRepo,
         ShiftIdentityConfiguration shiftIdentityConfiguration,
         TokenService tokenService,
-        AuthCodeService authCodeService,
         ShiftIdentityLocalizer Loc
         )
     {
         this.userRepo = userRepo;
         this.shiftIdentityConfigurations = shiftIdentityConfiguration;
         this.tokenService = tokenService;
-        this.authCodeService = authCodeService;
         this.Loc = Loc;
     }
 
@@ -80,29 +77,6 @@ public class AuthService
         var token = tokenService.GenerateInternalJwtToken(user);
 
         return new LoginResultModel(token);
-    }
-
-    public async Task<TokenDTO?> GenrerateExternalTokenWithAppIdOnly(GenerateExternalTokenWithAppIdOnlyDTO dto)
-    {
-        var authCode = await authCodeService.VerifyCodeByAppIdOnly(dto.AppId, dto.AuthCode, dto.CodeVerifier);
-
-        if (authCode is null)
-        {
-            Console.WriteLine("VerifyCodeByAppIdOnly returnd null");
-            return null;
-        }
-
-        var user = await userRepo.FindAsync(authCode.UserID, disableDefaultDataLevelAccess: true, disableGlobalFilters: true);
-
-        if (user is null)
-        {
-            Console.WriteLine("userRepo returnd null");
-            return null;
-        }
-
-        var token = tokenService.GenerateExternalJwtToken(user, authCode);
-
-        return token;
     }
 
     public async Task<TokenDTO?> RefreshAsync(string refreshToken)

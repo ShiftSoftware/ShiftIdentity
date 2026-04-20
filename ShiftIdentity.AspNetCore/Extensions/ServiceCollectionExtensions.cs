@@ -110,8 +110,6 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddFakeIdentityEndPoints(this IServiceCollection services, TokenSettingsModel tokenConfiguration, TokenUserDataDTO userData, AppDTO app, string? userPassword, params string[] accessTrees)
     {
-        services.AddSingleton<AuthCodeStoreService>();
-        services.AddScoped<AuthCodeService>();
         services.AddScoped<AuthService>();
         services.AddScoped<TokenService>();
         services.AddScoped<HashService>();

@@ -14,15 +14,6 @@ public class ShiftIdentityProvider : IShiftIdentityProvider
         this.http = http;
     }
 
-    public async Task<HttpResponse<ShiftEntityResponse<TokenDTO?>?>> GetTokenWithAppIdOnlyAsync(string baseUrl, GenerateExternalTokenWithAppIdOnlyDTO dto)
-    {
-        var url = $"{(baseUrl.EndsWith('/') ? baseUrl : baseUrl + "/")}Auth/TokenWithAppIdOnly";
-        using var response = await http.PostAsJsonAsync(url, dto);
-
-        return new HttpResponse<ShiftEntityResponse<TokenDTO?>?>
-            ((await response.Content.ReadFromJsonAsync<ShiftEntityResponse<TokenDTO>>())!, response.StatusCode);
-    }
-
     /// <summary>
     /// Refresh the token by sending refresh token
     /// </summary>

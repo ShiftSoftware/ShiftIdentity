@@ -34,14 +34,6 @@ public class TokenService
         return GenerateToken(user);
     }
 
-    public TokenDTO? GenerateExternalJwtToken(User user, AuthCodeModel authCode)
-    {
-        if (shiftIdentityConfiguration.Security.RequirePasswordChange && user.RequireChangePassword)
-            return null;
-
-        return GenerateToken(user, true);
-    }
-
     public ClaimsPrincipal? GetPrincipalFromRefreshToken(string token)
     {
         var tokenValidationParameters = new TokenValidationParameters
@@ -80,7 +72,7 @@ public class TokenService
         return principal;
     }
 
-    public TokenDTO GenerateToken(User user, bool external = false)
+    public TokenDTO GenerateToken(User user)
     {
         var requirePasswordChange = shiftIdentityConfiguration.Security.RequirePasswordChange && user.RequireChangePassword;
 
@@ -103,8 +95,6 @@ public class TokenService
 
         foreach (var team in user.TeamUsers)
             claims.Add(new Claim(ShiftEntity.Core.Constants.TeamIdsClaim, ShiftEntityHashIdService.Encode<TeamDTO>(team.TeamID)));
-
-        claims.Add(new Claim(ShiftIdentityClaims.ExternalToken, external.ToString().ToLower()));
 
         if (requirePasswordChange)
         {

@@ -88,48 +88,6 @@
                 return;
             }
         }
-
-        // External hosting without cookie auth: redirect to external identity frontend (OAuth/PKCE flow)
-        // When UseCookieAuth is true, the login form is shown and credentials are posted to /api/identity/login
-        if (ShiftIdentityDashboardBlazorOptions.ShiftIdentityHostingType == ShiftIdentityHostingTypes.External
-            && !ShiftIdentityDashboardBlazorOptions.UseCookieAuth)
-        {
-            var codeVerifierService = ServiceProvider.GetService<ShiftSoftware.ShiftIdentity.Blazor.Services.CodeVerifierService>();
-            var identityOptions = ServiceProvider.GetService<ShiftSoftware.ShiftIdentity.Blazor.ShiftIdentityBlazorOptions>();
-
-            if (codeVerifierService != null && identityOptions != null)
-            {
-                var codeChallenge = await codeVerifierService.GenerateCodeChallengeAsync();
-
-                // During SSR, set the code verifier cookie directly on the user's response
-                var httpContextAccessor = ServiceProvider.GetService<Microsoft.AspNetCore.Http.IHttpContextAccessor>();
-                var codeVerifier = await codeVerifierService.LoadCodeVerifierAsync();
-                if (httpContextAccessor?.HttpContext != null && codeVerifier != null)
-                {
-                    httpContextAccessor.HttpContext.Response.Cookies.Append("shift_code_verifier", codeVerifier, new Microsoft.AspNetCore.Http.CookieOptions
-                    {
-                        HttpOnly = true,
-                        Secure = true,
-                        SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax,
-                        MaxAge = TimeSpan.FromMinutes(10),
-                    });
-                }
-
-                var queryStrings = new Dictionary<string, object?>
-                {
-                    { "AppId", identityOptions.AppId },
-                    { "CodeChallenge", codeChallenge }
-                };
-
-                if (!string.IsNullOrWhiteSpace(ReturnUrl))
-                    queryStrings.Add("ReturnUrl", ReturnUrl);
-
-                var url = $"{(identityOptions.FrontEndBaseUrl.EndsWith('/') ? identityOptions.FrontEndBaseUrl : identityOptions.FrontEndBaseUrl + "/")}{Constants.IdentityRoutePreifix}/Auth/AuthCode";
-                var uri = NavManager.GetUriWithQueryParameters(url, queryStrings);
-                NavManager.NavigateTo(uri, true);
-                return;
-            }
-        }
     }
 
     private async Task Login()
