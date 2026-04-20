@@ -20,10 +20,11 @@ namespace Microsoft.Extensions.DependencyInjection;
 
 public static class IMvcBuilderExtensions
 {
+    [Obsolete("This method is deprecated. Please use AddShiftIdentityApi on IServiceCollection instead.")]
     public static IMvcBuilder AddShiftIdentity(this IMvcBuilder builder, string tokenIssuer, string tokenRSAPublicKeyBase64,
         Type? localizationResource = null, bool setAsDefaultScheme = true)
     {
-        builder.Services.AddShiftIdentity(tokenIssuer, tokenRSAPublicKeyBase64, localizationResource, setAsDefaultScheme);
+        builder.Services.AddShiftIdentityApi(tokenIssuer, tokenRSAPublicKeyBase64, localizationResource, setAsDefaultScheme);
         return builder;
     }
 

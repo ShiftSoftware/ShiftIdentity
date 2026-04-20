@@ -16,24 +16,24 @@ using ShiftSoftware.ShiftIdentity.Core.DTOs;
 
 namespace ShiftSoftware.ShiftIdentity.Blazor.Server.Extensions;
 
-public static class CookieAuthExtensions
+public static class ServiceCollectionExtensions
 {
     /// <summary>
     /// Registers cookie-based authentication for Blazor Web App with ShiftIdentity.
     /// Sets up policy scheme (Cookie + JWT), cookie auth middleware, ICookieAuthManager,
     /// PersistingCookieAuthStateProvider, NoOpIdentityStore, and ServerHttpMessageHandler.
     /// </summary>
-    public static WebApplicationBuilder AddShiftIdentityCookieAuth(
-        this WebApplicationBuilder builder,
+    public static IServiceCollection AddShiftIdentityBlazorServer(
+        this IServiceCollection services,
         Action<ShiftIdentityCookieAuthOptions> configure)
     {
         var options = new ShiftIdentityCookieAuthOptions();
         configure(options);
 
-        builder.Services.AddSingleton(options);
+        services.AddSingleton(options);
 
         // Policy scheme: Bearer token in header → JWT, otherwise → Cookies
-        builder.Services.AddAuthentication("ShiftAuth")
+        services.AddAuthentication("ShiftAuth")
             .AddPolicyScheme("ShiftAuth", "Cookie or JWT", policyOptions =>
             {
                 policyOptions.ForwardDefaultSelector = context =>
@@ -90,37 +90,37 @@ public static class CookieAuthExtensions
                 };
             });
 
-        builder.Services.AddAuthorization();
-        builder.Services.AddCascadingAuthenticationState();
-        builder.Services.AddHttpContextAccessor();
+        services.AddAuthorization();
+        services.AddCascadingAuthenticationState();
+        services.AddHttpContextAccessor();
 
         // Auth state provider for SSR → WASM handoff
-        builder.Services.AddScoped<AuthenticationStateProvider, PersistingCookieAuthStateProvider>();
+        services.AddScoped<AuthenticationStateProvider, PersistingCookieAuthStateProvider>();
 
         // No-op identity store — cookie handles token storage
-        builder.Services.AddScoped<IIdentityStore, ShiftIdentity.Blazor.Services.NoOpIdentityStore>();
+        services.AddScoped<IIdentityStore, ShiftIdentity.Blazor.Services.NoOpIdentityStore>();
 
         // ServerHttpMessageHandler for forwarding cookies during SSR
-        builder.Services.AddTransient<ServerHttpMessageHandler>();
+        services.AddTransient<ServerHttpMessageHandler>();
 
         // Register correct ICookieAuthManager based on hosting type
         if (options.HostingType == ShiftIdentityHostingTypes.Internal)
         {
-            builder.Services.AddScoped<ICookieAuthManager, InternalCookieAuthManager>();
+            services.AddScoped<ICookieAuthManager, InternalCookieAuthManager>();
         }
         else
         {
             if (string.IsNullOrEmpty(options.ExternalIdentityApiUrl))
                 throw new InvalidOperationException("ExternalIdentityApiUrl must be set for external identity hosting.");
 
-            builder.Services.AddHttpClient("ShiftIdentityExternal", client =>
+            services.AddHttpClient("ShiftIdentityExternal", client =>
             {
                 client.BaseAddress = new Uri(options.ExternalIdentityApiUrl);
             });
-            builder.Services.AddScoped<ICookieAuthManager, ExternalCookieAuthManager>();
+            services.AddScoped<ICookieAuthManager, ExternalCookieAuthManager>();
         }
 
-        return builder;
+        return services;
     }
 
     /// <summary>

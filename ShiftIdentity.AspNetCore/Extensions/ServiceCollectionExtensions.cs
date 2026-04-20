@@ -21,7 +21,7 @@ namespace ShiftSoftware.ShiftIdentity.AspNetCore.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddShiftIdentity(this IServiceCollection services, string tokenIssuer, string tokenRSAPublicKeyBase64,
+    public static IServiceCollection AddShiftIdentityApi(this IServiceCollection services, string tokenIssuer, string tokenRSAPublicKeyBase64,
         Type? localizationResource = null, bool setAsDefaultScheme = true)
     {
         services.AddJwtAuth(tokenIssuer, tokenRSAPublicKeyBase64, setAsDefaultScheme);

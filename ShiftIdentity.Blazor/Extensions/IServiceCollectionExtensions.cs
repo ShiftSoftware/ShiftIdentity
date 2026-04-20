@@ -15,7 +15,7 @@ namespace ShiftSoftware.ShiftIdentity.Blazor.Extensions;
 
 public static class IServiceCollectionExtensions
 {
-    public static IServiceCollection AddShiftIdentity(this IServiceCollection services,
+    public static IServiceCollection AddShiftIdentityBlazor(this IServiceCollection services,
         string appId, string baseUrl, string frontEndBaseUrl, Type? localizationResource = null)
     {
         if (services == null)
@@ -50,6 +50,14 @@ public static class IServiceCollectionExtensions
         else
             services.AddTransient(x => new ShiftIdentityLocalizer(x, localizationResource));
 
+        return services;
+    }
+
+    [Obsolete("Use AddShiftIdentityBlazor instead. This method will be removed in future versions.")]
+    public static IServiceCollection AddShiftIdentity(this IServiceCollection services,
+        string appId, string baseUrl, string frontEndBaseUrl, Type? localizationResource = null)
+    {
+        services.AddShiftIdentityBlazor(appId, baseUrl, frontEndBaseUrl, localizationResource);
         return services;
     }
 }

@@ -14,7 +14,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddShiftIdentityDashboard<TDbContext>(this IServiceCollection services, ShiftIdentityConfiguration shiftIdentityConfiguration) where TDbContext : ShiftIdentityDbContext
+    public static IServiceCollection AddShiftIdentityDashboardApi<TDbContext>(this IServiceCollection services, ShiftIdentityConfiguration shiftIdentityConfiguration) where TDbContext : ShiftIdentityDbContext
     {
         services.RegisterIShiftEntityFind();
         services.RegisterIShiftEntityPrepareForReplication();
