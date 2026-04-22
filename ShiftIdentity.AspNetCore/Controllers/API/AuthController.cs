@@ -55,7 +55,7 @@ public class AuthController : ControllerBase
         var token = await authService.RefreshAsync(dto.RefreshToken);
 
         if (token is null)
-            return BadRequest(new ShiftEntityResponse<TokenDTO>
+            return Unauthorized(new ShiftEntityResponse<TokenDTO>
             {
                 Message = new Message
                 {

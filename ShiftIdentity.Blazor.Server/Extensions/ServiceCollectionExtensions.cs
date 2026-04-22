@@ -59,31 +59,29 @@ public static class ServiceCollectionExtensions
                     var expiresAt = context.Properties.GetString("token_expires_at");
                     if (expiresAt != null && DateTimeOffset.TryParse(expiresAt, out var expiresAtDate))
                     {
-                        if (expiresAtDate - DateTimeOffset.UtcNow < TimeSpan.FromSeconds(60))
+                        // refresh the token if it's expiring within 30 seconds
+                        if (expiresAtDate - DateTimeOffset.UtcNow < TimeSpan.FromSeconds(30))
                         {
                             var refreshToken = context.Properties.GetString("refresh_token");
-                            if (refreshToken != null)
+                            var authManager = context.HttpContext.RequestServices.GetRequiredService<ICookieAuthManager>();
+                            var newToken = refreshToken != null ? await authManager.RefreshAsync(refreshToken) : null;
+
+                            if (newToken != null)
                             {
-                                var authManager = context.HttpContext.RequestServices.GetRequiredService<ICookieAuthManager>();
-                                var newToken = await authManager.RefreshAsync(refreshToken);
+                                var claims = CookieAuthHelpers.BuildClaimsFromToken(newToken);
+                                var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                                context.ReplacePrincipal(new ClaimsPrincipal(identity));
 
-                                if (newToken != null)
-                                {
-                                    var claims = CookieAuthHelpers.BuildClaimsFromToken(newToken);
-                                    var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-                                    context.ReplacePrincipal(new ClaimsPrincipal(identity));
+                                context.Properties.SetString("refresh_token", newToken.RefreshToken);
+                                context.Properties.SetString("token_expires_at",
+                                    DateTimeOffset.UtcNow.AddSeconds(newToken.TokenLifeTimeInSeconds ?? 900).ToString("o"));
 
-                                    context.Properties.SetString("refresh_token", newToken.RefreshToken);
-                                    context.Properties.SetString("token_expires_at",
-                                        DateTimeOffset.UtcNow.AddSeconds(newToken.TokenLifeTimeInSeconds ?? 900).ToString("o"));
-
-                                    context.ShouldRenew = true;
-                                }
-                                else
-                                {
-                                    context.RejectPrincipal();
-                                    await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-                                }
+                                context.ShouldRenew = true;
+                            }
+                            else
+                            {
+                                context.RejectPrincipal();
+                                await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
                             }
                         }
                     }
@@ -261,7 +259,8 @@ internal static class CookieAuthHelpers
 
         foreach (var claim in jwt.Claims)
         {
-            if (claim.Type is "nbf" or "exp" or "iat" or "iss" or "aud")
+            // these are some of the standard JWT claims that we don't need to include
+            if (claim.Type is "nbf" or "exp" or "iat" or "iss" or "aud" or "jti")
                 continue;
 
             claims.Add(new Claim(claim.Type, claim.Value));

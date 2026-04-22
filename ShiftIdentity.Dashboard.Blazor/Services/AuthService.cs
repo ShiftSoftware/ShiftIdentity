@@ -92,7 +92,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services
             var externalBaseUrl = options.ExternalIdentityApiUrl?.TrimEnd('/') ?? throw new InvalidOperationException(
                 "ExternalIdentityApiUrl must be configured for external hosting with cookie auth.");
 
-            var loginResponse = await http.PostAsJsonAsync($"{externalBaseUrl}/api/Auth/Login", loginDto);
+            var loginResponse = await http.PostAsJsonAsync($"{externalBaseUrl}/Auth/Login", loginDto);
 
             if (!loginResponse.IsSuccessStatusCode)
             {
