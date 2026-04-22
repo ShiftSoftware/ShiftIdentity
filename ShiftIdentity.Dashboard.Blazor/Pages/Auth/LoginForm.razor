@@ -6,6 +6,7 @@
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Components.Authorization;
 @using Microsoft.Extensions.DependencyInjection
+@using ShiftSoftware.ShiftEntity.Core.Extensions
 @using ShiftSoftware.ShiftIdentity.Blazor
 @using ShiftSoftware.ShiftIdentity.Core.DTOs
 @using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.UserManager;
@@ -19,8 +20,7 @@
 @inject ShiftIdentityLocalizer Loc
 @inject IServiceProvider ServiceProvider
 
-@*@inject Services.AuthService authService
-@inject MessageService msgService
+@*
 @inject Services.StorageService storageService
 @inject TypeAuth.Blazor.Services.TypeAuthService TypeAuth*@
 
@@ -101,6 +101,7 @@
             return;
         }
 
+        var returnUrl = !String.IsNullOrWhiteSpace(ReturnUrl) && ReturnUrl.IsLocalUrl() ? ReturnUrl : "/";
         var token = loginResult?.Data?.Entity;
 
         if (token != null)
@@ -116,7 +117,7 @@
             var url = $"{Constants.IdentityRoutePreifix}/{nameof(ChangePasswordForm)}";
 
             var queryStrings = new Dictionary<string, object?>();
-            queryStrings.Add("ReturnUrl", ReturnUrl ?? "/");
+            queryStrings.Add(Constants.ReturnUrlParameter, returnUrl);
             queryStrings.Add("Enforce", true);
 
             var uri = NavManager.GetUriWithQueryParameters(url, queryStrings);
@@ -125,9 +126,8 @@
             return;
         }
 
-        var returnUrl = !String.IsNullOrWhiteSpace(ReturnUrl) ? ReturnUrl : "/";
-
-        // Force reload so the browser picks up the auth cookie set by the server
+        // the returnUrl is already validated to be local url in above code,
+        // so it is safe to use here without validation
         NavManager.NavigateTo(returnUrl, forceLoad: true);
     }
 }
