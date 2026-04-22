@@ -54,6 +54,7 @@ public static class ServiceCollectionExtensions
                 cookieOptions.ExpireTimeSpan = options.ExpireTimeSpan;
                 cookieOptions.SlidingExpiration = true;
                 cookieOptions.LoginPath = options.LoginPath;
+                cookieOptions.ReturnUrlParameter = Constants.ReturnUrlParameter;
                 cookieOptions.Events.OnValidatePrincipal = async context =>
                 {
                     var expiresAt = context.Properties.GetString("token_expires_at");

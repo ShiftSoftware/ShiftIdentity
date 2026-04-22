@@ -19,7 +19,7 @@ public class RedirectToChangePassword : ComponentBase
         Options = ServiceProvider.GetService<ShiftIdentityBlazorOptions>();
         AuthStateProvider = ServiceProvider.GetService<AuthenticationStateProvider>();
 
-        if (NavManager.Uri.Contains($"{ShiftIdentity.Core.Constants.IdentityRoutePreifix}/ChangePasswordForm"))
+        if (NavManager.Uri.Contains($"{Constants.IdentityRoutePreifix}/ChangePasswordForm"))
             return;
 
         if (this.AuthStateProvider is null)
@@ -30,9 +30,9 @@ public class RedirectToChangePassword : ComponentBase
             return;
 
         var requirePasswordChangeClaim = authState.User?.Claims?.FirstOrDefault(c => c.Type == ShiftIdentityClaims.RequirePasswordChange)?.Value;
-        var parseSuccess = bool.TryParse(requirePasswordChangeClaim, out bool requirePaswordChange);
+        var parseSuccess = bool.TryParse(requirePasswordChangeClaim, out bool requirePasswordChange);
 
-        if (parseSuccess && requirePaswordChange)
+        if (parseSuccess && requirePasswordChange)
         {
             if (Options is null)
                 return;
@@ -47,10 +47,10 @@ public class RedirectToChangePassword : ComponentBase
 
             //Add return-url to login page
             if (!string.IsNullOrWhiteSpace(returnUrl))
-                queryStrings.Add("ReturnUrl", returnUrl);
+                queryStrings.Add(Constants.ReturnUrlParameter, returnUrl);
 
             var url = Options.FrontEndBaseUrl.EndsWith('/') ? Options.FrontEndBaseUrl : Options.FrontEndBaseUrl + '/';
-            var uri = NavManager.GetUriWithQueryParameters(url + $"{ShiftIdentity.Core.Constants.IdentityRoutePreifix}/ChangePasswordForm",
+            var uri = NavManager.GetUriWithQueryParameters(url + $"{Constants.IdentityRoutePreifix}/ChangePasswordForm",
                 queryStrings);
             NavManager.NavigateTo(uri);
         }

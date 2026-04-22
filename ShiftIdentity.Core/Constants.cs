@@ -10,4 +10,5 @@ public class Constants
     public const string BuiltInBranch = "Built-in System Branch";
     public const string BuiltInCountry = "Built-in System Country";
     public const string BuiltInCountryCallingCode = "+964";
+    public const string ReturnUrlParameter = "ReturnUrl";
 }
