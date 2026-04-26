@@ -53,6 +53,34 @@ public static class IServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Registers ShiftIdentity for the .Client (WASM) project of a Blazor Web App with cookie-based auth.
+    /// Auth state is read from PersistentComponentState seeded by the server during SSR.
+    /// For standalone WASM with JWT/localStorage, use <see cref="AddShiftIdentityBlazor"/> instead.
+    /// </summary>
+    public static IServiceCollection AddShiftIdentityBlazorClient(this IServiceCollection services,
+        string appId, string baseUrl, string frontEndBaseUrl, Type? localizationResource = null)
+    {
+        if (services == null)
+        {
+            throw new ArgumentNullException(nameof(services));
+        }
+
+        services.TryAddSingleton(x => new ShiftIdentityBlazorOptions(appId, baseUrl, frontEndBaseUrl));
+
+        services.TryAddScoped<AuthenticationStateProvider, PersistentCookieAuthStateProvider>();
+        services.TryAddScoped<IIdentityStore, NoOpIdentityStore>();
+        services.AddAuthorizationCore();
+        services.AddCascadingAuthenticationState();
+
+        if (localizationResource is null)
+            services.AddTransient(x => new ShiftIdentityLocalizer(x, typeof(Resource)));
+        else
+            services.AddTransient(x => new ShiftIdentityLocalizer(x, localizationResource));
+
+        return services;
+    }
+
     [Obsolete("Use AddShiftIdentityBlazor instead. This method will be removed in future versions.")]
     public static IServiceCollection AddShiftIdentity(this IServiceCollection services,
         string appId, string baseUrl, string frontEndBaseUrl, Type? localizationResource = null)

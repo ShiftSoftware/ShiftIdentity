@@ -31,6 +31,7 @@ public static class ServiceCollectionExtensions
         configure(options);
 
         services.AddSingleton(options);
+        services.AddSingleton(new ShiftIdentityBlazorOptions(options.AppId, options.BaseUrl, options.FrontEndBaseUrl));
 
         // Policy scheme: Bearer token in header → JWT, otherwise → Cookies
         services.AddAuthentication("ShiftAuth")
