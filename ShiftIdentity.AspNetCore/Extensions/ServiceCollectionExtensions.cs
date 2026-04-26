@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Fakes;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Models;
@@ -14,8 +16,10 @@ using ShiftSoftware.ShiftIdentity.Core.IRepositories;
 using ShiftSoftware.ShiftIdentity.Core.Localization;
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.RateLimiting;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Extensions;
 
@@ -38,6 +42,26 @@ public static class ServiceCollectionExtensions
         //});
 
         services.Configure<MvcOptions>(o => o.Filters.Add(new AuthorizeFilter()));
+
+        services.AddRateLimiter(x =>
+        {
+            x.RejectionStatusCode = (int)HttpStatusCode.TooManyRequests;
+            x.AddPolicy(Constants.DefaultPolicyName, ctx =>
+            {
+                var options = ctx.RequestServices.GetService<IOptions<ShiftRateLimitOptions>>()?.Value ?? new();
+
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = options.PermitLimit,
+                        Window = options.Window,
+                        QueueLimit = options.QueueLimit,
+                        QueueProcessingOrder = options.QueueProcessingOrder,
+                        AutoReplenishment = options.AutoReplenishment,
+                    });
+            });
+        });
 
         // Register localizer
         if (localizationResource is null)

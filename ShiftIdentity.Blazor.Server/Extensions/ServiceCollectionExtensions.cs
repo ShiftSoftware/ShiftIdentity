@@ -152,7 +152,7 @@ public static class ServiceCollectionExtensions
                     result.Token.UserData,
                     result.Token.RequirePasswordChange,
                 });
-            }).AllowAnonymous();
+            }).AllowAnonymous().RequireRateLimiting(Constants.DefaultPolicyName);
         }
 
         // Sign in with an externally-obtained JWT token
@@ -200,7 +200,7 @@ public static class ServiceCollectionExtensions
 
             await CookieAuthHelpers.SignInWithToken(httpContext, token);
             return Results.Ok();
-        }).AllowAnonymous();
+        }).AllowAnonymous().RequireRateLimiting(Constants.DefaultPolicyName);
 
         // Refresh the auth cookie
         app.MapPost("/api/identity/refresh", async (HttpContext httpContext, ICookieAuthManager authManager) =>
@@ -225,7 +225,7 @@ public static class ServiceCollectionExtensions
         {
             await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return Results.Ok();
-        }).AllowAnonymous();
+        }).AllowAnonymous().RequireRateLimiting(Constants.DefaultPolicyName);
 
         return app;
     }
