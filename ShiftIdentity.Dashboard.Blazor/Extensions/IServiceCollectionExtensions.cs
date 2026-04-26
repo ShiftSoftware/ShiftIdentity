@@ -1,8 +1,5 @@
-﻿
-using Microsoft.Extensions.DependencyInjection;
-using ShiftSoftware.ShiftIdentity.Core;
+﻿using Microsoft.Extensions.DependencyInjection;
 using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services;
-using System.Text.Json;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Extensions;
 
@@ -20,13 +17,6 @@ public static class IServiceCollectionExtensions
     }
     public static IServiceCollection AddShiftIdentityDashboardBlazor(this IServiceCollection services, ShiftIdentityDashboardBlazorOptions options)
     {
-        if (options.ShiftIdentityHostingType == 0)
-        {
-            options.ShiftIdentityHostingType = string.IsNullOrWhiteSpace(options.ExternalIdentityApiUrl)
-                ? ShiftIdentityHostingTypes.Internal
-                : ShiftIdentityHostingTypes.External;
-        }
-
         services.AddSingleton(options);
 
         services.AddScoped<AuthService>();

@@ -16,7 +16,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services
         private readonly AuthenticationStateProvider? authStateProvider;
         private readonly HttpClient http;
         private readonly NavigationManager navManager;
-        private readonly ShiftIdentityDashboardBlazorOptions options;
+        private readonly ShiftIdentityBlazorOptions identityOptions;
         private const string url = "auth/";
 
         public AuthService(
@@ -25,21 +25,21 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services
             AuthenticationStateProvider? authStateProvider,
             NavigationManager navManager,
             HttpClient http,
-            ShiftIdentityDashboardBlazorOptions options)
+            ShiftIdentityBlazorOptions identityOptions)
         {
             this.httpService = httpService;
             this.storageService = storageService;
             this.authStateProvider = authStateProvider;
             this.navManager = navManager;
             this.http = http;
-            this.options = options;
+            this.identityOptions = identityOptions;
         }
 
         public async Task<HttpResponse<ShiftEntityResponse<TokenDTO>>> LoginAsync(LoginDTO loginDto)
         {
-            if (options.UseCookieAuth)
+            if (identityOptions.UseCookieAuth)
             {
-                if (options.ShiftIdentityHostingType == ShiftIdentityHostingTypes.External)
+                if (identityOptions.HostingType == ShiftIdentityHostingTypes.External)
                 {
                     return await LoginExternalCookieAuthAsync(loginDto);
                 }
@@ -89,7 +89,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services
         private async Task<HttpResponse<ShiftEntityResponse<TokenDTO>>> LoginExternalCookieAuthAsync(LoginDTO loginDto)
         {
             // Call external identity server directly
-            var externalBaseUrl = options.ExternalIdentityApiUrl?.TrimEnd('/') ?? throw new InvalidOperationException(
+            var externalBaseUrl = identityOptions.ExternalIdentityApiUrl?.TrimEnd('/') ?? throw new InvalidOperationException(
                 "ExternalIdentityApiUrl must be configured for external hosting with cookie auth.");
 
             var loginResponse = await http.PostAsJsonAsync($"{externalBaseUrl}/Auth/Login", loginDto);
@@ -142,7 +142,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services
 
         public async Task LogOutAsync()
         {
-            if (options.UseCookieAuth)
+            if (identityOptions.UseCookieAuth)
             {
                 try { await http.PostAsync("/api/identity/logout", null); } catch { }
             }

@@ -8,6 +8,7 @@ using System.Net.Http.Headers;
 using ShiftSoftware.ShiftIdentity.Blazor.Handlers;
 using ShiftSoftware.ShiftIdentity.Blazor.Providers;
 using ShiftSoftware.ShiftIdentity.Blazor.Services;
+using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.Localization;
 using ShiftSoftwareLocalization.Identity;
 
@@ -16,7 +17,10 @@ namespace ShiftSoftware.ShiftIdentity.Blazor.Extensions;
 public static class IServiceCollectionExtensions
 {
     public static IServiceCollection AddShiftIdentityBlazor(this IServiceCollection services,
-        string appId, string baseUrl, string frontEndBaseUrl, Type? localizationResource = null)
+        string appId, string baseUrl, string frontEndBaseUrl,
+        ShiftIdentityHostingTypes hostingType = ShiftIdentityHostingTypes.Internal,
+        string? externalIdentityApiUrl = null,
+        Type? localizationResource = null)
     {
         if (services == null)
         {
@@ -24,7 +28,12 @@ public static class IServiceCollectionExtensions
         }
 
         services.AddBlazoredLocalStorage();
-        services.TryAddSingleton(x => new ShiftIdentityBlazorOptions(appId, baseUrl, frontEndBaseUrl));
+        services.TryAddSingleton(x => new ShiftIdentityBlazorOptions(appId, baseUrl, frontEndBaseUrl)
+        {
+            UseCookieAuth = false,
+            HostingType = hostingType,
+            ExternalIdentityApiUrl = externalIdentityApiUrl,
+        });
         services.TryAddScoped<IShiftIdentityProvider, ShiftIdentityProvider>();
 
         // Register a dedicated HttpClient for HttpMessageHandlerService to avoid DI loop
@@ -59,14 +68,22 @@ public static class IServiceCollectionExtensions
     /// For standalone WASM with JWT/localStorage, use <see cref="AddShiftIdentityBlazor"/> instead.
     /// </summary>
     public static IServiceCollection AddShiftIdentityBlazorClient(this IServiceCollection services,
-        string appId, string baseUrl, string frontEndBaseUrl, Type? localizationResource = null)
+        string appId, string baseUrl, string frontEndBaseUrl,
+        ShiftIdentityHostingTypes hostingType = ShiftIdentityHostingTypes.Internal,
+        string? externalIdentityApiUrl = null,
+        Type? localizationResource = null)
     {
         if (services == null)
         {
             throw new ArgumentNullException(nameof(services));
         }
 
-        services.TryAddSingleton(x => new ShiftIdentityBlazorOptions(appId, baseUrl, frontEndBaseUrl));
+        services.TryAddSingleton(x => new ShiftIdentityBlazorOptions(appId, baseUrl, frontEndBaseUrl)
+        {
+            UseCookieAuth = true,
+            HostingType = hostingType,
+            ExternalIdentityApiUrl = externalIdentityApiUrl,
+        });
 
         services.TryAddScoped<AuthenticationStateProvider, PersistentCookieAuthStateProvider>();
         services.TryAddScoped<IIdentityStore, NoOpIdentityStore>();
@@ -85,7 +102,7 @@ public static class IServiceCollectionExtensions
     public static IServiceCollection AddShiftIdentity(this IServiceCollection services,
         string appId, string baseUrl, string frontEndBaseUrl, Type? localizationResource = null)
     {
-        services.AddShiftIdentityBlazor(appId, baseUrl, frontEndBaseUrl, localizationResource);
+        services.AddShiftIdentityBlazor(appId, baseUrl, frontEndBaseUrl, localizationResource: localizationResource);
         return services;
     }
 }

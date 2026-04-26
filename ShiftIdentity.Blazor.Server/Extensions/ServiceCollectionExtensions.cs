@@ -25,13 +25,21 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddShiftIdentityBlazorServer(
         this IServiceCollection services,
+        string appId, string baseUrl, string frontEndBaseUrl,
+        ShiftIdentityHostingTypes hostingType,
+        string? externalIdentityApiUrl,
         Action<ShiftIdentityCookieAuthOptions> configure)
     {
         var options = new ShiftIdentityCookieAuthOptions();
         configure(options);
 
         services.AddSingleton(options);
-        services.AddSingleton(new ShiftIdentityBlazorOptions(options.AppId, options.BaseUrl, options.FrontEndBaseUrl));
+        services.AddSingleton(new ShiftIdentityBlazorOptions(appId, baseUrl, frontEndBaseUrl)
+        {
+            UseCookieAuth = true,
+            HostingType = hostingType,
+            ExternalIdentityApiUrl = externalIdentityApiUrl,
+        });
 
         // Policy scheme: Bearer token in header → JWT, otherwise → Cookies
         services.AddAuthentication("ShiftAuth")
@@ -104,18 +112,18 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ServerHttpMessageHandler>();
 
         // Register correct ICookieAuthManager based on hosting type
-        if (options.HostingType == ShiftIdentityHostingTypes.Internal)
+        if (hostingType == ShiftIdentityHostingTypes.Internal)
         {
             services.AddScoped<ICookieAuthManager, InternalCookieAuthManager>();
         }
         else
         {
-            if (string.IsNullOrEmpty(options.ExternalIdentityApiUrl))
-                throw new InvalidOperationException("ExternalIdentityApiUrl must be set for external identity hosting.");
+            if (string.IsNullOrEmpty(externalIdentityApiUrl))
+                throw new InvalidOperationException("externalIdentityApiUrl must be set for external identity hosting.");
 
             services.AddHttpClient("ShiftIdentityExternal", client =>
             {
-                client.BaseAddress = new Uri(options.ExternalIdentityApiUrl);
+                client.BaseAddress = new Uri(externalIdentityApiUrl);
             });
             services.AddScoped<ICookieAuthManager, ExternalCookieAuthManager>();
         }
@@ -129,10 +137,10 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static WebApplication MapShiftIdentityCookieEndpoints(this WebApplication app)
     {
-        var options = app.Services.GetRequiredService<ShiftIdentityCookieAuthOptions>();
+        var blazorOptions = app.Services.GetRequiredService<ShiftSoftware.ShiftIdentity.Blazor.ShiftIdentityBlazorOptions>();
 
         // Internal hosting: login via in-process AuthService
-        if (options.HostingType == ShiftIdentityHostingTypes.Internal)
+        if (blazorOptions.HostingType == ShiftIdentityHostingTypes.Internal)
         {
             app.MapPost("/api/identity/login", async (
                 HttpContext httpContext,

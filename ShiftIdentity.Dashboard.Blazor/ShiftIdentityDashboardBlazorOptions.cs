@@ -1,5 +1,4 @@
 ﻿using ShiftSoftware.ShiftEntity.Model;
-using ShiftSoftware.ShiftIdentity.Core;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor;
 
@@ -13,23 +12,12 @@ public class ShiftIdentityDashboardBlazorOptions
 
     public string Title { get; set; } = default!;
     public string LogoPath { get; set; } = default!;
-    public ShiftIdentityHostingTypes ShiftIdentityHostingType { get; set; }
-
 
     public string BaseAddress { get; set; } = default!;
 
     public ShiftIdentityDashboardRoutes DashboardRoutes { get; set; } = new ShiftIdentityDashboardRoutes();
 
     public DayOfWeek WeekStart { get; set; } = DayOfWeek.Saturday;
-
-    public bool UseCookieAuth { get; set; }
-
-    /// <summary>
-    /// Base URL of the external identity server API (e.g., "https://identity.example.com/").
-    /// Used by cookie auth to call the external identity server's login/refresh endpoints directly from the client.
-    /// Only needed when ShiftIdentityHostingType is External and UseCookieAuth is true.
-    /// </summary>
-    public string? ExternalIdentityApiUrl { get; set; }
 
     public Func<Task>? DynamicTypeAuthActionExpander { get; set; }
 
