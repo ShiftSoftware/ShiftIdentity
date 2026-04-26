@@ -19,13 +19,13 @@ public class RedirectToLogin : ComponentBase
     {
         var options = ServiceProvider.GetService<ShiftIdentityBlazorOptions>();
 
-        const string url = $"{Constants.IdentityRoutePreifix}/login";
         var authState = AuthenticationStateTask != null ? await AuthenticationStateTask : null;
 
         if (authState?.User.Identity is null || !authState.User.Identity.IsAuthenticated)
         {
             var returnUrl = NavManager.ToBaseRelativePath(NavManager.Uri);
             var queryStrings = new Dictionary<string, object?>();
+            const string url = $"/{Constants.IdentityRoutePreifix}/login";
 
             if (!string.IsNullOrWhiteSpace(returnUrl))
                 queryStrings.Add(Constants.ReturnUrlParameter, returnUrl);
