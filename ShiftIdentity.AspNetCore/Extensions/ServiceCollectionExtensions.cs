@@ -30,17 +30,6 @@ public static class ServiceCollectionExtensions
     {
         services.AddJwtAuth(tokenIssuer, tokenRSAPublicKeyBase64, setAsDefaultScheme);
 
-        //builder.Services.AddAuthorization(options =>
-        //{
-        //    options.AddPolicy("ChangePassword", policy => policy.RequireClaim(ShiftIdentityClaims.ExternalToken, false.ToString().ToLower()));
-
-        //    //options.AddPolicy("Scopes", policy =>
-        //    //{
-        //    //    policy.RequireAuthenticatedUser();
-        //    //    policy.RequireClaim("scope", allowedScopes);
-        //    //});
-        //});
-
         services.Configure<MvcOptions>(o => o.Filters.Add(new AuthorizeFilter()));
 
         services.AddRateLimiter(x =>

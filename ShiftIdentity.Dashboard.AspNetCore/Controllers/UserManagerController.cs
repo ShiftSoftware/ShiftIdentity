@@ -86,7 +86,6 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
 
         //// POST api/<UserManagerController>
         [HttpPut("ChangePassword")]
-        [Authorize(Policy = "ChangePassword")]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDTO dto)
         {
             var loginUser = claimService.GetUser();
