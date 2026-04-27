@@ -19,7 +19,6 @@ public static class IServiceCollectionExtensions
     public static IServiceCollection AddShiftIdentityBlazor(this IServiceCollection services,
         string appId, string baseUrl, string frontEndBaseUrl,
         ShiftIdentityHostingTypes hostingType = ShiftIdentityHostingTypes.Internal,
-        string? externalIdentityApiUrl = null,
         Type? localizationResource = null)
     {
         if (services == null)
@@ -32,7 +31,6 @@ public static class IServiceCollectionExtensions
         {
             UseCookieAuth = false,
             HostingType = hostingType,
-            ExternalIdentityApiUrl = externalIdentityApiUrl,
         });
         services.TryAddScoped<IShiftIdentityProvider, ShiftIdentityProvider>();
 
@@ -70,7 +68,6 @@ public static class IServiceCollectionExtensions
     public static IServiceCollection AddShiftIdentityBlazorClient(this IServiceCollection services,
         string appId, string baseUrl, string frontEndBaseUrl,
         ShiftIdentityHostingTypes hostingType = ShiftIdentityHostingTypes.Internal,
-        string? externalIdentityApiUrl = null,
         Type? localizationResource = null)
     {
         if (services == null)
@@ -82,7 +79,6 @@ public static class IServiceCollectionExtensions
         {
             UseCookieAuth = true,
             HostingType = hostingType,
-            ExternalIdentityApiUrl = externalIdentityApiUrl,
         });
 
         services.TryAddScoped<AuthenticationStateProvider, PersistentCookieAuthStateProvider>();

@@ -47,7 +47,8 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services
                 return await LoginInternalCookieAuthAsync(loginDto);
             }
 
-            return await httpService.PostAsync<ShiftEntityResponse<TokenDTO>, LoginDTO>(url + "login", loginDto);
+            var loginUrl = $"{identityOptions.BaseUrl.TrimEnd('/')}/{url}login";
+            return await httpService.PostAsync<ShiftEntityResponse<TokenDTO>, LoginDTO>(loginUrl, loginDto);
         }
 
         /// <summary>
@@ -89,8 +90,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services
         private async Task<HttpResponse<ShiftEntityResponse<TokenDTO>>> LoginExternalCookieAuthAsync(LoginDTO loginDto)
         {
             // Call external identity server directly
-            var externalBaseUrl = identityOptions.ExternalIdentityApiUrl?.TrimEnd('/') ?? throw new InvalidOperationException(
-                "ExternalIdentityApiUrl must be configured for external hosting with cookie auth.");
+            var externalBaseUrl = identityOptions.BaseUrl.TrimEnd('/');
 
             var loginResponse = await http.PostAsJsonAsync($"{externalBaseUrl}/Auth/Login", loginDto);
 

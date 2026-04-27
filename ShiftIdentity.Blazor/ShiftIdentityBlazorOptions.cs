@@ -19,11 +19,6 @@ public class ShiftIdentityBlazorOptions
     /// </summary>
     public ShiftIdentityHostingTypes HostingType { get; init; }
 
-    /// <summary>
-    /// Base URL of the external identity server. Required when <see cref="HostingType"/> is External.
-    /// </summary>
-    public string? ExternalIdentityApiUrl { get; init; }
-
     public ShiftIdentityBlazorOptions(string appId, string baseUrl, string frontEndBaseUrl)
     {
         AppId = appId;

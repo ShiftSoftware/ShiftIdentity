@@ -27,7 +27,6 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         string appId, string baseUrl, string frontEndBaseUrl,
         ShiftIdentityHostingTypes hostingType,
-        string? externalIdentityApiUrl,
         Action<ShiftIdentityCookieAuthOptions> configure)
     {
         var options = new ShiftIdentityCookieAuthOptions();
@@ -38,7 +37,6 @@ public static class ServiceCollectionExtensions
         {
             UseCookieAuth = true,
             HostingType = hostingType,
-            ExternalIdentityApiUrl = externalIdentityApiUrl,
         });
 
         // Policy scheme: Bearer token in header → JWT, otherwise → Cookies
@@ -118,12 +116,12 @@ public static class ServiceCollectionExtensions
         }
         else
         {
-            if (string.IsNullOrEmpty(externalIdentityApiUrl))
-                throw new InvalidOperationException("externalIdentityApiUrl must be set for external identity hosting.");
+            if (string.IsNullOrEmpty(baseUrl))
+                throw new InvalidOperationException("baseUrl must be set for external identity hosting.");
 
             services.AddHttpClient("ShiftIdentityExternal", client =>
             {
-                client.BaseAddress = new Uri(externalIdentityApiUrl);
+                client.BaseAddress = new Uri(baseUrl);
             });
             services.AddScoped<ICookieAuthManager, ExternalCookieAuthManager>();
         }

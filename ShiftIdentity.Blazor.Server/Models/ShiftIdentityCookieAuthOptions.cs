@@ -1,3 +1,5 @@
+using ShiftSoftware.ShiftIdentity.Core;
+
 namespace ShiftSoftware.ShiftIdentity.Blazor.Server.Models;
 
 public class ShiftIdentityCookieAuthOptions
@@ -25,5 +27,5 @@ public class ShiftIdentityCookieAuthOptions
     /// <summary>
     /// Path to redirect to when unauthenticated.
     /// </summary>
-    public string LoginPath { get; set; } = "/Identity/login";
+    public string LoginPath { get; set; } = $"/{Constants.IdentityRoutePreifix}/login";
 }
