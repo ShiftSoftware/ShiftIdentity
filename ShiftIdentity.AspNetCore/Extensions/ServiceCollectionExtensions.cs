@@ -14,11 +14,9 @@ using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.App;
 using ShiftSoftware.ShiftIdentity.Core.IRepositories;
 using ShiftSoftware.ShiftIdentity.Core.Localization;
-using System;
-using System.Collections.Generic;
+using System.Globalization;
 using System.Net;
 using System.Security.Cryptography;
-using System.Text;
 using System.Threading.RateLimiting;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Extensions;
@@ -35,6 +33,15 @@ public static class ServiceCollectionExtensions
         services.AddRateLimiter(x =>
         {
             x.RejectionStatusCode = (int)HttpStatusCode.TooManyRequests;
+            x.OnRejected = (context, cancellationToken) =>
+            {
+                if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+                {
+                    context.HttpContext.Response.Headers.RetryAfter =
+                        ((int)retryAfter.TotalSeconds).ToString(NumberFormatInfo.InvariantInfo);
+                }
+                return ValueTask.CompletedTask;
+            };
             x.AddPolicy(Constants.DefaultPolicyName, ctx =>
             {
                 var options = ctx.RequestServices.GetService<IOptions<ShiftRateLimitOptions>>()?.Value ?? new();
