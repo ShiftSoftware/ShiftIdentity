@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftIdentity.Blazor.Server.Models;
 using ShiftSoftware.ShiftIdentity.Blazor.Server.Providers;
 using ShiftSoftware.ShiftIdentity.Blazor.Server.Services;
@@ -143,13 +144,22 @@ public static class ServiceCollectionExtensions
             app.MapPost("/api/identity/login", async (
                 HttpContext httpContext,
                 ShiftSoftware.ShiftIdentity.AspNetCore.Services.AuthService authService,
-                LoginDTO loginDto) =>
+                LoginDTO? loginDto) =>
             {
+                if (loginDto == null)
+                    return Results.BadRequest(new ShiftEntityResponse<TokenDTO>
+                    {
+                        Message = new Message { Body = "Request body is required." }
+                    });
+
                 var result = await authService.LoginAsync(loginDto);
 
                 if (result.Result != ShiftSoftware.ShiftIdentity.AspNetCore.Models.LoginResultEnum.Success)
                 {
-                    return Results.BadRequest(new { error = result.ErrorMessage });
+                    return Results.BadRequest(new ShiftEntityResponse<TokenDTO>
+                    {
+                        Message = new Message { Body = result.ErrorMessage }
+                    });
                 }
 
                 await CookieAuthHelpers.SignInWithToken(httpContext, result.Token);
@@ -166,13 +176,22 @@ public static class ServiceCollectionExtensions
         app.MapPost("/api/identity/sign-in-with-token", async (
             HttpContext httpContext,
             ShiftIdentityCookieAuthOptions cookieAuthOptions,
-            SignInWithTokenRequest request) =>
+            SignInWithTokenRequest? request) =>
         {
+            if (request == null)
+                return Results.BadRequest(new ShiftEntityResponse<TokenDTO>
+                {
+                    Message = new Message { Body = "Request body is required." }
+                });
+
             var issuer = cookieAuthOptions.JwtIssuer;
             var publicKeyBase64 = cookieAuthOptions.JwtPublicKeyBase64;
 
             if (string.IsNullOrEmpty(issuer) || string.IsNullOrEmpty(publicKeyBase64))
-                return Results.Problem("Token validation is not configured.");
+                return Results.Json(new ShiftEntityResponse<TokenDTO>
+                {
+                    Message = new Message { Body = "Token validation is not configured." }
+                }, statusCode: StatusCodes.Status500InternalServerError);
 
             var rsa = RSA.Create();
             rsa.ImportRSAPublicKey(Convert.FromBase64String(publicKeyBase64), out _);
@@ -195,7 +214,10 @@ public static class ServiceCollectionExtensions
             }
             catch (SecurityTokenException)
             {
-                return Results.Unauthorized();
+                return Results.Json(new ShiftEntityResponse<TokenDTO>
+                {
+                    Message = new Message { Body = "Invalid token." }
+                }, statusCode: StatusCodes.Status401Unauthorized);
             }
 
             var token = new TokenDTO
@@ -216,11 +238,17 @@ public static class ServiceCollectionExtensions
             var refreshToken = authResult.Properties?.GetString("refresh_token");
 
             if (refreshToken == null)
-                return Results.Unauthorized();
+                return Results.Json(new ShiftEntityResponse<TokenDTO>
+                {
+                    Message = new Message { Body = "Invalid refresh token" }
+                }, statusCode: StatusCodes.Status401Unauthorized);
 
             var newToken = await authManager.RefreshAsync(refreshToken);
             if (newToken == null)
-                return Results.Unauthorized();
+                return Results.Json(new ShiftEntityResponse<TokenDTO>
+                {
+                    Message = new Message { Body = "Invalid refresh token" }
+                }, statusCode: StatusCodes.Status401Unauthorized);
 
             await CookieAuthHelpers.SignInWithToken(httpContext, newToken);
 
