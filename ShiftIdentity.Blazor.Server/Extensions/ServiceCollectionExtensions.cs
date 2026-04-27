@@ -1,19 +1,14 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.IdentityModel.Tokens;
-using ShiftSoftware.ShiftEntity.Model;
+using ShiftSoftware.ShiftIdentity.Blazor.Server.Helpers;
 using ShiftSoftware.ShiftIdentity.Blazor.Server.Models;
 using ShiftSoftware.ShiftIdentity.Blazor.Server.Providers;
 using ShiftSoftware.ShiftIdentity.Blazor.Server.Services;
 using ShiftSoftware.ShiftIdentity.Core;
-using ShiftSoftware.ShiftIdentity.Core.DTOs;
 
 namespace ShiftSoftware.ShiftIdentity.Blazor.Server.Extensions;
 
@@ -128,180 +123,5 @@ public static class ServiceCollectionExtensions
         }
 
         return services;
-    }
-
-    /// <summary>
-    /// Maps the cookie auth endpoints: /api/identity/login (internal only),
-    /// /api/identity/sign-in-with-token, /api/identity/refresh, /api/identity/logout.
-    /// </summary>
-    public static WebApplication MapShiftIdentityCookieEndpoints(this WebApplication app)
-    {
-        var blazorOptions = app.Services.GetRequiredService<ShiftSoftware.ShiftIdentity.Blazor.ShiftIdentityBlazorOptions>();
-
-        // Internal hosting: login via in-process AuthService
-        if (blazorOptions.HostingType == ShiftIdentityHostingTypes.Internal)
-        {
-            app.MapPost("/api/identity/login", async (
-                HttpContext httpContext,
-                ShiftSoftware.ShiftIdentity.AspNetCore.Services.AuthService authService,
-                LoginDTO? loginDto) =>
-            {
-                if (loginDto == null)
-                    return Results.BadRequest(new ShiftEntityResponse<TokenDTO>
-                    {
-                        Message = new Message { Body = "Request body is required." }
-                    });
-
-                var result = await authService.LoginAsync(loginDto);
-
-                if (result.Result != ShiftSoftware.ShiftIdentity.AspNetCore.Models.LoginResultEnum.Success)
-                {
-                    return Results.BadRequest(new ShiftEntityResponse<TokenDTO>
-                    {
-                        Message = new Message { Body = result.ErrorMessage }
-                    });
-                }
-
-                await CookieAuthHelpers.SignInWithToken(httpContext, result.Token);
-
-                return Results.Ok(new
-                {
-                    result.Token.UserData,
-                    result.Token.RequirePasswordChange,
-                });
-            }).AllowAnonymous().RequireRateLimiting(Constants.DefaultPolicyName);
-        }
-
-        // Sign in with an externally-obtained JWT token
-        app.MapPost("/api/identity/sign-in-with-token", async (
-            HttpContext httpContext,
-            ShiftIdentityCookieAuthOptions cookieAuthOptions,
-            SignInWithTokenRequest? request) =>
-        {
-            if (request == null)
-                return Results.BadRequest(new ShiftEntityResponse<TokenDTO>
-                {
-                    Message = new Message { Body = "Request body is required." }
-                });
-
-            var issuer = cookieAuthOptions.JwtIssuer;
-            var publicKeyBase64 = cookieAuthOptions.JwtPublicKeyBase64;
-
-            if (string.IsNullOrEmpty(issuer) || string.IsNullOrEmpty(publicKeyBase64))
-                return Results.Json(new ShiftEntityResponse<TokenDTO>
-                {
-                    Message = new Message { Body = "Token validation is not configured." }
-                }, statusCode: StatusCodes.Status500InternalServerError);
-
-            var rsa = RSA.Create();
-            rsa.ImportRSAPublicKey(Convert.FromBase64String(publicKeyBase64), out _);
-            var rsaSecurityKey = new RsaSecurityKey(rsa);
-
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var validationParameters = new TokenValidationParameters
-            {
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = rsaSecurityKey,
-                ValidateIssuer = true,
-                ValidIssuer = issuer,
-                ValidateAudience = false,
-                ValidateLifetime = true,
-            };
-
-            try
-            {
-                tokenHandler.ValidateToken(request.Token, validationParameters, out _);
-            }
-            catch (SecurityTokenException)
-            {
-                return Results.Json(new ShiftEntityResponse<TokenDTO>
-                {
-                    Message = new Message { Body = "Invalid token." }
-                }, statusCode: StatusCodes.Status401Unauthorized);
-            }
-
-            var token = new TokenDTO
-            {
-                Token = request.Token,
-                RefreshToken = request.RefreshToken,
-                TokenLifeTimeInSeconds = request.TokenLifeTimeInSeconds,
-            };
-
-            await CookieAuthHelpers.SignInWithToken(httpContext, token);
-            return Results.Ok();
-        }).AllowAnonymous().RequireRateLimiting(Constants.DefaultPolicyName);
-
-        // Refresh the auth cookie
-        app.MapPost("/api/identity/refresh", async (HttpContext httpContext, ICookieAuthManager authManager) =>
-        {
-            var authResult = await httpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            var refreshToken = authResult.Properties?.GetString("refresh_token");
-
-            if (refreshToken == null)
-                return Results.Json(new ShiftEntityResponse<TokenDTO>
-                {
-                    Message = new Message { Body = "Invalid refresh token" }
-                }, statusCode: StatusCodes.Status401Unauthorized);
-
-            var newToken = await authManager.RefreshAsync(refreshToken);
-            if (newToken == null)
-                return Results.Json(new ShiftEntityResponse<TokenDTO>
-                {
-                    Message = new Message { Body = "Invalid refresh token" }
-                }, statusCode: StatusCodes.Status401Unauthorized);
-
-            await CookieAuthHelpers.SignInWithToken(httpContext, newToken);
-
-            return Results.Ok(new { newToken.UserData });
-        });
-
-        // Logout
-        app.MapPost("/api/identity/logout", async (HttpContext httpContext) =>
-        {
-            await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            return Results.Ok();
-        }).AllowAnonymous().RequireRateLimiting(Constants.DefaultPolicyName);
-
-        return app;
-    }
-}
-
-internal static class CookieAuthHelpers
-{
-    internal static async Task SignInWithToken(HttpContext httpContext, TokenDTO token)
-    {
-        var claims = BuildClaimsFromToken(token);
-        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-        var principal = new ClaimsPrincipal(identity);
-
-        var authProperties = new AuthenticationProperties
-        {
-            IsPersistent = true,
-            AllowRefresh = true,
-        };
-        authProperties.SetString("refresh_token", token.RefreshToken);
-        authProperties.SetString("token_expires_at",
-            DateTimeOffset.UtcNow.AddSeconds(token.TokenLifeTimeInSeconds ?? 900).ToString("o"));
-
-        await httpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal, authProperties);
-    }
-
-    internal static List<Claim> BuildClaimsFromToken(TokenDTO token)
-    {
-        var handler = new JwtSecurityTokenHandler();
-        var jwt = handler.ReadJwtToken(token.Token);
-
-        var claims = new List<Claim>();
-
-        foreach (var claim in jwt.Claims)
-        {
-            // these are some of the standard JWT claims that we don't need to include
-            if (claim.Type is "nbf" or "exp" or "iat" or "iss" or "aud" or "jti")
-                continue;
-
-            claims.Add(new Claim(claim.Type, claim.Value));
-        }
-
-        return claims;
     }
 }
