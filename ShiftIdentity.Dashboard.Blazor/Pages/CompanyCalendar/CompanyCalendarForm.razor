@@ -127,7 +127,7 @@
                         </MudGrid>
                     </MudPaper>
 
-                    <MultiItemField DisableCounter Style="background-color:#f2f2f2a1;" DisableDragAndDrop="false" DisableReorder ControlVariant="Variant.Filled" Title="@Loc["Shifts"]" @bind-Value="shiftGroup.Shifts" T="CompanyCalendarShiftItemDTO">
+                    <MultiItemField @ref="_shiftsField" DisableCounter Style="background-color:#f2f2f2a1;" DisableDragAndDrop="false" DisableReorder ControlVariant="Variant.Filled" Title="@Loc["Shifts"]" @bind-Value="shiftGroup.Shifts" T="CompanyCalendarShiftItemDTO">
                         <FieldBody Context="shift">
                             <MudGrid Spacing="2" Class="mb-1" Style="align-items: baseline;">
                                 <MudItem xs="4">
@@ -138,13 +138,17 @@
                                 </MudItem>
                                 <MudItem xs="4">
                                     <MudTimePicker Label="@Loc["Start Time"]"
-                                                   @bind-Time="shift.StartTime"
+                                                   Time="shift.StartTime"
+                                                   TimeChanged="@(t => HandleTimeChange(shift, t, isStart: true))"
                                                    Variant="Variant.Outlined"
                                                    Margin="Margin.Dense" />
+
+                                                   @shift.StartTime  Ticks=@shift.StartTimeTicks
                                 </MudItem>
                                 <MudItem xs="4">
                                     <MudTimePicker Label="@Loc["End Time"]"
-                                                   @bind-Time="shift.EndTime"
+                                                   Time="shift.EndTime"
+                                                   TimeChanged="@(t => HandleTimeChange(shift, t, isStart: false))"
                                                    Variant="Variant.Outlined"
                                                    Margin="Margin.Dense" />
                                 </MudItem>
@@ -234,6 +238,16 @@
     [Parameter] public List<ShiftEntitySelectDTO>? InitialBranches { get; set; }
 
     private int[] _orderedDays = Array.Empty<int>();
+
+    private MultiItemField<CompanyCalendarShiftItemDTO>? _shiftsField;
+
+    private void HandleTimeChange(CompanyCalendarShiftItemDTO shift, TimeSpan? value, bool isStart)
+    {
+        if (isStart) shift.StartTime = value;
+        else         shift.EndTime   = value;
+
+        _shiftsField?.ForceRender();
+    }
 
     protected override void OnInitialized()
     {
