@@ -35,12 +35,14 @@ internal static class CookieAuthEndpoints
             });
         }
 
-        await CookieAuthHelpers.SignInWithToken(httpContext, result.Token);
+        var signedInClaims = await CookieAuthHelpers.SignInWithToken(httpContext, result.Token);
 
-        return Results.Ok(new
+        return Results.Ok(new CookieAuthStateResponse
         {
-            result.Token.UserData,
-            result.Token.RequirePasswordChange,
+            UserData = result.Token.UserData,
+            RequirePasswordChange = result.Token.RequirePasswordChange,
+            Claims = CookieAuthHelpers.ProjectClaims(signedInClaims),
+            RefreshAfterSeconds = CookieAuthHelpers.ComputeRefreshAfterSecondsFromLifetime(result.Token.TokenLifeTimeInSeconds),
         });
     }
 
@@ -98,8 +100,13 @@ internal static class CookieAuthEndpoints
             TokenLifeTimeInSeconds = request.TokenLifeTimeInSeconds,
         };
 
-        await CookieAuthHelpers.SignInWithToken(httpContext, token);
-        return Results.Ok();
+        var signedInClaims = await CookieAuthHelpers.SignInWithToken(httpContext, token);
+
+        return Results.Ok(new CookieAuthStateResponse
+        {
+            Claims = CookieAuthHelpers.ProjectClaims(signedInClaims),
+            RefreshAfterSeconds = CookieAuthHelpers.ComputeRefreshAfterSecondsFromLifetime(token.TokenLifeTimeInSeconds),
+        });
     }
 
     internal static async Task<IResult> Refresh(HttpContext httpContext, ICookieAuthManager authManager)
@@ -120,9 +127,35 @@ internal static class CookieAuthEndpoints
                 Message = new Message { Body = "Invalid refresh token" }
             }, statusCode: StatusCodes.Status401Unauthorized);
 
-        await CookieAuthHelpers.SignInWithToken(httpContext, newToken);
+        var signedInClaims = await CookieAuthHelpers.SignInWithToken(httpContext, newToken);
 
-        return Results.Ok(new { newToken.UserData });
+        return Results.Ok(new CookieAuthStateResponse
+        {
+            UserData = newToken.UserData,
+            Claims = CookieAuthHelpers.ProjectClaims(signedInClaims),
+            RefreshAfterSeconds = CookieAuthHelpers.ComputeRefreshAfterSecondsFromLifetime(newToken.TokenLifeTimeInSeconds),
+        });
+    }
+
+    internal static async Task<IResult> Me(HttpContext httpContext)
+    {
+        // [Authorize] gates access. By the time we get here, the cookie middleware has run
+        // OnValidatePrincipal — which means a near-expiry JWT will already have been refreshed
+        // (with fresh claims from the identity server) and the new cookie issued. So
+        // HttpContext.User holds the freshest claims this request can produce, and we just
+        // project them into the response.
+        var authResult = await httpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+        var refreshAfter = 60;
+        var expiresAtStr = authResult.Properties?.GetString("token_expires_at");
+        if (expiresAtStr != null && DateTimeOffset.TryParse(expiresAtStr, out var expiresAt))
+            refreshAfter = CookieAuthHelpers.ComputeRefreshAfterSecondsFromExpiresAt(expiresAt);
+
+        return Results.Ok(new CookieAuthStateResponse
+        {
+            Claims = CookieAuthHelpers.ProjectClaims(httpContext.User.Claims),
+            RefreshAfterSeconds = refreshAfter,
+        });
     }
 
     internal static async Task<IResult> Logout(HttpContext httpContext)

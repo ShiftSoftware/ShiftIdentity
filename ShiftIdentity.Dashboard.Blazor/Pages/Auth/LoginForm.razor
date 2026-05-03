@@ -14,8 +14,6 @@
 @inject ShiftIdentityDashboardBlazorOptions ShiftIdentityDashboardBlazorOptions
 @inject Services.AuthService AuthService
 @inject MessageService msgService
-@inject IIdentityStore storageService
-@inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavManager
 @inject ShiftIdentityLocalizer Loc
 @inject IServiceProvider ServiceProvider
@@ -69,11 +67,13 @@
     LoginDTO loginDto { get; set; } = new LoginDTO();
 
     [CascadingParameter]
-    private Task<AuthenticationState>? authenticationStateTask { get; set; }
+    private Task<Microsoft.AspNetCore.Components.Authorization.AuthenticationState>? authenticationStateTask { get; set; }
 
     [Parameter]
     [SupplyParameterFromQuery]
     public string? ReturnUrl { get; set; }
+
+    private string localReturnUrl = "/";
 
     protected override async Task OnInitializedAsync()
     {
@@ -88,6 +88,9 @@
                 return;
             }
         }
+
+        if (!String.IsNullOrWhiteSpace(ReturnUrl) && ReturnUrl.IsLocalUrl())
+            localReturnUrl = ReturnUrl;
     }
 
     private async Task Login()
@@ -97,37 +100,42 @@
         if (!loginResult.IsSuccess)
         {
             msgService.Error(loginResult?.Data?.Message?.Body!, loginResult?.Data?.Message?.Title);
-
             return;
         }
 
-        var returnUrl = !String.IsNullOrWhiteSpace(ReturnUrl) && ReturnUrl.IsLocalUrl() ? ReturnUrl : "/";
         var token = loginResult?.Data?.Entity;
-
-        if (token != null)
+        if (token == null)
         {
-            await storageService.StoreTokenAsync(token);
-        }
-
-        //Notify AuthenticationStateProvider and TypeAuth that auth state has changed
-        await AuthenticationStateProvider.GetAuthenticationStateAsync();
-
-        if (token?.RequirePasswordChange ?? false)
-        {
-            var url = $"{Constants.IdentityRoutePreifix}/{nameof(ChangePasswordForm)}";
-
-            var queryStrings = new Dictionary<string, object?>();
-            queryStrings.Add(Constants.ReturnUrlParameter, returnUrl);
-            queryStrings.Add("Enforce", true);
-
-            var uri = NavManager.GetUriWithQueryParameters(url, queryStrings);
-
-            NavManager.NavigateTo(uri);
+            msgService.Error(Loc["Token not found"]);
             return;
         }
 
-        // the returnUrl is already validated to be local url in above code,
-        // so it is safe to use here without validation
-        NavManager.NavigateTo(returnUrl, forceLoad: true);
+        // Login() only fires after WASM hydration (MudButton OnClick is a no-op during SSR),
+        // so AuthRefreshService is always resolvable here. We use ServiceProvider lookup
+        // instead of [Inject] so SSR component instantiation doesn't fail when the server-side
+        // DI doesn't register AuthRefreshService (it's a WASM-only service).
+        var authRefresh = ServiceProvider.GetService<ShiftSoftware.ShiftIdentity.Blazor.Services.AuthSessionService>();
+        if (authRefresh != null)
+        {
+            await authRefresh.OnLoginSuccessAsync(new ShiftSoftware.ShiftIdentity.Blazor.Services.AuthLoginResult
+            {
+                Token = token,
+                Claims = this.AuthService.LastLoginClaims,
+            });
+        }
+
+        var nextPageUrl = token.RequirePasswordChange ? GetPasswordChangeUrl() : localReturnUrl;
+        NavManager.NavigateTo(nextPageUrl);
+    }
+
+    private string GetPasswordChangeUrl()
+    {
+        var url = $"{Constants.IdentityRoutePreifix}/{nameof(ChangePasswordForm)}";
+
+        var queryStrings = new Dictionary<string, object?>();
+        queryStrings.Add(Constants.ReturnUrlParameter, localReturnUrl);
+        queryStrings.Add("Enforce", true);
+
+        return NavManager.GetUriWithQueryParameters(url, queryStrings);
     }
 }

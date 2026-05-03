@@ -9,7 +9,11 @@ namespace ShiftSoftware.ShiftIdentity.Blazor.Server.Helpers;
 
 internal static class CookieAuthHelpers
 {
-    internal static async Task SignInWithToken(HttpContext httpContext, TokenDTO token)
+    // Aligned with OnValidatePrincipal's 30-second refresh window in
+    // ServiceCollectionExtensions; the next poll should land inside it.
+    private const int RefreshBufferSeconds = 15;
+
+    internal static async Task<List<Claim>> SignInWithToken(HttpContext httpContext, TokenDTO token)
     {
         var claims = BuildClaimsFromToken(token);
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
@@ -25,6 +29,7 @@ internal static class CookieAuthHelpers
             DateTimeOffset.UtcNow.AddSeconds(token.TokenLifeTimeInSeconds ?? 900).ToString("o"));
 
         await httpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal, authProperties);
+        return claims;
     }
 
     internal static List<Claim> BuildClaimsFromToken(TokenDTO token)
@@ -44,5 +49,31 @@ internal static class CookieAuthHelpers
         }
 
         return claims;
+    }
+
+    internal static List<UserClaimModel> ProjectClaims(IEnumerable<Claim> claims)
+    {
+        return claims.Select(c => new UserClaimModel { Type = c.Type, Value = c.Value }).ToList();
+    }
+
+    /// <summary>
+    /// Computes how many seconds the client should wait before polling again, given the
+    /// JWT lifetime returned by the identity server. The result lands the next poll inside
+    /// OnValidatePrincipal's refresh window so the cookie gets refreshed at that point.
+    /// </summary>
+    internal static int ComputeRefreshAfterSecondsFromLifetime(long? tokenLifeTimeInSeconds)
+    {
+        var lifetime = (int)(tokenLifeTimeInSeconds ?? 900);
+        return Math.Max(RefreshBufferSeconds, lifetime - RefreshBufferSeconds);
+    }
+
+    /// <summary>
+    /// Computes refreshAfterSeconds from an absolute expiry timestamp stored in the cookie's
+    /// AuthenticationProperties. Used by /me where we don't have a fresh TokenDTO.
+    /// </summary>
+    internal static int ComputeRefreshAfterSecondsFromExpiresAt(DateTimeOffset expiresAt)
+    {
+        var remaining = (int)(expiresAt - DateTimeOffset.UtcNow).TotalSeconds;
+        return Math.Max(RefreshBufferSeconds, remaining - RefreshBufferSeconds);
     }
 }

@@ -28,6 +28,7 @@ public static class WebApplicationExtensions
         anonymous.MapPost("/logout", (Delegate)CookieAuthEndpoints.Logout);
 
         group.MapPost("/refresh", CookieAuthEndpoints.Refresh);
+        group.MapGet("/me", (Delegate)CookieAuthEndpoints.Me).RequireAuthorization();
 
         return app;
     }

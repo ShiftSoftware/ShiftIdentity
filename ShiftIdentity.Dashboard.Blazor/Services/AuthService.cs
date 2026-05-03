@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components;
 using ShiftSoftware.ShiftEntity.Model;
 using System.Net;
 using System.Net.Http.Json;
@@ -35,6 +35,18 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services
             this.identityOptions = identityOptions;
         }
 
+        /// <summary>
+        /// Claims returned by the most recent successful cookie-auth login. Consumed by the
+        /// post-login flow (LoginForm / AuthSyncService) to seed the WASM auth state without
+        /// a full page reload. Null until a cookie-auth login succeeds.
+        /// </summary>
+        public List<UserClaimModel>? LastLoginClaims { get; private set; }
+
+        /// <summary>
+        /// Recommended seconds before the next /me poll. Set alongside LastLoginClaims.
+        /// </summary>
+        public int LastLoginRefreshAfterSeconds { get; private set; }
+
         public async Task<HttpResponse<ShiftEntityResponse<TokenDTO>>> LoginAsync(LoginDTO loginDto)
         {
             if (identityOptions.UseCookieAuth)
@@ -60,7 +72,11 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services
 
             if (response.IsSuccessStatusCode)
             {
-                var result = await response.Content.ReadFromJsonAsync<CookieLoginResponse>();
+                var result = await response.Content.ReadFromJsonAsync<CookieAuthStateResponse>();
+
+                LastLoginClaims = result?.Claims;
+                LastLoginRefreshAfterSeconds = result?.RefreshAfterSeconds ?? 0;
+
                 var token = new TokenDTO
                 {
                     UserData = result?.UserData,
@@ -135,6 +151,11 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services
                     signInResponse.StatusCode);
             }
 
+            var signInState = await signInResponse.Content.ReadFromJsonAsync<CookieAuthStateResponse>();
+
+            LastLoginClaims = signInState?.Claims;
+            LastLoginRefreshAfterSeconds = signInState?.RefreshAfterSeconds ?? 0;
+
             return new HttpResponse<ShiftEntityResponse<TokenDTO>>(
                 new ShiftEntityResponse<TokenDTO> { Entity = tokenResult.Entity },
                 HttpStatusCode.OK);
@@ -147,13 +168,10 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services
                 try { await http.PostAsync("/api/identity/logout", null); } catch { }
             }
 
-            await storageService.RemoveTokenAsync();
-        }
+            LastLoginClaims = null;
+            LastLoginRefreshAfterSeconds = 0;
 
-        private class CookieLoginResponse
-        {
-            public TokenUserDataDTO? UserData { get; set; }
-            public bool RequirePasswordChange { get; set; }
+            await storageService.RemoveTokenAsync();
         }
 
         private class CookieLoginErrorResponse

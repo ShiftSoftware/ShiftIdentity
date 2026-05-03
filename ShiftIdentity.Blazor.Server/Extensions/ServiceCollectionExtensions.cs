@@ -17,7 +17,8 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// Registers cookie-based authentication for Blazor Web App with ShiftIdentity.
     /// Sets up policy scheme (Cookie + JWT), cookie auth middleware, ICookieAuthManager,
-    /// PersistingCookieAuthStateProvider, NoOpIdentityStore, and ServerHttpMessageHandler.
+    /// PersistingCookieAuthStateProvider (server-side, for SSR → WASM handoff), and ServerHttpMessageHandler.
+    /// The .Client (WASM) project should call <c>AddShiftIdentityBlazorClient</c> instead.
     /// </summary>
     public static IServiceCollection AddShiftIdentityBlazorServer(
         this IServiceCollection services,
@@ -29,7 +30,7 @@ public static class ServiceCollectionExtensions
         configure(options);
 
         services.AddSingleton(options);
-        services.AddSingleton(new ShiftIdentityBlazorOptions(appId, baseUrl, frontEndBaseUrl)
+        services.AddSingleton(new ShiftIdentity.Blazor.ShiftIdentityBlazorOptions(appId, baseUrl, frontEndBaseUrl)
         {
             UseCookieAuth = true,
             HostingType = hostingType,
@@ -96,11 +97,13 @@ public static class ServiceCollectionExtensions
         services.AddCascadingAuthenticationState();
         services.AddHttpContextAccessor();
 
-        // Auth state provider for SSR → WASM handoff
+        // Server-side state provider — reads HttpContext.User during SSR and persists claims
+        // into PersistentComponentState for the WASM client to pick up on hydration.
         services.AddScoped<AuthenticationStateProvider, PersistingCookieAuthStateProvider>();
 
-        // No-op identity store — cookie handles token storage
-        services.AddScoped<IIdentityStore, ShiftIdentity.Blazor.Services.NoOpIdentityStore>();
+        // No-op identity store — cookie handles token storage. Stays for any consumer that
+        // still injects IIdentityStore (UserAvatar, FileExplorer, etc).
+        services.AddScoped<ShiftIdentity.Blazor.IIdentityStore, ShiftIdentity.Blazor.Services.NoOpIdentityStore>();
 
         // ServerHttpMessageHandler for forwarding cookies during SSR
         services.AddTransient<ServerHttpMessageHandler>();

@@ -1,10 +1,7 @@
-﻿using Blazored.LocalStorage;
-using Microsoft.AspNetCore.Components;
+using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using System.Net.Http;
-using System.Net.Http.Headers;
 using ShiftSoftware.ShiftIdentity.Blazor.Handlers;
 using ShiftSoftware.ShiftIdentity.Blazor.Providers;
 using ShiftSoftware.ShiftIdentity.Blazor.Services;
@@ -16,15 +13,17 @@ namespace ShiftSoftware.ShiftIdentity.Blazor.Extensions;
 
 public static class IServiceCollectionExtensions
 {
+    /// <summary>
+    /// Registers ShiftIdentity for a standalone-WASM app using JWT in localStorage.
+    /// Wires the JWT <see cref="IAuthRefreshStrategy"/> with the unified
+    /// <see cref="AuthSessionService"/> + <see cref="ShiftAuthStateProvider"/> + <see cref="Auth401Handler"/>.
+    /// </summary>
     public static IServiceCollection AddShiftIdentityBlazor(this IServiceCollection services,
         string appId, string baseUrl, string frontEndBaseUrl,
         ShiftIdentityHostingTypes hostingType = ShiftIdentityHostingTypes.Internal,
         Type? localizationResource = null)
     {
-        if (services == null)
-        {
-            throw new ArgumentNullException(nameof(services));
-        }
+        if (services == null) throw new ArgumentNullException(nameof(services));
 
         services.AddBlazoredLocalStorage();
         services.TryAddSingleton(x => new ShiftIdentityBlazorOptions(appId, baseUrl, frontEndBaseUrl)
@@ -34,46 +33,35 @@ public static class IServiceCollectionExtensions
         });
         services.TryAddScoped<IShiftIdentityProvider, ShiftIdentityProvider>();
 
-        // Register a dedicated HttpClient for HttpMessageHandlerService to avoid DI loop
         services.AddScoped<ShiftIdentityHttpClient>(sp =>
         {
             var options = sp.GetRequiredService<ShiftIdentityBlazorOptions>();
             return new ShiftIdentityHttpClient { BaseAddress = new Uri(options.BaseUrl) };
         });
 
-        // Standalone WASM + JWT/localStorage. For Blazor Web App + cookies, use ShiftIdentity.Blazor.Server instead.
-        services.TryAddScoped<TokenRefreshService>();
-        services.TryAddScoped<HttpMessageHandlerService>();
-        services.AddTransient<TokenMessageHandlerWithAutoRefresh>();
         services.TryAddScoped<IIdentityStore, IdentityLocalStorageService>();
         services.AddScoped<MessageService>();
-        services.TryAddScoped<AuthenticationStateProvider, ShiftIdentityAuthStateProvider>();
         services.AddTransient<TokenMessageHandler>();
+        services.AddTransient<Auth401Handler>();
+
+        AddSharedAuthRefresh<JwtRefreshStrategy>(services);
+        AddLocalizer(services, localizationResource);
+
         services.AddAuthorizationCore();
-
-        // Register localizer
-        if (localizationResource is null)
-            services.AddTransient(x => new ShiftIdentityLocalizer(x, typeof(Resource)));
-        else
-            services.AddTransient(x => new ShiftIdentityLocalizer(x, localizationResource));
-
         return services;
     }
 
     /// <summary>
-    /// Registers ShiftIdentity for the .Client (WASM) project of a Blazor Web App with cookie-based auth.
-    /// Auth state is read from PersistentComponentState seeded by the server during SSR.
-    /// For standalone WASM with JWT/localStorage, use <see cref="AddShiftIdentityBlazor"/> instead.
+    /// Registers ShiftIdentity for the .Client (WASM) project of a Blazor Web App with cookie auth.
+    /// Wires the cookie <see cref="IAuthRefreshStrategy"/> with the unified
+    /// <see cref="AuthSessionService"/> + <see cref="ShiftAuthStateProvider"/> + <see cref="Auth401Handler"/>.
     /// </summary>
     public static IServiceCollection AddShiftIdentityBlazorClient(this IServiceCollection services,
         string appId, string baseUrl, string frontEndBaseUrl,
         ShiftIdentityHostingTypes hostingType = ShiftIdentityHostingTypes.Internal,
         Type? localizationResource = null)
     {
-        if (services == null)
-        {
-            throw new ArgumentNullException(nameof(services));
-        }
+        if (services == null) throw new ArgumentNullException(nameof(services));
 
         services.TryAddSingleton(x => new ShiftIdentityBlazorOptions(appId, baseUrl, frontEndBaseUrl)
         {
@@ -81,17 +69,32 @@ public static class IServiceCollectionExtensions
             HostingType = hostingType,
         });
 
-        services.TryAddScoped<AuthenticationStateProvider, PersistentCookieAuthStateProvider>();
         services.TryAddScoped<IIdentityStore, NoOpIdentityStore>();
+        services.AddTransient<Auth401Handler>();
+
+        AddSharedAuthRefresh<CookieRefreshStrategy>(services);
+        AddLocalizer(services, localizationResource);
+
         services.AddAuthorizationCore();
         services.AddCascadingAuthenticationState();
+        return services;
+    }
 
+    private static void AddSharedAuthRefresh<TStrategy>(IServiceCollection services)
+        where TStrategy : class, IAuthRefreshStrategy
+    {
+        services.TryAddScoped<IAuthRefreshStrategy, TStrategy>();
+        services.TryAddScoped<ShiftAuthStateProvider>();
+        services.TryAddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<ShiftAuthStateProvider>());
+        services.TryAddScoped<AuthSessionService>();
+    }
+
+    private static void AddLocalizer(IServiceCollection services, Type? localizationResource)
+    {
         if (localizationResource is null)
             services.AddTransient(x => new ShiftIdentityLocalizer(x, typeof(Resource)));
         else
             services.AddTransient(x => new ShiftIdentityLocalizer(x, localizationResource));
-
-        return services;
     }
 
     [Obsolete("Use AddShiftIdentityBlazor instead. This method will be removed in future versions.")]
