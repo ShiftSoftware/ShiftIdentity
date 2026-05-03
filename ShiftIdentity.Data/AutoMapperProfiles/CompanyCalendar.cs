@@ -1,6 +1,6 @@
 using AutoMapper;
+using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
-using ShiftSoftware.ShiftEntity.Model.HashIds;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Brand;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyCalendar;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Department;
@@ -10,24 +10,24 @@ namespace ShiftSoftware.ShiftIdentity.Data.AutoMapperProfiles;
 
 public class CompanyCalendar : Profile
 {
-    public CompanyCalendar()
+    public CompanyCalendar(IHashIdService hashIdService)
     {
         // ShiftGroup JSON child types
         CreateMap<CompanyCalendarShiftGroup, CompanyCalendarShiftGroupDTO>()
-            .ForMember(x => x.Departments, x => x.MapFrom(s => s.DepartmentIds.Select(id => new ShiftEntitySelectDTO { Value = ShiftEntityHashIdService.Encode<DepartmentListDTO>(id) }).ToList()))
-            .ForMember(x => x.Brands, x => x.MapFrom(s => s.BrandIds.Select(id => new ShiftEntitySelectDTO { Value = ShiftEntityHashIdService.Encode<BrandListDTO>(id) }).ToList()))
+            .ForMember(x => x.Departments, x => x.MapFrom(s => s.DepartmentIds.Select(id => new ShiftEntitySelectDTO { Value = hashIdService.Encode<DepartmentListDTO>(id) }).ToList()))
+            .ForMember(x => x.Brands, x => x.MapFrom(s => s.BrandIds.Select(id => new ShiftEntitySelectDTO { Value = hashIdService.Encode<BrandListDTO>(id) }).ToList()))
         .ReverseMap()
-            .ForMember(x => x.DepartmentIds, x => x.MapFrom(s => s.Departments.Where(d => d.Value != null).Select(d => ShiftEntityHashIdService.Decode<DepartmentListDTO>(d.Value!)).ToList()))
-            .ForMember(x => x.BrandIds, x => x.MapFrom(s => s.Brands.Where(b => b.Value != null).Select(b => ShiftEntityHashIdService.Decode<BrandListDTO>(b.Value!)).ToList()));
+            .ForMember(x => x.DepartmentIds, x => x.MapFrom(s => s.Departments.Where(d => d.Value != null).Select(d => hashIdService.Decode<DepartmentListDTO>(d.Value!)).ToList()))
+            .ForMember(x => x.BrandIds, x => x.MapFrom(s => s.Brands.Where(b => b.Value != null).Select(b => hashIdService.Decode<BrandListDTO>(b.Value!)).ToList()));
         CreateMap<CompanyCalendarShift, CompanyCalendarShiftItemDTO>().ReverseMap();
 
         // WeekendGroup JSON child types
         CreateMap<CompanyCalendarWeekendGroup, CompanyCalendarWeekendGroupDTO>()
-            .ForMember(x => x.Departments, x => x.MapFrom(s => s.DepartmentIds.Select(id => new ShiftEntitySelectDTO { Value = ShiftEntityHashIdService.Encode<DepartmentListDTO>(id) }).ToList()))
-            .ForMember(x => x.Brands, x => x.MapFrom(s => s.BrandIds.Select(id => new ShiftEntitySelectDTO { Value = ShiftEntityHashIdService.Encode<BrandListDTO>(id) }).ToList()))
+            .ForMember(x => x.Departments, x => x.MapFrom(s => s.DepartmentIds.Select(id => new ShiftEntitySelectDTO { Value = hashIdService.Encode<DepartmentListDTO>(id) }).ToList()))
+            .ForMember(x => x.Brands, x => x.MapFrom(s => s.BrandIds.Select(id => new ShiftEntitySelectDTO { Value = hashIdService.Encode<BrandListDTO>(id) }).ToList()))
         .ReverseMap()
-            .ForMember(x => x.DepartmentIds, x => x.MapFrom(s => s.Departments.Where(d => d.Value != null).Select(d => ShiftEntityHashIdService.Decode<DepartmentListDTO>(d.Value!)).ToList()))
-            .ForMember(x => x.BrandIds, x => x.MapFrom(s => s.Brands.Where(b => b.Value != null).Select(b => ShiftEntityHashIdService.Decode<BrandListDTO>(b.Value!)).ToList()));
+            .ForMember(x => x.DepartmentIds, x => x.MapFrom(s => s.Departments.Where(d => d.Value != null).Select(d => hashIdService.Decode<DepartmentListDTO>(d.Value!)).ToList()))
+            .ForMember(x => x.BrandIds, x => x.MapFrom(s => s.Brands.Where(b => b.Value != null).Select(b => hashIdService.Decode<BrandListDTO>(b.Value!)).ToList()));
         CreateMap<CompanyCalendarWeekendRule, CompanyCalendarWeekendRuleItemDTO>().ReverseMap();
 
         // Entity <-> ListDTO

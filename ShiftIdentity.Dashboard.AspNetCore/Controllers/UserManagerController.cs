@@ -1,9 +1,9 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Core.Services;
 using ShiftSoftware.ShiftEntity.Model;
-using ShiftSoftware.ShiftEntity.Model.HashIds;
 using ShiftSoftware.ShiftIdentity.AspNetCore;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
 using ShiftSoftware.ShiftIdentity.Core;
@@ -26,17 +26,20 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
         private readonly IClaimService claimService;
         private readonly IMapper mapper;
         private readonly ShiftIdentityConfiguration options;
+        private readonly IHashIdService hashIdService;
         private readonly IEnumerable<ISendEmailVerification>? sendEmailVerifications;
         private readonly IEnumerable<ISendEmailResetPassword>? sendEmailResetPasswords;
 
         public UserManagerController(UserRepository userRepo, IClaimService claimService, IMapper mapper,
-            ShiftIdentityConfiguration options, IEnumerable<ISendEmailVerification>? sendEmailVerifications = null,
+            ShiftIdentityConfiguration options, IHashIdService hashIdService,
+            IEnumerable<ISendEmailVerification>? sendEmailVerifications = null,
             IEnumerable<ISendEmailResetPassword>? sendEmailResetPasswords = null)
         {
             this.userRepo = userRepo;
             this.claimService = claimService;
             this.mapper = mapper;
             this.options = options;
+            this.hashIdService = hashIdService;
             this.sendEmailVerifications = sendEmailVerifications;
             this.sendEmailResetPasswords = sendEmailResetPasswords;
         }
@@ -123,7 +126,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
         {
             var loginUser = claimService.GetUser();
             var userId = loginUser.ID.ToLong();
-            var encodedId = ShiftEntityHashIdService.Encode<UserDTO>(userId);
+            var encodedId = hashIdService.Encode<UserDTO>(userId);
 
             // Get the user and check if the user is not null
             var user = await userRepo.FindAsync(userId, asOf: null, disableDefaultDataLevelAccess: true, disableGlobalFilters: true);
@@ -181,7 +184,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> VerifyEmail(string userId, [FromQuery] string? expires = null, [FromQuery] string? token = null)
         {
-            var decodedId = ShiftEntityHashIdService.Decode<UserDTO>(userId);
+            var decodedId = hashIdService.Decode<UserDTO>(userId);
 
             // Get the user and check if the user is not null
             var user = await userRepo.FindAsync(decodedId, asOf: null, disableDefaultDataLevelAccess: true, disableGlobalFilters: true);
@@ -234,7 +237,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
                     }
                 });
 
-            var encodedId = ShiftEntityHashIdService.Encode<UserDTO>(user.ID);
+            var encodedId = hashIdService.Encode<UserDTO>(user.ID);
             
             // Generate the token and send the email verification
             var url = Url.Action(nameof(ResetPassword), new { userId = encodedId });
@@ -265,7 +268,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
             [FromQuery] string? expires = null, [FromQuery] string? token = null)
         {
             // Get the user and check if the user is not null
-            var decodedId = ShiftEntityHashIdService.Decode<UserDTO>(userId);
+            var decodedId = hashIdService.Decode<UserDTO>(userId);
             var user = await userRepo.FindAsync(decodedId, asOf: null, disableDefaultDataLevelAccess: true, disableGlobalFilters: true);
             if (user is null)
                 return NotFound(new ShiftEntityResponse<UserDataDTO>
