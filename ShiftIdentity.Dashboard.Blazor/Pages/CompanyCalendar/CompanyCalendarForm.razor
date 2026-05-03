@@ -142,8 +142,6 @@
                                                    TimeChanged="@(t => HandleTimeChange(shift, t, isStart: true))"
                                                    Variant="Variant.Outlined"
                                                    Margin="Margin.Dense" />
-
-                                                   @shift.StartTime  Ticks=@shift.StartTimeTicks
                                 </MudItem>
                                 <MudItem xs="4">
                                     <MudTimePicker Label="@Loc["End Time"]"
