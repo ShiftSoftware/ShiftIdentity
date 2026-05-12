@@ -33,7 +33,18 @@ public class User : Profile
                 opt => opt.MapFrom(src => src.AccessTrees.Select(y => new ShiftEntitySelectDTO { Value = y.AccessTreeID.ToString()!, Text = y.AccessTree!.Name }))
             );
 
-        CreateMap<Core.Entities.User, UserDataDTO>().ReverseMap();
+        CreateMap<Core.Entities.User, UserDataDTO>()
+            .ReverseMap()
+            .ForMember(d => d.ID, o => o.Ignore())
+            .ForMember(d => d.Username, o => o.Ignore())
+            .ForMember(d => d.Email, o => o.Ignore())
+            .ForMember(d => d.Phone, o => o.Ignore())
+            .ForMember(d => d.EmailVerified, o => o.Ignore())
+            .ForMember(d => d.PhoneVerified, o => o.Ignore())
+            .ForMember(d => d.LastSavedByUserID, o => o.Ignore())
+            .ForMember(d => d.CreatedByUserID, o => o.Ignore())
+            .ForMember(d => d.LastSaveDate, o => o.Ignore())
+            .ForMember(d => d.CreateDate, o => o.Ignore());
         CreateMap<Core.Entities.User, UserInfoDTO>();
     }
 }

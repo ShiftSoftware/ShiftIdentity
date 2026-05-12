@@ -294,6 +294,22 @@ public class UserRepository :
         if (await db.Users.AnyAsync(x => !x.IsDeleted && x.Email.ToLower() == (dto.Email ?? "").ToLower() && x.ID != userId))
             throw new ShiftEntityException(new Message(Loc["Duplicate"], Loc["The email {0} exist", dto.Email]));
 
+        // TEMP FIX
+        if (dto.FullName != null)
+            user.FullName = dto.FullName;
+        if (dto.BirthDate != null)
+            user.BirthDate = dto.BirthDate;
+        if (dto.Signature != null)
+        {
+            var _u = this.mapper.Map(dto, new User());
+            user.Signature = _u.Signature;
+        }
+        if (dto.Email != null && dto.Email != user.Email)
+        {
+            user.Email = dto.Email;
+            user.EmailVerified = false;
+        }
+
         //Assign phone
         string? formattedPhone = null;
         if (dto.Phone != null)
@@ -302,15 +318,16 @@ public class UserRepository :
                 throw new ShiftEntityException(new Message(Loc["Validation Error"], Loc["Invalid Phone Number"]));
 
             formattedPhone = Core.ValidatorsAndFormatters.PhoneNumber.GetFormattedPhone(dto.Phone);
+            if (user.Phone != formattedPhone)
+            {
+                user.PhoneVerified = false;
+            }
+            user.Phone = formattedPhone;
 
             //Check if the phone is duplicate
             if (await db.Users.AnyAsync(x => !x.IsDeleted && x.Phone.ToLower() == formattedPhone.ToLower() && x.ID != userId))
                 throw new ShiftEntityException(new Message(Loc["Duplicate"], Loc["The phone {0} exist", dto.Phone]));
         }
-
-        //Assign values
-        this.mapper.Map(dto, user);
-        user.Phone = formattedPhone;
 
         return user;
     }
