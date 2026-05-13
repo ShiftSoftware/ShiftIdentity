@@ -1,6 +1,6 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
-@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CityForm)}/{{Key?}}")]
+@attribute [Route($"{Constants.IdentityRoutePrefix}/{nameof(CityForm)}/{{Key?}}")]
 @inherits ShiftForm<CityForm, ShiftSoftware.ShiftIdentity.Core.DTOs.City.CityDTO>
 @inject HttpClient Http
 @inject ODataQuery odataQuery
@@ -11,7 +11,7 @@
 <ShiftEntityForm @bind-Mode="Mode"
                  @bind-Value="TheItem"
                  @ref="FormContainer"
-                 Endpoint="@($"{Constants.IdentityRoutePreifix}City")"
+                 Endpoint="@($"{Constants.IdentityRoutePrefix}City")"
                  Title="@Loc["City"]"
                  AllowSaveAsNew
                  @bind-Key="@Key"

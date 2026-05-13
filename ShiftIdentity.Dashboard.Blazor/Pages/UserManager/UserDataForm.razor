@@ -1,6 +1,6 @@
 ﻿@attribute [Authorize]
 @layout Shared.DefaultLayout
-@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(UserDataForm)}")]
+@attribute [Route($"{Constants.IdentityRoutePrefix}/{nameof(UserDataForm)}")]
 @inherits ShiftForm<UserDataForm, ShiftIdentity.Core.DTOs.User.UserDataDTO>
 @inject ShiftModal ShiftModal
 @inject HttpClient Http

@@ -1,6 +1,6 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
-@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CompanyCalendarMudPage)}")]
+@attribute [Route($"{Constants.IdentityRoutePrefix}/{nameof(CompanyCalendarMudPage)}")]
 @using ShiftSoftware.ShiftEntity.Model.Dtos
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyCalendar
 @using ShiftSoftware.ShiftIdentity.Core.Enums
@@ -21,7 +21,7 @@
                                    Adornment="Adornment.Start"
                                    AdornmentSize="Size.Small"
                                    TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Company.CompanyListDTO"
-                                   EntitySet="@($"{Constants.IdentityRoutePreifix}Company")"
+                                   EntitySet="@($"{Constants.IdentityRoutePrefix}Company")"
                                    Value="_selectedCompany"
                                    ValueChanged="OnCompanyChanged" />
                 
@@ -34,7 +34,7 @@
                                    Adornment="Adornment.Start"
                                    AdornmentSize="Size.Small"
                                    TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO"
-                                   EntitySet="@($"{Constants.IdentityRoutePreifix}CompanyBranch")"
+                                   EntitySet="@($"{Constants.IdentityRoutePrefix}CompanyBranch")"
                                    Disabled="_selectedCompany?.Value is null"
                                    Filter="x => x.Add(f => { f.Field = nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO.CompanyId); f.Value = _selectedCompany?.Value; })"
                                    Value="_selectedBranch"
@@ -138,7 +138,7 @@
                                Adornment="Adornment.Start"
                                AdornmentSize="Size.Small"
                                TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentListDTO"
-                               EntitySet="@($"{Constants.IdentityRoutePreifix}Department")"
+                               EntitySet="@($"{Constants.IdentityRoutePrefix}Department")"
                                Value="_selectedDepartment"
                                ValueChanged="OnDepartmentChanged" />
 
@@ -151,7 +151,7 @@
                                Adornment="Adornment.Start"
                                AdornmentSize="Size.Small"
                                TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Brand.BrandListDTO"
-                               EntitySet="@($"{Constants.IdentityRoutePreifix}Brand")"
+                               EntitySet="@($"{Constants.IdentityRoutePrefix}Brand")"
                                Value="_selectedBrand"
                                ValueChanged="OnBrandhChanged" />
         </MudStack>

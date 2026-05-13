@@ -1,6 +1,6 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
-@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CountryForm)}/{{Key?}}")]
+@attribute [Route($"{Constants.IdentityRoutePrefix}/{nameof(CountryForm)}/{{Key?}}")]
 @inherits ShiftForm<CountryForm, ShiftSoftware.ShiftIdentity.Core.DTOs.Country.CountryDTO>
 @inject HttpClient Http
 @inject ShiftIdentityLocalizer Loc
@@ -8,7 +8,7 @@
 <ShiftEntityForm @bind-Mode="Mode"
                  @bind-Value="TheItem"
                  @ref="FormContainer"
-                 Endpoint="@($"{Constants.IdentityRoutePreifix}Country")"
+                 Endpoint="@($"{Constants.IdentityRoutePrefix}Country")"
                  Title="@Loc["Country"]"
                  AllowSaveAsNew
                  @bind-Key="@Key"

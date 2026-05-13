@@ -1,10 +1,10 @@
 @layout Shared.DefaultLayout
 @attribute [Authorize]
-@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(AccessTreeList)}")]
+@attribute [Route($"{Constants.IdentityRoutePrefix}/{nameof(AccessTreeList)}")]
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
 @inject ShiftIdentityLocalizer Loc
 
-<ShiftList EntitySet="@($"{Constants.IdentityRoutePreifix}AccessTree")"
+<ShiftList EntitySet="@($"{Constants.IdentityRoutePrefix}AccessTree")"
            Title="@Loc["Access Tree List"]"
            T="AccessTreeDTO"
            ComponentType="typeof(AccessTreeForm)"

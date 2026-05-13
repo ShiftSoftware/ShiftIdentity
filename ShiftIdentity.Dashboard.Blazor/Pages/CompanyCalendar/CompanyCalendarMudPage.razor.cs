@@ -181,7 +181,7 @@ public partial class CompanyCalendarMudPage : IDisposable
             };
 
             var response = await Http.PostAsJsonAsync(
-                $"{Constants.IdentityRoutePreifix}CompanyCalendar/GetCalendarEvents", filter, cts.Token);
+                $"{Constants.IdentityRoutePrefix}CompanyCalendar/GetCalendarEvents", filter, cts.Token);
 
             cts.Token.ThrowIfCancellationRequested();
 

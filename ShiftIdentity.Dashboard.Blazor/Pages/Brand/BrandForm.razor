@@ -1,6 +1,6 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
-@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(BrandForm)}/{{Key?}}")]
+@attribute [Route($"{Constants.IdentityRoutePrefix}/{nameof(BrandForm)}/{{Key?}}")]
 @inherits ShiftForm<BrandForm, ShiftSoftware.ShiftIdentity.Core.DTOs.Brand.BrandDTO>
 @inject HttpClient Http
 @inject ShiftIdentityLocalizer Loc
@@ -9,7 +9,7 @@
 <ShiftEntityForm @bind-Mode="Mode"
                  @bind-Value="TheItem"
                  @ref="FormContainer"
-                 Endpoint="@($"{Constants.IdentityRoutePreifix}Brand")"
+                 Endpoint="@($"{Constants.IdentityRoutePrefix}Brand")"
                  Title="@Loc["Brand"]"
                  @bind-Key="@Key"
                  AllowSaveAsNew

@@ -1,11 +1,11 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
-@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CompanyCalendarList)}")]
+@attribute [Route($"{Constants.IdentityRoutePrefix}/{nameof(CompanyCalendarList)}")]
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Company
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyCalendar
 @inject ShiftIdentityLocalizer Loc
 
-<ShiftList EntitySet="@($"{Constants.IdentityRoutePreifix}CompanyCalendar")"
+<ShiftList EntitySet="@($"{Constants.IdentityRoutePrefix}CompanyCalendar")"
            Title="@Loc["Company Calendar Entries"]"
            T="CompanyCalendarListDTO"
            Dense
@@ -25,7 +25,7 @@
                    Filterable="false"
                    CellClass="whitespace-nowrap"
                    TEntity="CompanyListDTO"
-                   EntitySet="@($"{Constants.IdentityRoutePreifix}Company")"
+                   EntitySet="@($"{Constants.IdentityRoutePrefix}Company")"
                    TProperty="string"
                    Property="x => x.CompanyID" />
 </ShiftList>

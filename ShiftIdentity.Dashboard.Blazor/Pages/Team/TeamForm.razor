@@ -8,7 +8,7 @@
 
 
 
-@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(TeamForm)}/{{Key?}}")]
+@attribute [Route($"{Constants.IdentityRoutePrefix}/{nameof(TeamForm)}/{{Key?}}")]
 @inherits ShiftForm<TeamForm, ShiftSoftware.ShiftIdentity.Core.DTOs.Team.TeamDTO>
 @inject HttpClient Http
 @inject ODataQuery odataQuery
@@ -19,7 +19,7 @@
                  @bind-Value="TheItem"
                  @ref="FormContainer"
                  AllowSaveAsNew
-                 Endpoint="@($"{Constants.IdentityRoutePreifix}Team")"
+                 Endpoint="@($"{Constants.IdentityRoutePrefix}Team")"
                  Title="@Loc["Team"]"
                  @bind-Key="@Key"
                  TypeAuthAction="ShiftIdentityActions.Teams"

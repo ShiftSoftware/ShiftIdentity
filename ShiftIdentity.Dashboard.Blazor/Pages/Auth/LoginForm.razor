@@ -1,4 +1,4 @@
-﻿@attribute [Route($"{Constants.IdentityRoutePreifix}/login")]
+﻿@attribute [Route($"{Constants.IdentityRoutePrefix}/login")]
 @attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
 @layout Shared.EmptyLayout
 
@@ -130,7 +130,7 @@
 
     private string GetPasswordChangeUrl()
     {
-        var url = $"{Constants.IdentityRoutePreifix}/{nameof(ChangePasswordForm)}";
+        var url = $"{Constants.IdentityRoutePrefix}/{nameof(ChangePasswordForm)}";
 
         var queryStrings = new Dictionary<string, object?>();
         queryStrings.Add(Constants.ReturnUrlParameter, localReturnUrl);

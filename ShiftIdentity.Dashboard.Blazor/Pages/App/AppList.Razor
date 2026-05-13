@@ -1,10 +1,10 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
-@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(AppList)}")]
+@attribute [Route($"{Constants.IdentityRoutePrefix}/{nameof(AppList)}")]
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.App;
 @inject ShiftIdentityLocalizer Loc
 
-<ShiftList EntitySet="@($"{Constants.IdentityRoutePreifix}App")"
+<ShiftList EntitySet="@($"{Constants.IdentityRoutePrefix}App")"
            Title="@Loc["App List"]"
            T="AppDTO"
            ComponentType="typeof(AppForm)"

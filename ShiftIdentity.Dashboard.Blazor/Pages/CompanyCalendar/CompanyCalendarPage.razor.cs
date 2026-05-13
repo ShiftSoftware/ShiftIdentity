@@ -36,14 +36,14 @@ public partial class CompanyCalendarPage : IAsyncDisposable
     [JSInvokable]
     public Task OnDateRangeSelected(string start, string end)
     {
-        Nav.NavigateTo($"{Constants.IdentityRoutePreifix}/{nameof(CompanyCalendarForm)}");
+        Nav.NavigateTo($"{Constants.IdentityRoutePrefix}/{nameof(CompanyCalendarForm)}");
         return Task.CompletedTask;
     }
 
     [JSInvokable]
     public Task OnEventClicked(int calendarId)
     {
-        Nav.NavigateTo($"{Constants.IdentityRoutePreifix}/{nameof(CompanyCalendarForm)}/{calendarId}");
+        Nav.NavigateTo($"{Constants.IdentityRoutePrefix}/{nameof(CompanyCalendarForm)}/{calendarId}");
         return Task.CompletedTask;
     }
 
@@ -159,7 +159,7 @@ public partial class CompanyCalendarPage : IAsyncDisposable
                     : null,
             };
 
-            var response = await Http.PostAsJsonAsync($"{Constants.IdentityRoutePreifix}CompanyCalendar/GetCalendarEvents", filter);
+            var response = await Http.PostAsJsonAsync($"{Constants.IdentityRoutePrefix}CompanyCalendar/GetCalendarEvents", filter);
 
             if (response.IsSuccessStatusCode)
             {

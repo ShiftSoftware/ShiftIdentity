@@ -1,6 +1,6 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
-@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CompanyBranchList)}")]
+@attribute [Route($"{Constants.IdentityRoutePrefix}/{nameof(CompanyBranchList)}")]
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.City
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Company
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Department
@@ -10,7 +10,7 @@
 @using ShiftSoftware.ShiftEntity.Model.Enums
 @inject ShiftIdentityLocalizer Loc
 
-<ShiftList EntitySet="@($"{Constants.IdentityRoutePreifix}CompanyBranch")"
+<ShiftList EntitySet="@($"{Constants.IdentityRoutePrefix}CompanyBranch")"
            Title="@Loc["Company Branch List"]"
            T="CompanyBranchListDTO"
            ComponentType="typeof(CompanyBranchForm)"
@@ -23,11 +23,11 @@
 
     <StringFilter Property="x => x.Name" Label="@Loc["Name"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="3" md="6" sm="12" xs="12" />
     <StringFilter Property="x => x.DisplayName" Label="@Loc["Display Name"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="3" md="6" sm="12" xs="12" />
-    <ForeignFilter Property="x => x.CityId" Label="@Loc["City"]" DTOType="typeof(CityListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}City")" lg="3" md="6" sm="12" xs="12" />
-    <ForeignFilter Property="x => x.CompanyId" Label="@Loc["Company"]" DTOType="typeof(CompanyListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Company")" lg="3" md="6" sm="12" xs="12" />
+    <ForeignFilter Property="x => x.CityId" Label="@Loc["City"]" DTOType="typeof(CityListDTO)" EntitySet="@($"{Constants.IdentityRoutePrefix}City")" lg="3" md="6" sm="12" xs="12" />
+    <ForeignFilter Property="x => x.CompanyId" Label="@Loc["Company"]" DTOType="typeof(CompanyListDTO)" EntitySet="@($"{Constants.IdentityRoutePrefix}Company")" lg="3" md="6" sm="12" xs="12" />
     <StringFilter Property="x => x.IntegrationId" Label="@Loc["Integration ID"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="3" md="6" sm="12" xs="12" />
-    <ForeignFilter Property="x => x.Value" DTOType="typeof(DepartmentListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Department")" Label="@Loc["Departments"]" TProperty="string" T="ShiftEntitySelectDTO" CollectionPrefix="@(["Departments"])" lg="3" md="6" sm="12" xs="12" />
-    <ForeignFilter Property="x => x.Value" DTOType="typeof(ServiceListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Service")" Label="@Loc["Services"]" TProperty="string" T="ShiftEntitySelectDTO" CollectionPrefix="@(["Services"])" lg="3" md="6" sm="12" xs="12" />
+    <ForeignFilter Property="x => x.Value" DTOType="typeof(DepartmentListDTO)" EntitySet="@($"{Constants.IdentityRoutePrefix}Department")" Label="@Loc["Departments"]" TProperty="string" T="ShiftEntitySelectDTO" CollectionPrefix="@(["Departments"])" lg="3" md="6" sm="12" xs="12" />
+    <ForeignFilter Property="x => x.Value" DTOType="typeof(ServiceListDTO)" EntitySet="@($"{Constants.IdentityRoutePrefix}Service")" Label="@Loc["Services"]" TProperty="string" T="ShiftEntitySelectDTO" CollectionPrefix="@(["Services"])" lg="3" md="6" sm="12" xs="12" />
     
   @*   <EnumFilter Property="x => x.PublishTargets"  Label="@Loc["Publish Targets"]"  lg="3" md="6" sm="12" xs="12" /> *@
     

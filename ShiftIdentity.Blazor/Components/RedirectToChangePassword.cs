@@ -19,7 +19,7 @@ public class RedirectToChangePassword : ComponentBase
         Options = ServiceProvider.GetService<ShiftIdentityBlazorOptions>();
         AuthStateProvider = ServiceProvider.GetService<AuthenticationStateProvider>();
 
-        if (NavManager.Uri.Contains($"{Constants.IdentityRoutePreifix}/ChangePasswordForm"))
+        if (NavManager.Uri.Contains($"{Constants.IdentityRoutePrefix}/ChangePasswordForm"))
             return;
 
         if (this.AuthStateProvider is null)
@@ -50,7 +50,7 @@ public class RedirectToChangePassword : ComponentBase
                 queryStrings.Add(Constants.ReturnUrlParameter, returnUrl);
 
             var url = Options.FrontEndBaseUrl.EndsWith('/') ? Options.FrontEndBaseUrl : Options.FrontEndBaseUrl + '/';
-            var uri = NavManager.GetUriWithQueryParameters(url + $"{Constants.IdentityRoutePreifix}/ChangePasswordForm",
+            var uri = NavManager.GetUriWithQueryParameters(url + $"{Constants.IdentityRoutePrefix}/ChangePasswordForm",
                 queryStrings);
             NavManager.NavigateTo(uri);
         }

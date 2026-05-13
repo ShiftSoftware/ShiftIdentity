@@ -1,6 +1,6 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
-@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(DepartmentForm)}/{{Key?}}")]
+@attribute [Route($"{Constants.IdentityRoutePrefix}/{nameof(DepartmentForm)}/{{Key?}}")]
 @inherits ShiftForm<DepartmentForm, ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentDTO>
 @inject HttpClient Http
 @inject ShiftIdentityLocalizer Loc
@@ -9,7 +9,7 @@
 <ShiftEntityForm @bind-Mode="Mode"
                  @bind-Value="TheItem"
                  @ref="FormContainer"
-                 Endpoint="@($"{Constants.IdentityRoutePreifix}Department")"
+                 Endpoint="@($"{Constants.IdentityRoutePrefix}Department")"
                  Title="@Loc["Department"]"
                  AllowSaveAsNew
                  @bind-Key="@Key"

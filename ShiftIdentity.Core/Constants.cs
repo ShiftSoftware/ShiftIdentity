@@ -2,7 +2,7 @@
 
 public class Constants
 {
-    public const string IdentityRoutePreifix = "Identity";
+    public const string IdentityRoutePrefix = "Identity";
     public const string BuiltInUsername = "SuperUser";
     public const string BuiltInCity = "Built-in System City";
     public const string BuiltInRegion = "Built-in System Region";

@@ -1,11 +1,11 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
-@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CityList)}")]
+@attribute [Route($"{Constants.IdentityRoutePrefix}/{nameof(CityList)}")]
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.City;
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Region
 @inject ShiftIdentityLocalizer Loc
 
-<ShiftList EntitySet="@($"{Constants.IdentityRoutePreifix}City")"
+<ShiftList EntitySet="@($"{Constants.IdentityRoutePrefix}City")"
            Title="@Loc["City List"]"
            T="CityListDTO"
            ComponentType="typeof(CityForm)"
@@ -17,8 +17,8 @@
            EnableExport>
 
     <StringFilter Property="x => x.Name" Label="@Loc["Name"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="6" md="6" sm="12" xs="12" />
-    <ForeignFilter Property="x => x.CountryID" Label="@Loc["Country"]" DTOType="typeof(CountryListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Country")" lg="6" md="6" sm="12" xs="12" />
-    <ForeignFilter Property="x => x.RegionID" Label="@Loc["Region"]" DTOType="typeof(RegionListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Region")" lg="6" md="6" sm="12" xs="12" />
+    <ForeignFilter Property="x => x.CountryID" Label="@Loc["Country"]" DTOType="typeof(CountryListDTO)" EntitySet="@($"{Constants.IdentityRoutePrefix}Country")" lg="6" md="6" sm="12" xs="12" />
+    <ForeignFilter Property="x => x.RegionID" Label="@Loc["Region"]" DTOType="typeof(RegionListDTO)" EntitySet="@($"{Constants.IdentityRoutePrefix}Region")" lg="6" md="6" sm="12" xs="12" />
     <StringFilter Property="x => x.IntegrationId" Label="@Loc["Integration ID"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="6" md="6" sm="12" xs="12" />
 
     <PropertyColumn Title="@Loc["Name"]" Property="x => x.Name" />

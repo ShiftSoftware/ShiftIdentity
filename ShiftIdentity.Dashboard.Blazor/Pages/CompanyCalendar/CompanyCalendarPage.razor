@@ -1,6 +1,6 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
-@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CompanyCalendarPage)}")]
+@attribute [Route($"{Constants.IdentityRoutePrefix}/{nameof(CompanyCalendarPage)}")]
 @inject ShiftIdentityLocalizer Loc
 
 <MudPaper Elevation="0" Class="pa-4" Style="height: calc(100vh - 64px); display: flex; flex-direction: column;">
@@ -10,7 +10,7 @@
         <MudItem Style="min-width: 280px;">
             <ShiftAutocomplete Label="@Loc["Company"]"
                                TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Company.CompanyListDTO"
-                               EntitySet="@($"{Constants.IdentityRoutePreifix}Company")"
+                               EntitySet="@($"{Constants.IdentityRoutePrefix}Company")"
                                Value="_selectedCompany"
                                ValueChanged="OnCompanyChanged" />
         </MudItem>
@@ -18,7 +18,7 @@
         <MudItem Style="min-width: 280px;">
             <ShiftAutocomplete Label="@Loc["Branch"]"
                                TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO"
-                               EntitySet="@($"{Constants.IdentityRoutePreifix}CompanyBranch")"
+                               EntitySet="@($"{Constants.IdentityRoutePrefix}CompanyBranch")"
                                Disabled="_selectedCompany?.Value is null"
                                Filter="x => x.Add(f => { f.Field = nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO.CompanyId); f.Value = _selectedCompany?.Value; })"
                                Value="_selectedBranch"
@@ -28,7 +28,7 @@
         <MudItem Style="min-width: 280px;">
             <ShiftAutocomplete Label="@Loc["Department"]"
                                TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentListDTO"
-                               EntitySet="@($"{Constants.IdentityRoutePreifix}Department")"
+                               EntitySet="@($"{Constants.IdentityRoutePrefix}Department")"
                                Disabled="_selectedCompany?.Value is null"
                                Value="_selectedDepartment"
                                ValueChanged="OnDepartmentChanged" />

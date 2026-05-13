@@ -1,10 +1,10 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
-@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CountryList)}")]
+@attribute [Route($"{Constants.IdentityRoutePrefix}/{nameof(CountryList)}")]
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Country;
 @inject ShiftIdentityLocalizer Loc
 
-<ShiftList EntitySet="@($"{Constants.IdentityRoutePreifix}Country")"
+<ShiftList EntitySet="@($"{Constants.IdentityRoutePrefix}Country")"
            Title="@Loc["Country List"]"
            T="CountryListDTO"
            ComponentType="typeof(CountryForm)"

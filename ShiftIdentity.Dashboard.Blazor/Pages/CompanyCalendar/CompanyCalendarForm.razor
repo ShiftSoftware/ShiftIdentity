@@ -1,6 +1,6 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
-@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CompanyCalendarForm)}/{{Key?}}")]
+@attribute [Route($"{Constants.IdentityRoutePrefix}/{nameof(CompanyCalendarForm)}/{{Key?}}")]
 @using ShiftSoftware.ShiftEntity.Model.Dtos
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyCalendar
 @using ShiftSoftware.ShiftIdentity.Core.Enums
@@ -12,7 +12,7 @@
 <ShiftEntityForm @bind-Mode="Mode"
                  @bind-Value="TheItem"
                  @ref="FormContainer"
-                 Endpoint="@($"{Constants.IdentityRoutePreifix}CompanyCalendar")"
+                 Endpoint="@($"{Constants.IdentityRoutePrefix}CompanyCalendar")"
                  Title="@Loc["Company Calendar Entry"]"
                  TypeAuthAction="ShiftIdentityActions.CompanyCalendars"
                  @bind-Key="@Key">
@@ -65,7 +65,7 @@
                 <MudItem xs="12" md="6">
                     <ShiftAutocomplete Label="@Loc["Company"]"
                                        TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Company.CompanyListDTO"
-                                       EntitySet="@($"{Constants.IdentityRoutePreifix}Company")"
+                                       EntitySet="@($"{Constants.IdentityRoutePrefix}Company")"
                                        For="() => TheItem.Company"
                                        @bind-Value="TheItem.Company" />
                 </MudItem>
@@ -73,7 +73,7 @@
                 <MudItem xs="12" md="6">
                     <ShiftAutocomplete Label="@Loc["Branches"]"
                                        TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO"
-                                       EntitySet="@($"{Constants.IdentityRoutePreifix}CompanyBranch")"
+                                       EntitySet="@($"{Constants.IdentityRoutePrefix}CompanyBranch")"
                                        MultiSelect
                                        @bind-SelectedValues="TheItem.Branches" />
                 </MudItem>
@@ -97,7 +97,7 @@
                             <MudItem xs="12">
                                 <ShiftAutocomplete Label="@Loc["Department"]"
                                                    TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentListDTO"
-                                                   EntitySet="@($"{Constants.IdentityRoutePreifix}Department")"
+                                                   EntitySet="@($"{Constants.IdentityRoutePrefix}Department")"
                                                    MultiSelect
                                                    @bind-SelectedValues="shiftGroup.Departments" />
                             </MudItem>
@@ -120,7 +120,7 @@
                             <MudItem xs="12" md="6">
                                 <ShiftAutocomplete Label="@Loc["Brand"]"
                                                    TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Brand.BrandListDTO"
-                                                   EntitySet="@($"{Constants.IdentityRoutePreifix}Brand")"
+                                                   EntitySet="@($"{Constants.IdentityRoutePrefix}Brand")"
                                                    MultiSelect
                                                    @bind-SelectedValues="shiftGroup.Brands" />
                             </MudItem>
@@ -171,7 +171,7 @@
                             <MudItem xs="12" md="6">
                                 <ShiftAutocomplete Label="@Loc["Department"]"
                                                    TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentListDTO"
-                                                   EntitySet="@($"{Constants.IdentityRoutePreifix}Department")"
+                                                   EntitySet="@($"{Constants.IdentityRoutePrefix}Department")"
                                                    MultiSelect
                                                    @bind-SelectedValues="weekendGroup.Departments" />
                             </MudItem>
@@ -179,7 +179,7 @@
                             <MudItem xs="12" md="6">
                                 <ShiftAutocomplete Label="@Loc["Brand"]"
                                                    TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Brand.BrandListDTO"
-                                                   EntitySet="@($"{Constants.IdentityRoutePreifix}Brand")"
+                                                   EntitySet="@($"{Constants.IdentityRoutePrefix}Brand")"
                                                    MultiSelect
                                                    @bind-SelectedValues="weekendGroup.Brands" />
                             </MudItem>

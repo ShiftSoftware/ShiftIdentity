@@ -17,76 +17,76 @@
 @inject ShiftIdentityLocalizer Loc
 
 <MudNavMenu>
-    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(CountryList)}")"
+    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePrefix}/{nameof(CountryList)}")"
                           Match="NavLinkMatch.All"
                           Icon="@Icons.Material.Outlined.Flag"
                           TypeAuthAction="ShiftIdentityActions.Regions">@Loc["Countries"]</AuthorizedMudNavLink>
 
-    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(RegionList)}")"
+    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePrefix}/{nameof(RegionList)}")"
                           Match="NavLinkMatch.All"
                           Icon="@Icons.Material.Outlined.Map"
                           TypeAuthAction="ShiftIdentityActions.Regions">@Loc["Regions"]</AuthorizedMudNavLink>
 
-    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(CityList)}")"
+    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePrefix}/{nameof(CityList)}")"
                           Match="NavLinkMatch.All"
                           Icon="@Icons.Material.Outlined.AccountBalance"
                           TypeAuthAction="ShiftIdentityActions.Cities">@Loc["Cities"]</AuthorizedMudNavLink>
 
-    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(BrandList)}")"
+    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePrefix}/{nameof(BrandList)}")"
                           Match="NavLinkMatch.All"
                           Icon="@Icons.Material.Outlined.LocalMall"
                           TypeAuthAction="ShiftIdentityActions.Brands">@Loc["Brands"]</AuthorizedMudNavLink>
 
-    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(DepartmentList)}")"
+    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePrefix}/{nameof(DepartmentList)}")"
                           Match="NavLinkMatch.All"
                           Icon="@Icons.Material.Outlined.Dashboard"
                           TypeAuthAction="ShiftIdentityActions.Departments">@Loc["Departments"]</AuthorizedMudNavLink>
 
-    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(ServiceList)}")"
+    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePrefix}/{nameof(ServiceList)}")"
                           Match="NavLinkMatch.All"
                           Icon="@Icons.Material.Outlined.Checklist"
                           TypeAuthAction="ShiftIdentityActions.Services">@Loc["Services"]</AuthorizedMudNavLink>
 
-    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(CompanyList)}")"
+    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePrefix}/{nameof(CompanyList)}")"
                           Match="NavLinkMatch.All"
                           Icon="@Icons.Material.Outlined.Business"
                           TypeAuthAction="ShiftIdentityActions.Companies">@Loc["Companies"]</AuthorizedMudNavLink>
 
-    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(CompanyBranchList)}")"
+    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePrefix}/{nameof(CompanyBranchList)}")"
                           Match="NavLinkMatch.All"
                           Icon="@Icons.Material.Outlined.AddBusiness"
                           TypeAuthAction="ShiftIdentityActions.CompanyBranches">@Loc["Branches"]</AuthorizedMudNavLink>
 
-    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(CompanyCalendarMudPage)}")"
+    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePrefix}/{nameof(CompanyCalendarMudPage)}")"
                           Match="NavLinkMatch.All"
                           Icon="@Icons.Material.Outlined.CalendarMonth"
                           TypeAuthAction="ShiftIdentityActions.CompanyCalendars">@Loc["Calendar"]</AuthorizedMudNavLink>
 
-    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(CompanyCalendarList)}")"
+    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePrefix}/{nameof(CompanyCalendarList)}")"
                           Match="NavLinkMatch.All"
                           Icon="@Icons.Material.Outlined.EditCalendar"
                           TypeAuthAction="ShiftIdentityActions.CompanyCalendars">@Loc["Calendar Entries"]</AuthorizedMudNavLink>
 
     @* @if (ShiftIdentityDashboardBlazorOptions.ShiftIdentityHostingType == ShiftIdentityHostingTypes.External) *@
     {
-        <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(AppList)}")"
+        <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePrefix}/{nameof(AppList)}")"
                               Match="NavLinkMatch.All"
                               Icon="@Icons.Material.Outlined.Apps"
                               TypeAuthAction="ShiftIdentityActions.Apps">@Loc["Apps"]</AuthorizedMudNavLink>
 
     }
 
-    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(AccessTreeList)}")"
+    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePrefix}/{nameof(AccessTreeList)}")"
                           Match="NavLinkMatch.All"
                           Icon="@Icons.Material.Outlined.AccountTree"
                           TypeAuthAction="ShiftIdentityActions.AccessTrees">@Loc["Access Trees"]</AuthorizedMudNavLink>
 
-    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(UserList)}")"
+    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePrefix}/{nameof(UserList)}")"
                           Match="NavLinkMatch.All"
                           Icon="@Icons.Material.Outlined.People"
                           TypeAuthAction="ShiftIdentityActions.Users">@Loc["Users"]</AuthorizedMudNavLink>
 
-    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(TeamList)}")"
+    <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePrefix}/{nameof(TeamList)}")"
                           Match="NavLinkMatch.All"
                           Icon="@Icons.Material.Outlined.Groups"
                           TypeAuthAction="ShiftIdentityActions.Teams">@Loc["Teams"]</AuthorizedMudNavLink>

@@ -1,6 +1,6 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
-@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CompanyBranchForm)}/{{Key?}}")]
+@attribute [Route($"{Constants.IdentityRoutePrefix}/{nameof(CompanyBranchForm)}/{{Key?}}")]
 @inherits ShiftForm<CompanyBranchForm, ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchDTO>
 @inject HttpClient Http
 @inject ShiftIdentityDashboardBlazorOptions Options
@@ -24,7 +24,7 @@
 <ShiftEntityForm @bind-Mode="Mode"
                  @bind-Value="TheItem"
                  @ref="FormContainer"
-                 Endpoint="@($"{Constants.IdentityRoutePreifix}CompanyBranch")"
+                 Endpoint="@($"{Constants.IdentityRoutePrefix}CompanyBranch")"
                  Title="@Loc["Company Branch"]"
                  @bind-Key="@Key"
                  OnInvalidSubmit="OnInvalidSubmit"

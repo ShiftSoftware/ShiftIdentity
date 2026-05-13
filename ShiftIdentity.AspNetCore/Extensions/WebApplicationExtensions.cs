@@ -10,7 +10,7 @@ public static class WebApplicationExtensions
     {
         var shiftIdentityOptions = app.Services.GetRequiredService<ShiftIdentityOptions>();
 
-        app.MapGet($"api/{ShiftSoftware.ShiftIdentity.Core.Constants.IdentityRoutePreifix}PublicUser", () =>
+        app.MapGet($"api/{ShiftSoftware.ShiftIdentity.Core.Constants.IdentityRoutePrefix}PublicUser", () =>
         {
             return new Dictionary<string, object> {
                 { "Count", 1 },
