@@ -23,9 +23,4 @@ public class ShiftIdentityCookieAuthOptions
     /// How long the auth cookie remains valid.
     /// </summary>
     public TimeSpan ExpireTimeSpan { get; set; } = TimeSpan.FromDays(14);
-
-    /// <summary>
-    /// Path to redirect to when unauthenticated.
-    /// </summary>
-    public string LoginPath { get; set; } = $"/{Constants.IdentityRoutePreifix}/login";
 }

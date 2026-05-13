@@ -57,7 +57,7 @@ public static class ServiceCollectionExtensions
                 cookieOptions.Cookie.Name = options.CookieName;
                 cookieOptions.ExpireTimeSpan = options.ExpireTimeSpan;
                 cookieOptions.SlidingExpiration = true;
-                cookieOptions.LoginPath = options.LoginPath;
+                cookieOptions.LoginPath = Constants.CookieLoginPath;
                 cookieOptions.ReturnUrlParameter = Constants.ReturnUrlParameter;
                 cookieOptions.Events.OnValidatePrincipal = async context =>
                 {

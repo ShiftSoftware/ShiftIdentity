@@ -12,4 +12,6 @@ public class Constants
     public const string BuiltInCountryCallingCode = "+964";
     public const string ReturnUrlParameter = "ReturnUrl";
     public const string DefaultPolicyName = "DefaultPolicy";
+    public const string CookieLoginPath = "/login";
+    public const string JwtLoginPath = $"/{IdentityRoutePrefix}/login";
 }

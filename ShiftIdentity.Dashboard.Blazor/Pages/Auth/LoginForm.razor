@@ -1,4 +1,4 @@
-﻿@attribute [Route($"{Constants.IdentityRoutePrefix}/login")]
+﻿@attribute [Route($"{Constants.JwtLoginPath}")]
 @attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
 @layout Shared.EmptyLayout
 
@@ -45,7 +45,7 @@
                 <br />
                 <MudButton Size="Size.Small"
                            Color="Color.Warning"
-                           Href="@($"{Constants.IdentityRoutePreifix}/{nameof(SendResetPasswordLink)}")"
+                           Href="@($"{Constants.IdentityRoutePrefix}/{nameof(SendResetPasswordLink)}")"
                            Variant="Variant.Text">
                     @Loc["Forgot Password?"]
                 </MudButton>

@@ -1,7 +1,7 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
 
-@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(UserList)}")]
+@attribute [Route($"{Constants.IdentityRoutePrefix}/{nameof(UserList)}")]
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Company
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
@@ -11,7 +11,7 @@
 @inject MessageService MessageService
 @inject ShiftIdentityLocalizer Loc
 
-<ShiftList EntitySet="@($"{Constants.IdentityRoutePreifix}User")"
+<ShiftList EntitySet="@($"{Constants.IdentityRoutePrefix}User")"
            Title="@Loc["User List"]"
            T="UserListDTO"
            @ref="ShiftList"
@@ -34,7 +34,7 @@
                           Confirm
                           OnResult="AssignRandomPasswordsResponse"
                           T="UserListDTO"
-                          Endpoint="@($"{Constants.IdentityRoutePreifix}User/AssignRandomPasswords?shareWithUser={SharePasswordWithUser}&passwordLength={passwordLength}")">
+                          Endpoint="@($"{Constants.IdentityRoutePrefix}User/AssignRandomPasswords?shareWithUser={SharePasswordWithUser}&passwordLength={passwordLength}")">
 
                 <DialogBodyTemplate>
                     <MudCheckBox @bind-Value="SharePasswordWithUser" Label="@Loc["Send login info to the user"]" />
@@ -58,7 +58,7 @@
                           Confirm
                           OnResult="VerifyEmailsResponse"
                           T="UserListDTO"
-                          Endpoint="@($"{Constants.IdentityRoutePreifix}User/VerifyEmails")">
+                          Endpoint="@($"{Constants.IdentityRoutePrefix}User/VerifyEmails")">
                 @Loc["Verify Emails"]
             </ActionButton>
 
@@ -69,7 +69,7 @@
                           Confirm
                           OnResult="VerifyPhonesResponse"
                           T="UserListDTO"
-                          Endpoint="@($"{Constants.IdentityRoutePreifix}User/VerifyPhones")">
+                          Endpoint="@($"{Constants.IdentityRoutePrefix}User/VerifyPhones")">
                 @Loc["Verify Phones"]
             </ActionButton>
 
@@ -92,10 +92,10 @@
         <StringFilter Property="x => x.IntegrationId" Label="@Loc["Integration Id"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" md="6" sm="12" xs="12" />
         <StringFilter Property="x => x.Phone" Label="@Loc["Phone"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" md="6" sm="12" xs="12" />
         <StringFilter Property="x => x.Email" Label="@Loc["Email"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" md="6" sm="12" xs="12" />
-        <ForeignFilter AdditionalParameters='new() { ["GroupSelectedValues"] = false }' @ref="CompanyFilter" Property="x => x.CompanyID" Label="@Loc["Company"]" DTOType="typeof(CompanyListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Company")" lg="4" md="6" sm="12" xs="12" />
-        <ForeignFilter Property="x => x.CompanyBranchID" AutocompleteFilter="x => x.Add(CompanyFilter?.Filter)" Label="@Loc["Branch"]" DTOType="typeof(CompanyBranchListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}CompanyBranch")" lg="4" md="6" sm="12" xs="12" />
+        <ForeignFilter AdditionalParameters='new() { ["GroupSelectedValues"] = false }' @ref="CompanyFilter" Property="x => x.CompanyID" Label="@Loc["Company"]" DTOType="typeof(CompanyListDTO)" EntitySet="@($"{Constants.IdentityRoutePrefix}Company")" lg="4" md="6" sm="12" xs="12" />
+        <ForeignFilter Property="x => x.CompanyBranchID" AutocompleteFilter="x => x.Add(CompanyFilter?.Filter)" Label="@Loc["Branch"]" DTOType="typeof(CompanyBranchListDTO)" EntitySet="@($"{Constants.IdentityRoutePrefix}CompanyBranch")" lg="4" md="6" sm="12" xs="12" />
         <DateTimeFilter Property="x => x.LastSeen" Label="@Loc["Last Seen"]" lg="4" md="6" sm="12" xs="12" />
-        <ForeignFilter Property="x => x.Value" DTOType="typeof(AccessTreeListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}AccessTree")" Label="@Loc["Access Trees"]" TProperty="string" T="ShiftEntitySelectDTO" CollectionPrefix="@(["AccessTrees"])" lg="3" md="6" sm="12" xs="12" />
+        <ForeignFilter Property="x => x.Value" DTOType="typeof(AccessTreeListDTO)" EntitySet="@($"{Constants.IdentityRoutePrefix}AccessTree")" Label="@Loc["Access Trees"]" TProperty="string" T="ShiftEntitySelectDTO" CollectionPrefix="@(["AccessTrees"])" lg="3" md="6" sm="12" xs="12" />
 
 
         <PropertyColumn Title="@Loc["Name"]" Property="x => x.FullName" />
