@@ -1,22 +1,27 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Components;
+using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 
-namespace ShiftSoftware.ShiftIdentity.Blazor.Services;
+namespace ShiftSoftware.ShiftIdentity.Blazor.AuthRefresh;
 
 /// <summary>
 /// Blazor-Web-App (HttpOnly auth cookie) implementation of <see cref="IAuthRefreshStrategy"/>.
-/// The cookie is the source of truth — refreshing client-side just means polling
-/// <c>/api/identity/me</c>. The server's <c>OnValidatePrincipal</c> handles the actual
-/// JWT/refresh-token rotation as a side effect of any authenticated request.
+/// Login and logout are not part of this strategy: cookie-mutating operations must originate
+/// from a browser HTML form post to land in the user's cookie jar in any render mode
+/// (form-post contract). Login is handled by the static-SSR <c>LoginForm</c> page in
+/// <c>ShiftIdentity.Blazor.Server</c>; logout is a hidden form post to
+/// <c>POST /api/identity/logout</c> from <c>UserAvatar</c>.
 /// </summary>
 public class CookieRefreshStrategy : IAuthRefreshStrategy
 {
     private readonly HttpClient _http;
     private readonly PersistentComponentState _persistentState;
 
-    public CookieRefreshStrategy(HttpClient http, PersistentComponentState persistentState)
+    public CookieRefreshStrategy(
+        HttpClient http,
+        PersistentComponentState persistentState)
     {
         _http = http;
         _persistentState = persistentState;
@@ -42,18 +47,5 @@ public class CookieRefreshStrategy : IAuthRefreshStrategy
         response.EnsureSuccessStatusCode();
         var data = await response.Content.ReadFromJsonAsync<CookieAuthStateResponse>();
         return data?.Claims;
-    }
-
-    public Task<List<UserClaimModel>?> OnLoginCommittedAsync(AuthLoginResult result)
-    {
-        // Cookie was set server-side during /api/identity/login or /sign-in-with-token.
-        // Nothing to store locally — just hand back the claims for the provider.
-        return Task.FromResult(result.Claims);
-    }
-
-    public async Task OnLogoutAsync()
-    {
-        try { await _http.PostAsync("/api/identity/logout", null); }
-        catch { /* best-effort: cookie may already be invalid; provider will be cleared regardless */ }
     }
 }

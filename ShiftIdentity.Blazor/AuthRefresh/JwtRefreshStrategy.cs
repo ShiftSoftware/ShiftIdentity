@@ -2,12 +2,23 @@ using Microsoft.IdentityModel.JsonWebTokens;
 using ShiftSoftware.ShiftIdentity.Blazor.Providers;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 
-namespace ShiftSoftware.ShiftIdentity.Blazor.Services;
+namespace ShiftSoftware.ShiftIdentity.Blazor.AuthRefresh;
 
 /// <summary>
 /// Standalone-WASM (JWT in localStorage) implementation of <see cref="IAuthRefreshStrategy"/>.
-/// Refreshes by POSTing the stored refresh token to the identity server's <c>/Auth/Refresh</c>
-/// endpoint and replacing the stored <see cref="TokenDTO"/>.
+/// <para>
+/// Interface members (used by the shared polling loop): <see cref="GetInitialClaims"/> reads
+/// claims from the stored JWT; <see cref="RefreshAsync"/> POSTs the stored refresh token to
+/// <c>/Auth/Refresh</c> and stores the rotated JWT.
+/// </para>
+/// <para>
+/// JWT-only extras (called directly by JWT-mode UI — Dashboard <c>LoginForm</c> / <c>UserAvatar</c>):
+/// <see cref="LoginAsync"/> POSTs credentials to <c>/Auth/Login</c> and stores the returned
+/// <see cref="TokenDTO"/>; <see cref="ClearStoredTokenAsync"/> removes the stored token on logout.
+/// These are not on <see cref="IAuthRefreshStrategy"/> because the cookie strategy has no
+/// equivalent operation on the WASM side (cookie login + logout are form-post flows handled
+/// server-side).
+/// </para>
 /// </summary>
 public class JwtRefreshStrategy : IAuthRefreshStrategy
 {
@@ -42,14 +53,29 @@ public class JwtRefreshStrategy : IAuthRefreshStrategy
         return ParseJwtClaims(result.Data.Entity.Token);
     }
 
-    public async Task<List<UserClaimModel>?> OnLoginCommittedAsync(AuthLoginResult result)
+    public async Task<LoginResult> LoginAsync(LoginDTO dto)
     {
-        if (result.Token is null) return null;
-        await _store.StoreTokenAsync(result.Token);
-        return ParseJwtClaims(result.Token.Token);
+        var response = await _identityProvider.LoginAsync(_options.BaseUrl, dto);
+
+        var token = response.Data?.Entity;
+        if (!response.IsSuccess || token is null)
+        {
+            return LoginResult.Failure(
+                response.Data?.Message?.Body ?? response.ErrorMessage,
+                response.Data?.Message?.Title);
+        }
+
+        await _store.StoreTokenAsync(token);
+
+        return new LoginResult
+        {
+            IsSuccess = true,
+            RequirePasswordChange = token.RequirePasswordChange,
+            Claims = ParseJwtClaims(token.Token),
+        };
     }
 
-    public Task OnLogoutAsync() => _store.RemoveTokenAsync();
+    public Task ClearStoredTokenAsync() => _store.RemoveTokenAsync();
 
     private static List<UserClaimModel>? ParseJwtClaims(string? jwt)
     {

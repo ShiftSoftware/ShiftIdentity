@@ -19,7 +19,6 @@ public static class IServiceCollectionExtensions
     {
         services.AddSingleton(options);
 
-        services.AddScoped<AuthService>();
         services.AddScoped<HttpService>();
         services.AddScoped<UserManagerService>();
 

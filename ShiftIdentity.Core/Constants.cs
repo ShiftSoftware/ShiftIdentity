@@ -13,5 +13,7 @@ public class Constants
     public const string ReturnUrlParameter = "ReturnUrl";
     public const string DefaultPolicyName = "DefaultPolicy";
     public const string CookieLoginPath = "/login";
+    public const string CookieChangePasswordPath = "/change-password";
     public const string JwtLoginPath = $"/{IdentityRoutePrefix}/login";
+    public const string JwtChangePasswordPath = $"/{IdentityRoutePrefix}/ChangePasswordForm";
 }

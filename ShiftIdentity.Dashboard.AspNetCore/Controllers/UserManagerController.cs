@@ -53,14 +53,13 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
         }
 
         [HttpPut("UserData")]
-        public async Task<IActionResult> UpdateUserData([FromBody] UserDataDTO dto)
+        public async Task<IActionResult> UpdateUserDataJson([FromBody] UserDataDTO dto)
         {
-            var loginUser = claimService.GetUser();
             User? user;
 
             try
             {
-                user = await userRepo.UpdateUserDataAsync(dto, loginUser.ID.ToLong());
+                user = await UpdateUserData(dto);
             }
             catch (ShiftEntityException ex)
             {
@@ -79,7 +78,35 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
                     }
                 });
 
-            await userRepo.SaveChangesAsync();
+            return Ok(new ShiftEntityResponse<UserDataDTO>(mapper.Map<UserDataDTO>(user)));
+        }
+
+        [HttpPost("UserData")]
+        [Consumes("application/x-www-form-urlencoded", "multipart/form-data")]
+        public async Task<IActionResult> UpdateUserDataForm([FromForm] UserDataDTO dto)
+        {
+            User? user;
+
+            try
+            {
+                user = await UpdateUserData(dto);
+            }
+            catch (ShiftEntityException ex)
+            {
+                return StatusCode(ex.HttpStatusCode, new ShiftEntityResponse<UserDataDTO>
+                {
+                    Message = ex.Message
+                });
+            }
+
+            if (user is null)
+                return BadRequest(new ShiftEntityResponse<UserDataDTO>
+                {
+                    Message = new Message
+                    {
+                        Body = "Could not update user data!"
+                    }
+                });
 
             return Ok(new ShiftEntityResponse<UserDataDTO>(mapper.Map<UserDataDTO>(user)));
         }
@@ -310,6 +337,20 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
                     Body = "Your password is reset successfully."
                 }
             });
+        }
+
+        [NonAction]
+        private async Task<User?> UpdateUserData(UserDataDTO dto)
+        {
+            var loginUser = claimService.GetUser();
+            var user = await userRepo.UpdateUserDataAsync(dto, loginUser.ID.ToLong());
+
+            if (user is null)
+                return null;
+
+            await userRepo.SaveChangesAsync();
+
+            return user;
         }
     }
 }

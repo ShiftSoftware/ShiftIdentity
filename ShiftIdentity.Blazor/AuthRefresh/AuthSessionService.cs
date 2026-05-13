@@ -1,13 +1,15 @@
 using Microsoft.JSInterop;
-using ShiftSoftware.ShiftIdentity.Blazor.Providers;
-using ShiftSoftware.ShiftIdentity.Core;
+using ShiftSoftware.ShiftIdentity.Core.DTOs;
 
-namespace ShiftSoftware.ShiftIdentity.Blazor.Services;
+namespace ShiftSoftware.ShiftIdentity.Blazor.AuthRefresh;
 
 /// <summary>
-/// Unified WASM auth refresh loop for JWT (standalone) and cookie (Blazor Web App). Pluggable
-/// per-tick behavior is provided by <see cref="IAuthRefreshStrategy"/>; this service owns the
-/// timer, visibility skip, in-memory provider mutation, and login/logout entry points.
+/// Unified WASM auth refresh loop for JWT (standalone) and cookie (Blazor Web App). Owns the
+/// polling timer, the tab-visibility skip, and the in-memory <see cref="ShiftAuthStateProvider"/>
+/// mutation. Per-mode "where do the current claims come from" is provided by
+/// <see cref="IAuthRefreshStrategy"/>; login and logout side effects are mode-specific and
+/// handled at the call sites (JWT: <see cref="JwtRefreshStrategy"/> + <see cref="IIdentityStore"/>;
+/// cookie: server-side form posts).
 ///
 /// Each tick:
 /// <list type="number">
@@ -60,31 +62,20 @@ public class AuthSessionService : IAsyncDisposable
     }
 
     /// <summary>
-    /// Apply login claims to the provider and ensure the loop is running. Call from the
-    /// login UI after a successful login response.
+    /// Stop the polling loop and clear the in-memory <see cref="ShiftAuthStateProvider"/>.
+    /// Called from the logout UI (JWT mode, via <c>UserAvatar.Logout</c>) and from
+    /// <see cref="Handlers.Auth401Handler"/> on a 401 from an authenticated request.
+    /// <para>
+    /// Mode-specific cleanup (clearing JWT in localStorage, clearing the cookie server-side)
+    /// is the caller's responsibility — this method only manages the loop and the in-memory
+    /// auth state.
+    /// </para>
     /// </summary>
-    public async Task OnLoginSuccessAsync(AuthLoginResult result)
-    {
-        var claims = await _strategy.OnLoginCommittedAsync(result);
-        if (claims is { Count: > 0 })
-            _provider.NotifyUserAuthentication(claims);
-
-        if (!_started)
-        {
-            _started = true;
-            StartLoop();
-        }
-    }
-
-    /// <summary>
-    /// Stop the loop, run logout side effects, and clear the provider. Call from the
-    /// logout UI or from <see cref="Handlers.Auth401Handler"/> on a 401.
-    /// </summary>
-    public async Task OnLogoutAsync()
+    public Task OnLogoutAsync()
     {
         StopLoop();
-        try { await _strategy.OnLogoutAsync(); } catch { /* best-effort */ }
         _provider.NotifyUserLoggedOut();
+        return Task.CompletedTask;
     }
 
     private void StartLoop()

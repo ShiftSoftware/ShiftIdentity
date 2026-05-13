@@ -1,11 +1,14 @@
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 
-namespace ShiftSoftware.ShiftIdentity.Blazor.Services;
+namespace ShiftSoftware.ShiftIdentity.Blazor.AuthRefresh;
 
 /// <summary>
-/// Pluggable refresh + login/logout side effects for the unified <see cref="AuthSessionService"/>
-/// loop. The loop, the in-memory state provider, and the 401 handler are shared; only the
-/// per-tick HTTP call and the local storage side effects differ between JWT and cookie auth.
+/// Pluggable claims-source behavior for the unified <see cref="AuthSessionService"/> polling loop.
+/// JWT (standalone WASM) and cookie (Blazor Web App) modes differ only in where the current
+/// claims come from at app startup and on each refresh tick — login and logout side effects
+/// are mode-specific and live outside this interface (JWT login in <c>JwtRefreshStrategy</c>,
+/// cookie login in the static-SSR <c>LoginForm</c> page; JWT logout cleanup at the call sites,
+/// cookie logout in the form-post endpoint).
 /// </summary>
 public interface IAuthRefreshStrategy
 {
@@ -28,17 +31,4 @@ public interface IAuthRefreshStrategy
     /// Throws on transient failures (network, 5xx); the loop keeps state and retries next tick.
     /// </returns>
     Task<List<UserClaimModel>?> RefreshAsync();
-
-    /// <summary>
-    /// Apply local side effects after a successful login. JWT stores the <see cref="AuthLoginResult.Token"/>
-    /// in localStorage and parses claims from it. Cookie does nothing (the cookie is already set
-    /// by the server) and just returns <see cref="AuthLoginResult.Claims"/>.
-    /// </summary>
-    Task<List<UserClaimModel>?> OnLoginCommittedAsync(AuthLoginResult result);
-
-    /// <summary>
-    /// Apply local side effects on logout. JWT clears localStorage. Cookie POSTs
-    /// <c>/api/identity/logout</c> to clear the cookie.
-    /// </summary>
-    Task OnLogoutAsync();
 }

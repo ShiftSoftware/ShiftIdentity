@@ -32,7 +32,7 @@ public class RedirectToLogin : ComponentBase
                 queryStrings.Add(Constants.ReturnUrlParameter, returnUrl);
 
             var uri = NavManager.GetUriWithQueryParameters(url, queryStrings);
-            NavManager.NavigateTo(uri);
+            NavManager.NavigateTo(uri, forceLoad: true);
         }
     }
 }

@@ -1,6 +1,4 @@
 using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using ShiftSoftware.ShiftIdentity.Blazor;
 using ShiftSoftware.ShiftIdentity.Blazor.Server.Endpoints;
 using ShiftSoftware.ShiftIdentity.Core;
 
@@ -9,25 +7,16 @@ namespace ShiftSoftware.ShiftIdentity.Blazor.Server.Extensions;
 public static class WebApplicationExtensions
 {
     /// <summary>
-    /// Maps the cookie auth endpoints: /api/identity/login (internal only),
-    /// /api/identity/sign-in-with-token, /api/identity/refresh, /api/identity/logout.
+    /// Maps the cookie auth endpoints: <c>GET /api/identity/me</c> (authenticated, used by the
+    /// WASM refresh poll) and <c>POST /api/identity/logout</c> (called via HTML form post per
+    /// the form-post contract — see the auth migration guide).
     /// </summary>
     public static WebApplication MapShiftIdentityCookieEndpoints(this WebApplication app)
     {
-        var blazorOptions = app.Services.GetRequiredService<ShiftIdentityBlazorOptions>();
-
         var group = app.MapGroup("/api/identity")
             .RequireRateLimiting(Constants.DefaultPolicyName);
 
-        var anonymous = group.MapGroup("").AllowAnonymous();
-
-        if (blazorOptions.HostingType == ShiftIdentityHostingTypes.Internal)
-            anonymous.MapPost("/login", CookieAuthEndpoints.Login);
-
-        anonymous.MapPost("/sign-in-with-token", CookieAuthEndpoints.SignInWithToken);
-        anonymous.MapPost("/logout", (Delegate)CookieAuthEndpoints.Logout);
-
-        group.MapPost("/refresh", CookieAuthEndpoints.Refresh);
+        group.MapPost("/logout", (Delegate)CookieAuthEndpoints.Logout).AllowAnonymous();
         group.MapGet("/me", (Delegate)CookieAuthEndpoints.Me).RequireAuthorization();
 
         return app;

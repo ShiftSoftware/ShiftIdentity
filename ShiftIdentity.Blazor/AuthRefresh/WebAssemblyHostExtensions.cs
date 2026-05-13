@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using ShiftSoftware.ShiftIdentity.Blazor.Services;
 
-namespace ShiftSoftware.ShiftIdentity.Blazor.Extensions;
+namespace ShiftSoftware.ShiftIdentity.Blazor.AuthRefresh;
 
 public static class WebAssemblyHostExtensions
 {

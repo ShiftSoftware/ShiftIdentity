@@ -2,21 +2,16 @@
 @attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
 @layout Shared.EmptyLayout
 
-@using System.Text.RegularExpressions
-@using System.ComponentModel.DataAnnotations
-@using Microsoft.AspNetCore.Components.Authorization;
-@using Microsoft.Extensions.DependencyInjection
 @using ShiftSoftware.ShiftEntity.Core.Extensions
-@using ShiftSoftware.ShiftIdentity.Blazor
 @using ShiftSoftware.ShiftIdentity.Core.DTOs
 @using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.UserManager;
 
 @inject ShiftIdentityDashboardBlazorOptions ShiftIdentityDashboardBlazorOptions
-@inject Services.AuthService AuthService
+@inject ShiftSoftware.ShiftIdentity.Blazor.AuthRefresh.JwtRefreshStrategy JwtStrategy
+@inject ShiftSoftware.ShiftIdentity.Blazor.AuthRefresh.ShiftAuthStateProvider AuthStateProvider
 @inject MessageService msgService
 @inject NavigationManager NavManager
 @inject ShiftIdentityLocalizer Loc
-@inject IServiceProvider ServiceProvider
 
 @*
 @inject Services.StorageService storageService
@@ -95,36 +90,18 @@
 
     private async Task Login()
     {
-        var loginResult = await this.AuthService.LoginAsync(loginDto);
+        var loginResult = await JwtStrategy.LoginAsync(loginDto);
 
         if (!loginResult.IsSuccess)
         {
-            msgService.Error(loginResult?.Data?.Message?.Body!, loginResult?.Data?.Message?.Title);
+            msgService.Error(loginResult.ErrorMessage!, loginResult.ErrorTitle);
             return;
         }
 
-        var token = loginResult?.Data?.Entity;
-        if (token == null)
-        {
-            msgService.Error(Loc["Token not found"]);
-            return;
-        }
+        if (loginResult.Claims is { Count: > 0 })
+            AuthStateProvider.NotifyUserAuthentication(loginResult.Claims);
 
-        // Login() only fires after WASM hydration (MudButton OnClick is a no-op during SSR),
-        // so AuthRefreshService is always resolvable here. We use ServiceProvider lookup
-        // instead of [Inject] so SSR component instantiation doesn't fail when the server-side
-        // DI doesn't register AuthRefreshService (it's a WASM-only service).
-        var authRefresh = ServiceProvider.GetService<ShiftSoftware.ShiftIdentity.Blazor.Services.AuthSessionService>();
-        if (authRefresh != null)
-        {
-            await authRefresh.OnLoginSuccessAsync(new ShiftSoftware.ShiftIdentity.Blazor.Services.AuthLoginResult
-            {
-                Token = token,
-                Claims = this.AuthService.LastLoginClaims,
-            });
-        }
-
-        var nextPageUrl = token.RequirePasswordChange ? GetPasswordChangeUrl() : localReturnUrl;
+        var nextPageUrl = loginResult.RequirePasswordChange ? GetPasswordChangeUrl() : localReturnUrl;
         NavManager.NavigateTo(nextPageUrl);
     }
 

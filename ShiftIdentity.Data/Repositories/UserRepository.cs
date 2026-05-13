@@ -310,7 +310,6 @@ public class UserRepository :
             user.EmailVerified = false;
         }
 
-        //Assign phone
         string? formattedPhone = null;
         if (dto.Phone != null)
         {

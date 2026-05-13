@@ -2,11 +2,11 @@ using Microsoft.AspNetCore.Components.Authorization;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using System.Security.Claims;
 
-namespace ShiftSoftware.ShiftIdentity.Blazor.Providers;
+namespace ShiftSoftware.ShiftIdentity.Blazor.AuthRefresh;
 
 /// <summary>
 /// In-memory <see cref="AuthenticationStateProvider"/> shared by JWT (standalone WASM) and
-/// cookie (Blazor Web App) auth. The state is mutated by <see cref="Services.AuthSessionService"/>
+/// cookie (Blazor Web App) auth. The state is mutated by <see cref="AuthSessionService"/>
 /// after the initial seed, refresh ticks, login, and logout — each call raises
 /// <c>AuthenticationStateChanged</c> so cascading consumers re-evaluate without a full reload.
 /// </summary>

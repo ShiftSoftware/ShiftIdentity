@@ -2,6 +2,7 @@ using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using ShiftSoftware.ShiftIdentity.Blazor.AuthRefresh;
 using ShiftSoftware.ShiftIdentity.Blazor.Handlers;
 using ShiftSoftware.ShiftIdentity.Blazor.Providers;
 using ShiftSoftware.ShiftIdentity.Blazor.Services;
@@ -83,7 +84,8 @@ public static class IServiceCollectionExtensions
     private static void AddSharedAuthRefresh<TStrategy>(IServiceCollection services)
         where TStrategy : class, IAuthRefreshStrategy
     {
-        services.TryAddScoped<IAuthRefreshStrategy, TStrategy>();
+        services.TryAddScoped<TStrategy>();
+        services.TryAddScoped<IAuthRefreshStrategy>(sp => sp.GetRequiredService<TStrategy>());
         services.TryAddScoped<ShiftAuthStateProvider>();
         services.TryAddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<ShiftAuthStateProvider>());
         services.TryAddScoped<AuthSessionService>();

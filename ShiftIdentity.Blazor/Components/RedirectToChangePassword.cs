@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿using FluentValidation;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using ShiftSoftware.ShiftEntity.Core.Extensions;
 using ShiftSoftware.ShiftIdentity.Core;
 
 namespace ShiftSoftware.ShiftIdentity.Blazor.Components;
@@ -19,7 +21,11 @@ public class RedirectToChangePassword : ComponentBase
         Options = ServiceProvider.GetService<ShiftIdentityBlazorOptions>();
         AuthStateProvider = ServiceProvider.GetService<AuthenticationStateProvider>();
 
-        if (NavManager.Uri.Contains($"{Constants.IdentityRoutePrefix}/ChangePasswordForm"))
+        var path = Options?.UseCookieAuth == true
+                ? Constants.CookieChangePasswordPath
+                : Constants.JwtChangePasswordPath;
+
+        if (NavManager.Uri.Contains(path))
             return;
 
         if (this.AuthStateProvider is null)
@@ -49,9 +55,7 @@ public class RedirectToChangePassword : ComponentBase
             if (!string.IsNullOrWhiteSpace(returnUrl))
                 queryStrings.Add(Constants.ReturnUrlParameter, returnUrl);
 
-            var url = Options.FrontEndBaseUrl.EndsWith('/') ? Options.FrontEndBaseUrl : Options.FrontEndBaseUrl + '/';
-            var uri = NavManager.GetUriWithQueryParameters(url + $"{Constants.IdentityRoutePrefix}/ChangePasswordForm",
-                queryStrings);
+            var uri = NavManager.GetUriWithQueryParameters(Options.FrontEndBaseUrl.AddUrlPath(path), queryStrings);
             NavManager.NavigateTo(uri);
         }
     }

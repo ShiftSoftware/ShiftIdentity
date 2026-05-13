@@ -108,10 +108,13 @@ public static class ServiceCollectionExtensions
         // ServerHttpMessageHandler for forwarding cookies during SSR
         services.AddTransient<ServerHttpMessageHandler>();
 
-        // Register correct ICookieAuthManager based on hosting type
+        // Register correct ICookieAuthManager + ICookieLoginHandler + ICookieChangePasswordHandler
+        // based on hosting type.
         if (hostingType == ShiftIdentityHostingTypes.Internal)
         {
             services.AddScoped<ICookieAuthManager, InternalCookieAuthManager>();
+            services.AddScoped<ICookieLoginHandler, InternalCookieLoginHandler>();
+            services.AddScoped<ICookieChangePasswordHandler, InternalCookieChangePasswordHandler>();
         }
         else
         {
@@ -123,6 +126,8 @@ public static class ServiceCollectionExtensions
                 client.BaseAddress = new Uri(baseUrl);
             });
             services.AddScoped<ICookieAuthManager, ExternalCookieAuthManager>();
+            services.AddScoped<ICookieLoginHandler, ExternalCookieLoginHandler>();
+            services.AddScoped<ICookieChangePasswordHandler, ExternalCookieChangePasswordHandler>();
         }
 
         return services;

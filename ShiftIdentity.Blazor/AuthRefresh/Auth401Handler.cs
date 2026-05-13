@@ -1,14 +1,15 @@
 using System.Net;
 using Microsoft.Extensions.DependencyInjection;
-using ShiftSoftware.ShiftIdentity.Blazor.Services;
+using ShiftSoftware.ShiftIdentity.Core;
 
-namespace ShiftSoftware.ShiftIdentity.Blazor.Handlers;
+namespace ShiftSoftware.ShiftIdentity.Blazor.AuthRefresh;
 
 /// <summary>
 /// WASM <see cref="HttpClient"/> handler that watches for 401 on authenticated calls and
 /// drives the user back to anonymous via <see cref="AuthSessionService.OnLogoutAsync"/>.
 /// Works for both JWT (refresh-token expired / revoked) and cookie (cookie expired / revoked)
-/// auth — the strategy injected into the refresh service handles the path-specific cleanup.
+/// auth — the cookie path's <c>NoOpIdentityStore</c> makes the token-store clear a no-op,
+/// so the same handler covers both modes.
 ///
 /// Skipped for unauthenticated endpoints (login, sign-in-with-token, logout) so a failed
 /// login attempt does not trigger a logout cycle.
@@ -43,10 +44,16 @@ public class Auth401Handler : DelegatingHandler
 
         if (response.StatusCode == HttpStatusCode.Unauthorized && !ShouldSkip(request))
         {
-            var refreshService = _services.GetService<AuthSessionService>();
             // Fire-and-forget so the original caller still sees the 401 and can react.
+            var refreshService = _services.GetService<AuthSessionService>();
             if (refreshService != null)
                 _ = refreshService.OnLogoutAsync();
+
+            // JWT: clear the stale token so a reload doesn't transiently rehydrate from localStorage.
+            // Cookie: NoOpIdentityStore makes this a no-op.
+            var tokenStore = _services.GetService<IIdentityStore>();
+            if (tokenStore != null)
+                _ = tokenStore.RemoveTokenAsync();
         }
 
         return response;

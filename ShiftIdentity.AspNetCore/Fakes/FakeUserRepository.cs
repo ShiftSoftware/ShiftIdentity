@@ -1,5 +1,6 @@
 ﻿using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
+using ShiftSoftware.ShiftIdentity.Core.DTOs.UserManager;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.ShiftIdentity.Core.IRepositories;
 
@@ -50,6 +51,9 @@ public class FakeUserRepository : IUserRepository
             }).ToList()
         };
     }
+
+    public Task<User?> ChangePasswordAsync(ChangePasswordDTO dto, long userId)
+        => throw new NotSupportedException("FakeUserRepository does not support changing passwords.");
 
     public async Task<int> SaveChangesAsync()
     {
