@@ -59,6 +59,25 @@ public static class ServiceCollectionExtensions
                 cookieOptions.SlidingExpiration = true;
                 cookieOptions.LoginPath = Constants.CookieLoginPath;
                 cookieOptions.ReturnUrlParameter = Constants.ReturnUrlParameter;
+                // For API requests, return raw 401/403 instead of the default HTML redirect to
+                // /login or /Account/AccessDenied. The redirect is correct for SSR navigations
+                // but breaks fetch/HttpClient callers that expect a status code.
+                cookieOptions.Events.OnRedirectToLogin = context =>
+                {
+                    if (IsApiRequest(context.Request))
+                        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                    else
+                        context.Response.Redirect(context.RedirectUri);
+                    return Task.CompletedTask;
+                };
+                cookieOptions.Events.OnRedirectToAccessDenied = context =>
+                {
+                    if (IsApiRequest(context.Request))
+                        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                    else
+                        context.Response.Redirect(context.RedirectUri);
+                    return Task.CompletedTask;
+                };
                 cookieOptions.Events.OnValidatePrincipal = async context =>
                 {
                     var expiresAt = context.Properties.GetString("token_expires_at");
@@ -131,5 +150,16 @@ public static class ServiceCollectionExtensions
         }
 
         return services;
+    }
+
+    private static bool IsApiRequest(HttpRequest request)
+    {
+        if (request.Path.StartsWithSegments("/api"))
+            return true;
+
+        // Fallback for any non-/api endpoint hit by a fetch/HttpClient caller: an HTML browser
+        // navigation always sends Accept: text/html, so its absence is a strong signal.
+        var accept = request.Headers.Accept.ToString();
+        return !accept.Contains("text/html", StringComparison.OrdinalIgnoreCase);
     }
 }

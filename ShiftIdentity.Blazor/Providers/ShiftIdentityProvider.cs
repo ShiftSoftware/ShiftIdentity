@@ -1,6 +1,7 @@
 ﻿using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
+using ShiftSoftware.ShiftIdentity.Core.DTOs.UserManager;
 using System.Net.Http.Json;
 
 namespace ShiftSoftware.ShiftIdentity.Blazor.Providers;
@@ -50,6 +51,15 @@ internal class ShiftIdentityProvider : IShiftIdentityProvider
     public async Task<HttpResponse<ShiftEntityResponse<TokenDTO?>?>> LoginAsync(string baseUrl, LoginDTO dto)
     {
         var url = $"{(baseUrl.EndsWith('/') ? baseUrl : baseUrl + "/")}Auth/Login";
+        using var response = await http.PostAsJsonAsync(url, dto);
+
+        return new HttpResponse<ShiftEntityResponse<TokenDTO?>?>
+            ((await response.Content.ReadFromJsonAsync<ShiftEntityResponse<TokenDTO>>())!, response.StatusCode);
+    }
+
+    public async Task<HttpResponse<ShiftEntityResponse<TokenDTO?>?>> CompletePasswordChangeAsync(string baseUrl, CompletePasswordChangeDTO dto)
+    {
+        var url = $"{(baseUrl.EndsWith('/') ? baseUrl : baseUrl + "/")}Auth/CompletePasswordChange";
         using var response = await http.PostAsJsonAsync(url, dto);
 
         return new HttpResponse<ShiftEntityResponse<TokenDTO?>?>

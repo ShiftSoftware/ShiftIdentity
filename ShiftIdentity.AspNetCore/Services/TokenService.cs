@@ -34,6 +34,52 @@ public class TokenService
         return GenerateToken(user);
     }
 
+    /// <summary>
+    /// Short-lived token issued by login when the user must change their password before being
+    /// fully authenticated. Carries only the minimum needed to identify the user to the
+    /// <c>CompletePasswordChange</c> endpoint; no refresh token, no <c>AccessTree</c>, no role
+    /// claims. The <see cref="Filters.RequirePasswordChangeFilter"/> ensures other endpoints
+    /// reject it.
+    /// </summary>
+    public TokenDTO GenerateChallengeToken(User user)
+    {
+        const int challengeLifetimeSeconds = 600; // 10 minutes — enough to fill the form, not enough to linger.
+
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, ShiftEntityHashIdService.Encode<Core.DTOs.User.UserDTO>(user.ID)),
+            new Claim(ClaimTypes.Name, user.Username),
+            new Claim(ClaimTypes.GivenName, user.FullName),
+            new Claim(ShiftIdentityClaims.RequirePasswordChange, true.ToString()),
+        };
+
+        var rsa = RSA.Create();
+        rsa.ImportRSAPrivateKey(Convert.FromBase64String(shiftIdentityConfiguration.Token.RSAPrivateKeyBase64), out _);
+        var signingCredentials = new SigningCredentials(new RsaSecurityKey(rsa), SecurityAlgorithms.RsaSha256);
+
+        var jwt = new JwtSecurityToken(
+            issuer: shiftIdentityConfiguration.Token.Issuer,
+            claims: claims,
+            expires: DateTime.UtcNow.AddSeconds(challengeLifetimeSeconds),
+            signingCredentials: signingCredentials);
+
+        return new TokenDTO
+        {
+            Token = new JwtSecurityTokenHandler().WriteToken(jwt),
+            TokenLifeTimeInSeconds = challengeLifetimeSeconds,
+            RefreshToken = string.Empty,
+            RefreshTokenLifeTimeInSeconds = 0,
+            RequirePasswordChange = true,
+            UserData = new TokenUserDataDTO
+            {
+                FullName = user.FullName,
+                ID = user.ID.ToString(),
+                Username = user.Username,
+                CompanyType = user.Company?.CompanyType,
+            }
+        };
+    }
+
     public ClaimsPrincipal? GetPrincipalFromRefreshToken(string token)
     {
         var tokenValidationParameters = new TokenValidationParameters

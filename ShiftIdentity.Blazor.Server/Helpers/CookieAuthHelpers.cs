@@ -19,14 +19,24 @@ internal static class CookieAuthHelpers
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         var principal = new ClaimsPrincipal(identity);
 
+        var tokenExpiresAt = DateTimeOffset.UtcNow.AddSeconds(token.TokenLifeTimeInSeconds ?? 900);
+
         var authProperties = new AuthenticationProperties
         {
             IsPersistent = true,
             AllowRefresh = true,
+            // Align cookie lifetime with the underlying token. Crucial for challenge tokens
+            // (RequirePasswordChange=true): the cookie expires in ~10 minutes if the user
+            // doesn't complete the change, instead of lingering until the cookie middleware's
+            // default ExpireTimeSpan elapses.
+            ExpiresUtc = tokenExpiresAt,
         };
-        authProperties.SetString("refresh_token", token.RefreshToken);
-        authProperties.SetString("token_expires_at",
-            DateTimeOffset.UtcNow.AddSeconds(token.TokenLifeTimeInSeconds ?? 900).ToString("o"));
+        authProperties.SetString("refresh_token", token.RefreshToken ?? string.Empty);
+        // The raw JWT is needed by ExternalCookieChangePasswordHandler when completing a
+        // challenge — there's no refresh token to swap, so the cookie must carry the
+        // challenge JWT directly for the Bearer call to /Auth/CompletePasswordChange.
+        authProperties.SetString("access_token", token.Token);
+        authProperties.SetString("token_expires_at", tokenExpiresAt.ToString("o"));
 
         await httpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal, authProperties);
         return claims;

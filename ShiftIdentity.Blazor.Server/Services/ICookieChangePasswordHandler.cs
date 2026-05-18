@@ -13,7 +13,17 @@ namespace ShiftSoftware.ShiftIdentity.Blazor.Server.Services;
 /// </summary>
 public interface ICookieChangePasswordHandler
 {
+    /// <summary>
+    /// Voluntary change — caller is fully logged in and must supply their current password.
+    /// </summary>
     Task<CookieChangePasswordResult> ChangePasswordAsync(ChangePasswordDTO dto, HttpContext httpContext);
+
+    /// <summary>
+    /// Forced change — caller holds a challenge cookie (logged in only enough to change their
+    /// password). No current password required because they just authenticated. On success
+    /// the cookie is upgraded to a full session cookie.
+    /// </summary>
+    Task<CookieChangePasswordResult> CompletePasswordChangeAsync(CompletePasswordChangeDTO dto, HttpContext httpContext);
 }
 
 public sealed record CookieChangePasswordResult(bool Succeeded, string? ErrorMessage);

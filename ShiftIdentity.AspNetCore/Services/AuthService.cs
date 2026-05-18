@@ -2,6 +2,7 @@
 using ShiftSoftware.ShiftIdentity.AspNetCore.Models;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
+using ShiftSoftware.ShiftIdentity.Core.DTOs.UserManager;
 using ShiftSoftware.ShiftIdentity.Core.IRepositories;
 using ShiftSoftware.ShiftIdentity.Core.Localization;
 using System.Security.Claims;
@@ -74,9 +75,42 @@ public class AuthService
 
         await userRepo.SaveChangesAsync();
 
-        var token = tokenService.GenerateInternalJwtToken(user);
+        // When the user must change their password before being fully authenticated, hand them
+        // a short-lived challenge token. It carries the RequirePasswordChange claim and only
+        // unlocks /Auth/CompletePasswordChange (see RequirePasswordChangeFilter); no refresh
+        // token, so the only way out is to complete the change or log in again.
+        var mustChange = shiftIdentityConfigurations.Security.RequirePasswordChange && user.RequireChangePassword;
+        var token = mustChange
+            ? tokenService.GenerateChallengeToken(user)
+            : tokenService.GenerateInternalJwtToken(user);
 
         return new LoginResultModel(token);
+    }
+
+    /// <summary>
+    /// Completes the forced password-change flow: validates the caller is in challenge state,
+    /// sets the new password, clears the flag, and returns a full session token. The user is
+    /// considered "logged in" only after this call succeeds.
+    /// </summary>
+    public async Task<TokenDTO?> CompletePasswordChangeAsync(long userId, CompletePasswordChangeDTO dto)
+    {
+        var user = await userRepo.FindAsync(userId, asOf: null, disableDefaultDataLevelAccess: true, disableGlobalFilters: true);
+        if (user is null || !user.IsActive || user.IsDeleted)
+            return null;
+
+        var hash = HashService.GenerateHash(dto.NewPassword);
+        user.PasswordHash = hash.PasswordHash;
+        user.Salt = hash.Salt;
+        user.RequireChangePassword = false;
+
+        if (user.UserLog is null)
+            user.UserLog = new Core.Entities.UserLog { LastSeen = DateTimeOffset.UtcNow };
+        else
+            user.UserLog.LastSeen = DateTimeOffset.UtcNow;
+
+        await userRepo.SaveChangesAsync();
+
+        return tokenService.GenerateInternalJwtToken(user);
     }
 
     public async Task<TokenDTO?> RefreshAsync(string refreshToken)

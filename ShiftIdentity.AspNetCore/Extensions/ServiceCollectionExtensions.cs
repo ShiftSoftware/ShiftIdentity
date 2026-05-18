@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Fakes;
+using ShiftSoftware.ShiftIdentity.AspNetCore.Filters;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Models;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
@@ -28,7 +29,11 @@ public static class ServiceCollectionExtensions
     {
         services.AddJwtAuth(tokenIssuer, tokenRSAPublicKeyBase64, setAsDefaultScheme);
 
-        services.Configure<MvcOptions>(o => o.Filters.Add(new AuthorizeFilter()));
+        services.Configure<MvcOptions>(o =>
+        {
+            o.Filters.Add(new AuthorizeFilter());
+            o.Filters.Add(new RequirePasswordChangeFilter());
+        });
 
         services.AddRateLimiter(x =>
         {

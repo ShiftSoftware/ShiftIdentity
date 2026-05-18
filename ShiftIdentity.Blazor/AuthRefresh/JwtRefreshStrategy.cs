@@ -1,6 +1,7 @@
 using Microsoft.IdentityModel.JsonWebTokens;
 using ShiftSoftware.ShiftIdentity.Blazor.Providers;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
+using ShiftSoftware.ShiftIdentity.Core.DTOs.UserManager;
 
 namespace ShiftSoftware.ShiftIdentity.Blazor.AuthRefresh;
 
@@ -56,6 +57,34 @@ public class JwtRefreshStrategy : IAuthRefreshStrategy
     public async Task<LoginResult> LoginAsync(LoginDTO dto)
     {
         var response = await _identityProvider.LoginAsync(_options.BaseUrl, dto);
+
+        var token = response.Data?.Entity;
+        if (!response.IsSuccess || token is null)
+        {
+            return LoginResult.Failure(
+                response.Data?.Message?.Body ?? response.ErrorMessage,
+                response.Data?.Message?.Title);
+        }
+
+        await _store.StoreTokenAsync(token);
+
+        return new LoginResult
+        {
+            IsSuccess = true,
+            RequirePasswordChange = token.RequirePasswordChange,
+            Claims = ParseJwtClaims(token.Token),
+        };
+    }
+
+    /// <summary>
+    /// Forced-change completion. The currently stored token is the short-lived challenge
+    /// issued at login; the TokenMessageHandler attaches it as the Bearer for this call.
+    /// On success the challenge is replaced with the full session token returned by the
+    /// server, and the caller pushes the new claims to <c>ShiftAuthStateProvider</c>.
+    /// </summary>
+    public async Task<LoginResult> CompletePasswordChangeAsync(CompletePasswordChangeDTO dto)
+    {
+        var response = await _identityProvider.CompletePasswordChangeAsync(_options.BaseUrl, dto);
 
         var token = response.Data?.Entity;
         if (!response.IsSuccess || token is null)

@@ -84,6 +84,49 @@ internal sealed class ExternalCookieChangePasswordHandler : ICookieChangePasswor
         return new CookieChangePasswordResult(true, null);
     }
 
+    public async Task<CookieChangePasswordResult> CompletePasswordChangeAsync(CompletePasswordChangeDTO dto, HttpContext httpContext)
+    {
+        // The cookie carries the challenge JWT directly (no refresh token in challenge state).
+        // Read it from AuthenticationProperties and use it as the Bearer for the external call.
+        var authResult = await httpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        var challengeToken = authResult.Properties?.GetString("access_token");
+        if (string.IsNullOrEmpty(challengeToken))
+            return new CookieChangePasswordResult(false, "Not authenticated");
+
+        var client = _httpClientFactory.CreateClient("ShiftIdentityExternal");
+        var baseUrl = client.BaseAddress!.ToString();
+
+        var request = new HttpRequestMessage(HttpMethod.Post, baseUrl.AddUrlPath("api/Auth/CompletePasswordChange"))
+        {
+            Content = JsonContent.Create(dto),
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", challengeToken);
+
+        var response = await client.SendAsync(request);
+        if (!response.IsSuccessStatusCode)
+        {
+            string? errorMessage = null;
+            if (response.StatusCode != HttpStatusCode.InternalServerError)
+            {
+                try
+                {
+                    var error = await response.Content.ReadFromJsonAsync<ShiftEntityResponse<TokenDTO>>();
+                    errorMessage = error?.Message?.Body;
+                }
+                catch { /* fallthrough */ }
+            }
+            return new CookieChangePasswordResult(false, errorMessage ?? "Password change failed");
+        }
+
+        var tokenResult = await response.Content.ReadFromJsonAsync<ShiftEntityResponse<TokenDTO>>();
+        if (tokenResult?.Entity is null)
+            return new CookieChangePasswordResult(false, "Invalid response from identity server");
+
+        // Upgrade the challenge cookie to a full session cookie.
+        await CookieAuthHelpers.SignInWithToken(httpContext, tokenResult.Entity);
+        return new CookieChangePasswordResult(true, null);
+    }
+
     private static async Task<TokenDTO?> RefreshAsync(HttpClient client, string baseUrl, string refreshToken)
     {
         var response = await client.PostAsJsonAsync(
