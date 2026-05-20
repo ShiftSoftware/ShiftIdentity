@@ -43,8 +43,18 @@ public class JwtRefreshStrategy : IAuthRefreshStrategy
     public async Task<List<UserClaimModel>?> RefreshAsync()
     {
         var stored = await _store.GetTokenAsync();
-        if (stored is null || string.IsNullOrEmpty(stored.RefreshToken))
+        if (stored is null)
             return null;
+
+        // Challenge token (forced password change) is issued without a refresh token by
+        // design — see TokenService.GenerateChallengeToken. Don't treat the missing
+        // refresh token as a logout signal; the user is mid-flow on the change-password
+        // page and a page refresh must keep them there. Once CompletePasswordChange
+        // succeeds the stored token is replaced with a full session token and normal
+        // refresh resumes. If the challenge JWT has expired, CompletePasswordChange will
+        // 401 and Auth401Handler will clear state.
+        if (string.IsNullOrEmpty(stored.RefreshToken))
+            return ParseJwtClaims(stored.Token);
 
         var result = await _identityProvider.RefreshTokenAsync(_options.BaseUrl, new RefreshDTO { RefreshToken = stored.RefreshToken });
         if (!result.IsSuccess || result.Data?.Entity == null)

@@ -52,7 +52,7 @@ internal sealed class ExternalCookieChangePasswordHandler : ICookieChangePasswor
             return new CookieChangePasswordResult(false, "Session is invalid; please log in again.");
 
         // 2. Call ChangePassword on the external server using the Bearer JWT.
-        var changeRequest = new HttpRequestMessage(HttpMethod.Put, baseUrl.AddUrlPath("api/UserManager/ChangePassword"))
+        var changeRequest = new HttpRequestMessage(HttpMethod.Put, baseUrl.AddUrlPath("UserManager/ChangePassword"))
         {
             Content = JsonContent.Create(dto),
         };
@@ -96,7 +96,7 @@ internal sealed class ExternalCookieChangePasswordHandler : ICookieChangePasswor
         var client = _httpClientFactory.CreateClient("ShiftIdentityExternal");
         var baseUrl = client.BaseAddress!.ToString();
 
-        var request = new HttpRequestMessage(HttpMethod.Post, baseUrl.AddUrlPath("api/Auth/CompletePasswordChange"))
+        var request = new HttpRequestMessage(HttpMethod.Post, baseUrl.AddUrlPath("Auth/CompletePasswordChange"))
         {
             Content = JsonContent.Create(dto),
         };

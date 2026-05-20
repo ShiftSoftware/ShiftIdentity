@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
-using ShiftSoftware.ShiftEntity.Core.Extensions;
 using ShiftSoftware.ShiftIdentity.Core;
 
 namespace ShiftSoftware.ShiftIdentity.Blazor.Components;
@@ -55,7 +54,7 @@ public class RedirectToChangePassword : ComponentBase
             if (!string.IsNullOrWhiteSpace(returnUrl))
                 queryStrings.Add(Constants.ReturnUrlParameter, returnUrl);
 
-            var uri = NavManager.GetUriWithQueryParameters(Options.FrontEndBaseUrl.AddUrlPath(path), queryStrings);
+            var uri = NavManager.GetUriWithQueryParameters(path, queryStrings);
             NavManager.NavigateTo(uri);
         }
     }
