@@ -19,4 +19,6 @@ public class IdentityReferenceCosmosDataOptions
     public string TeamContainerName { get; set; } = IdentityDatabaseAndContainerNames.TeamContainerName;
 
     public string BrandContainerName { get; set; } = IdentityDatabaseAndContainerNames.BrandContainerName;
+
+    public string UserContainerName { get; set; } = IdentityDatabaseAndContainerNames.UserContainerName;
 }
