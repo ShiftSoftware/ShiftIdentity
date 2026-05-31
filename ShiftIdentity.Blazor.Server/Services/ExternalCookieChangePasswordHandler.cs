@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
+using Microsoft.IdentityModel.Tokens;
 using ShiftSoftware.ShiftEntity.Core.Extensions;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftIdentity.Blazor.Server.Helpers;
@@ -30,10 +31,12 @@ namespace ShiftSoftware.ShiftIdentity.Blazor.Server.Services;
 internal sealed class ExternalCookieChangePasswordHandler : ICookieChangePasswordHandler
 {
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ExternalJwtValidator _jwtValidator;
 
-    public ExternalCookieChangePasswordHandler(IHttpClientFactory httpClientFactory)
+    public ExternalCookieChangePasswordHandler(IHttpClientFactory httpClientFactory, ExternalJwtValidator jwtValidator)
     {
         _httpClientFactory = httpClientFactory;
+        _jwtValidator = jwtValidator;
     }
 
     public async Task<CookieChangePasswordResult> ChangePasswordAsync(ChangePasswordDTO dto, HttpContext httpContext)
@@ -122,12 +125,21 @@ internal sealed class ExternalCookieChangePasswordHandler : ICookieChangePasswor
         if (tokenResult?.Entity is null)
             return new CookieChangePasswordResult(false, "Invalid response from identity server");
 
+        try
+        {
+            _jwtValidator.Validate(tokenResult.Entity.Token);
+        }
+        catch (SecurityTokenException)
+        {
+            return new CookieChangePasswordResult(false, "Invalid response from identity server");
+        }
+
         // Upgrade the challenge cookie to a full session cookie.
         await CookieAuthHelpers.SignInWithToken(httpContext, tokenResult.Entity);
         return new CookieChangePasswordResult(true, null);
     }
 
-    private static async Task<TokenDTO?> RefreshAsync(HttpClient client, string baseUrl, string refreshToken)
+    private async Task<TokenDTO?> RefreshAsync(HttpClient client, string baseUrl, string refreshToken)
     {
         var response = await client.PostAsJsonAsync(
             baseUrl.AddUrlPath("Auth/Refresh"),
@@ -137,6 +149,18 @@ internal sealed class ExternalCookieChangePasswordHandler : ICookieChangePasswor
             return null;
 
         var result = await response.Content.ReadFromJsonAsync<ShiftEntityResponse<TokenDTO>>();
-        return result?.Entity;
+        if (result?.Entity is null)
+            return null;
+
+        try
+        {
+            _jwtValidator.Validate(result.Entity.Token);
+        }
+        catch (SecurityTokenException)
+        {
+            return null;
+        }
+
+        return result.Entity;
     }
 }

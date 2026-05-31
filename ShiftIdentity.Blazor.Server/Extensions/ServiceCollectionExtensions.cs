@@ -144,6 +144,10 @@ public static class ServiceCollectionExtensions
             {
                 client.BaseAddress = new Uri(baseUrl);
             });
+            // Eagerly construct so misconfigured JwtIssuer/JwtPublicKey fails at startup, not
+            // on the first login attempt. ExternalJwtValidator gates every token returned by
+            // the external identity server before its claims are bound to the local cookie.
+            services.AddSingleton(new ExternalJwtValidator(options));
             services.AddScoped<ICookieAuthManager, ExternalCookieAuthManager>();
             services.AddScoped<ICookieLoginHandler, ExternalCookieLoginHandler>();
             services.AddScoped<ICookieChangePasswordHandler, ExternalCookieChangePasswordHandler>();

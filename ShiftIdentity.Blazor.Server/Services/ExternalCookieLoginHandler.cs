@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Http;
+using Microsoft.IdentityModel.Tokens;
 using ShiftSoftware.ShiftEntity.Core.Extensions;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftIdentity.Blazor.Server.Helpers;
@@ -14,10 +15,12 @@ namespace ShiftSoftware.ShiftIdentity.Blazor.Server.Services;
 internal sealed class ExternalCookieLoginHandler : ICookieLoginHandler
 {
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ExternalJwtValidator _jwtValidator;
 
-    public ExternalCookieLoginHandler(IHttpClientFactory httpClientFactory)
+    public ExternalCookieLoginHandler(IHttpClientFactory httpClientFactory, ExternalJwtValidator jwtValidator)
     {
         _httpClientFactory = httpClientFactory;
+        _jwtValidator = jwtValidator;
     }
 
     public async Task<CookieLoginResult> LoginAsync(LoginDTO loginDto, HttpContext httpContext)
@@ -47,6 +50,15 @@ internal sealed class ExternalCookieLoginHandler : ICookieLoginHandler
         var tokenResult = await response.Content.ReadFromJsonAsync<ShiftEntityResponse<TokenDTO>>();
         if (tokenResult?.Entity is null)
             return new CookieLoginResult(false, "Invalid response from identity server", false);
+
+        try
+        {
+            _jwtValidator.Validate(tokenResult.Entity.Token);
+        }
+        catch (SecurityTokenException)
+        {
+            return new CookieLoginResult(false, "Invalid response from identity server", false);
+        }
 
         await CookieAuthHelpers.SignInWithToken(httpContext, tokenResult.Entity);
         return new CookieLoginResult(true, null, tokenResult.Entity.RequirePasswordChange);

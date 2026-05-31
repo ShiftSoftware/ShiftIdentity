@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.IdentityModel.Tokens;
 using ShiftSoftware.ShiftEntity.Core.Extensions;
 using ShiftSoftware.ShiftEntity.Model;
+using ShiftSoftware.ShiftIdentity.Blazor.Server.Helpers;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 
 namespace ShiftSoftware.ShiftIdentity.Blazor.Server.Services;
@@ -9,13 +11,15 @@ namespace ShiftSoftware.ShiftIdentity.Blazor.Server.Services;
 /// <summary>
 /// Refreshes tokens by calling the external identity server via HTTP (external identity hosting).
 /// </summary>
-public class ExternalCookieAuthManager : ICookieAuthManager
+internal sealed class ExternalCookieAuthManager : ICookieAuthManager
 {
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ExternalJwtValidator _jwtValidator;
 
-    public ExternalCookieAuthManager(IHttpClientFactory httpClientFactory)
+    public ExternalCookieAuthManager(IHttpClientFactory httpClientFactory, ExternalJwtValidator jwtValidator)
     {
         _httpClientFactory = httpClientFactory;
+        _jwtValidator = jwtValidator;
     }
 
     public async Task<TokenDTO?> RefreshAsync(string refreshToken)
@@ -31,6 +35,18 @@ public class ExternalCookieAuthManager : ICookieAuthManager
         response.EnsureSuccessStatusCode();
 
         var result = await response.Content.ReadFromJsonAsync<ShiftEntityResponse<TokenDTO>>();
-        return result?.Entity;
+        if (result?.Entity is null)
+            return null;
+
+        try
+        {
+            _jwtValidator.Validate(result.Entity.Token);
+        }
+        catch (SecurityTokenException)
+        {
+            return null;
+        }
+
+        return result.Entity;
     }
 }
