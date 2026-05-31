@@ -24,7 +24,7 @@ public class RedirectToChangePassword : ComponentBase
                 ? Constants.CookieChangePasswordPath
                 : Constants.JwtChangePasswordPath;
 
-        if (NavManager.Uri.Contains(path))
+        if (new Uri(NavManager.Uri).AbsolutePath.StartsWith(path))
             return;
 
         if (this.AuthStateProvider is null)
