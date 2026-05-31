@@ -20,7 +20,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.16.0" />
+		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.17.0" />
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.Cookies" Version="2.3.0" />
 	</ItemGroup>
 
@@ -30,6 +30,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\..\ShiftBlazor\ShiftBlazor\ShiftBlazor.csproj" Condition="Exists('..\..\ShiftBlazor\ShiftBlazor\ShiftBlazor.csproj')" />
 		<ProjectReference Include="..\ShiftIdentity.AspNetCore\ShiftIdentity.AspNetCore.csproj" />
 		<ProjectReference Include="..\ShiftIdentity.Blazor\ShiftIdentity.Blazor.csproj" />
 		<ProjectReference Include="..\ShiftIdentity.Core\ShiftIdentity.Core.csproj" />
