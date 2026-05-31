@@ -10,5 +10,5 @@ public class ShiftIdentityCookieAuthOptions
     /// <summary>
     /// How long the auth cookie remains valid.
     /// </summary>
-    public TimeSpan ExpireTimeSpan { get; set; } = TimeSpan.FromDays(14);
+    public TimeSpan ExpireTimeSpan { get; set; } = TimeSpan.FromDays(3);
 }
