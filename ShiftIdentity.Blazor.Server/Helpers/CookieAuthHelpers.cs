@@ -25,12 +25,16 @@ internal static class CookieAuthHelpers
         {
             IsPersistent = true,
             AllowRefresh = true,
-            // Align cookie lifetime with the underlying token. Crucial for challenge tokens
-            // (RequirePasswordChange=true): the cookie expires in ~10 minutes if the user
-            // doesn't complete the change, instead of lingering until the cookie middleware's
-            // default ExpireTimeSpan elapses.
-            ExpiresUtc = tokenExpiresAt,
         };
+
+        // Challenge tokens (no refresh token) must expire with the JWT so the session
+        // doesn't linger. Normal tokens leave ExpiresUtc unset so the cookie middleware's
+        // ExpireTimeSpan + SlidingExpiration govern lifetime, and OnValidatePrincipal can
+        // refresh the JWT even if the user returns after hours of inactivity.
+        if (string.IsNullOrEmpty(token.RefreshToken))
+        {
+            authProperties.ExpiresUtc = tokenExpiresAt;
+        }
         authProperties.SetString("refresh_token", token.RefreshToken ?? string.Empty);
         // The raw JWT is needed by ExternalCookieChangePasswordHandler when completing a
         // challenge — there's no refresh token to swap, so the cookie must carry the
