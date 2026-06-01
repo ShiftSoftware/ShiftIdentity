@@ -32,11 +32,16 @@ internal sealed class ExternalCookieChangePasswordHandler : ICookieChangePasswor
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ExternalJwtValidator _jwtValidator;
+    private readonly ICookieAuthManager _authManager;
 
-    public ExternalCookieChangePasswordHandler(IHttpClientFactory httpClientFactory, ExternalJwtValidator jwtValidator)
+    public ExternalCookieChangePasswordHandler(
+        IHttpClientFactory httpClientFactory,
+        ExternalJwtValidator jwtValidator,
+        ICookieAuthManager authManager)
     {
         _httpClientFactory = httpClientFactory;
         _jwtValidator = jwtValidator;
+        _authManager = authManager;
     }
 
     public async Task<CookieChangePasswordResult> ChangePasswordAsync(ChangePasswordDTO dto, HttpContext httpContext)
@@ -46,16 +51,24 @@ internal sealed class ExternalCookieChangePasswordHandler : ICookieChangePasswor
         if (string.IsNullOrEmpty(refreshToken))
             return new CookieChangePasswordResult(false, "Not authenticated");
 
-        var client = _httpClientFactory.CreateClient("ShiftIdentityExternal");
-        var baseUrl = client.BaseAddress!.ToString();
-
-        // 1. Refresh to get a usable Bearer JWT for the change-password call.
-        var preToken = await RefreshAsync(client, baseUrl, refreshToken);
+        // 1. Refresh to get a usable Bearer JWT for the change-password call. Shares the
+        //    same RefreshAsync contract as OnValidatePrincipal: null = rejected (401/403),
+        //    throw = transient (5xx/429/network).
+        TokenDTO? preToken;
+        try
+        {
+            preToken = await _authManager.RefreshAsync(refreshToken);
+        }
+        catch
+        {
+            return new CookieChangePasswordResult(false, "Could not reach identity server, please try again.");
+        }
         if (preToken is null)
             return new CookieChangePasswordResult(false, "Session is invalid; please log in again.");
 
         // 2. Call ChangePassword on the external server using the Bearer JWT.
-        var changeRequest = new HttpRequestMessage(HttpMethod.Put, baseUrl.AddUrlPath("UserManager/ChangePassword"))
+        var client = _httpClientFactory.CreateClient("ShiftIdentityExternal");
+        var changeRequest = new HttpRequestMessage(HttpMethod.Put, client.BaseAddress!.ToString().AddUrlPath("UserManager/ChangePassword"))
         {
             Content = JsonContent.Create(dto),
         };
@@ -79,7 +92,15 @@ internal sealed class ExternalCookieChangePasswordHandler : ICookieChangePasswor
 
         // 3. Refresh again — the user entity now has RequireChangePassword=false, so the
         //    new JWT will carry RequirePasswordChange=false. Bind it to a new cookie.
-        var freshToken = await RefreshAsync(client, baseUrl, preToken.RefreshToken);
+        TokenDTO? freshToken;
+        try
+        {
+            freshToken = await _authManager.RefreshAsync(preToken.RefreshToken);
+        }
+        catch
+        {
+            return new CookieChangePasswordResult(false, "Password changed but couldn't reach identity server; please log in again.");
+        }
         if (freshToken is null)
             return new CookieChangePasswordResult(false, "Password changed but failed to refresh session; please log in again.");
 
@@ -137,30 +158,5 @@ internal sealed class ExternalCookieChangePasswordHandler : ICookieChangePasswor
         // Upgrade the challenge cookie to a full session cookie.
         await CookieAuthHelpers.SignInWithToken(httpContext, tokenResult.Entity);
         return new CookieChangePasswordResult(true, null);
-    }
-
-    private async Task<TokenDTO?> RefreshAsync(HttpClient client, string baseUrl, string refreshToken)
-    {
-        var response = await client.PostAsJsonAsync(
-            baseUrl.AddUrlPath("Auth/Refresh"),
-            new RefreshDTO { RefreshToken = refreshToken });
-
-        if (!response.IsSuccessStatusCode)
-            return null;
-
-        var result = await response.Content.ReadFromJsonAsync<ShiftEntityResponse<TokenDTO>>();
-        if (result?.Entity is null)
-            return null;
-
-        try
-        {
-            _jwtValidator.Validate(result.Entity.Token);
-        }
-        catch (SecurityTokenException)
-        {
-            return null;
-        }
-
-        return result.Entity;
     }
 }

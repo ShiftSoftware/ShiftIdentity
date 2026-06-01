@@ -4,11 +4,13 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using ShiftSoftware.ShiftIdentity.Blazor.Server.Helpers;
 using ShiftSoftware.ShiftIdentity.Blazor.Server.Models;
 using ShiftSoftware.ShiftIdentity.Blazor.Server.Providers;
 using ShiftSoftware.ShiftIdentity.Blazor.Server.Services;
 using ShiftSoftware.ShiftIdentity.Core;
+using ShiftSoftware.ShiftIdentity.Core.DTOs;
 
 namespace ShiftSoftware.ShiftIdentity.Blazor.Server.Extensions;
 
@@ -80,15 +82,37 @@ public static class ServiceCollectionExtensions
                 };
                 cookieOptions.Events.OnValidatePrincipal = async context =>
                 {
+                    // Missing or malformed token_expires_at is treated as "refresh now" rather
+                    // than silently skipped — otherwise a cookie issued by an older app version
+                    // (no expiry stamp) would carry permanently stale claims until the outer
+                    // cookie expired. Normal cookies always have it set (CookieAuthHelpers.cs).
                     var expiresAt = context.Properties.GetString("token_expires_at");
-                    if (expiresAt != null && DateTimeOffset.TryParse(expiresAt, out var expiresAtDate))
+                    var needsRefresh = !(expiresAt != null
+                        && DateTimeOffset.TryParse(expiresAt, out var expiresAtDate)
+                        && expiresAtDate - DateTimeOffset.UtcNow >= TimeSpan.FromSeconds(30));
+
+                    if (!needsRefresh)
+                        return;
+
+                    var refreshToken = context.Properties.GetString("refresh_token");
+                    var authManager = context.HttpContext.RequestServices.GetRequiredService<ICookieAuthManager>();
+
+                    TokenDTO? newToken;
+                    try
                     {
-                        // refresh the token if it's expiring within 30 seconds
-                        if (expiresAtDate - DateTimeOffset.UtcNow < TimeSpan.FromSeconds(30))
+                        newToken = refreshToken != null ? await authManager.RefreshAsync(refreshToken) : null;
+                    }
+                    catch (Exception ex)
                         {
-                            var refreshToken = context.Properties.GetString("refresh_token");
-                            var authManager = context.HttpContext.RequestServices.GetRequiredService<ICookieAuthManager>();
-                            var newToken = refreshToken != null ? await authManager.RefreshAsync(refreshToken) : null;
+                        // Transient failure from the identity server (5xx, 408/429, network blip).
+                        // Keep the existing principal — the cookie is still valid for up to 30 more
+                        // seconds — and let the next request retry. Don't fail this request.
+                        var logger = context.HttpContext.RequestServices
+                            .GetService<ILogger<ICookieAuthManager>>();
+                        logger?.LogWarning(ex,
+                            "Cookie token refresh threw transiently; preserving session for retry.");
+                        return;
+                    }
 
                             if (newToken != null)
                             {
