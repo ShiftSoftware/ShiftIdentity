@@ -12,7 +12,6 @@ using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.App;
 using ShiftSoftware.ShiftIdentity.Core.IRepositories;
 using ShiftSoftware.ShiftIdentity.Core.Localization;
 using System.Globalization;
@@ -133,7 +132,7 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddFakeIdentityEndPoints(this IServiceCollection services, TokenSettingsModel tokenConfiguration, TokenUserDataDTO userData, AppDTO app, string? userPassword, params string[] accessTrees)
+    public static IServiceCollection AddFakeIdentityEndPoints(this IServiceCollection services, TokenSettingsModel tokenConfiguration, TokenUserDataDTO userData, string? userPassword, params string[] accessTrees)
     {
         services.AddScoped<AuthService>();
         services.AddScoped<TokenService>();
@@ -166,12 +165,11 @@ public static class ServiceCollectionExtensions
         };
 
         services.AddSingleton(configuration);
-        services.AddSingleton(new ShiftIdentityOptions(userData, app, accessTrees, configuration, userPassword));
+        services.AddSingleton(new ShiftIdentityOptions(userData, accessTrees, configuration, userPassword));
 
         //builder.AddApplicationPart(Assembly.GetExecutingAssembly());
 
         services.AddScoped<IUserRepository, FakeUserRepository>();
-        services.AddScoped<IAppRepository, FakeAppRepository>();
         services.AddScoped<IClaimService, FakeClaimService>();
 
         return services;

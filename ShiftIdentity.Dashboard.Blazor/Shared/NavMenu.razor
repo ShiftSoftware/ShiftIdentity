@@ -1,5 +1,4 @@
 ﻿@using Pages.User
-@using Pages.App
 @using Pages.AccessTree
 @using Pages.Department
 @using Pages.Service
@@ -66,15 +65,6 @@
                           Match="NavLinkMatch.All"
                           Icon="@Icons.Material.Outlined.EditCalendar"
                           TypeAuthAction="ShiftIdentityActions.CompanyCalendars">@Loc["Calendar Entries"]</AuthorizedMudNavLink>
-
-    @* @if (ShiftIdentityDashboardBlazorOptions.ShiftIdentityHostingType == ShiftIdentityHostingTypes.External) *@
-    {
-        <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePrefix}/{nameof(AppList)}")"
-                              Match="NavLinkMatch.All"
-                              Icon="@Icons.Material.Outlined.Apps"
-                              TypeAuthAction="ShiftIdentityActions.Apps">@Loc["Apps"]</AuthorizedMudNavLink>
-
-    }
 
     <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePrefix}/{nameof(AccessTreeList)}")"
                           Match="NavLinkMatch.All"

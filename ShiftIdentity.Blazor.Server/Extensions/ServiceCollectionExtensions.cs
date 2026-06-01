@@ -32,7 +32,7 @@ public static class ServiceCollectionExtensions
         configure(options);
 
         services.AddSingleton(options);
-        services.AddSingleton(new ShiftIdentity.Blazor.ShiftIdentityBlazorOptions(appId, baseUrl, frontEndBaseUrl)
+        services.AddSingleton(new ShiftIdentity.Blazor.ShiftIdentityBlazorOptions(baseUrl, frontEndBaseUrl)
         {
             UseCookieAuth = true,
             HostingType = hostingType,
@@ -103,7 +103,7 @@ public static class ServiceCollectionExtensions
                         newToken = refreshToken != null ? await authManager.RefreshAsync(refreshToken) : null;
                     }
                     catch (Exception ex)
-                        {
+                    {
                         // Transient failure from the identity server (5xx, 408/429, network blip).
                         // Keep the existing principal — the cookie is still valid for up to 30 more
                         // seconds — and let the next request retry. Don't fail this request.
@@ -114,24 +114,22 @@ public static class ServiceCollectionExtensions
                         return;
                     }
 
-                            if (newToken != null)
-                            {
-                                var claims = CookieAuthHelpers.BuildClaimsFromToken(newToken);
-                                var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-                                context.ReplacePrincipal(new ClaimsPrincipal(identity));
+                    if (newToken != null)
+                    {
+                        var claims = CookieAuthHelpers.BuildClaimsFromToken(newToken);
+                        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                        context.ReplacePrincipal(new ClaimsPrincipal(identity));
 
-                                context.Properties.SetString("refresh_token", newToken.RefreshToken);
-                                context.Properties.SetString("token_expires_at",
-                                    DateTimeOffset.UtcNow.AddSeconds(newToken.TokenLifeTimeInSeconds ?? 900).ToString("o"));
+                        context.Properties.SetString("refresh_token", newToken.RefreshToken);
+                        context.Properties.SetString("token_expires_at",
+                            DateTimeOffset.UtcNow.AddSeconds(newToken.TokenLifeTimeInSeconds ?? 900).ToString("o"));
 
-                                context.ShouldRenew = true;
-                            }
-                            else
-                            {
-                                context.RejectPrincipal();
-                                await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-                            }
-                        }
+                        context.ShouldRenew = true;
+                    }
+                    else
+                    {
+                        context.RejectPrincipal();
+                        await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
                     }
                 };
             });

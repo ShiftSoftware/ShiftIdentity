@@ -1,6 +1,5 @@
 ﻿using ShiftSoftware.ShiftEntity.Web;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.App;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Brand;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.City;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;

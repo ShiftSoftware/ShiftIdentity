@@ -4,7 +4,6 @@ namespace ShiftSoftware.ShiftIdentity.Blazor;
 
 public class ShiftIdentityBlazorOptions
 {
-    public string AppId { get; }
     public string BaseUrl { get; }
     public string FrontEndBaseUrl { get; }
 
@@ -19,9 +18,8 @@ public class ShiftIdentityBlazorOptions
     /// </summary>
     public ShiftIdentityHostingTypes HostingType { get; init; }
 
-    public ShiftIdentityBlazorOptions(string appId, string baseUrl, string frontEndBaseUrl)
+    public ShiftIdentityBlazorOptions(string baseUrl, string frontEndBaseUrl)
     {
-        AppId = appId;
         BaseUrl = baseUrl;
         FrontEndBaseUrl = frontEndBaseUrl;
     }

@@ -34,11 +34,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<Core.HashService>();
 
         services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IAppRepository, AppRepository>();
         services.AddScoped<AccessTreeRepository>();
-
         services.AddScoped<UserRepository>();
-        services.AddScoped<AppRepository>();
 
         services.AddScoped<IClaimService, ClaimService>();
 

@@ -9,7 +9,6 @@ using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.App;
 using ShiftSoftware.ShiftIdentity.Core.IRepositories;
 using ShiftSoftware.ShiftIdentity.Core.Localization;
 using ShiftSoftwareLocalization.Identity;
@@ -29,9 +28,9 @@ public static class IMvcBuilderExtensions
     }
 
     [Obsolete("This method is deprecated. Please use AddFakeIdentityEndPoints on IServiceCollection instead.")]
-    public static IMvcBuilder AddFakeIdentityEndPoints(this IMvcBuilder builder, TokenSettingsModel tokenConfiguration, TokenUserDataDTO userData, AppDTO app, string? userPassword, params string[] accessTrees)
+    public static IMvcBuilder AddFakeIdentityEndPoints(this IMvcBuilder builder, TokenSettingsModel tokenConfiguration, TokenUserDataDTO userData, object app, string? userPassword, params string[] accessTrees)
     {
-        builder.Services.AddFakeIdentityEndPoints(tokenConfiguration, userData, app, userPassword, accessTrees);
+        builder.Services.AddFakeIdentityEndPoints(tokenConfiguration, userData, userPassword, accessTrees);
         return builder;
     }
 }

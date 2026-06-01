@@ -43,7 +43,6 @@
 
 	<ItemGroup>
 		<Folder Include="Pages\AccessTree\" />
-		<Folder Include="Pages\App\" />
 	</ItemGroup>
 
 </Project>

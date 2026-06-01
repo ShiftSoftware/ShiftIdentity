@@ -20,17 +20,16 @@ public static class IServiceCollectionExtensions
     /// <see cref="AuthSessionService"/> + <see cref="ShiftAuthStateProvider"/> + <see cref="Auth401Handler"/>.
     /// </summary>
     public static IServiceCollection AddShiftIdentityBlazor(this IServiceCollection services,
-        string appId, string baseUrl, string frontEndBaseUrl,
+        string baseUrl, string frontEndBaseUrl,
         ShiftIdentityHostingTypes hostingType = ShiftIdentityHostingTypes.Internal,
         Type? localizationResource = null)
     {
         if (services == null) throw new ArgumentNullException(nameof(services));
 
         services.AddBlazoredLocalStorage();
-        services.TryAddSingleton(x => new ShiftIdentityBlazorOptions(appId, baseUrl, frontEndBaseUrl)
+        services.TryAddSingleton(x => new ShiftIdentityBlazorOptions(baseUrl, frontEndBaseUrl)
         {
             UseCookieAuth = false,
-            HostingType = hostingType,
         });
         services.TryAddScoped<IShiftIdentityProvider, ShiftIdentityProvider>();
 
@@ -58,16 +57,15 @@ public static class IServiceCollectionExtensions
     /// <see cref="AuthSessionService"/> + <see cref="ShiftAuthStateProvider"/> + <see cref="Auth401Handler"/>.
     /// </summary>
     public static IServiceCollection AddShiftIdentityBlazorClient(this IServiceCollection services,
-        string appId, string baseUrl, string frontEndBaseUrl,
+        string baseUrl, string frontEndBaseUrl,
         ShiftIdentityHostingTypes hostingType = ShiftIdentityHostingTypes.Internal,
         Type? localizationResource = null)
     {
         if (services == null) throw new ArgumentNullException(nameof(services));
 
-        services.TryAddSingleton(x => new ShiftIdentityBlazorOptions(appId, baseUrl, frontEndBaseUrl)
+        services.TryAddSingleton(x => new ShiftIdentityBlazorOptions(baseUrl, frontEndBaseUrl)
         {
             UseCookieAuth = true,
-            HostingType = hostingType,
         });
 
         services.TryAddScoped<IIdentityStore, NoOpIdentityStore>();
@@ -103,7 +101,7 @@ public static class IServiceCollectionExtensions
     public static IServiceCollection AddShiftIdentity(this IServiceCollection services,
         string appId, string baseUrl, string frontEndBaseUrl, Type? localizationResource = null)
     {
-        services.AddShiftIdentityBlazor(appId, baseUrl, frontEndBaseUrl, localizationResource: localizationResource);
+        services.AddShiftIdentityBlazor(baseUrl, frontEndBaseUrl, localizationResource: localizationResource);
         return services;
     }
 }
