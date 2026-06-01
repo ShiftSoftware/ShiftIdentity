@@ -30,10 +30,12 @@ public class Auth401Handler : DelegatingHandler
     };
 
     private readonly IServiceProvider _services;
+    private readonly AuthSessionService _refreshService;
 
-    public Auth401Handler(IServiceProvider services)
+    public Auth401Handler(IServiceProvider services, AuthSessionService refreshService)
     {
         _services = services;
+        _refreshService = refreshService;
     }
 
     protected override async Task<HttpResponseMessage> SendAsync(
@@ -44,10 +46,7 @@ public class Auth401Handler : DelegatingHandler
 
         if (response.StatusCode == HttpStatusCode.Unauthorized && !ShouldSkip(request))
         {
-            // Fire-and-forget so the original caller still sees the 401 and can react.
-            var refreshService = _services.GetService<AuthSessionService>();
-            if (refreshService != null)
-                _ = refreshService.OnLogoutAsync();
+            _ = _refreshService.OnLogoutAsync();
 
             // JWT: clear the stale token so a reload doesn't transiently rehydrate from localStorage.
             // Cookie: NoOpIdentityStore makes this a no-op.

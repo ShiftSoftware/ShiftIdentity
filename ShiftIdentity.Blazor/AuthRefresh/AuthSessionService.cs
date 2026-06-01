@@ -74,6 +74,7 @@ public class AuthSessionService : IAsyncDisposable
     public Task OnLogoutAsync()
     {
         StopLoop();
+        _started = false;
         _provider.NotifyUserLoggedOut();
         return Task.CompletedTask;
     }
