@@ -1,8 +1,8 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
+using Microsoft.IdentityModel.JsonWebTokens;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 
 namespace ShiftSoftware.ShiftIdentity.Blazor.Server.Helpers;
@@ -48,8 +48,13 @@ internal static class CookieAuthHelpers
 
     internal static List<Claim> BuildClaimsFromToken(TokenDTO token)
     {
-        var handler = new JwtSecurityTokenHandler();
-        var jwt = handler.ReadJwtToken(token.Token);
+        // Modern JsonWebTokenHandler matches what the client uses in JwtRefreshStrategy —
+        // one JWT parser project-wide. Both ReadJwtToken and ReadToken(...) return claims
+        // with their raw JWT names (no inbound mapping); the consolidation is for hygiene
+        // and to avoid the legacy handler's static InboundClaimTypeMap foot-gun if anyone
+        // later swaps ReadJwtToken for ValidateToken.
+        var jwt = new JsonWebTokenHandler().ReadToken(token.Token) as JsonWebToken
+            ?? throw new InvalidOperationException("Token is not a JWT.");
 
         var claims = new List<Claim>();
 
@@ -71,9 +76,7 @@ internal static class CookieAuthHelpers
     }
 
     /// <summary>
-    /// Computes how many seconds the client should wait before polling again, given the
-    /// JWT lifetime returned by the identity server. The result lands the next poll inside
-    /// OnValidatePrincipal's refresh window so the cookie gets refreshed at that point.
+    /// Computes how many seconds the client should wait before polling again.
     /// </summary>
     internal static int ComputeRefreshAfterSecondsFromLifetime(long? tokenLifeTimeInSeconds)
     {
