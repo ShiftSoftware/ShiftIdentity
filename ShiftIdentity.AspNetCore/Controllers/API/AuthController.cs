@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Filters;
@@ -17,6 +18,7 @@ namespace ShiftSoftware.ShiftIdentity.AspNetCore.Controllers.API;
 [Route("api/[controller]")]
 [ApiController]
 [Authorize]
+[EnableRateLimiting(Constants.DefaultPolicyName)]
 public class AuthController : ControllerBase
 {
     private readonly AuthService authService;
