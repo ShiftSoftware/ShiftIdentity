@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
@@ -29,10 +30,21 @@ internal static class CookieAuthEndpoints
         });
     }
 
-    internal static async Task<IResult> Logout(HttpContext httpContext)
+    internal static async Task<IResult> Logout(HttpContext httpContext, IAntiforgery antiforgery)
     {
-        // Invoked exclusively via HTML form post (see UserAvatar). The form supplies a
-        // returnUrl so the browser lands on a sensible page after the cookie is cleared.
+        // Invoked exclusively via HTML form post (see UserAvatar, ChangePasswordForm). The
+        // form posts <AntiforgeryToken /> — validate it so a cross-origin POST can't force-
+        // logout the user. SameSite=Lax already blocks most top-level POSTs, this is
+        // defense-in-depth and matches the form-post contract in the migration doc.
+        try
+        {
+            await antiforgery.ValidateRequestAsync(httpContext);
+        }
+        catch (AntiforgeryValidationException)
+        {
+            return Results.BadRequest();
+        }
+
         string? returnUrl = null;
         if (httpContext.Request.HasFormContentType)
         {
