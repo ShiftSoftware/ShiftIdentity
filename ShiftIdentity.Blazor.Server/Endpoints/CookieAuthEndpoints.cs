@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
+using ShiftSoftware.ShiftEntity.Core.Extensions;
 using ShiftSoftware.ShiftIdentity.Blazor.Server.Helpers;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 
@@ -52,9 +53,8 @@ internal static class CookieAuthEndpoints
             returnUrl = form["returnUrl"];
         }
 
-        var safeReturnUrl = !string.IsNullOrWhiteSpace(returnUrl) && Uri.IsWellFormedUriString(returnUrl, UriKind.Relative)
-            ? returnUrl
-            : "/";
+        var safeReturnUrl = !string.IsNullOrWhiteSpace(returnUrl) && returnUrl.IsLocalUrl()
+            ? returnUrl : "/";
 
         return Results.SignOut(
             new AuthenticationProperties { RedirectUri = safeReturnUrl },

@@ -50,6 +50,15 @@ public static class ServiceCollectionExtensions
             {
                 var options = ctx.RequestServices.GetService<IOptions<ShiftRateLimitOptions>>()?.Value ?? new();
 
+                // Per-client-IP partition. This is ONLY correct if RemoteIpAddress is the real
+                // client IP. Behind a reverse proxy / load balancer / Azure App Service, the TCP
+                // connection is from the proxy, so RemoteIpAddress is the proxy's IP unless the
+                // host configures ForwardedHeaders middleware (reading X-Forwarded-For) BEFORE
+                // UseRateLimiter. Without it, every client collapses into one partition: legitimate
+                // users throttle each other and per-attacker brute-force limiting is defeated.
+                // The host MUST call UseForwardedHeaders with its proxies pinned via
+                // KnownProxies/KnownNetworks (blindly trusting X-Forwarded-For lets a client forge
+                // its own partition key and bypass the limit). See the auth-migration guide.
                 return RateLimitPartition.GetFixedWindowLimiter(
                     partitionKey: ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                     factory: _ => new FixedWindowRateLimiterOptions

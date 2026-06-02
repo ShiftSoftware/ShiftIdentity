@@ -100,7 +100,7 @@ public static class ServiceCollectionExtensions
                     TokenDTO? newToken;
                     try
                     {
-                        newToken = refreshToken != null ? await authManager.RefreshAsync(refreshToken) : null;
+                        newToken = !string.IsNullOrEmpty(refreshToken) ? await authManager.RefreshAsync(refreshToken) : null;
                     }
                     catch (Exception ex)
                     {
