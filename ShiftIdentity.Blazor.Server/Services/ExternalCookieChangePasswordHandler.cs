@@ -15,18 +15,19 @@ namespace ShiftSoftware.ShiftIdentity.Blazor.Server.Services;
 
 /// <summary>
 /// External hosting: changes the password against the external identity server, then re-issues
-/// the local cookie with a fresh JWT so the <c>RequirePasswordChange</c> claim clears immediately.
+/// the local cookie with the fresh JWT the change returns.
 ///
-/// The external <c>PUT /api/UserManager/ChangePassword</c> endpoint returns the updated user
-/// data, not a token, so we sequence three calls:
 /// <list type="number">
 ///   <item>POST <c>/Auth/Refresh</c> with the cookie's stored refresh token → fresh JWT for Bearer auth.</item>
-///   <item>PUT <c>/api/UserManager/ChangePassword</c> with that JWT → success.</item>
-///   <item>POST <c>/Auth/Refresh</c> again → fresh JWT now carrying <c>RequirePasswordChange=false</c>.</item>
+///   <item>PUT <c>/api/UserManager/ChangePassword</c> with that JWT → fresh token carrying the rolled
+///         security stamp and <c>RequirePasswordChange=false</c>.</item>
 /// </list>
-/// The final JWT is bound to a new cookie via <see cref="CookieAuthHelpers.SignInWithToken"/>.
-/// Credentials never traverse the WASM boundary; the user's password lives only in the form
-/// post that hits this handler.
+/// The returned JWT is signature-validated and bound to a new cookie via
+/// <see cref="CookieAuthHelpers.SignInWithToken"/>. A second refresh is deliberately NOT issued:
+/// changing the password rolls the user's security stamp, so the refresh token minted in step 1
+/// (under the old stamp) is now rejected — the change-password response is the only token that
+/// carries the new stamp. Credentials never traverse the WASM boundary; the user's password
+/// lives only in the form post that hits this handler.
 /// </summary>
 internal sealed class ExternalCookieChangePasswordHandler : ICookieChangePasswordHandler
 {
@@ -66,7 +67,8 @@ internal sealed class ExternalCookieChangePasswordHandler : ICookieChangePasswor
         if (preToken is null)
             return new CookieChangePasswordResult(false, "Session is invalid; please log in again.");
 
-        // 2. Call ChangePassword on the external server using the Bearer JWT.
+        // 2. Call ChangePassword on the external server using the Bearer JWT. The response carries
+        //    a fresh token minted after the security stamp rolled (RequirePasswordChange=false).
         var client = _httpClientFactory.CreateClient("ShiftIdentityExternal");
         var changeRequest = new HttpRequestMessage(HttpMethod.Put, client.BaseAddress!.ToString().AddUrlPath("UserManager/ChangePassword"))
         {
@@ -82,7 +84,7 @@ internal sealed class ExternalCookieChangePasswordHandler : ICookieChangePasswor
             {
                 try
                 {
-                    var error = await changeResponse.Content.ReadFromJsonAsync<ShiftEntityResponse<object>>();
+                    var error = await changeResponse.Content.ReadFromJsonAsync<ShiftEntityResponse<TokenDTO>>();
                     errorMessage = error?.Message?.Body;
                 }
                 catch { /* fallthrough */ }
@@ -90,21 +92,23 @@ internal sealed class ExternalCookieChangePasswordHandler : ICookieChangePasswor
             return new CookieChangePasswordResult(false, errorMessage ?? "Password change failed");
         }
 
-        // 3. Refresh again — the user entity now has RequireChangePassword=false, so the
-        //    new JWT will carry RequirePasswordChange=false. Bind it to a new cookie.
-        TokenDTO? freshToken;
+        // 3. Bind the returned token to a new cookie. Do NOT refresh again: the stamp has rolled,
+        //    so preToken.RefreshToken (minted in step 1) is now invalid — this response is the only
+        //    token carrying the new stamp. Validate its signature before trusting it.
+        var tokenResult = await changeResponse.Content.ReadFromJsonAsync<ShiftEntityResponse<TokenDTO>>();
+        if (tokenResult?.Entity is null)
+            return new CookieChangePasswordResult(false, "Invalid response from identity server");
+
         try
         {
-            freshToken = await _authManager.RefreshAsync(preToken.RefreshToken);
+            _jwtValidator.Validate(tokenResult.Entity.Token);
         }
-        catch
+        catch (SecurityTokenException)
         {
-            return new CookieChangePasswordResult(false, "Password changed but couldn't reach identity server; please log in again.");
+            return new CookieChangePasswordResult(false, "Invalid response from identity server");
         }
-        if (freshToken is null)
-            return new CookieChangePasswordResult(false, "Password changed but failed to refresh session; please log in again.");
 
-        await CookieAuthHelpers.SignInWithToken(httpContext, freshToken);
+        await CookieAuthHelpers.SignInWithToken(httpContext, tokenResult.Entity);
         return new CookieChangePasswordResult(true, null);
     }
 

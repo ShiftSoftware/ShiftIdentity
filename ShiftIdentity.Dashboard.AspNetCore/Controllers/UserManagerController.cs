@@ -8,7 +8,10 @@ using ShiftSoftware.ShiftEntity.Model.HashIds;
 using ShiftSoftware.ShiftIdentity.AspNetCore;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
 using ShiftSoftware.ShiftIdentity.Core;
+using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
+// Aliased: the unqualified TokenService in this file is ShiftEntity.Core's (static SAS helpers).
+using IdentityTokenService = ShiftSoftware.ShiftIdentity.AspNetCore.Services.TokenService;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.UserManager;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.ShiftIdentity.Data.Repositories;
@@ -28,17 +31,20 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
         private readonly IClaimService claimService;
         private readonly IMapper mapper;
         private readonly ShiftIdentityConfiguration options;
+        private readonly IdentityTokenService tokenService;
         private readonly IEnumerable<ISendEmailVerification>? sendEmailVerifications;
         private readonly IEnumerable<ISendEmailResetPassword>? sendEmailResetPasswords;
 
         public UserManagerController(UserRepository userRepo, IClaimService claimService, IMapper mapper,
-            ShiftIdentityConfiguration options, IEnumerable<ISendEmailVerification>? sendEmailVerifications = null,
+            ShiftIdentityConfiguration options, IdentityTokenService tokenService,
+            IEnumerable<ISendEmailVerification>? sendEmailVerifications = null,
             IEnumerable<ISendEmailResetPassword>? sendEmailResetPasswords = null)
         {
             this.userRepo = userRepo;
             this.claimService = claimService;
             this.mapper = mapper;
             this.options = options;
+            this.tokenService = tokenService;
             this.sendEmailVerifications = sendEmailVerifications;
             this.sendEmailResetPasswords = sendEmailResetPasswords;
         }
@@ -126,14 +132,14 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
             }
             catch (ShiftEntityException ex)
             {
-                return StatusCode(ex.HttpStatusCode, new ShiftEntityResponse<UserDataDTO>
+                return StatusCode(ex.HttpStatusCode, new ShiftEntityResponse<TokenDTO>
                 {
                     Message = ex.Message
                 });
             }
 
             if (user is null)
-                return BadRequest(new ShiftEntityResponse<UserDataDTO>
+                return BadRequest(new ShiftEntityResponse<TokenDTO>
                 {
                     Message = new Message
                     {
@@ -143,7 +149,12 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
 
             await userRepo.SaveChangesAsync();
 
-            return Ok(new ShiftEntityResponse<UserDataDTO>(mapper.Map<UserDataDTO>(user)));
+            // ChangePasswordAsync rolled the user's SecurityStamp, invalidating every refresh token
+            // issued before this call. Hand the caller a fresh token carrying the new stamp so the
+            // session that just changed the password stays alive while all others are killed.
+            var token = tokenService.GenerateInternalJwtToken(user);
+
+            return Ok(new ShiftEntityResponse<TokenDTO>(token));
         }
 
         [HttpGet("SendEmailVerificationLink")]

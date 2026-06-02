@@ -43,6 +43,22 @@ public class User : ShiftEntity<User>,
 
     public string? VerificationSASToken { get; set; }
 
+    /// <summary>
+    /// Versions the user's issued refresh tokens. Every refresh token embeds the stamp that was
+    /// current when it was minted (see <c>TokenService.GenerateRefreshToken</c>), and
+    /// <c>AuthService.RefreshAsync</c> rejects any refresh whose stamp no longer matches.
+    /// Calling <see cref="RegenerateSecurityStamp"/> therefore invalidates every outstanding
+    /// session for this user — this is what makes a password change (or an explicit "log out
+    /// everywhere") kill stolen/lingering refresh tokens, which are otherwise non-revocable.
+    /// <para>
+    /// Default is <see cref="Guid.Empty"/> (never randomized in the constructor): a brand-new
+    /// stamp per <c>new User()</c> would break stateless repositories that reconstruct the same
+    /// logical user on each call (e.g. <c>FakeUserRepository</c>). Empty is a valid, stable
+    /// baseline because the comparison is per-user — uniqueness across users is irrelevant.
+    /// </para>
+    /// </summary>
+    public Guid SecurityStamp { get; set; }
+
     #endregion
 
     #region Contacts
@@ -93,4 +109,10 @@ public class User : ShiftEntity<User>,
         TeamUsers = new HashSet<TeamUser>();
     }
 
+    /// <summary>
+    /// Rolls the <see cref="SecurityStamp"/>, invalidating every refresh token previously issued
+    /// to this user. Call this on any credential change (password change/reset) or whenever all
+    /// of the user's sessions must be terminated.
+    /// </summary>
+    public void RegenerateSecurityStamp() => SecurityStamp = Guid.NewGuid();
 }

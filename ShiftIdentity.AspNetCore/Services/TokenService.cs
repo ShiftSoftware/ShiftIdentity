@@ -209,11 +209,15 @@ public class TokenService
         return result;
     }
 
-    private string GenerateRefreshToken(long userId)
+    private string GenerateRefreshToken(User user)
     {
         var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, userId.ToString())
+            new Claim(ClaimTypes.NameIdentifier, user.ID.ToString()),
+            // Versions this refresh token. AuthService.RefreshAsync rejects the refresh once the
+            // user's SecurityStamp rolls (password change / log-out-everywhere), so a stolen or
+            // lingering refresh token cannot outlive a credential change.
+            new Claim(ShiftIdentityClaims.SecurityStamp, user.SecurityStamp.ToString())
         };
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(shiftIdentityConfiguration.RefreshToken.Key));

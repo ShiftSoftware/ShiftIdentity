@@ -65,4 +65,17 @@ internal class ShiftIdentityProvider : IShiftIdentityProvider
         return new HttpResponse<ShiftEntityResponse<TokenDTO?>?>
             ((await response.Content.ReadFromJsonAsync<ShiftEntityResponse<TokenDTO>>())!, response.StatusCode);
     }
+
+    /// <summary>
+    /// Self-service password change. Returns a fresh <see cref="TokenDTO"/> carrying the rolled
+    /// security stamp so the caller's current session survives (all others are invalidated).
+    /// </summary>
+    public async Task<HttpResponse<ShiftEntityResponse<TokenDTO?>?>> ChangePasswordAsync(string baseUrl, ChangePasswordDTO dto)
+    {
+        var url = $"{(baseUrl.EndsWith('/') ? baseUrl : baseUrl + "/")}UserManager/ChangePassword";
+        using var response = await http.PutAsJsonAsync(url, dto);
+
+        return new HttpResponse<ShiftEntityResponse<TokenDTO?>?>
+            ((await response.Content.ReadFromJsonAsync<ShiftEntityResponse<TokenDTO>>())!, response.StatusCode);
+    }
 }

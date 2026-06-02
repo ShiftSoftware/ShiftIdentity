@@ -13,6 +13,15 @@ public class ChangePasswordDTO
     public string ConfirmPassword { get; set; } = default!;
 
     public string CurrentPassword { get; set; } = default!;
+
+    /// <summary>
+    /// When <c>true</c> (default), the user's security stamp is rolled so every <em>other</em>
+    /// session is signed out; the session performing the change stays alive because the caller
+    /// re-issues a token carrying the new stamp. Set <c>false</c> to leave the user's other
+    /// devices logged in. Only honored for self-service changes — admin resets and forced
+    /// (challenge) changes always roll the stamp.
+    /// </summary>
+    public bool SignOutOtherSessions { get; set; } = true;
 }
 
 public class ChangePasswordValidator : AbstractValidator<ChangePasswordDTO>

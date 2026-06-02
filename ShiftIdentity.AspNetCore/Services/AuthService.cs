@@ -103,6 +103,10 @@ public class AuthService
         user.Salt = hash.Salt;
         user.RequireChangePassword = false;
 
+        // Invalidate any refresh tokens issued before this change. The token minted below carries
+        // the new stamp, so this session survives; every other outstanding session is killed.
+        user.RegenerateSecurityStamp();
+
         if (user.UserLog is null)
             user.UserLog = new Core.Entities.UserLog { LastSeen = DateTimeOffset.UtcNow };
         else
@@ -126,6 +130,13 @@ public class AuthService
             var user = await userRepo.FindAsync(userId, disableDefaultDataLevelAccess: true, disableGlobalFilters: true);
 
             if(user is null || !user.IsActive || user.IsDeleted)
+                return null;
+
+            // Reject refresh tokens minted before the user's security stamp last rolled (password
+            // change / log-out-everywhere). A missing or unparseable claim means a pre-stamp token,
+            // which is also rejected — those sessions must re-authenticate once after deploy.
+            var stampClaim = claimPrincipal!.FindFirstValue(ShiftIdentityClaims.SecurityStamp);
+            if (!Guid.TryParse(stampClaim, out var tokenStamp) || tokenStamp != user.SecurityStamp)
                 return null;
 
             var token = tokenService.GenerateToken(user);

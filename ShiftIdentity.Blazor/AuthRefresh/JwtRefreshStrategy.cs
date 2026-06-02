@@ -114,6 +114,34 @@ public class JwtRefreshStrategy : IAuthRefreshStrategy
         };
     }
 
+    /// <summary>
+    /// Self-service password change (the user knows their current password). The server rolls the
+    /// security stamp — invalidating every other session — and returns a fresh token carrying the
+    /// new stamp, which we store so this session keeps refreshing. The caller pushes the returned
+    /// claims to <c>ShiftAuthStateProvider</c>.
+    /// </summary>
+    public async Task<LoginResult> ChangePasswordAsync(ChangePasswordDTO dto)
+    {
+        var response = await _identityProvider.ChangePasswordAsync(_options.BaseUrl, dto);
+
+        var token = response.Data?.Entity;
+        if (!response.IsSuccess || token is null)
+        {
+            return LoginResult.Failure(
+                response.Data?.Message?.Body ?? response.ErrorMessage,
+                response.Data?.Message?.Title);
+        }
+
+        await _store.StoreTokenAsync(token);
+
+        return new LoginResult
+        {
+            IsSuccess = true,
+            RequirePasswordChange = token.RequirePasswordChange,
+            Claims = ParseJwtClaims(token.Token),
+        };
+    }
+
     public Task ClearStoredTokenAsync() => _store.RemoveTokenAsync();
 
     private static List<UserClaimModel>? ParseJwtClaims(string? jwt)

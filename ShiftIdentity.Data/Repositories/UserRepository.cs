@@ -178,6 +178,9 @@ public class UserRepository :
 
             //Set flag to enforce password change
             entity.RequireChangePassword = true;
+
+            //Roll the security stamp so any sessions issued under the previous password are killed
+            entity.RegenerateSecurityStamp();
         }
 
         var accessTreeIds = dto.AccessTrees.Select(x => x.Value.ToLong());
@@ -272,6 +275,12 @@ public class UserRepository :
         //Set enforce password change flag to false
         user.RequireChangePassword = false;
 
+        //Optionally roll the security stamp to sign out the user's *other* sessions. The caller
+        //re-issues a token from this entity afterwards, so the session performing the change stays
+        //alive regardless. When the user opts out, their other devices keep working.
+        if (dto.SignOutOtherSessions)
+            user.RegenerateSecurityStamp();
+
         return user;
     }
 
@@ -350,6 +359,9 @@ public class UserRepository :
 
             //Set flag to enforce password change
             user.RequireChangePassword = true;
+
+            //Roll the security stamp so the reset kills the user's existing sessions
+            user.RegenerateSecurityStamp();
 
             var userInfo = this.mapper.Map<UserInfoDTO>(user);
             userInfo.PlainTextPassword = password;
