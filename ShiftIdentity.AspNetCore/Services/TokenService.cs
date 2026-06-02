@@ -120,8 +120,6 @@ public class TokenService
 
     public TokenDTO GenerateToken(User user)
     {
-        var requirePasswordChange = shiftIdentityConfiguration.Security.RequirePasswordChange && user.RequireChangePassword;
-
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, ShiftEntityHashIdService.Encode<Core.DTOs.User.UserDTO>(user.ID)),
@@ -142,30 +140,23 @@ public class TokenService
         foreach (var team in user.TeamUsers)
             claims.Add(new Claim(ShiftEntity.Core.Constants.TeamIdsClaim, ShiftEntityHashIdService.Encode<TeamDTO>(team.TeamID)));
 
-        if (requirePasswordChange)
-        {
-            claims.Add(new Claim(ShiftIdentityClaims.RequirePasswordChange, true.ToString()));
-        }
-        else
-        {
-            if (user.IsSuperAdmin)
-                claims.Add(new Claim(ClaimTypes.Role, "superadmin"));
+        if (user.IsSuperAdmin)
+            claims.Add(new Claim(ClaimTypes.Role, "superadmin"));
 
-            if (user.Email != null)
-                claims.Add(new Claim(ClaimTypes.Email, user.Email));
+        if (user.Email != null)
+            claims.Add(new Claim(ClaimTypes.Email, user.Email));
 
-            if (user.Phone != null)
-                claims.Add(new Claim(ClaimTypes.MobilePhone, user.Phone));
+        if (user.Phone != null)
+            claims.Add(new Claim(ClaimTypes.MobilePhone, user.Phone));
 
-            //Store access tree per user
-            if (!string.IsNullOrWhiteSpace(user.AccessTree))
-                claims.Add(new Claim(TypeAuthClaimTypes.AccessTree, user.AccessTree));
+        //Store access tree per user
+        if (!string.IsNullOrWhiteSpace(user.AccessTree))
+            claims.Add(new Claim(TypeAuthClaimTypes.AccessTree, user.AccessTree));
 
-            //Store access-trees in calim
-            if (user.AccessTrees?.Count() > 0)
-                foreach (var accessTree in user.AccessTrees)
-                    claims.Add(new Claim(TypeAuthClaimTypes.AccessTree, accessTree.AccessTree.Tree));
-        }
+        //Store access-trees in claim
+        if (user.AccessTrees?.Count() > 0)
+            foreach (var accessTree in user.AccessTrees)
+                claims.Add(new Claim(TypeAuthClaimTypes.AccessTree, accessTree.AccessTree.Tree));
 
         var rsa = RSA.Create();
         rsa.ImportRSAPrivateKey(Convert.FromBase64String(shiftIdentityConfiguration.Token.RSAPrivateKeyBase64), out _);
@@ -183,28 +174,24 @@ public class TokenService
         {
             Token = tokenString,
             TokenLifeTimeInSeconds = shiftIdentityConfiguration.Token.ExpireSeconds,
-            RefreshToken = GenerateRefreshToken(user.ID),
+            RefreshToken = GenerateRefreshToken(user),
             RefreshTokenLifeTimeInSeconds = shiftIdentityConfiguration.RefreshToken.ExpireSeconds,
-            RequirePasswordChange = requirePasswordChange,
+            RequirePasswordChange = false,
             UserData = new TokenUserDataDTO
             {
                 FullName = user.FullName,
                 ID = user.ID.ToString(),
                 Username = user.Username,
                 CompanyType = user.Company?.CompanyType,
+                UserSignature = string.IsNullOrWhiteSpace(user.Signature) ? null : JsonSerializer.Deserialize<IEnumerable<ShiftFileDTO>>(user.Signature)
             }
         };
 
-        if (!requirePasswordChange)
-        {
-            if (user?.Email is not null)
-                result.UserData.Emails = new List<EmailDTO> { new EmailDTO { Email = user.Email } };
+        if (user.Email is not null)
+            result.UserData.Emails = [ new EmailDTO { Email = user.Email }];
 
-            if (user?.Phone is not null)
-                result.UserData.Phones = new List<PhoneDTO> { new PhoneDTO { Phone = user.Phone } };
-
-            result.UserData.UserSignature = string.IsNullOrWhiteSpace(user?.Signature) ? null : JsonSerializer.Deserialize<IEnumerable<ShiftFileDTO>>(user!.Signature);
-        }
+        if (user.Phone is not null)
+            result.UserData.Phones = [ new PhoneDTO { Phone = user.Phone }];
 
         return result;
     }
