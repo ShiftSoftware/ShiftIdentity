@@ -1,7 +1,8 @@
 ﻿using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Options;
 using MudBlazor;
-using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services;
 using ShiftSoftware.TypeAuth.Core;
+using System.Net.Http.Json;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Shared.ActionTree;
 
@@ -16,8 +17,8 @@ public partial class ActionTree
     }
 
     [Inject] ITypeAuthService TypeAuth { get; set; } = default!;
-    [Inject] ShiftIdentityDashboardBlazorOptions ShiftIdentityDashboardBlazorOptions { get; set; } = default!;
-    [Inject] HttpService HttpService { get; set; } = default!;
+    [Inject] IOptions<ShiftIdentityDashboardBlazorOptions> ShiftIdentityDashboardBlazorOptions { get; set; } = default!;
+    [Inject] HttpClient HttpClient { get; set; } = default!;
 
     public IReadOnlyCollection<TreeItemData<ActionTreeNode>> TreeItems { get; set; } = [];
 
@@ -44,48 +45,48 @@ public partial class ActionTree
         await Task.WhenAll(new List<Task>
         {
             Task.Run(async () => {
-                var countries = await this.HttpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Country.CountryListDTO>>("IdentityCountry?$orderby=Name");
+                var countries = await HttpClient.GetFromJsonAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Country.CountryListDTO>>("IdentityCountry?$orderby=Name");
 
-                Core.ShiftIdentityActions.DataLevelAccess.Countries.Expand(countries.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), true, true);
+                Core.ShiftIdentityActions.DataLevelAccess.Countries.Expand(countries!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), true, true);
             }),
 
             Task.Run(async () => {
-                var regions = await this.HttpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Region.RegionListDTO>>("IdentityRegion?$orderby=Name");
+                var regions = await HttpClient.GetFromJsonAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Region.RegionListDTO>>("IdentityRegion?$orderby=Name");
 
-                Core.ShiftIdentityActions.DataLevelAccess.Regions.Expand(regions.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), true, true);
+                Core.ShiftIdentityActions.DataLevelAccess.Regions.Expand(regions!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), true, true);
             }),
 
             Task.Run(async () => {
-                var companies = await this.HttpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Company.CompanyListDTO>>("IdentityCompany?$orderby=Name");
-                Core.ShiftIdentityActions.DataLevelAccess.Companies.Expand(companies.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name ?? x.ID!); }).ToList(), true, true);
+                var companies = await HttpClient.GetFromJsonAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Company.CompanyListDTO>>("IdentityCompany?$orderby=Name");
+                Core.ShiftIdentityActions.DataLevelAccess.Companies.Expand(companies!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name ?? x.ID!); }).ToList(), true, true);
             }),
 
             Task.Run(async () =>
             {
-                var branches = await this.HttpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO>>("IdentityCompanyBranch?$orderby=Company");
+                var branches = await HttpClient.GetFromJsonAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO>>("IdentityCompanyBranch?$orderby=Company");
 
-                Core.ShiftIdentityActions.DataLevelAccess.Branches.Expand(branches.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, $"{x.Company} ↔ {x.Name}"); }).ToList(), true, true);
+                Core.ShiftIdentityActions.DataLevelAccess.Branches.Expand(branches!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, $"{x.Company} ↔ {x.Name}"); }).ToList(), true, true);
             }),
 
             Task.Run(async () =>
             {
-                var teams = await this.HttpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Team.TeamListDTO>>("IdentityTeam?$orderby=Name");
+                var teams = await HttpClient.GetFromJsonAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Team.TeamListDTO>>("IdentityTeam?$orderby=Name");
 
-                Core.ShiftIdentityActions.DataLevelAccess.Teams.Expand(teams.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), true, true);
+                Core.ShiftIdentityActions.DataLevelAccess.Teams.Expand(teams!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), true, true);
             }),
 
             Task.Run(async () =>
             {
-                var brands = await this.HttpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Brand.BrandListDTO>>("IdentityBrand?$orderby=Name");
+                var brands = await HttpClient.GetFromJsonAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.Brand.BrandListDTO>>("IdentityBrand?$orderby=Name");
 
-                Core.ShiftIdentityActions.DataLevelAccess.Brands.Expand(brands.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), false, true);
+                Core.ShiftIdentityActions.DataLevelAccess.Brands.Expand(brands!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), false, true);
             }),
 
             Task.Run(async () =>
             {
-                var cities = await this.HttpService.GetAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.City.CityListDTO>>("IdentityCity?$orderby=Name");
+                var cities = await HttpClient.GetFromJsonAsync<ShiftEntity.Model.Dtos.ODataDTO<ShiftIdentity.Core.DTOs.City.CityListDTO>>("IdentityCity?$orderby=Name");
 
-                Core.ShiftIdentityActions.DataLevelAccess.Cities.Expand(cities.Data!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), true, true);
+                Core.ShiftIdentityActions.DataLevelAccess.Cities.Expand(cities!.Value.Select((x) => { return new KeyValuePair<string, string>(x.ID!, x.Name); }).ToList(), true, true);
             }),
         });
     }
@@ -98,8 +99,8 @@ public partial class ActionTree
 
         await ExpandIdentityActions();
 
-        if (ShiftIdentityDashboardBlazorOptions.DynamicTypeAuthActionExpander != null)
-            await ShiftIdentityDashboardBlazorOptions.DynamicTypeAuthActionExpander.Invoke();
+        if (ShiftIdentityDashboardBlazorOptions.Value.DynamicTypeAuthActionExpander != null)
+            await ShiftIdentityDashboardBlazorOptions.Value.DynamicTypeAuthActionExpander.Invoke();
 
         foreach (var actionTree in this.tAuth_LoggedInUser!.GetRegisteredActionTrees())
             typeAuthBuilder.AddActionTree(actionTree);

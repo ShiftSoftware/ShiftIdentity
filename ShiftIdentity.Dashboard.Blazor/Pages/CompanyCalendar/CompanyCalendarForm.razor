@@ -7,7 +7,7 @@
 
 @inherits ShiftForm<CompanyCalendarForm, CompanyCalendarDTO>
 @inject ShiftIdentityLocalizer Loc
-@inject ShiftIdentityDashboardBlazorOptions Options
+@inject IOptions<ShiftIdentityDashboardBlazorOptions> Options
 
 <ShiftEntityForm @bind-Mode="Mode"
                  @bind-Value="TheItem"
@@ -238,7 +238,7 @@
     protected override void OnInitialized()
     {
         _orderedDays = Enumerable.Range(0, 7)
-            .Select(i => ((int)Options.WeekStart + i) % 7)
+            .Select(i => ((int)Options.Value.WeekStart + i) % 7)
             .ToArray();
 
         if (InitialStartDate is not null)

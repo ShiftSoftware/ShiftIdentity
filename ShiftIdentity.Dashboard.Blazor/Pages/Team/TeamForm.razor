@@ -7,13 +7,12 @@
 @layout Shared.DefaultLayout
 
 
-
 @attribute [Route($"{Constants.IdentityRoutePrefix}/{nameof(TeamForm)}/{{Key?}}")]
 @inherits ShiftForm<TeamForm, ShiftSoftware.ShiftIdentity.Core.DTOs.Team.TeamDTO>
 @inject HttpClient Http
 @inject ODataQuery odataQuery
 @inject ShiftIdentityLocalizer Loc
-@inject ShiftIdentityDashboardBlazorOptions Options
+@inject IOptions<ShiftIdentityDashboardBlazorOptions> Options
 
 <ShiftEntityForm @bind-Mode="Mode"
                  @bind-Value="TheItem"
@@ -75,7 +74,7 @@
                                @bind-SelectedValues="TheItem.Tags"
                                T="string"
                                Label="@Loc["Tags"]">
-                @foreach (var state in Options.TeamTags)
+                @foreach (var state in Options.Value.TeamTags)
                 {
                     <MudSelectItem T="string" Value="@state">@state</MudSelectItem>
                 }

@@ -3,7 +3,7 @@
 @attribute [Route($"{Constants.IdentityRoutePrefix}/{nameof(CompanyForm)}/{{Key?}}")]
 @inherits ShiftForm<CompanyForm, ShiftSoftware.ShiftIdentity.Core.DTOs.Company.CompanyDTO>
 @inject HttpClient Http
-@inject ShiftIdentityDashboardBlazorOptions Options
+@inject IOptions<ShiftIdentityDashboardBlazorOptions> Options
 @inject ShiftIdentityLocalizer Loc
 
 @using ShiftSoftware.ShiftEntity.Model.Enums
@@ -169,12 +169,12 @@
 
     private void SetCustomFiles()
     {
-        // Only keep fields that are registred in Options
+        // Only keep fields that are registered in Options
         TheItem.CustomFields = TheItem.CustomFields?
-            .Where(kv => Options.CompanyCustomFields.ContainsKey(kv.Key))
+            .Where(kv => Options.Value.CompanyCustomFields.ContainsKey(kv.Key))
             .ToDictionary(kv => kv.Key, kv => kv.Value);
 
-        foreach (var field in this.Options.CompanyCustomFields)
+        foreach (var field in this.Options.Value.CompanyCustomFields)
         {
             if (this.TheItem.CustomFields?.ContainsKey(field.Key) ?? false)
                 this.TheItem.CustomFields[field.Key]?.Set(field.Value);

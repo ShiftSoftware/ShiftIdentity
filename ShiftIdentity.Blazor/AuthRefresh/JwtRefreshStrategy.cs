@@ -1,4 +1,5 @@
 using Microsoft.IdentityModel.JsonWebTokens;
+using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftIdentity.Blazor.Providers;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.UserManager;
@@ -65,26 +66,7 @@ public class JwtRefreshStrategy : IAuthRefreshStrategy
     }
 
     public async Task<LoginResult> LoginAsync(LoginDTO dto)
-    {
-        var response = await _identityProvider.LoginAsync(_options.BaseUrl, dto);
-
-        var token = response.Data?.Entity;
-        if (!response.IsSuccess || token is null)
-        {
-            return LoginResult.Failure(
-                response.Data?.Message?.Body ?? response.ErrorMessage,
-                response.Data?.Message?.Title);
-        }
-
-        await _store.StoreTokenAsync(token);
-
-        return new LoginResult
-        {
-            IsSuccess = true,
-            RequirePasswordChange = token.RequirePasswordChange,
-            Claims = ParseJwtClaims(token.Token),
-        };
-    }
+        => await StoreTokenResponseAsync(await _identityProvider.LoginAsync(_options.BaseUrl, dto));
 
     /// <summary>
     /// Forced-change completion. The currently stored token is the short-lived challenge
@@ -93,26 +75,7 @@ public class JwtRefreshStrategy : IAuthRefreshStrategy
     /// server, and the caller pushes the new claims to <c>ShiftAuthStateProvider</c>.
     /// </summary>
     public async Task<LoginResult> CompletePasswordChangeAsync(CompletePasswordChangeDTO dto)
-    {
-        var response = await _identityProvider.CompletePasswordChangeAsync(_options.BaseUrl, dto);
-
-        var token = response.Data?.Entity;
-        if (!response.IsSuccess || token is null)
-        {
-            return LoginResult.Failure(
-                response.Data?.Message?.Body ?? response.ErrorMessage,
-                response.Data?.Message?.Title);
-        }
-
-        await _store.StoreTokenAsync(token);
-
-        return new LoginResult
-        {
-            IsSuccess = true,
-            RequirePasswordChange = token.RequirePasswordChange,
-            Claims = ParseJwtClaims(token.Token),
-        };
-    }
+        => await StoreTokenResponseAsync(await _identityProvider.CompletePasswordChangeAsync(_options.BaseUrl, dto));
 
     /// <summary>
     /// Self-service password change (the user knows their current password). The server rolls the
@@ -121,9 +84,14 @@ public class JwtRefreshStrategy : IAuthRefreshStrategy
     /// claims to <c>ShiftAuthStateProvider</c>.
     /// </summary>
     public async Task<LoginResult> ChangePasswordAsync(ChangePasswordDTO dto)
-    {
-        var response = await _identityProvider.ChangePasswordAsync(_options.BaseUrl, dto);
+        => await StoreTokenResponseAsync(await _identityProvider.ChangePasswordAsync(_options.BaseUrl, dto));
 
+    /// <summary>
+    /// Shared tail for endpoints that return a <see cref="TokenDTO"/>: store the token
+    /// and turn the response into a <see cref="LoginResult"/>.
+    /// </summary>
+    private async Task<LoginResult> StoreTokenResponseAsync(HttpResponse<ShiftEntityResponse<TokenDTO?>?> response)
+    {
         var token = response.Data?.Entity;
         if (!response.IsSuccess || token is null)
         {

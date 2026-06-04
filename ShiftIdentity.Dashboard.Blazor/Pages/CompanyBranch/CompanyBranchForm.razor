@@ -3,7 +3,7 @@
 @attribute [Route($"{Constants.IdentityRoutePrefix}/{nameof(CompanyBranchForm)}/{{Key?}}")]
 @inherits ShiftForm<CompanyBranchForm, ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchDTO>
 @inject HttpClient Http
-@inject ShiftIdentityDashboardBlazorOptions Options
+@inject IOptions<ShiftIdentityDashboardBlazorOptions> Options
 
 @inject ODataQuery odataQuery
 
@@ -309,7 +309,7 @@
                                                                    For="@(() => line.Tag)"
                                                                    Adornment="Adornment.Start"
                                                                    AdornmentIcon="@Icons.Material.Filled.Tag">
-                                                    @foreach (var tag in this.Options.CompanyBranchPhoneTags)
+                                                    @foreach (var tag in this.Options.Value.CompanyBranchPhoneTags)
                                                     {
                                                         <MudSelectItem Value="@tag" T="string">@tag</MudSelectItem>
                                                     }
@@ -377,7 +377,7 @@
                                                                    For="@(() => line.Tag)"
                                                                    Adornment="Adornment.Start"
                                                                    AdornmentIcon="@Icons.Material.Filled.Tag">
-                                                    @foreach (var tag in this.Options.CompanyBranchEmailTags)
+                                                    @foreach (var tag in this.Options.Value.CompanyBranchEmailTags)
                                                     {
                                                         <MudSelectItem Value="@tag" T="string">@tag</MudSelectItem>
                                                     }
@@ -474,12 +474,12 @@
     }
     private void SetCustomFiles()
     {
-        // Only keep fields that are registred in Options
+        // Only keep fields that are registered in Options
         TheItem.CustomFields = TheItem.CustomFields?
-            .Where(kv => Options.CompanyBranchCustomFields.ContainsKey(kv.Key))
+            .Where(kv => Options.Value.CompanyBranchCustomFields.ContainsKey(kv.Key))
             .ToDictionary(kv => kv.Key, kv => kv.Value);
 
-        foreach (var field in this.Options.CompanyBranchCustomFields)
+        foreach (var field in this.Options.Value.CompanyBranchCustomFields)
         {
             if (this.TheItem.CustomFields?.ContainsKey(field.Key) ?? false)
                 this.TheItem.CustomFields[field.Key]?.Set(field.Value);

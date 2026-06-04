@@ -2,7 +2,7 @@
 
 @inherits LayoutBase
 @inject SettingManager SettingManager
-@inject ShiftIdentityDashboardBlazorOptions ShiftIdentityDashboardBlazorOptions
+@inject IOptions<ShiftIdentityDashboardBlazorOptions> ShiftIdentityDashboardBlazorOptions
 
 @inject HttpClient HttpClient
 @inject ISnackbar Snackbar
@@ -18,7 +18,7 @@
 
         <MudAppBar>
             <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
-            <MudLink Href="/"><MudText Style="color: #fff;">@ShiftIdentityDashboardBlazorOptions.Title</MudText></MudLink>
+            <MudLink Href="/"><MudText Style="color: #fff;">@ShiftIdentityDashboardBlazorOptions.Value.Title</MudText></MudLink>
 
             <MudSpacer />
 

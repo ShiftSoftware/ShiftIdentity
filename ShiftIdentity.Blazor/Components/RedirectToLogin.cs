@@ -23,15 +23,15 @@ public class RedirectToLogin : ComponentBase
         {
             var options = ServiceProvider.GetService<ShiftIdentityBlazorOptions>();
             var returnUrl = NavManager.ToBaseRelativePath(NavManager.Uri);
-            var queryStrings = new Dictionary<string, object?>();
-            var url = options?.UseCookieAuth == true
+            var path = options?.UseCookieAuth == true
                 ? Constants.CookieLoginPath
                 : Constants.JwtLoginPath;
 
+            var queryStrings = new Dictionary<string, object?>();
             if (!string.IsNullOrWhiteSpace(returnUrl))
                 queryStrings.Add(Constants.ReturnUrlParameter, returnUrl);
 
-            var uri = NavManager.GetUriWithQueryParameters(url, queryStrings);
+            var uri = NavManager.GetUriWithQueryParameters(path, queryStrings);
             NavManager.NavigateTo(uri, forceLoad: true);
         }
     }

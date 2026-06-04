@@ -4,18 +4,15 @@
 
 @using ShiftSoftware.ShiftEntity.Core.Extensions
 @using ShiftSoftware.ShiftIdentity.Core.DTOs
-@using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.UserManager;
+@using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.UserManager
+@using ShiftSoftware.ShiftIdentity.Blazor.AuthRefresh
 
-@inject ShiftIdentityDashboardBlazorOptions ShiftIdentityDashboardBlazorOptions
-@inject ShiftSoftware.ShiftIdentity.Blazor.AuthRefresh.JwtRefreshStrategy JwtStrategy
-@inject ShiftSoftware.ShiftIdentity.Blazor.AuthRefresh.ShiftAuthStateProvider AuthStateProvider
+@inject IOptions<ShiftIdentityDashboardBlazorOptions> ShiftIdentityDashboardBlazorOptions
+@inject JwtRefreshStrategy JwtStrategy
+@inject ShiftAuthStateProvider AuthStateProvider
 @inject MessageService msgService
 @inject NavigationManager NavManager
 @inject ShiftIdentityLocalizer Loc
-
-@*
-@inject Services.StorageService storageService
-@inject TypeAuth.Blazor.Services.TypeAuthService TypeAuth*@
 
 <MudGrid Justify="Justify.Center">
     <MudItem xs="12" sm="10" md="8" lg="6" xl="6">
@@ -24,7 +21,7 @@
             <br />
             <MudGrid Justify="Justify.Center">
                 <MudItem xs="11" sm="11" md="10" lg="8" xl=6>
-                    <MudImage Src="@ShiftIdentityDashboardBlazorOptions.LogoPath" Style="width:100%;" />
+                    <MudImage Src="@ShiftIdentityDashboardBlazorOptions.Value.LogoPath" Style="width:100%;" />
                 </MudItem>
             </MudGrid>
             <br />
@@ -62,7 +59,7 @@
     LoginDTO loginDto { get; set; } = new LoginDTO();
 
     [CascadingParameter]
-    private Task<Microsoft.AspNetCore.Components.Authorization.AuthenticationState>? authenticationStateTask { get; set; }
+    private Task<AuthenticationState>? authenticationStateTask { get; set; }
 
     [Parameter]
     [SupplyParameterFromQuery]
