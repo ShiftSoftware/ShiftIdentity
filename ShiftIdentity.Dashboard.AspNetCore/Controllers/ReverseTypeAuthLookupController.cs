@@ -126,8 +126,8 @@ public class ReverseTypeAuthLookupController : ControllerBase
 
         if (request.AnyDynamicRow)
         {
-            var (wildCard, ids) = context.GetAccessibleItems(dynamicAction, a => a == request.Access);
-            return wildCard || ids.Count > 0;
+            var accessible = context.GetAccessibleItems(dynamicAction, a => a == request.Access);
+            return accessible.WildCard || accessible.AccessibleIds.Count > 0;
         }
 
         return context.Can(action, request.Access, request.DynamicId!);
