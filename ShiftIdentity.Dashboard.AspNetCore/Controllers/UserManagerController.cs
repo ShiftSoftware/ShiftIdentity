@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using ShiftSoftware.ShiftEntity.Core.Services;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
 using ShiftSoftware.ShiftIdentity.AspNetCore;
@@ -10,12 +9,12 @@ using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
-// Aliased: the unqualified TokenService in this file is ShiftEntity.Core's (static SAS helpers).
-using IdentityTokenService = ShiftSoftware.ShiftIdentity.AspNetCore.Services.TokenService;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.UserManager;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.ShiftIdentity.Data.Repositories;
-using System.Security.Cryptography;
+// two very different classes share the same name
+using SASTokenService = ShiftSoftware.ShiftEntity.Core.Services.TokenService;
+using IdentityTokenService = ShiftSoftware.ShiftIdentity.AspNetCore.Services.TokenService;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -149,9 +148,9 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
 
             await userRepo.SaveChangesAsync();
 
-            // ChangePasswordAsync rolled the user's SecurityStamp, invalidating every refresh token
-            // issued before this call. Hand the caller a fresh token carrying the new stamp so the
-            // session that just changed the password stays alive while all others are killed.
+            // If the user opted to sign out their other sessions, ChangePasswordAsync rolled the
+            // SecurityStamp, invalidating refresh tokens issued before this call. Re-issue a token
+            // carrying the current stamp so the session that just changed the password stays alive.
             var token = tokenService.GenerateInternalJwtToken(user);
 
             return Ok(new ShiftEntityResponse<TokenDTO>(token));
@@ -198,7 +197,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
             // Generate the token and send the email verification
             var url = Url.Action(nameof(VerifyEmail), new { userId = encodedId });
             var uniqueId = $"{url}-{user.Email}";
-            var (token, expires) = TokenService.GenerateSASToken(uniqueId, encodedId, DateTime.UtcNow.AddSeconds(options.SASToken.ExpiresInSeconds), options.SASToken.Key);
+            var (token, expires) = SASTokenService.GenerateSASToken(uniqueId, encodedId, DateTime.UtcNow.AddSeconds(options.SASToken.ExpiresInSeconds), options.SASToken.Key);
 
             // Generate the full url
             string baseUrl = $"{Request.Scheme}://{Request.Host}";
@@ -229,11 +228,11 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
 
             // Verify the token
             var url = Url.Action(nameof(VerifyEmail), new { userId = userId });
-            if (!TokenService.ValidateSASToken($"{url}-{user.Email}", userId.ToString(), expires!, token!, options.SASToken.Key))
+            if (!SASTokenService.ValidateSASToken($"{url}-{user.Email}", userId.ToString(), expires!, token!, options.SASToken.Key))
                 return Ok("The operation is failed, the token may be expired or currupted, please retry the operation.");
 
             // Verify the token against the database
-            if (!TokenService.ValidateSASToken(user.VerificationSASToken ?? "", token ?? ""))
+            if (!SASTokenService.ValidateSASToken(user.VerificationSASToken ?? "", token ?? ""))
                 return Ok("The operation is failed, the token may be expired or currupted, please retry the operation.");
 
             // Check if the email is already verified
@@ -278,7 +277,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
             // Generate the token and send the email verification
             var url = Url.Action(nameof(ResetPassword), new { userId = encodedId });
             var uniqueId = $"{url}-{user.Email}";
-            var (token, expires) = TokenService.GenerateSASToken(uniqueId, encodedId, 
+            var (token, expires) = SASTokenService.GenerateSASToken(uniqueId, encodedId, 
                 DateTime.UtcNow.AddSeconds(options.SASToken.ExpiresInSeconds), options.SASToken.Key);
 
             // Generate the full url
@@ -317,7 +316,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
 
             // Verify the token
             var url = Url.Action(nameof(ResetPassword), new { userId = userId });
-            if (!TokenService.ValidateSASToken($"{url}-{user.Email}", userId, expires!, token!, options.SASToken.Key))
+            if (!SASTokenService.ValidateSASToken($"{url}-{user.Email}", userId, expires!, token!, options.SASToken.Key))
                 return BadRequest(new ShiftEntityResponse<UserDataDTO>
                 {
                     Message = new Message
@@ -327,7 +326,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
                 });
 
             // Verify the token against the database
-            if (!TokenService.ValidateSASToken(user.VerificationSASToken ?? "", token ?? ""))
+            if (!SASTokenService.ValidateSASToken(user.VerificationSASToken ?? "", token ?? ""))
                 return BadRequest(new ShiftEntityResponse<UserDataDTO>
                 {
                     Message = new Message

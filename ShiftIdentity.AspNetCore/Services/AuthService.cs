@@ -38,13 +38,13 @@ public class AuthService
 
         if (!HashService.VerifyPassword(loginDto.Password, user.Salt, user.PasswordHash))
         {
-            //If password is incorrect update logigattempts
+            //If password is incorrect update LoginAttempts
             user.LoginAttempts++;
 
             if (user.LoginAttempts >= shiftIdentityConfigurations.Security.LoginAttemptsForLockDown)
             {
-                //If user exceeds login attemps for lockdown
-                //Reset loginattemps and set lockdownuntil
+                //If user exceeds login attempts for lockdown
+                //Reset LoginAttempts and set LockDownUntil
                 user.LoginAttempts = 0;
                 user.LockDownUntil = DateTime.UtcNow.AddMinutes(shiftIdentityConfigurations.Security.LockDownInMinutes);
             }
@@ -54,7 +54,7 @@ public class AuthService
             return new LoginResultModel(LoginResultEnum.PasswordIncorrect, Loc["Username or password is incorrect"]);
         }
 
-        //If user deactive
+        //If user is not active
         if (!user.IsActive)
             return new LoginResultModel(LoginResultEnum.UserDeactive, Loc["The user is deactivated"]);
 
@@ -63,22 +63,21 @@ public class AuthService
         if (lockdownUntil > DateTime.UtcNow)
             return new LoginResultModel(LoginResultEnum.UserLockDown, Loc["User is lockdown for {0} minutes", shiftIdentityConfigurations.Security.LockDownInMinutes]);
 
-        //If user credentials are correct, then reset loginattempt and lockdownuntil
+        //If user credentials are correct, then reset LoginAttempts and LockDownUntil
         user.LoginAttempts = 0;
         user.LockDownUntil = null;
 
-        //Update lastseen
-        if(user.UserLog is null)
+        //Update LastSeen
+        if (user.UserLog is null)
             user.UserLog = new Core.Entities.UserLog { LastSeen = DateTimeOffset.UtcNow };
         else
             user.UserLog.LastSeen = DateTimeOffset.UtcNow;
 
         await userRepo.SaveChangesAsync();
 
-        // When the user must change their password before being fully authenticated, hand them
-        // a short-lived challenge token. It carries the RequirePasswordChange claim and only
-        // unlocks /Auth/CompletePasswordChange (see RequirePasswordChangeFilter); no refresh
-        // token, so the only way out is to complete the change or log in again.
+        // When a password change is required, hand out a short-lived challenge token: it carries
+        // the RequirePasswordChange claim and, via RequirePasswordChangeFilter, only unlocks
+        // /Auth/CompletePasswordChange. No refresh token, so the user must complete the change.
         var mustChange = shiftIdentityConfigurations.Security.RequirePasswordChange && user.RequireChangePassword;
         var token = mustChange
             ? tokenService.GenerateChallengeToken(user)
@@ -141,7 +140,7 @@ public class AuthService
 
             var token = tokenService.GenerateToken(user);
 
-            //Update lastseen
+            //Update LastSeen
             if (user.UserLog is null)
                 user.UserLog = new Core.Entities.UserLog { LastSeen = DateTimeOffset.UtcNow };
             else

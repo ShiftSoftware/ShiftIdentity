@@ -15,11 +15,10 @@ public class ChangePasswordDTO
     public string CurrentPassword { get; set; } = default!;
 
     /// <summary>
-    /// When <c>true</c> (default), the user's security stamp is rolled so every <em>other</em>
-    /// session is signed out; the session performing the change stays alive because the caller
-    /// re-issues a token carrying the new stamp. Set <c>false</c> to leave the user's other
-    /// devices logged in. Only honored for self-service changes — admin resets and forced
-    /// (challenge) changes always roll the stamp.
+    /// When <c>true</c> (default), rolls the security stamp so every <em>other</em> session is
+    /// signed out (the changing session survives via a re-issued token). Set <c>false</c> to keep
+    /// other devices logged in. Only honored for self-service changes; admin/forced resets always
+    /// roll the stamp.
     /// </summary>
     public bool SignOutOtherSessions { get; set; } = true;
 }

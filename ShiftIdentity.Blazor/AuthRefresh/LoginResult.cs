@@ -3,9 +3,10 @@ using ShiftSoftware.ShiftIdentity.Core.DTOs;
 namespace ShiftSoftware.ShiftIdentity.Blazor.AuthRefresh;
 
 /// <summary>
-/// Outcome of <see cref="JwtRefreshStrategy.LoginAsync"/>. Success carries the claims used to
-/// seed the in-memory auth state and a <see cref="RequirePasswordChange"/> hint for the UI;
-/// failure carries the server-provided error message + title for display.
+/// Outcome of the JWT login and password-change operations on <see cref="JwtRefreshStrategy"/>.
+/// Success carries the claims used to seed the in-memory auth state and a
+/// <see cref="RequirePasswordChange"/> hint for the UI; failure carries the server-provided
+/// error message + title for display.
 /// </summary>
 public class LoginResult
 {

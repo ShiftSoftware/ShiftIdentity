@@ -9,17 +9,15 @@ namespace ShiftSoftware.ShiftIdentity.Blazor.AuthRefresh;
 /// <summary>
 /// Standalone-WASM (JWT in localStorage) implementation of <see cref="IAuthRefreshStrategy"/>.
 /// <para>
-/// Interface members (used by the shared polling loop): <see cref="GetInitialClaims"/> reads
-/// claims from the stored JWT; <see cref="RefreshAsync"/> POSTs the stored refresh token to
-/// <c>/Auth/Refresh</c> and stores the rotated JWT.
+/// Interface members (used by the shared loop): <see cref="GetInitialClaims"/> reads claims from
+/// the stored JWT; <see cref="RefreshAsync"/> POSTs the stored refresh token to <c>/Auth/Refresh</c>
+/// and stores the rotated JWT.
 /// </para>
 /// <para>
-/// JWT-only extras (called directly by JWT-mode UI — Dashboard <c>LoginForm</c> / <c>UserAvatar</c>):
-/// <see cref="LoginAsync"/> POSTs credentials to <c>/Auth/Login</c> and stores the returned
-/// <see cref="TokenDTO"/>; <see cref="ClearStoredTokenAsync"/> removes the stored token on logout.
-/// These are not on <see cref="IAuthRefreshStrategy"/> because the cookie strategy has no
-/// equivalent operation on the WASM side (cookie login + logout are form-post flows handled
-/// server-side).
+/// JWT-only extras (called directly by JWT-mode UI): <see cref="LoginAsync"/> POSTs credentials to
+/// <c>/Auth/Login</c> and stores the <see cref="TokenDTO"/>; <see cref="ClearStoredTokenAsync"/>
+/// clears it on logout. Not on the interface — the cookie strategy has no WASM-side equivalent
+/// (its login/logout are server-side form posts).
 /// </para>
 /// </summary>
 public class JwtRefreshStrategy : IAuthRefreshStrategy

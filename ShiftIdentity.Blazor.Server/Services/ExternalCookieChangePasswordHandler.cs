@@ -19,15 +19,14 @@ namespace ShiftSoftware.ShiftIdentity.Blazor.Server.Services;
 ///
 /// <list type="number">
 ///   <item>POST <c>/Auth/Refresh</c> with the cookie's stored refresh token → fresh JWT for Bearer auth.</item>
-///   <item>PUT <c>/api/UserManager/ChangePassword</c> with that JWT → fresh token carrying the rolled
-///         security stamp and <c>RequirePasswordChange=false</c>.</item>
+///   <item>PUT <c>/api/UserManager/ChangePassword</c> with that JWT → fresh token with
+///         <c>RequirePasswordChange=false</c>.</item>
 /// </list>
 /// The returned JWT is signature-validated and bound to a new cookie via
-/// <see cref="CookieAuthHelpers.SignInWithToken"/>. A second refresh is deliberately NOT issued:
-/// changing the password rolls the user's security stamp, so the refresh token minted in step 1
-/// (under the old stamp) is now rejected — the change-password response is the only token that
-/// carries the new stamp. Credentials never traverse the WASM boundary; the user's password
-/// lives only in the form post that hits this handler.
+/// <see cref="CookieAuthHelpers.SignInWithToken"/>. No second refresh is issued — the change
+/// response is the authoritative new token (and if the user signed out other sessions, the
+/// rolled security stamp has already invalidated step 1's refresh token). Credentials never
+/// cross the WASM boundary.
 /// </summary>
 internal sealed class ExternalCookieChangePasswordHandler : ICookieChangePasswordHandler
 {
@@ -68,7 +67,8 @@ internal sealed class ExternalCookieChangePasswordHandler : ICookieChangePasswor
             return new CookieChangePasswordResult(false, "Session is invalid; please log in again.");
 
         // 2. Call ChangePassword on the external server using the Bearer JWT. The response carries
-        //    a fresh token minted after the security stamp rolled (RequirePasswordChange=false).
+        //    a fresh token with RequirePasswordChange=false (and a rolled security stamp if the
+        //    user opted to sign out their other sessions).
         var client = _httpClientFactory.CreateClient("ShiftIdentityExternal");
         var changeRequest = new HttpRequestMessage(HttpMethod.Put, client.BaseAddress!.ToString().AddUrlPath("UserManager/ChangePassword"))
         {
@@ -92,9 +92,10 @@ internal sealed class ExternalCookieChangePasswordHandler : ICookieChangePasswor
             return new CookieChangePasswordResult(false, errorMessage ?? "Password change failed");
         }
 
-        // 3. Bind the returned token to a new cookie. Do NOT refresh again: the stamp has rolled,
-        //    so preToken.RefreshToken (minted in step 1) is now invalid — this response is the only
-        //    token carrying the new stamp. Validate its signature before trusting it.
+        // 3. Bind the returned token to a new cookie. Do NOT refresh again — this change response
+        //    is the authoritative token to bind (and if other sessions were signed out, the rolled
+        //    stamp has already invalidated preToken.RefreshToken from step 1). Validate its
+        //    signature before trusting it.
         var tokenResult = await changeResponse.Content.ReadFromJsonAsync<ShiftEntityResponse<TokenDTO>>();
         if (tokenResult?.Entity is null)
             return new CookieChangePasswordResult(false, "Invalid response from identity server");

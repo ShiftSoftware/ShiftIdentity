@@ -1,14 +1,29 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftIdentity.Data;
 
-namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Extentsions;
-
-public static class ShiftEntityOptionsExtensions
+namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Extentsions
 {
-    public static ShiftEntityOptions AddShiftIdentityAutoMapper(this ShiftEntityOptions shiftEntityOptions)
+    public static class ShiftEntityOptionsExtensions
     {
-        shiftEntityOptions.AddAutoMapper(typeof(Marker).Assembly);
+        [Obsolete("This method is deprecated. Please use AddShiftIdentityAutoMapper with correct namespace.")]
+        public static ShiftEntityOptions AddShiftIdentityAutoMapper(this ShiftEntityOptions shiftEntityOptions)
+        {
+            shiftEntityOptions.AddAutoMapper(typeof(Marker).Assembly);
 
-        return shiftEntityOptions;
+            return shiftEntityOptions;
+        }
+    }
+}
+
+namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Extensions
+{
+    public static class ShiftEntityOptionsExtensions
+    {
+        public static ShiftEntityOptions AddShiftIdentityAutoMapper(this ShiftEntityOptions shiftEntityOptions)
+        {
+            shiftEntityOptions.AddAutoMapper(typeof(Marker).Assembly);
+
+            return shiftEntityOptions;
+        }
     }
 }

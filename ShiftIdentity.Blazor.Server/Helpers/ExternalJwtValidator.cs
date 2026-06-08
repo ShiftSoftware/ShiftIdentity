@@ -7,8 +7,7 @@ namespace ShiftSoftware.ShiftIdentity.Blazor.Server.Helpers;
 
 /// <summary>
 /// Validates JWTs received from an external identity server before their claims are bound to
-/// the local cookie. Without this, any host that can return a TokenDTO-shaped JSON body at the
-/// configured external base URL could mint arbitrary claims (any role, any AccessTree, etc.).
+/// the local cookie, so a host returning a TokenDTO-shaped body can't mint arbitrary claims.
 /// Pinned to RS256 to close algorithm-confusion attacks.
 /// </summary>
 internal sealed class ExternalJwtValidator

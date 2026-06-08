@@ -48,11 +48,9 @@ internal static class CookieAuthHelpers
 
     internal static List<Claim> BuildClaimsFromToken(TokenDTO token)
     {
-        // Modern JsonWebTokenHandler matches what the client uses in JwtRefreshStrategy —
-        // one JWT parser project-wide. Both ReadJwtToken and ReadToken(...) return claims
-        // with their raw JWT names (no inbound mapping); the consolidation is for hygiene
-        // and to avoid the legacy handler's static InboundClaimTypeMap foot-gun if anyone
-        // later swaps ReadJwtToken for ValidateToken.
+        // Modern JsonWebTokenHandler — one JWT parser project-wide (matches JwtRefreshStrategy).
+        // ReadToken returns claims with raw JWT names (no inbound mapping); avoids the legacy
+        // handler's static InboundClaimTypeMap foot-gun if anyone later switches to ValidateToken.
         var jwt = new JsonWebTokenHandler().ReadToken(token.Token) as JsonWebToken
             ?? throw new InvalidOperationException("Token is not a JWT.");
 

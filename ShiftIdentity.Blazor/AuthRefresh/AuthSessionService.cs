@@ -5,10 +5,9 @@ namespace ShiftSoftware.ShiftIdentity.Blazor.AuthRefresh;
 
 /// <summary>
 /// Unified WASM auth refresh loop for JWT (standalone) and cookie (Blazor Web App). Owns the
-/// polling timer, the tab-visibility skip, and the in-memory <see cref="ShiftAuthStateProvider"/>
-/// mutation. Per-mode "where do the current claims come from" is provided by
-/// <see cref="IAuthRefreshStrategy"/>; login and logout side effects are mode-specific and
-/// handled at the call sites (JWT: <see cref="JwtRefreshStrategy"/> + <see cref="IIdentityStore"/>;
+/// polling timer, tab-visibility skip, and in-memory <see cref="ShiftAuthStateProvider"/> mutation.
+/// The claims source per mode comes from <see cref="IAuthRefreshStrategy"/>; login/logout side
+/// effects are mode-specific and live at the call sites (JWT: <see cref="JwtRefreshStrategy"/>;
 /// cookie: server-side form posts).
 ///
 /// Each tick:
@@ -64,7 +63,7 @@ public class AuthSessionService : IAsyncDisposable
     /// <summary>
     /// Stop the polling loop and clear the in-memory <see cref="ShiftAuthStateProvider"/>.
     /// Called from the logout UI (JWT mode, via <c>UserAvatar.Logout</c>) and from
-    /// <see cref="Handlers.Auth401Handler"/> on a 401 from an authenticated request.
+    /// <see cref="Auth401Handler"/> on a 401 from an authenticated request.
     /// <para>
     /// Mode-specific cleanup (clearing JWT in localStorage, clearing the cookie server-side)
     /// is the caller's responsibility — this method only manages the loop and the in-memory

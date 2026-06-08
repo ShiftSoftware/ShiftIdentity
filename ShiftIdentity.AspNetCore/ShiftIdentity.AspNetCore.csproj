@@ -22,7 +22,6 @@
 
 	<ItemGroup>
 		<Compile Remove="AppModel.cs" />
-		<Compile Remove="Controllers\MVC\AuthController.cs" />
 		<Compile Remove="Extensions\ControllerBaseExtensions.cs" />
 	</ItemGroup>
 
@@ -36,7 +35,6 @@
 
 	<ItemGroup>
 		<None Include="Images\icon.png" Pack="true" PackagePath="\" />
-		<Folder Include="Controllers\MVC\" />
 		<Folder Include="Images\" />
 	</ItemGroup>
 

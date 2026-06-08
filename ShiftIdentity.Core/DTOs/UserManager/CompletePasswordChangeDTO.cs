@@ -5,10 +5,9 @@ using System.Linq;
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.UserManager;
 
 /// <summary>
-/// Payload for finishing the forced-password-change flow. Used after a successful login that
-/// returned a challenge token (<see cref="ShiftIdentityClaims.RequirePasswordChange"/>=true).
-/// No <c>CurrentPassword</c> — the user just authenticated, so re-asking would be redundant
-/// and the challenge token already proves they hold the credentials.
+/// Payload for finishing the forced-password-change flow, after a login that returned a challenge
+/// token (<see cref="ShiftIdentityClaims.RequirePasswordChange"/>=true). No <c>CurrentPassword</c>:
+/// the challenge token already proves the user just authenticated.
 /// </summary>
 public class CompletePasswordChangeDTO
 {

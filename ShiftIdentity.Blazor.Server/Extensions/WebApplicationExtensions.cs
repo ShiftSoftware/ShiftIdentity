@@ -9,7 +9,7 @@ public static class WebApplicationExtensions
     /// <summary>
     /// Maps the cookie auth endpoints: <c>GET /api/identity/me</c> (authenticated, used by the
     /// WASM refresh poll) and <c>POST /api/identity/logout</c> (called via HTML form post per
-    /// the form-post contract — see the auth migration guide).
+    /// the form-post contract).
     /// </summary>
     public static WebApplication MapShiftIdentityCookieEndpoints(this WebApplication app)
     {

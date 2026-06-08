@@ -12,11 +12,9 @@ internal static class CookieAuthEndpoints
 {
     internal static async Task<IResult> Me(HttpContext httpContext)
     {
-        // [Authorize] gates access. By the time we get here, the cookie middleware has run
-        // OnValidatePrincipal — which means a near-expiry JWT will already have been refreshed
-        // (with fresh claims from the identity server) and the new cookie issued. So
-        // HttpContext.User holds the freshest claims this request can produce, and we just
-        // project them into the response.
+        // By the time this authorized endpoint runs, the cookie middleware's OnValidatePrincipal
+        // has already refreshed any near-expiry JWT, so HttpContext.User holds the freshest claims
+        // this request can produce — we just project them into the response.
         var authResult = await httpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
         var refreshAfter = 60;
@@ -33,10 +31,9 @@ internal static class CookieAuthEndpoints
 
     internal static async Task<IResult> Logout(HttpContext httpContext, IAntiforgery antiforgery)
     {
-        // Invoked exclusively via HTML form post (see UserAvatar, ChangePasswordForm). The
-        // form posts <AntiforgeryToken /> — validate it so a cross-origin POST can't force-
-        // logout the user. SameSite=Lax already blocks most top-level POSTs, this is
-        // defense-in-depth and matches the form-post contract in the migration doc.
+        // Invoked exclusively via HTML form post (see UserAvatar, ChangePasswordForm), which
+        // posts <AntiforgeryToken />. Validate it so a cross-origin POST can't force-logout the
+        // user — defense-in-depth on top of SameSite=Lax.
         try
         {
             await antiforgery.ValidateRequestAsync(httpContext);

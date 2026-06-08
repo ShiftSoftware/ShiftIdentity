@@ -32,7 +32,7 @@ public static class ServiceCollectionExtensions
         configure(options);
 
         services.AddSingleton(options);
-        services.AddSingleton(new ShiftIdentity.Blazor.ShiftIdentityBlazorOptions(baseUrl, frontEndBaseUrl)
+        services.AddSingleton(new ShiftIdentityBlazorOptions(baseUrl, frontEndBaseUrl)
         {
             UseCookieAuth = true,
             HostingType = hostingType,
@@ -82,10 +82,9 @@ public static class ServiceCollectionExtensions
                 };
                 cookieOptions.Events.OnValidatePrincipal = async context =>
                 {
-                    // Missing or malformed token_expires_at is treated as "refresh now" rather
-                    // than silently skipped — otherwise a cookie issued by an older app version
-                    // (no expiry stamp) would carry permanently stale claims until the outer
-                    // cookie expired. Normal cookies always have it set (CookieAuthHelpers.cs).
+                    // Missing/malformed token_expires_at means "refresh now", not "skip" — else a
+                    // cookie from an older app version (no expiry stamp) would carry stale claims
+                    // until the outer cookie expired. Normal cookies always set it (CookieAuthHelpers.cs).
                     var expiresAt = context.Properties.GetString("token_expires_at");
                     var needsRefresh = !(expiresAt != null
                         && DateTimeOffset.TryParse(expiresAt, out var expiresAtDate)

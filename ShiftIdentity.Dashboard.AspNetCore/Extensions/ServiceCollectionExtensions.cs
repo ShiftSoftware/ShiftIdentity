@@ -14,12 +14,6 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    [Obsolete("Use AddShiftIdentityDashboardApi instead. This method is kept for backward compatibility and will be removed in future versions.")]
-    public static IServiceCollection AddShiftIdentityDashboard<TDbContext>(this IServiceCollection services, ShiftIdentityConfiguration shiftIdentityConfiguration) where TDbContext : ShiftIdentityDbContext
-    {
-        return services.AddShiftIdentityDashboardApi<TDbContext>(shiftIdentityConfiguration);
-    }
-
     public static IServiceCollection AddShiftIdentityDashboardApi<TDbContext>(this IServiceCollection services, ShiftIdentityConfiguration shiftIdentityConfiguration) where TDbContext : ShiftIdentityDbContext
     {
         services.RegisterIShiftEntityFind();
@@ -60,12 +54,12 @@ public static class ServiceCollectionExtensions
     {
         Assembly repositoryAssembly = typeof(Marker).Assembly; // Adjust this as needed
 
-        // Find all types in the assembly that implement IRepository<>
+        // Find all types in the assembly that implement IShiftEntityFind<>
         var repositoryTypes = repositoryAssembly.GetTypes()
             .Where(t => t.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IShiftEntityFind<>)) &&
                 !t.IsInterface);
 
-        // Register each IRepository<> implementation with its corresponding interface
+        // Register each IShiftEntityFind<> implementation with its corresponding interface
         foreach (var repositoryType in repositoryTypes)
         {
             var interfaceType = repositoryType.GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IShiftEntityFind<>));
@@ -86,7 +80,7 @@ public static class ServiceCollectionExtensions
             .Where(t => t.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IShiftEntityPrepareForReplicationAsync<>)) &&
                 !t.IsInterface);
 
-        // Register each IRepository<> implementation with its corresponding interface
+        // Register each IShiftEntityPrepareForReplicationAsync<> implementation with its corresponding interface
         foreach (var repositoryType in repositoryTypes)
         {
             var interfaceType = repositoryType.GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IShiftEntityPrepareForReplicationAsync<>));

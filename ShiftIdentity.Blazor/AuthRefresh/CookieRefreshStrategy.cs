@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Components;
-using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 
 namespace ShiftSoftware.ShiftIdentity.Blazor.AuthRefresh;
@@ -9,10 +8,8 @@ namespace ShiftSoftware.ShiftIdentity.Blazor.AuthRefresh;
 /// <summary>
 /// Blazor-Web-App (HttpOnly auth cookie) implementation of <see cref="IAuthRefreshStrategy"/>.
 /// Login and logout are not part of this strategy: cookie-mutating operations must originate
-/// from a browser HTML form post to land in the user's cookie jar in any render mode
-/// (form-post contract). Login is handled by the static-SSR <c>LoginForm</c> page in
-/// <c>ShiftIdentity.Blazor.Server</c>; logout is a hidden form post to
-/// <c>POST /api/identity/logout</c> from <c>UserAvatar</c>.
+/// from a browser HTML form post to land in the user's cookie jar (form-post contract) —
+/// login via the static-SSR <c>LoginForm</c> page, logout via <c>POST /api/identity/logout</c>.
 /// </summary>
 public class CookieRefreshStrategy : IAuthRefreshStrategy
 {

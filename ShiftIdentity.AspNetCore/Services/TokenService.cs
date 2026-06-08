@@ -35,11 +35,10 @@ public class TokenService
     }
 
     /// <summary>
-    /// Short-lived token issued by login when the user must change their password before being
-    /// fully authenticated. Carries only the minimum needed to identify the user to the
-    /// <c>CompletePasswordChange</c> endpoint; no refresh token, no <c>AccessTree</c>, no role
-    /// claims. The <see cref="Filters.RequirePasswordChangeFilter"/> ensures other endpoints
-    /// reject it.
+    /// Short-lived token issued at login when the user must change their password first. Carries
+    /// only enough to identify the user to <c>CompletePasswordChange</c> — no refresh token, no
+    /// <c>AccessTree</c>, no role claims, and <see cref="Filters.RequirePasswordChangeFilter"/>
+    /// makes other endpoints reject it.
     /// </summary>
     public TokenDTO GenerateChallengeToken(User user)
     {
@@ -120,6 +119,10 @@ public class TokenService
 
     public TokenDTO GenerateToken(User user)
     {
+        // Safety net: never mint a full session token for a user who still owes a password change.
+        if (shiftIdentityConfiguration.Security.RequirePasswordChange && user.RequireChangePassword)
+            throw new InvalidOperationException("Cannot issue a session token while RequireChangePassword is set.");
+
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, ShiftEntityHashIdService.Encode<Core.DTOs.User.UserDTO>(user.ID)),
@@ -149,11 +152,9 @@ public class TokenService
         if (user.Phone != null)
             claims.Add(new Claim(ClaimTypes.MobilePhone, user.Phone));
 
-        //Store access tree per user
         if (!string.IsNullOrWhiteSpace(user.AccessTree))
             claims.Add(new Claim(TypeAuthClaimTypes.AccessTree, user.AccessTree));
 
-        //Store access-trees in claim
         if (user.AccessTrees?.Count() > 0)
             foreach (var accessTree in user.AccessTrees)
                 claims.Add(new Claim(TypeAuthClaimTypes.AccessTree, accessTree.AccessTree.Tree));

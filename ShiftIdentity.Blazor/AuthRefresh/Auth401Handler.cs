@@ -5,18 +5,13 @@ using ShiftSoftware.ShiftIdentity.Core;
 namespace ShiftSoftware.ShiftIdentity.Blazor.AuthRefresh;
 
 /// <summary>
-/// WASM <see cref="HttpClient"/> handler that watches for 401 on authenticated calls and
-/// drives the user back to anonymous via <see cref="AuthSessionService.OnLogoutAsync"/>.
-/// Works for both JWT (refresh-token expired / revoked) and cookie (cookie expired / revoked)
-/// auth — the cookie path's <c>NoOpIdentityStore</c> makes the token-store clear a no-op,
-/// so the same handler covers both modes.
-///
-/// Skipped for unauthenticated endpoints (login, sign-in-with-token, logout) so a failed
-/// login attempt does not trigger a logout cycle.
-///
-/// Resolves <see cref="AuthSessionService"/> lazily through <see cref="IServiceProvider"/>:
-/// taking it as a constructor parameter would form a DI cycle with the
-/// <see cref="HttpClient"/> the refresh service itself uses.
+/// WASM <see cref="HttpClient"/> handler that watches for 401 on authenticated calls and drives
+/// the user back to anonymous via <see cref="AuthSessionService.OnLogoutAsync"/>. Covers both JWT
+/// and cookie auth (the cookie path's <c>NoOpIdentityStore</c> makes the token-store clear a no-op).
+/// Skipped for unauthenticated endpoints (login, sign-in-with-token, logout) so a failed login
+/// doesn't trigger a logout cycle. Resolves <see cref="AuthSessionService"/> lazily via
+/// <see cref="IServiceProvider"/> — a constructor dependency would form a DI cycle with the
+/// <see cref="HttpClient"/> the refresh service uses.
 /// </summary>
 public class Auth401Handler : DelegatingHandler
 {

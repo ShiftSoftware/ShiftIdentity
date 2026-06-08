@@ -44,17 +44,14 @@ public class User : ShiftEntity<User>,
     public string? VerificationSASToken { get; set; }
 
     /// <summary>
-    /// Versions the user's issued refresh tokens. Every refresh token embeds the stamp that was
-    /// current when it was minted (see <c>TokenService.GenerateRefreshToken</c>), and
-    /// <c>AuthService.RefreshAsync</c> rejects any refresh whose stamp no longer matches.
-    /// Calling <see cref="RegenerateSecurityStamp"/> therefore invalidates every outstanding
-    /// session for this user — this is what makes a password change (or an explicit "log out
-    /// everywhere") kill stolen/lingering refresh tokens, which are otherwise non-revocable.
+    /// Versions the user's refresh tokens: each embeds the stamp current at mint time and
+    /// <c>AuthService.RefreshAsync</c> rejects any whose stamp no longer matches. So
+    /// <see cref="RegenerateSecurityStamp"/> invalidates every outstanding session — what lets a
+    /// password change / "log out everywhere" kill otherwise non-revocable refresh tokens.
     /// <para>
-    /// Default is <see cref="Guid.Empty"/> (never randomized in the constructor): a brand-new
-    /// stamp per <c>new User()</c> would break stateless repositories that reconstruct the same
-    /// logical user on each call (e.g. <c>FakeUserRepository</c>). Empty is a valid, stable
-    /// baseline because the comparison is per-user — uniqueness across users is irrelevant.
+    /// Defaults to <see cref="Guid.Empty"/> (not randomized in the ctor): a fresh stamp per
+    /// <c>new User()</c> would break stateless repositories that rebuild the same user each call
+    /// (e.g. <c>FakeUserRepository</c>). Empty is a stable baseline — the check is per-user.
     /// </para>
     /// </summary>
     public Guid SecurityStamp { get; set; }
