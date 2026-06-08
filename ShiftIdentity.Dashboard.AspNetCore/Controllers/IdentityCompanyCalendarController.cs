@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using ShiftSoftware.ShiftEntity.Model.HashIds;
+using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Web;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Brand;
@@ -20,14 +20,17 @@ public class IdentityCompanyCalendarController : ShiftEntitySecureControllerAsyn
 {
     private readonly ShiftIdentityDbContext _db;
     private readonly CalendarService _calendarService;
+    private readonly IHashIdService _hashIdService;
 
     public IdentityCompanyCalendarController(
         ShiftIdentityDbContext db,
-        CalendarService calendarService)
+        CalendarService calendarService,
+        IHashIdService hashIdService)
         : base(ShiftIdentityActions.CompanyCalendars)
     {
         _db = db;
         _calendarService = calendarService;
+        _hashIdService = hashIdService;
     }
 
     [HttpPost("GetCalendarEvents")]
@@ -43,24 +46,24 @@ public class IdentityCompanyCalendarController : ShiftEntitySecureControllerAsyn
         return Ok(events);
     }
 
-    private static void DecodeFilterHashIds(CalendarFilterDTO filter)
+    private void DecodeFilterHashIds(CalendarFilterDTO filter)
     {
         if (!string.IsNullOrEmpty(filter.CompanyHashId))
-            filter.CompanyId = ShiftEntityHashIdService.Decode<CompanyListDTO>(filter.CompanyHashId);
+            filter.CompanyId = _hashIdService.Decode<CompanyListDTO>(filter.CompanyHashId);
 
         if (filter.ViewBranchHashIds is { Count: > 0 })
             filter.ViewBranchIds = filter.ViewBranchHashIds
-                .Select(ShiftEntityHashIdService.Decode<CompanyBranchListDTO>)
+                .Select(_hashIdService.Decode<CompanyBranchListDTO>)
                 .ToList();
 
         if (filter.ViewDepartmentHashIds is { Count: > 0 })
             filter.ViewDepartmentIds = filter.ViewDepartmentHashIds
-                .Select(ShiftEntityHashIdService.Decode<DepartmentListDTO>)
+                .Select(_hashIdService.Decode<DepartmentListDTO>)
                 .ToList();
 
         if (filter.ViewBrandHashIds is { Count: > 0 })
             filter.ViewBrandIds = filter.ViewBrandHashIds
-                .Select(ShiftEntityHashIdService.Decode<BrandListDTO>)
+                .Select(_hashIdService.Decode<BrandListDTO>)
                 .ToList();
     }
 

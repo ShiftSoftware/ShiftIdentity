@@ -28,8 +28,6 @@ public class CompanyCalendarDTO : ShiftEntityViewAndUpsertDTO
     [ShiftSoftware.ShiftEntity.Model.HashIds.CompanyHashIdConverter]
     public ShiftEntitySelectDTO? Company { get; set; }
 
-    public DateTime? LastReplicationDate { get; set; }
-
     [ShiftSoftware.ShiftEntity.Model.HashIds.CompanyBranchHashIdConverter]
     public List<ShiftEntitySelectDTO> Branches { get; set; } = [];
 

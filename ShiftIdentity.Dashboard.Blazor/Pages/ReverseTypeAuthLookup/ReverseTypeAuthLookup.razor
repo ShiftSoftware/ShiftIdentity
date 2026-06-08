@@ -1,0 +1,217 @@
+@attribute [Authorize]
+@layout Shared.DefaultLayout
+
+@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(ReverseTypeAuthLookup)}")]
+
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.ReverseTypeAuthLookup
+@using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Shared.ActionTree
+@using ShiftSoftware.ShiftEntity.Model
+@using Microsoft.JSInterop
+@using System.Text
+@using System.Text.Json
+
+@inject Services.HttpService HttpService
+@inject ShiftIdentityLocalizer Loc
+@inject MessageService MessageService
+@inject IJSRuntime JS
+
+<style>
+    .reverse-lookup-table td,
+    .reverse-lookup-table th {
+        white-space: nowrap;
+    }
+</style>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudText Typo="Typo.h5">@Loc["Reverse TypeAuth Lookup"]</MudText>
+        <MudText Typo="Typo.body2" Class="mt-2">
+            @Loc["Click an access level on any action below to list all active users who have that access."]
+        </MudText>
+    </MudPaper>
+
+    <ActionTree Tree="@emptyTree" PickerMode="true" OnActionPicked="OnActionPicked" />
+
+</MudContainer>
+
+<MudDialog @bind-Visible="resultsOpen" Options="dialogOptions">
+    <TitleContent>
+        @if (lastResult is not null)
+        {
+            <MudText Typo="Typo.h6">
+                @lastDisplayName
+            </MudText>
+            <MudText Typo="Typo.caption">
+                @Loc["Matching users"]: @lastResult.TotalMatchingUsers
+                @if (lastResult.SuperAdminCount > 0)
+                {
+                    <span> · @Loc["includes {0} super-admin(s)", lastResult.SuperAdminCount]</span>
+                }
+            </MudText>
+        }
+    </TitleContent>
+    <DialogContent>
+        @if (loading)
+        {
+            <MudProgressCircular Indeterminate="true" />
+        }
+        else if (lastResult is null || lastResult.Users.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">@Loc["No users match this access."]</MudAlert>
+        }
+        else
+        {
+            <MudTable Items="lastResult.Users" Class="reverse-lookup-table" Dense="true" Hover="true" Striped="true">
+                <HeaderContent>
+                    <MudTh>@Loc["ID"]</MudTh>
+                    <MudTh>@Loc["Raw ID"]</MudTh>
+                    <MudTh>@Loc["Full Name"]</MudTh>
+                    <MudTh>@Loc["Username"]</MudTh>
+                    <MudTh>@Loc["Email"]</MudTh>
+                    <MudTh>@Loc["Branch"]</MudTh>
+                    <MudTh>@Loc["Access Trees"]</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd><code>@context.ID</code></MudTd>
+                    <MudTd><code>@context.RawID</code></MudTd>
+                    <MudTd>@context.FullName</MudTd>
+                    <MudTd>@context.Username</MudTd>
+                    <MudTd>@context.Email</MudTd>
+                    <MudTd>@context.CompanyBranch</MudTd>
+                    <MudTd>
+                        @if (context.IsSuperAdmin)
+                        {
+                            <MudChip T="string" Color="Color.Error" Size="Size.Small">@Loc["Super Admin"]</MudChip>
+                        }
+                        @foreach (var tree in context.AccessTrees)
+                        {
+                            <MudChip T="string" Color="Color.Primary" Size="Size.Small">@tree</MudChip>
+                        }
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </DialogContent>
+    <DialogActions>
+        @if (lastResult?.Users.Count > 0)
+        {
+            <MudButton OnClick="ExportCsv" StartIcon="@Icons.Material.Filled.Download" Color="Color.Primary">
+                @Loc["Export CSV"]
+            </MudButton>
+        }
+        <MudButton OnClick="CloseResults">@Loc["Close"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private readonly string emptyTree = "{}";
+
+    private ReverseTypeAuthLookupResponseDTO? lastResult;
+    private string? lastDisplayName;
+    private bool loading;
+    private bool resultsOpen;
+
+    private readonly DialogOptions dialogOptions = new() { FullWidth = true, MaxWidth = MaxWidth.Medium };
+
+    private async Task OnActionPicked(ActionPickedEventArgs args)
+    {
+        lastDisplayName = args.DisplayName;
+        lastResult = null;
+        loading = true;
+        resultsOpen = true;
+        StateHasChanged();
+
+        try
+        {
+            var qs = new List<string>
+            {
+                $"ActionPath={System.Web.HttpUtility.UrlEncode(args.ActionPath)}",
+                $"Access={args.Access}",
+                $"AnyDynamicRow={(args.AnyDynamicRow ? "true" : "false")}",
+            };
+
+            if (!string.IsNullOrWhiteSpace(args.DynamicId))
+                qs.Add($"DynamicId={System.Web.HttpUtility.UrlEncode(args.DynamicId)}");
+
+            var url = $"ReverseTypeAuthLookup?{string.Join("&", qs)}";
+
+            var response = await HttpService.GetAsync<ShiftEntityResponse<ReverseTypeAuthLookupResponseDTO>>(url);
+
+            if (!response.IsSuccess)
+            {
+                MessageService.Error(response.Data?.Message?.Body ?? response.ErrorMessage ?? Loc["Request failed"]);
+                resultsOpen = false;
+            }
+            else
+            {
+                lastResult = response.Data?.Entity;
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error(ex.Message);
+            resultsOpen = false;
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ExportCsv()
+    {
+        if (lastResult is null || lastResult.Users.Count == 0)
+            return;
+
+        var sb = new StringBuilder();
+        sb.AppendLine("ID,RawID,Username,FullName,Email,Branch,IsSuperAdmin,AccessTrees");
+        foreach (var u in lastResult.Users)
+        {
+            sb.Append(CsvField(u.ID)).Append(',')
+              .Append(CsvField(u.RawID)).Append(',')
+              .Append(CsvField(u.Username)).Append(',')
+              .Append(CsvField(u.FullName)).Append(',')
+              .Append(CsvField(u.Email)).Append(',')
+              .Append(CsvField(u.CompanyBranch)).Append(',')
+              .Append(u.IsSuperAdmin ? "true" : "false").Append(',')
+              .Append(CsvField(string.Join("; ", u.AccessTrees)))
+              .Append('\n');
+        }
+
+        // \uFEFF BOM so Excel opens UTF-8 correctly.
+        var csv = "\uFEFF" + sb.ToString();
+        var csvLiteral = JsonSerializer.Serialize(csv);
+        var filename = $"reverse-typeauth-lookup-{DateTime.Now:yyyyMMdd-HHmmss}.csv";
+
+        var script = $@"(function() {{
+            const csv = {csvLiteral};
+            const blob = new Blob([csv], {{ type: 'text/csv;charset=utf-8;' }});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = '{filename}';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }})();";
+
+        await JS.InvokeVoidAsync("eval", script);
+    }
+
+    private static string CsvField(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return "";
+        if (value.IndexOfAny(new[] { ',', '"', '\n', '\r' }) < 0)
+            return value;
+        return "\"" + value.Replace("\"", "\"\"") + "\"";
+    }
+
+    private void CloseResults()
+    {
+        resultsOpen = false;
+    }
+}

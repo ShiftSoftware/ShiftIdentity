@@ -30,4 +30,7 @@ public interface IIdentityReferenceCosmosDataService
 
     Task<Dictionary<string, BrandModel>> GetBrandsAsync(CancellationToken cancellationToken = default);
     Task<BrandModel?> GetBrandByIdAsync(string id, CancellationToken cancellationToken = default);
+
+    Task<Dictionary<string, UserModel>> GetUsersAsync(CancellationToken cancellationToken = default);
+    Task<UserModel?> GetUserByIdAsync(string id, CancellationToken cancellationToken = default);
 }

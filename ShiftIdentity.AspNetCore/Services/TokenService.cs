@@ -1,6 +1,6 @@
 ﻿using Microsoft.IdentityModel.Tokens;
+using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
-using ShiftSoftware.ShiftEntity.Model.HashIds;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.City;
@@ -23,10 +23,12 @@ namespace ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 public class TokenService
 {
     private readonly ShiftIdentityConfiguration shiftIdentityConfiguration;
+    private readonly IHashIdService hashIdService;
 
-    public TokenService(ShiftIdentityConfiguration shiftIdentityConfiguration)
+    public TokenService(ShiftIdentityConfiguration shiftIdentityConfiguration, IHashIdService hashIdService)
     {
         this.shiftIdentityConfiguration = shiftIdentityConfiguration;
+        this.hashIdService = hashIdService;
     }
 
     public TokenDTO GenerateInternalJwtToken(User user)
@@ -125,23 +127,23 @@ public class TokenService
 
         var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, ShiftEntityHashIdService.Encode<Core.DTOs.User.UserDTO>(user.ID)),
+            new Claim(ClaimTypes.NameIdentifier, hashIdService.Encode<Core.DTOs.User.UserDTO>(user.ID)),
             new Claim(ClaimTypes.Name, user.Username),
             new Claim(ClaimTypes.GivenName, user.FullName),
-            new Claim(ShiftEntity.Core.Constants.RegionIdClaim, ShiftEntityHashIdService.Encode<RegionDTO>(user.RegionID!.Value)),
-            new Claim(ShiftEntity.Core.Constants.CompanyIdClaim, ShiftEntityHashIdService.Encode<CompanyDTO>(user.CompanyID!.Value)),
-            new Claim(ShiftEntity.Core.Constants.CompanyBranchIdClaim, ShiftEntityHashIdService.Encode<CompanyBranchDTO>(user.CompanyBranchID!.Value)),
+            new Claim(ShiftEntity.Core.Constants.RegionIdClaim, hashIdService.Encode<RegionDTO>(user.RegionID!.Value)),
+            new Claim(ShiftEntity.Core.Constants.CompanyIdClaim, hashIdService.Encode<CompanyDTO>(user.CompanyID!.Value)),
+            new Claim(ShiftEntity.Core.Constants.CompanyBranchIdClaim, hashIdService.Encode<CompanyBranchDTO>(user.CompanyBranchID!.Value)),
             new Claim(ShiftEntity.Core.Constants.CompanyTypeClaim, user.Company?.CompanyType.ToString()??string.Empty),
         };
 
         if (user.CountryID is not null)
-            claims.Add(new Claim(ShiftEntity.Core.Constants.CountryIdClaim, ShiftEntityHashIdService.Encode<CountryDTO>(user.CountryID!.Value)));
+            claims.Add(new Claim(ShiftEntity.Core.Constants.CountryIdClaim, hashIdService.Encode<CountryDTO>(user.CountryID!.Value)));
 
         if (user.CompanyBranch is not null)
-            claims.Add(new Claim(ShiftEntity.Core.Constants.CityIdClaim, ShiftEntityHashIdService.Encode<CityDTO>(user.CompanyBranch.CityID!.Value)));
+            claims.Add(new Claim(ShiftEntity.Core.Constants.CityIdClaim, hashIdService.Encode<CityDTO>(user.CompanyBranch.CityID!.Value)));
 
         foreach (var team in user.TeamUsers)
-            claims.Add(new Claim(ShiftEntity.Core.Constants.TeamIdsClaim, ShiftEntityHashIdService.Encode<TeamDTO>(team.TeamID)));
+            claims.Add(new Claim(ShiftEntity.Core.Constants.TeamIdsClaim, hashIdService.Encode<TeamDTO>(team.TeamID)));
 
         if (user.IsSuperAdmin)
             claims.Add(new Claim(ClaimTypes.Role, "superadmin"));

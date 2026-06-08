@@ -121,22 +121,26 @@
 ::deep .chip-work {
     background-color: #e0e0e0;
     color: #333;
+    border: 1px solid #c7c7c7 !important;
 }
 
 ::deep .chip-weekend {
     background-color: #1976d2;
     color: #fff;
+    border: 1px solid #1e65ab !important;
 }
 
 ::deep .chip-holiday {
     background-color: #388e3c;
     color: #fff;
+    border: 1px solid #2e6b2e !important;
 }
 
 ::deep .chip-inactive {
     background-color: #d32f2f;
     color: #fff;
     opacity: 0.6;
+    border: 1px solid #77242470 !important;
 }
 
 /* Drag-to-select */

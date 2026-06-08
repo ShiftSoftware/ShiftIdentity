@@ -34,13 +34,7 @@ public class CityRepository : ShiftRepository<ShiftIdentityDbContext, City, City
         if (entity.BuiltIn)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
-        var oldCountryId = entity.CountryID;
-
         entity.CountryID = (await this.regionRepo.FindAsync(dto.Region.Value.ToLong(), asOf: null, disableDefaultDataLevelAccess: true, disableGlobalFilters: true))?.CountryID;
-
-        if (actionType == ActionTypes.Update)
-            if (entity.CountryID != oldCountryId && oldCountryId is not null)
-                throw new ShiftEntityException(new Message(Loc["Error"], Loc["Country can not be changed after creation."]));
 
         return await base.UpsertAsync(entity, dto, actionType, userId, idempotencyKey, disableDefaultDataLevelAccess, disableGlobalFilters);
     }

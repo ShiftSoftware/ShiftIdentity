@@ -1,10 +1,10 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Core.Services;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
-using ShiftSoftware.ShiftEntity.Model.HashIds;
 using ShiftSoftware.ShiftEntity.Web;
 using ShiftSoftware.ShiftIdentity.AspNetCore;
 using ShiftSoftware.ShiftIdentity.Core;
@@ -24,6 +24,7 @@ public class IdentityUserController : ShiftEntitySecureControllerAsync<UserRepos
     private readonly ShiftIdentityConfiguration options;
     private readonly ITypeAuthService typeAuth;
     private readonly IHttpContextAccessor httpContextAccessor;
+    private readonly IHashIdService hashIdService;
     private readonly IEnumerable<ISendEmailVerification>? sendEmailVerifications;
     private readonly IEnumerable<ISendUserInfo>? sendUserInfos;
 
@@ -32,6 +33,7 @@ public class IdentityUserController : ShiftEntitySecureControllerAsync<UserRepos
         ShiftIdentityConfiguration options,
         ITypeAuthService typeAuth,
         IHttpContextAccessor httpContextAccessor,
+        IHashIdService hashIdService,
         IEnumerable<ISendEmailVerification>? sendEmailVerifications = null,
         IEnumerable<ISendUserInfo>? sendUserInfos = null)
         : base(ShiftIdentityActions.Users)
@@ -41,6 +43,7 @@ public class IdentityUserController : ShiftEntitySecureControllerAsync<UserRepos
         this.options = options;
         this.typeAuth = typeAuth;
         this.httpContextAccessor = httpContextAccessor;
+        this.hashIdService = hashIdService;
         this.sendEmailVerifications = sendEmailVerifications;
         this.sendUserInfos = sendUserInfos;
     }
@@ -84,7 +87,7 @@ public class IdentityUserController : ShiftEntitySecureControllerAsync<UserRepos
             if(user.EmailVerified || string.IsNullOrWhiteSpace(user.Email))
                 continue;
 
-            var encodedId = ShiftEntityHashIdService.Encode<UserDTO>(user.ID);
+            var encodedId = hashIdService.Encode<UserDTO>(user.ID);
 
             // Generate the token and send the email verification
             var userManagerControllerName = nameof(UserManagerController).Replace("Controller", "");

@@ -73,6 +73,12 @@ public class IdentityReferenceCosmosDataService<TCosmosClient>(
     public Task<BrandModel?> GetBrandByIdAsync(string id, CancellationToken cancellationToken = default)
         => GetItemByIdAsync<BrandModel>(id, GetDatabaseName(), GetBrandContainerName(), null, cancellationToken);
 
+    public Task<Dictionary<string, UserModel>> GetUsersAsync(CancellationToken cancellationToken = default)
+        => GetItemsAsync<UserModel>(GetDatabaseName(), GetUserContainerName(), null, cancellationToken);
+
+    public Task<UserModel?> GetUserByIdAsync(string id, CancellationToken cancellationToken = default)
+        => GetItemByIdAsync<UserModel>(id, GetDatabaseName(), GetUserContainerName(), null, cancellationToken);
+
     private async Task<Dictionary<string, TModel>> GetItemsAsync<TModel>(
         string databaseName,
         string containerName,
@@ -203,4 +209,6 @@ public class IdentityReferenceCosmosDataService<TCosmosClient>(
     private string GetTeamContainerName() => _options.TeamContainerName;
 
     private string GetBrandContainerName() => _options.BrandContainerName;
+
+    private string GetUserContainerName() => _options.UserContainerName;
 }
