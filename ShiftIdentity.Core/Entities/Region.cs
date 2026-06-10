@@ -1,5 +1,6 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Model.Flags;
+using ShiftSoftware.ShiftEntity.Model.Replication;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -7,8 +8,11 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
 [Table("Regions", Schema = "ShiftIdentity")]
-public class Region : ShiftEntity<Region>, IEntityHasCountry<Region>, IEntityHasRegion<Region>
+public class Region : ShiftEntity<Region>, IEntityHasCountry<Region>, IEntityHasRegion<Region>, IHasLastReplicationStamp
 {
+    /// <inheritdoc />
+    public string? LastReplicationStamp { get; set; }
+
     public string Name { get; set; } = default!;
     public string? IntegrationId { get; set; }
     public string? ShortCode { get; set; }

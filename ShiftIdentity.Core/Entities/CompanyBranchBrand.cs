@@ -1,12 +1,16 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
+using ShiftSoftware.ShiftEntity.Model.Replication;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
 [Table("CompanyBranchBrands", Schema = "ShiftIdentity")]
-public class CompanyBranchBrand : ShiftEntity<CompanyBranchBrand>
+public class CompanyBranchBrand : ShiftEntity<CompanyBranchBrand>, IHasLastReplicationStamp
 {
+    /// <inheritdoc />
+    public string? LastReplicationStamp { get; set; }
+
     public long ID { get; set; }
     public long CompanyBranchID { get; set; }
     public long BrandID { get; set; }

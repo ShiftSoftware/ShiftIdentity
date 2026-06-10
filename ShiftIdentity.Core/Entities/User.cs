@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using ShiftSoftware.ShiftEntity.Model.Flags;
+using ShiftSoftware.ShiftEntity.Model.Replication;
 
 namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
@@ -13,8 +14,12 @@ public class User : ShiftEntity<User>,
     IEntityHasCountry<User>, 
     IEntityHasRegion<User>,
     IEntityHasCompany<User>, 
-    IEntityHasCompanyBranch<User>
+    IEntityHasCompanyBranch<User>,
+    IHasLastReplicationStamp
 {
+    /// <inheritdoc />
+    public string? LastReplicationStamp { get; set; }
+
     #region Security
 
     [Required]

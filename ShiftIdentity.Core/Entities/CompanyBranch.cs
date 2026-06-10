@@ -1,6 +1,7 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
+using ShiftSoftware.ShiftEntity.Model.Replication;
 using ShiftSoftware.ShiftEntity.Model.Enums;
 using ShiftSoftware.ShiftEntity.Model.Flags;
 using System;
@@ -16,8 +17,12 @@ public class CompanyBranch :
     IEntityHasRegion<CompanyBranch>,
     IEntityHasCompany<CompanyBranch>, 
     IEntityHasCountry<CompanyBranch>,
-    IEntityHasCompanyBranch<CompanyBranch>
+    IEntityHasCompanyBranch<CompanyBranch>,
+    IHasLastReplicationStamp
 {
+    /// <inheritdoc />
+    public string? LastReplicationStamp { get; set; }
+
     public string Name { get; set; } = default!;
     public string? Phone { get; set; }
     public List<TaggedTextDTO> Phones { get; set; } = new();

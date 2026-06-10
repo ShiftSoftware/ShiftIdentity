@@ -1,4 +1,5 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
+using ShiftSoftware.ShiftEntity.Model.Replication;
 using System.ComponentModel.DataAnnotations.Schema;
 
 
@@ -6,8 +7,11 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
 [Table("CompanyBranchServices", Schema = "ShiftIdentity")]
-public class CompanyBranchService : ShiftEntity<CompanyBranchService>
+public class CompanyBranchService : ShiftEntity<CompanyBranchService>, IHasLastReplicationStamp
 {
+    /// <inheritdoc />
+    public string? LastReplicationStamp { get; set; }
+
     public long ID { get; set; }
     public long CompanyBranchID { get; set; }
     public long ServiceID { get; set; }
