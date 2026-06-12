@@ -229,7 +229,7 @@ public class UserRepository :
         return entity;
     }
 
-    public override ValueTask<User> DeleteAsync(User entity, bool isHardDelete, long? userId, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
+    public override ValueTask<User> DeleteAsync(User entity, long? userId, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
     {
         if (shiftIdentityFeatureLocking.UserFeatureIsLocked)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["User Feature is locked"]));
@@ -237,7 +237,7 @@ public class UserRepository :
         if (entity.BuiltIn)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
-        return base.DeleteAsync(entity, isHardDelete, userId, disableDefaultDataLevelAccess, disableGlobalFilters);
+        return base.DeleteAsync(entity, userId, disableDefaultDataLevelAccess, disableGlobalFilters);
     }
 
     public async Task<User?> GetUserByUsernameAsync(string username)

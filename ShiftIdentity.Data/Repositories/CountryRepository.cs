@@ -33,12 +33,12 @@ public class CountryRepository : ShiftRepository<ShiftIdentityDbContext, Country
         return base.UpsertAsync(entity, dto, actionType, userId, idempotencyKey, disableDefaultDataLevelAccess, disableGlobalFilters);
     }
 
-    public override ValueTask<Country> DeleteAsync(Country entity, bool isHardDelete, long? userId, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
+    public override ValueTask<Country> DeleteAsync(Country entity, long? userId, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
     {
         if (entity.BuiltIn)
             throw new ShiftEntityException(new Message(localizer["Error"], localizer["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
-        return base.DeleteAsync(entity, isHardDelete, userId, disableDefaultDataLevelAccess, disableGlobalFilters);
+        return base.DeleteAsync(entity, userId, disableDefaultDataLevelAccess, disableGlobalFilters);
     }
 
     public override Task<int> SaveChangesAsync()

@@ -80,12 +80,12 @@ public class CompanyRepository : ShiftRepository<ShiftIdentityDbContext, Company
         return result;
     }
 
-    public override ValueTask<Company> DeleteAsync(Company entity, bool isHardDelete, long? userId, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
+    public override ValueTask<Company> DeleteAsync(Company entity, long? userId, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
     {
         if (entity.BuiltIn)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
-        return base.DeleteAsync(entity, isHardDelete, userId, disableDefaultDataLevelAccess, disableGlobalFilters);
+        return base.DeleteAsync(entity, userId, disableDefaultDataLevelAccess, disableGlobalFilters);
     }
 
     public override ValueTask<IQueryable<CompanyListDTO>> ApplyPostODataProcessing(IQueryable<CompanyListDTO> queryable)

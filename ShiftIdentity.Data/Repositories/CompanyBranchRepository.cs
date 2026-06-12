@@ -180,12 +180,12 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
             return entity;
         }
 
-        public override ValueTask<CompanyBranch> DeleteAsync(CompanyBranch entity, bool isHardDelete, long? userId, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
+        public override ValueTask<CompanyBranch> DeleteAsync(CompanyBranch entity, long? userId, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
         {
             if (entity.BuiltIn)
                 throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
-            return base.DeleteAsync(entity, isHardDelete, userId, disableDefaultDataLevelAccess, disableGlobalFilters);
+            return base.DeleteAsync(entity, userId, disableDefaultDataLevelAccess, disableGlobalFilters);
         }
 
         public override ValueTask<IQueryable<CompanyBranchListDTO>> ApplyPostODataProcessing(IQueryable<CompanyBranchListDTO> queryable)
