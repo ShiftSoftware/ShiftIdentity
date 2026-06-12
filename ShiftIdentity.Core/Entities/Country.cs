@@ -13,8 +13,11 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
 [Table("Countries", Schema = "ShiftIdentity")]
-public class Country : ShiftEntity<Country>, IEntityHasCountry<Country>, IHasLastReplicationStamp
+public class Country : ShiftEntity<Country>, IEntityHasCountry<Country>, IShiftEntityReplication
 {
+    /// <inheritdoc />
+    public DateTimeOffset? LastReplicationDate { get; set; }
+
     /// <inheritdoc />
     public string? LastReplicationStamp { get; set; }
 

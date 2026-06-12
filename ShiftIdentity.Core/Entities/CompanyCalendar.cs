@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Model.Flags;
+using ShiftSoftware.ShiftEntity.Model.Replication;
 using ShiftSoftware.ShiftIdentity.Core.Enums;
 
 namespace ShiftSoftware.ShiftIdentity.Core.Entities;
@@ -11,8 +12,15 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 [Table("CompanyCalendars", Schema = "ShiftIdentity")]
 public class CompanyCalendar :
     ShiftEntity<CompanyCalendar>,
-    IEntityHasCompany<CompanyCalendar>
+    IEntityHasCompany<CompanyCalendar>,
+    IShiftEntityReplication
 {
+    /// <inheritdoc />
+    public DateTimeOffset? LastReplicationDate { get; set; }
+
+    /// <inheritdoc />
+    public string? LastReplicationStamp { get; set; }
+
     public string Title { get; set; } = default!;
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }

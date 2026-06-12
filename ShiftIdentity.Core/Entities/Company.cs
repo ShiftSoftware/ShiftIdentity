@@ -11,8 +11,11 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
 [Table("Companies", Schema = "ShiftIdentity")]
-public class Company : ShiftEntity<Company>, IEntityHasCompany<Company>, IHasLastReplicationStamp
+public class Company : ShiftEntity<Company>, IEntityHasCompany<Company>, IShiftEntityReplication
 {
+    /// <inheritdoc />
+    public DateTimeOffset? LastReplicationDate { get; set; }
+
     /// <inheritdoc />
     public string? LastReplicationStamp { get; set; }
 

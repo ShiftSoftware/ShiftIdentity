@@ -1,6 +1,7 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Model.Flags;
 using ShiftSoftware.ShiftEntity.Model.Replication;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -9,8 +10,11 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
 [Table("Teams", Schema = "ShiftIdentity")]
-public class Team : ShiftEntity<Team>, IEntityHasCompany<Team>, IEntityHasTeam<Team>, IHasLastReplicationStamp
+public class Team : ShiftEntity<Team>, IEntityHasCompany<Team>, IEntityHasTeam<Team>, IShiftEntityReplication
 {
+    /// <inheritdoc />
+    public DateTimeOffset? LastReplicationDate { get; set; }
+
     /// <inheritdoc />
     public string? LastReplicationStamp { get; set; }
 

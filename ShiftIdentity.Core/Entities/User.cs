@@ -15,8 +15,11 @@ public class User : ShiftEntity<User>,
     IEntityHasRegion<User>,
     IEntityHasCompany<User>, 
     IEntityHasCompanyBranch<User>,
-    IHasLastReplicationStamp
+    IShiftEntityReplication
 {
+    /// <inheritdoc />
+    public DateTimeOffset? LastReplicationDate { get; set; }
+
     /// <inheritdoc />
     public string? LastReplicationStamp { get; set; }
 

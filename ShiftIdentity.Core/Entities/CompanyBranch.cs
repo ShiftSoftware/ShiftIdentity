@@ -18,8 +18,11 @@ public class CompanyBranch :
     IEntityHasCompany<CompanyBranch>, 
     IEntityHasCountry<CompanyBranch>,
     IEntityHasCompanyBranch<CompanyBranch>,
-    IHasLastReplicationStamp
+    IShiftEntityReplication
 {
+    /// <inheritdoc />
+    public DateTimeOffset? LastReplicationDate { get; set; }
+
     /// <inheritdoc />
     public string? LastReplicationStamp { get; set; }
 
