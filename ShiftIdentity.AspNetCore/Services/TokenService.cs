@@ -48,7 +48,7 @@ public class TokenService
 
         var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, ShiftEntityHashIdService.Encode<Core.DTOs.User.UserDTO>(user.ID)),
+            new Claim(ClaimTypes.NameIdentifier, hashIdService.Encode<Core.DTOs.User.UserDTO>(user.ID)),
             new Claim(ClaimTypes.Name, user.Username),
             new Claim(ClaimTypes.GivenName, user.FullName),
             new Claim(ShiftIdentityClaims.RequirePasswordChange, true.ToString()),

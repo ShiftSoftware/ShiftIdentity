@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Filters;
@@ -18,19 +19,22 @@ namespace ShiftSoftware.ShiftIdentity.AspNetCore.Controllers.API;
 [Route("api/[controller]")]
 [ApiController]
 [Authorize]
-[EnableRateLimiting(Constants.DefaultPolicyName)]
+[EnableRateLimiting(Core.Constants.DefaultPolicyName)]
 public class AuthController : ControllerBase
 {
     private readonly AuthService authService;
     private readonly ShiftIdentityLocalizer Loc;
+    private readonly IHashIdService hashIdService;
 
     public AuthController(
             AuthService authService,
-            ShiftIdentityLocalizer Loc
+            ShiftIdentityLocalizer Loc,
+            IHashIdService hashIdService
         )
     {
         this.authService = authService;
         this.Loc = Loc;
+        this.hashIdService = hashIdService;
     }
 
     [HttpPost("Login")]
@@ -94,7 +98,7 @@ public class AuthController : ControllerBase
             return Unauthorized();
 
         long userId;
-        try { userId = ShiftEntityHashIdService.Decode<UserDTO>(userIdClaim); }
+        try { userId = hashIdService.Decode<UserDTO>(userIdClaim); }
         catch { return Unauthorized(); }
 
         var token = await authService.CompletePasswordChangeAsync(userId, dto);

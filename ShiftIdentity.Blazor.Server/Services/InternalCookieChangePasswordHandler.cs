@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
+using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
@@ -19,12 +20,14 @@ internal sealed class InternalCookieChangePasswordHandler : ICookieChangePasswor
     private readonly IUserRepository _userRepo;
     private readonly TokenService _tokenService;
     private readonly AuthService _authService;
+    private readonly IHashIdService _hashIdService;
 
-    public InternalCookieChangePasswordHandler(IUserRepository userRepo, TokenService tokenService, AuthService authService)
+    public InternalCookieChangePasswordHandler(IUserRepository userRepo, TokenService tokenService, AuthService authService, IHashIdService hashIdService)
     {
         _userRepo = userRepo;
         _tokenService = tokenService;
         _authService = authService;
+        _hashIdService = hashIdService;
     }
 
     public async Task<CookieChangePasswordResult> ChangePasswordAsync(ChangePasswordDTO dto, HttpContext httpContext)
@@ -34,7 +37,7 @@ internal sealed class InternalCookieChangePasswordHandler : ICookieChangePasswor
             return new CookieChangePasswordResult(false, "Not authenticated");
 
         long userId;
-        try { userId = ShiftEntityHashIdService.Decode<UserDTO>(userIdClaim); }
+        try { userId = _hashIdService.Decode<UserDTO>(userIdClaim); }
         catch { return new CookieChangePasswordResult(false, "Invalid user id"); }
 
         try
@@ -66,7 +69,7 @@ internal sealed class InternalCookieChangePasswordHandler : ICookieChangePasswor
             return new CookieChangePasswordResult(false, "Not authenticated");
 
         long userId;
-        try { userId = ShiftEntityHashIdService.Decode<UserDTO>(userIdClaim); }
+        try { userId = _hashIdService.Decode<UserDTO>(userIdClaim); }
         catch { return new CookieChangePasswordResult(false, "Invalid user id"); }
 
         try

@@ -1,7 +1,7 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
 
-@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(ReverseTypeAuthLookup)}")]
+@attribute [Route($"{Constants.IdentityRoutePrefix}/{nameof(ReverseTypeAuthLookup)}")]
 
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.ReverseTypeAuthLookup
 @using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Shared.ActionTree
@@ -10,10 +10,10 @@
 @using System.Text
 @using System.Text.Json
 
-@inject Services.HttpService HttpService
 @inject ShiftIdentityLocalizer Loc
 @inject MessageService MessageService
 @inject IJSRuntime JS
+@inject HttpClient HttpClient
 
 <style>
     .reverse-lookup-table td,
@@ -136,16 +136,17 @@
 
             var url = $"ReverseTypeAuthLookup?{string.Join("&", qs)}";
 
-            var response = await HttpService.GetAsync<ShiftEntityResponse<ReverseTypeAuthLookupResponseDTO>>(url);
+            var response = await HttpClient.GetAsync(url);
 
-            if (!response.IsSuccess)
+            if (!response.IsSuccessStatusCode)
             {
-                MessageService.Error(response.Data?.Message?.Body ?? response.ErrorMessage ?? Loc["Request failed"]);
+                MessageService.Error(response.ReasonPhrase ?? Loc["Request failed"]);
                 resultsOpen = false;
             }
             else
             {
-                lastResult = response.Data?.Entity;
+                var result = await response.Content.ReadFromJsonAsync<ShiftEntityResponse<ReverseTypeAuthLookupResponseDTO>>();
+                lastResult = result?.Entity;
             }
         }
         catch (Exception ex)

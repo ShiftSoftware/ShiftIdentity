@@ -28,7 +28,7 @@ public static class IMvcBuilderExtensions
     }
 
     [Obsolete("This method is deprecated. Please use AddFakeIdentityEndPoints on IServiceCollection instead.")]
-    public static IMvcBuilder AddFakeIdentityEndPoints(this IMvcBuilder builder, TokenSettingsModel tokenConfiguration, TokenUserDataDTO userData, object app, string? userPassword, params string[] accessTrees)
+    public static IMvcBuilder AddFakeIdentityEndPoints(this IMvcBuilder builder, TokenSettingsModel tokenConfiguration, TokenUserDataDTO userData, string? userPassword, params string[] accessTrees)
     {
         builder.Services.AddFakeIdentityEndPoints(tokenConfiguration, userData, userPassword, accessTrees);
         return builder;
