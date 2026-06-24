@@ -1,6 +1,6 @@
 ﻿using ShiftSoftware.ShiftIdentity.Core.DTOs;
 
-namespace ShiftSoftware.ShiftIdentity.AspNetCore.Models;
+namespace ShiftSoftware.ShiftIdentity.Core.Models;
 
 public class LoginResultModel
 {

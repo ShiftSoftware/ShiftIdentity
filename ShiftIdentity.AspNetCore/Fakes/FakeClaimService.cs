@@ -1,4 +1,5 @@
 ﻿using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
+using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Fakes;

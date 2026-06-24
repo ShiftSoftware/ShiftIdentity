@@ -82,7 +82,7 @@
             if (authState?.User?.Identity?.IsAuthenticated ?? false)
                 NavManager.NavigateTo("/");
         }
-        
+
     }
 
     private async Task Login()
@@ -103,9 +103,34 @@
 
         //TypeAuth.AuthStateHasChanged();
 
-        if (loginResult?.Data?.Entity?.RequirePasswordChange ?? false)
+        if (loginResult?.Data?.Entity?.Flow == Core.Enums.AuthPurpose.ChangePassword)
         {
             var url = $"{Constants.IdentityRoutePreifix}/{nameof(ChangePasswordForm)}";
+
+            var queryStrings = new Dictionary<string, object?>();
+            queryStrings.Add("ReturnUrl", ReturnUrl ?? "/");
+            queryStrings.Add("Enforce", true);
+
+            var uri = NavManager.GetUriWithQueryParameters(url, queryStrings);
+
+            NavManager.NavigateTo(uri);
+            return;
+        }
+        else if (loginResult?.Data?.Entity?.Flow == Core.Enums.AuthPurpose.Mfa)
+        {
+            var url = $"{Constants.IdentityRoutePreifix}/{nameof(MfaForm)}";
+
+            var queryStrings = new Dictionary<string, object?>();
+            queryStrings.Add("ReturnUrl", ReturnUrl ?? "/");
+
+            var uri = NavManager.GetUriWithQueryParameters(url, queryStrings);
+
+            NavManager.NavigateTo(uri);
+            return;
+        }
+        else if (loginResult?.Data?.Entity?.Flow == Core.Enums.AuthPurpose.MfaEnrollment)
+        {
+            var url = $"{Constants.IdentityRoutePreifix}/{nameof(TotpEnrollmentForm)}";
 
             var queryStrings = new Dictionary<string, object?>();
             queryStrings.Add("ReturnUrl", ReturnUrl ?? "/");

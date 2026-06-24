@@ -51,6 +51,8 @@ public class User : ShiftEntity<User>,
 
     public string? VerificationSASToken { get; set; }
 
+    public byte[]? TotpSecret { get; set; }
+
     #endregion
 
     #region Contacts

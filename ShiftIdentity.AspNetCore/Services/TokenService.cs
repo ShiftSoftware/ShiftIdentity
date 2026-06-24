@@ -10,6 +10,7 @@ using ShiftSoftware.ShiftIdentity.Core.DTOs.Country;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Region;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Team;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
+using ShiftSoftware.ShiftIdentity.Core.Enums;
 using ShiftSoftware.ShiftIdentity.Core.Models;
 using ShiftSoftware.TypeAuth.Core;
 using System.IdentityModel.Tokens.Jwt;
@@ -38,7 +39,7 @@ public class TokenService
 
     public TokenDTO? GenerateExternalJwtToken(User user, AuthCodeModel authCode)
     {
-        if (shiftIdentityConfiguration.Security.RequirePasswordChange && user.RequireChangePassword)
+        if (user.RequireChangePassword)
             return null;
 
         return GenerateToken(user, true);
@@ -84,11 +85,11 @@ public class TokenService
 
     public TokenDTO GenerateToken(User user, bool external = false)
     {
-        var requirePasswordChange = shiftIdentityConfiguration.Security.RequirePasswordChange && user.RequireChangePassword;
+        var userId = hashIdService.Encode<Core.DTOs.User.UserDTO>(user.ID);
 
         var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, hashIdService.Encode<Core.DTOs.User.UserDTO>(user.ID)),
+            new Claim(ClaimTypes.NameIdentifier, userId),
             new Claim(ClaimTypes.Name, user.Username),
             new Claim(ClaimTypes.GivenName, user.FullName),
             new Claim(ShiftEntity.Core.Constants.RegionIdClaim, hashIdService.Encode<RegionDTO>(user.RegionID!.Value)),
@@ -108,30 +109,23 @@ public class TokenService
 
         claims.Add(new Claim(ShiftIdentityClaims.ExternalToken, external.ToString().ToLower()));
 
-        if (requirePasswordChange)
-        {
-            claims.Add(new Claim(ShiftIdentityClaims.RequirePasswordChange, true.ToString()));
-        }
-        else
-        {
-            if (user.IsSuperAdmin)
-                claims.Add(new Claim(ClaimTypes.Role, "superadmin"));
+        if (user.IsSuperAdmin)
+            claims.Add(new Claim(ClaimTypes.Role, "superadmin"));
 
-            if (user.Email != null)
-                claims.Add(new Claim(ClaimTypes.Email, user.Email));
+        if (user.Email != null)
+            claims.Add(new Claim(ClaimTypes.Email, user.Email));
 
-            if (user.Phone != null)
-                claims.Add(new Claim(ClaimTypes.MobilePhone, user.Phone));
+        if (user.Phone != null)
+            claims.Add(new Claim(ClaimTypes.MobilePhone, user.Phone));
 
-            //Store access tree per user
-            if (!string.IsNullOrWhiteSpace(user.AccessTree))
-                claims.Add(new Claim(TypeAuthClaimTypes.AccessTree, user.AccessTree));
+        //Store access tree per user
+        if (!string.IsNullOrWhiteSpace(user.AccessTree))
+            claims.Add(new Claim(TypeAuthClaimTypes.AccessTree, user.AccessTree));
 
-            //Store access-trees in calim
-            if (user.AccessTrees?.Count() > 0)
-                foreach (var accessTree in user.AccessTrees)
-                    claims.Add(new Claim(TypeAuthClaimTypes.AccessTree, accessTree.AccessTree.Tree));
-        }
+        //Store access-trees in calim
+        if (user.AccessTrees?.Count() > 0)
+            foreach (var accessTree in user.AccessTrees)
+                claims.Add(new Claim(TypeAuthClaimTypes.AccessTree, accessTree.AccessTree.Tree));
 
         var rsa = RSA.Create();
         rsa.ImportRSAPrivateKey(Convert.FromBase64String(shiftIdentityConfiguration.Token.RSAPrivateKeyBase64), out _);
@@ -149,9 +143,8 @@ public class TokenService
         {
             Token = tokenString,
             TokenLifeTimeInSeconds = shiftIdentityConfiguration.Token.ExpireSeconds,
-            RefreshToken = GenerateRefreshToken(user.ID),
+            RefreshToken = GenerateRefreshToken(userId),
             RefreshTokenLifeTimeInSeconds = shiftIdentityConfiguration.RefreshToken.ExpireSeconds,
-            RequirePasswordChange = requirePasswordChange,
             UserData = new TokenUserDataDTO
             {
                 FullName = user.FullName,
@@ -161,25 +154,22 @@ public class TokenService
             }
         };
 
-        if (!requirePasswordChange)
-        {
-            if (user?.Email is not null)
-                result.UserData.Emails = new List<EmailDTO> { new EmailDTO { Email = user.Email } };
+        if (user?.Email is not null)
+            result.UserData.Emails = new List<EmailDTO> { new EmailDTO { Email = user.Email } };
 
-            if (user?.Phone is not null)
-                result.UserData.Phones = new List<PhoneDTO> { new PhoneDTO { Phone = user.Phone } };
+        if (user?.Phone is not null)
+            result.UserData.Phones = new List<PhoneDTO> { new PhoneDTO { Phone = user.Phone } };
 
-            result.UserData.UserSignature = string.IsNullOrWhiteSpace(user?.Signature) ? null : JsonSerializer.Deserialize<IEnumerable<ShiftFileDTO>>(user!.Signature);
-        }
+        result.UserData.UserSignature = string.IsNullOrWhiteSpace(user?.Signature) ? null : JsonSerializer.Deserialize<IEnumerable<ShiftFileDTO>>(user!.Signature);
 
         return result;
     }
 
-    private string GenerateRefreshToken(long userId)
+    private string GenerateRefreshToken(string userId)
     {
         var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, userId.ToString())
+            new Claim(ClaimTypes.NameIdentifier, userId)
         };
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(shiftIdentityConfiguration.RefreshToken.Key));
@@ -194,5 +184,96 @@ public class TokenService
         string tokenString = new JwtSecurityTokenHandler().WriteToken(token);
 
         return tokenString;
+    }
+
+    public TokenDTO GenerateMfaToken(User user)
+    {
+        return GenerateTemporaryToken(user, AuthPurpose.Mfa);
+    }
+
+    public TokenDTO GenerateMfaEnrollmentToken(User user)
+    {
+        return GenerateTemporaryToken(user, AuthPurpose.MfaEnrollment);
+    }
+
+    public TokenDTO GenerateChangePasswordToken(User user)
+    {
+        return GenerateTemporaryToken(user, AuthPurpose.ChangePassword);
+    }
+
+    private TokenDTO GenerateTemporaryToken(User user, AuthPurpose purpose)
+    {
+        var userId = hashIdService.Encode<Core.DTOs.User.UserDTO>(user.ID);
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId),
+            new Claim(ClaimTypes.Name, user.Username),
+            new Claim(ClaimTypes.GivenName, user.FullName),
+            new Claim(ShiftIdentityClaims.TokenPurpose, purpose.ToString()),
+        };
+
+        var expire = shiftIdentityConfiguration.TemporaryTokenSettings.ExpireSeconds;
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(shiftIdentityConfiguration.TemporaryTokenSettings.Key));
+        
+        var token = new JwtSecurityToken(
+            issuer: shiftIdentityConfiguration.TemporaryTokenSettings.Issuer,
+            audience: shiftIdentityConfiguration.TemporaryTokenSettings.Audience,
+            claims: claims,
+            expires: DateTime.UtcNow.AddSeconds(expire),
+            signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature));
+
+        string tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+
+        var result = new TokenDTO
+        {
+            Token = tokenString,
+            TokenLifeTimeInSeconds = expire,
+            Flow = purpose,
+            UserData = new TokenUserDataDTO
+            {
+                FullName = user.FullName,
+                ID = user.ID.ToString(),
+                Username = user.Username,
+            }
+        };
+
+        return result;
+    }
+
+    public ClaimsPrincipal? ValidateTemporaryToken(string token)
+    {
+        var tokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateAudience = false,
+            ValidateIssuer = true,
+            ValidateLifetime = true,
+            RequireExpirationTime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = shiftIdentityConfiguration.TemporaryTokenSettings.Issuer,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(shiftIdentityConfiguration.TemporaryTokenSettings.Key)),
+            ClockSkew = TimeSpan.Zero,
+            LifetimeValidator = (DateTime? notBefore, DateTime? expires, SecurityToken securityToken,
+                                     TokenValidationParameters validationParameters) =>
+            {
+                var now = DateTime.UtcNow;
+
+                if (notBefore != null && now < notBefore)
+                    return false;
+
+                if (expires != null)
+                    return expires > now;
+
+                return true;
+            }
+        };
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out SecurityToken securityToken);
+        var jwtSecurityToken = securityToken as JwtSecurityToken;
+
+        if (jwtSecurityToken == null || !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha512Signature, StringComparison.InvariantCultureIgnoreCase))
+            throw new SecurityTokenInvalidAlgorithmException("Token validation failed: unexpected signing algorithm.");
+
+        return principal;
     }
 }

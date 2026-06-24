@@ -1,13 +1,16 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ShiftSoftware.ShiftEntity.Model;
-using ShiftSoftware.ShiftIdentity.AspNetCore.Models;
+using ShiftSoftware.ShiftIdentity.AspNetCore.Authorization;
+using ShiftSoftware.ShiftIdentity.Core;
+using ShiftSoftware.ShiftIdentity.Core.Models;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Auth;
+using ShiftSoftware.ShiftIdentity.Core.Enums;
 using ShiftSoftware.ShiftIdentity.Core.Localization;
-using ShiftSoftware.ShiftIdentity.Core.Models;
+using System.Security.Claims;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Controllers.API;
 
@@ -18,7 +21,6 @@ public class AuthController : ControllerBase
 {
     private readonly AuthService authService;
     private readonly AuthCodeService authCodeService;
-    private readonly TokenService tokenService;
     private readonly IClaimService claimService;
     private readonly ShiftIdentityConfiguration shiftIdentityConfiguration;
     private readonly ShiftIdentityLocalizer Loc;
@@ -26,7 +28,6 @@ public class AuthController : ControllerBase
     public AuthController(
             AuthService authService,
             AuthCodeService authCodeService,
-            TokenService tokenService,
             IClaimService claimService,
             ShiftIdentityConfiguration shiftIdentityConfiguration,
             ShiftIdentityLocalizer Loc
@@ -34,7 +35,6 @@ public class AuthController : ControllerBase
     {
         this.authService = authService;
         this.authCodeService = authCodeService;
-        this.tokenService = tokenService;
         this.claimService = claimService;
         this.shiftIdentityConfiguration = shiftIdentityConfiguration;
         this.Loc = Loc;
@@ -58,6 +58,8 @@ public class AuthController : ControllerBase
         return Ok(new ShiftEntityResponse<TokenDTO>(result.Token));
     }
 
+
+    // we use [AllowAnonymous] to bypass the JWT auth scheme and validate the request manually
     [HttpPost("Refresh")]
     [AllowAnonymous]
     public async Task<IActionResult> Refresh([FromBody] RefreshDTO dto)
@@ -79,6 +81,28 @@ public class AuthController : ControllerBase
             });
 
         return Ok(new ShiftEntityResponse<TokenDTO>(token));
+    }
+
+
+    // Authenticated by the temporary MFA token (step-up scheme). allowAccessToken:false — a full
+    // access token must not satisfy login completion; only the matching purpose-bound token may.
+    [HttpPost("Login/mfa")]
+    [StepUp(AuthPurpose.Mfa, allowAccessToken: false)]
+    public async Task<IActionResult> VerifyMfa(MfaDTO mfaDto)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId is null)
+            return BadRequest(new ShiftEntityResponse<TokenDTO>
+            {
+                Message = new Message
+                {
+                    Body = Loc["Invalid token"]
+                }
+            });
+
+        var tokenDto = await authService.MfaLogin(userId, mfaDto.Code);
+
+        return Ok(new ShiftEntityResponse<TokenDTO>(tokenDto!));
     }
 
     /// <summary>

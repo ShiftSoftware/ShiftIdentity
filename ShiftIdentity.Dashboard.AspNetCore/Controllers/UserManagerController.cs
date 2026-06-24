@@ -4,14 +4,20 @@ using Microsoft.AspNetCore.Mvc;
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Core.Services;
 using ShiftSoftware.ShiftEntity.Model;
-using ShiftSoftware.ShiftIdentity.AspNetCore;
+using ShiftSoftware.ShiftIdentity.AspNetCore.Authorization;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
 using ShiftSoftware.ShiftIdentity.Core;
+using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.UserManager;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
+using ShiftSoftware.ShiftIdentity.Core.Enums;
 using ShiftSoftware.ShiftIdentity.Data.Repositories;
+using System.Security.Claims;
 using System.Security.Cryptography;
+using TotpService = ShiftSoftware.ShiftIdentity.AspNetCore.Services.TotpService;
+using AuthTokenService = ShiftSoftware.ShiftIdentity.AspNetCore.Services.TokenService;
+
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -29,9 +35,18 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
         private readonly IHashIdService hashIdService;
         private readonly IEnumerable<ISendEmailVerification>? sendEmailVerifications;
         private readonly IEnumerable<ISendEmailResetPassword>? sendEmailResetPasswords;
+        private readonly TotpService totpService;
+        private readonly AuthTokenService authTokenService;
 
-        public UserManagerController(UserRepository userRepo, IClaimService claimService, IMapper mapper,
-            ShiftIdentityConfiguration options, IHashIdService hashIdService,
+
+
+        public UserManagerController(UserRepository userRepo,
+            IClaimService claimService,
+            IMapper mapper,
+            ShiftIdentityConfiguration options,
+            IHashIdService hashIdService,
+            TotpService totpService,
+            AuthTokenService authTokenService,
             IEnumerable<ISendEmailVerification>? sendEmailVerifications = null,
             IEnumerable<ISendEmailResetPassword>? sendEmailResetPasswords = null)
         {
@@ -42,6 +57,8 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
             this.hashIdService = hashIdService;
             this.sendEmailVerifications = sendEmailVerifications;
             this.sendEmailResetPasswords = sendEmailResetPasswords;
+            this.totpService = totpService;
+            this.authTokenService = authTokenService;
         }
 
         // GET: api/<UserManagerController>
@@ -89,7 +106,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
 
         //// POST api/<UserManagerController>
         [HttpPut("ChangePassword")]
-        [Authorize(Policy = "ChangePassword")]
+        [StepUp(AuthPurpose.ChangePassword)]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDTO dto)
         {
             var loginUser = claimService.GetUser();
@@ -238,11 +255,11 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
                 });
 
             var encodedId = hashIdService.Encode<UserDTO>(user.ID);
-            
+
             // Generate the token and send the email verification
             var url = Url.Action(nameof(ResetPassword), new { userId = encodedId });
             var uniqueId = $"{url}-{user.Email}";
-            var (token, expires) = TokenService.GenerateSASToken(uniqueId, encodedId, 
+            var (token, expires) = TokenService.GenerateSASToken(uniqueId, encodedId,
                 DateTime.UtcNow.AddSeconds(options.SASToken.ExpiresInSeconds), options.SASToken.Key);
 
             // Generate the full url
@@ -314,6 +331,81 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
                     Body = "Your password is reset successfully."
                 }
             });
+        }
+
+        [HttpGet("StartTotpEnrollment")]
+        [StepUp(AuthPurpose.MfaEnrollment)]
+        public async Task<IActionResult> StartTotpEnrollment()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId is null)
+                return BadRequest(new ShiftEntityResponse<UserDataDTO>
+                {
+                    Message = new Message
+                    {
+                        Body = "Invalid token."
+                    }
+                });
+
+            var user = User.FindFirstValue(ClaimTypes.GivenName) ?? User.FindFirstValue(ClaimTypes.Name);
+            var (secret, uri) = totpService.GenerateSecret(user ?? userId);
+
+            // Sign the secret (bound to the user + an expiry) so it can't be swapped in transit
+            // before the client echoes it back on confirmation.
+            var (sasToken, expires) = TokenService.GenerateSASToken(
+                secret, userId, DateTime.UtcNow.AddSeconds(options.SASToken.ExpiresInSeconds), options.SASToken.Key);
+
+            return Ok(new ShiftEntityResponse<TotpDTO>(new TotpDTO
+            {
+                Uri = uri,
+                Secret = secret,
+                Svg = totpService.GenerateQrCode(uri),
+                SasToken = sasToken,
+                Expires = expires,
+            }));
+        }
+
+        [HttpPost("ConfirmTotpEnrollment")]
+        [StepUp(AuthPurpose.MfaEnrollment)]
+        public async Task<IActionResult> ConfirmTotpEnrollment([FromBody] TotpDTO dto)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId is null)
+                return BadRequest(new ShiftEntityResponse<UserDataDTO>
+                {
+                    Message = new Message
+                    {
+                        Body = "Invalid token."
+                    }
+                });
+
+            // Reject a secret that we didn't issue for this user (e.g. tampered in transit).
+            if (!TokenService.ValidateSASToken(dto.Secret, userId, dto.Expires, dto.SasToken, options.SASToken.Key))
+                return BadRequest(new ShiftEntityResponse<UserDataDTO>
+                {
+                    Message = new Message
+                    {
+                        Body = "Invalid token."
+                    }
+                });
+
+            if (totpService.Validate(dto.Code, dto.Secret))
+            {
+                var user = await userRepo.SetTotpSecret(totpService.DecodeSecret(dto.Secret), hashIdService.Decode<UserDTO>(userId));
+                await userRepo.SaveChangesAsync();
+                var token = authTokenService.GenerateInternalJwtToken(user);
+                return Ok(new ShiftEntityResponse<TokenDTO>(token!));
+            }
+            else
+            {
+                return BadRequest(new ShiftEntityResponse<UserDataDTO>
+                {
+                    Message = new Message
+                    {
+                        Body = "Invalid code."
+                    }
+                });
+            }
         }
     }
 }

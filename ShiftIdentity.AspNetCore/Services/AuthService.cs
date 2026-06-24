@@ -1,7 +1,11 @@
 ﻿using PhoneNumbers;
-using ShiftSoftware.ShiftIdentity.AspNetCore.Models;
+using ShiftSoftware.ShiftEntity.Core;
+using ShiftSoftware.ShiftEntity.Model.HashIds;
+using ShiftSoftware.ShiftIdentity.Core.Models;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
+using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
+using ShiftSoftware.ShiftIdentity.Core.Enums;
 using ShiftSoftware.ShiftIdentity.Core.IRepositories;
 using ShiftSoftware.ShiftIdentity.Core.Localization;
 using System.Security.Claims;
@@ -15,13 +19,17 @@ public class AuthService
     private readonly TokenService tokenService;
     private readonly AuthCodeService authCodeService;
     private readonly ShiftIdentityLocalizer Loc;
+    private readonly IHashIdService hashIdService;
+    private readonly TotpService totpService;
 
     public AuthService(
         IUserRepository userRepo,
         ShiftIdentityConfiguration shiftIdentityConfiguration,
         TokenService tokenService,
         AuthCodeService authCodeService,
-        ShiftIdentityLocalizer Loc
+        ShiftIdentityLocalizer Loc,
+        IHashIdService hashIdService,
+        TotpService totpService
         )
     {
         this.userRepo = userRepo;
@@ -29,6 +37,8 @@ public class AuthService
         this.tokenService = tokenService;
         this.authCodeService = authCodeService;
         this.Loc = Loc;
+        this.hashIdService = hashIdService;
+        this.totpService = totpService;
     }
 
     public async Task<LoginResultModel> LoginAsync(LoginDTO loginDto)
@@ -77,9 +87,27 @@ public class AuthService
 
         await userRepo.SaveChangesAsync();
 
-        var token = tokenService.GenerateInternalJwtToken(user);
+        TokenDTO tokenDTO;
+        var mfaEnabled = shiftIdentityConfigurations.MfaSettings.Enabled;
 
-        return new LoginResultModel(token);
+        if (user.RequireChangePassword)
+        {
+            tokenDTO = tokenService.GenerateChangePasswordToken(user);
+        }
+        else if (mfaEnabled && shiftIdentityConfigurations.MfaSettings.Mandatory && user.TotpSecret == null)
+        {
+            tokenDTO = tokenService.GenerateMfaEnrollmentToken(user);
+        }
+        else if (mfaEnabled && user.TotpSecret != null)
+        {
+            tokenDTO = tokenService.GenerateMfaToken(user);
+        }
+        else
+        {
+            tokenDTO = tokenService.GenerateInternalJwtToken(user);
+        }
+
+        return new LoginResultModel(tokenDTO);
     }
 
     public async Task<TokenDTO?> GenrerateExternalTokenWithAppIdOnly(GenerateExternalTokenWithAppIdOnlyDTO dto)
@@ -105,18 +133,45 @@ public class AuthService
         return token;
     }
 
+    /// <summary>
+    /// Completes an MFA login. The user is identified by <paramref name="userId"/> (the hash-encoded
+    /// id taken from the authenticated principal — the temporary MFA token validated by the step-up scheme),
+    /// so the temporary token is no longer re-validated here. Returns a full access token when the code is valid.
+    /// <para>Today the only enrolled method is TOTP, so verification dispatches to <see cref="TotpService"/>.</para>
+    /// </summary>
+    public async Task<TokenDTO?> MfaLogin(string userId, string code)
+    {
+        try
+        {
+            var user = await userRepo.FindAsync(hashIdService.Decode<UserDTO>(userId), disableDefaultDataLevelAccess: true, disableGlobalFilters: true);
+            if (user is null || !user.IsActive || user.IsDeleted)
+                return null;
+
+            if (totpService.Validate(code, user.TotpSecret))
+            {
+                var token = tokenService.GenerateInternalJwtToken(user);
+                return token;
+            }
+
+        }
+        catch (Exception) { }
+
+        return null;
+    }
+
     public async Task<TokenDTO?> RefreshAsync(string refreshToken)
     {
         try
         {
             var claimPrincipal = tokenService.GetPrincipalFromRefreshToken(refreshToken);
-
             if (claimPrincipal is null)
                 return null;
 
-            var userId = long.Parse(claimPrincipal?.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var user = await userRepo.FindAsync(userId, disableDefaultDataLevelAccess: true, disableGlobalFilters: true);
+            var userId = claimPrincipal?.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId is null)
+                return null;
 
+            var user = await userRepo.FindAsync(hashIdService.Decode<UserDTO>(userId), disableDefaultDataLevelAccess: true, disableGlobalFilters: true);
             if(user is null || !user.IsActive || user.IsDeleted)
                 return null;
 

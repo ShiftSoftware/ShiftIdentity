@@ -3,9 +3,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using ShiftSoftware.ShiftEntity.Core;
-using ShiftSoftware.ShiftIdentity.AspNetCore;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
+using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.IRepositories;
 using ShiftSoftware.ShiftIdentity.Data;
 using ShiftSoftware.ShiftIdentity.Data.Repositories;
@@ -73,6 +73,7 @@ public static class IMvcBuilderExtensions
         builder.Services.AddScoped<AuthService>();
         builder.Services.AddScoped<TokenService>();
         builder.Services.AddScoped<Core.HashService>();
+        builder.Services.AddScoped<TotpService>();
 
         builder.Services.AddScoped<IUserRepository, UserRepository>();
         builder.Services.AddScoped<IAppRepository, AppRepository>();
@@ -96,6 +97,9 @@ public static class IMvcBuilderExtensions
         builder.Services.AddScoped<CalendarService>();
 
         builder.Services.AddScoped<ShiftIdentityDbContext>(x=> x.GetRequiredService<TDbContext>());
+
+        // Step-up scheme + policies (shared with the fake host; defined in ShiftIdentity.AspNetCore).
+        builder.AddStepUpAuthorization();
 
         return builder;
     }

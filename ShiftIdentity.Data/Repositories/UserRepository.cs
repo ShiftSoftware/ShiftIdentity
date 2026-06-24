@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
@@ -19,7 +20,6 @@ public class UserRepository :
     ShiftRepository<ShiftIdentityDbContext, User, UserListDTO, UserDTO>,
     IUserRepository
 {
-
     private readonly ITypeAuthService typeAuthService;
     private readonly IMapper mapper;
     private readonly ShiftIdentityFeatureLocking shiftIdentityFeatureLocking;
@@ -275,6 +275,17 @@ public class UserRepository :
         return user;
     }
 
+    public async Task<User?> SetTotpSecret(byte[] secret, long userId)
+    {
+        var user = await FindAsync(userId, null, disableGlobalFilters: true, disableDefaultDataLevelAccess: true);
+        if (user is null)
+            return null;
+
+        user.TotpSecret = secret;
+
+        return user;
+    }
+
     public async Task<User?> UpdateUserDataAsync(UserDataDTO dto, long userId)
     {
         var user = await FindAsync(userId, null, disableGlobalFilters: true, disableDefaultDataLevelAccess: true);
@@ -320,7 +331,7 @@ public class UserRepository :
         return base.SaveChangesAsync();
     }
 
-    public IEnumerable<UserInfoDTO> AssignRandomPasswords(List<User> users, int passwordLength)
+    public IEnumerable<UserInfoDTO> AssignRandomPasswords(List<User> users, int passwordLength, bool enforceChange)
     {
         var userInfos = new List<UserInfoDTO>();
 
@@ -337,7 +348,7 @@ public class UserRepository :
             user.Salt = hash.Salt;
 
             //Set flag to enforce password change
-            user.RequireChangePassword = true;
+            user.RequireChangePassword = enforceChange;
 
             var userInfo = this.mapper.Map<UserInfoDTO>(user);
             userInfo.PlainTextPassword = password;

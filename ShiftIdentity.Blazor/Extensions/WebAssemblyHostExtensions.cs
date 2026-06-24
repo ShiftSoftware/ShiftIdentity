@@ -5,6 +5,7 @@ using Microsoft.JSInterop;
 using ShiftSoftware.ShiftIdentity.Blazor.Providers;
 using ShiftSoftware.ShiftIdentity.Blazor.Services;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
+using ShiftSoftware.ShiftIdentity.Core.Enums;
 using System.Net.Http.Headers;
 
 namespace ShiftSoftware.ShiftIdentity.Blazor.Extensions;
@@ -56,6 +57,12 @@ public static class WebAssemblyHostExtensions
         }
 
         if (storedToken is null)
+            return;
+
+        // During a step-up phase (forced change-password / MFA / MFA enrollment) the stored token is a
+        // short-lived, purpose-bound temporary token with no refresh token. It can't be refreshed — the call
+        // would fail and, on first run, wipe the temporary token, kicking the user out of the flow. Leave it be.
+        if (storedToken.Flow != AuthPurpose.None)
             return;
 
         var refreshToken = storedToken.RefreshToken;

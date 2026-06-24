@@ -52,7 +52,7 @@ public class IdentityUserController : ShiftEntitySecureControllerAsync<UserRepos
     [TypeAuth<ShiftIdentityActions>(nameof(ShiftIdentityActions.Users), TypeAuth.Core.Access.Write)]
     public async Task<IActionResult> AssignRandomPasswords([FromBody] SelectStateDTO<UserListDTO> ids, [FromQuery(Name = "shareWithUser")] bool shareWithUser, [FromQuery(Name = "passwordLength")] int passwordLength = 20)
     {
-        var users = userRepo.AssignRandomPasswords(await this.GetSelectedEntitiesAsync(ids), passwordLength);
+        var users = userRepo.AssignRandomPasswords(await this.GetSelectedEntitiesAsync(ids), passwordLength, options.Security.RequirePasswordChange);
 
         var userInfos = this.mapper.Map<IEnumerable<UserInfoDTO>>(users);
 

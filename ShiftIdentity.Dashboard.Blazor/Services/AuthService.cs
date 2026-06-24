@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.Models;
 using ShiftSoftware.ShiftIdentity.Blazor;
+using System.Text.Json;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services
 {
@@ -37,6 +38,11 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services
         public async Task<HttpResponse<ShiftEntityResponse<TokenDTO>>> LoginAsync(LoginDTO loginDto)
         {
             return await httpService.PostAsync<ShiftEntityResponse<TokenDTO>, LoginDTO>(url + "login", loginDto);
+        }
+
+        public async Task<HttpResponse<ShiftEntityResponse<TokenDTO>>> VerifyMfaAsync(MfaDTO mfaDto)
+        {
+            return await httpService.PostAsync<ShiftEntityResponse<TokenDTO>, MfaDTO>(url + "login/mfa", mfaDto);
         }
 
         public async Task<HttpResponse<ShiftEntityResponse<AuthCodeModel>>> GenerateAuthCodeAsync(GenerateAuthCodeDTO dto)

@@ -1,4 +1,6 @@
-﻿namespace ShiftSoftware.ShiftIdentity.Core.DTOs;
+﻿using ShiftSoftware.ShiftIdentity.Core.Enums;
+
+namespace ShiftSoftware.ShiftIdentity.Core.DTOs;
 
 
 public class TokenDTO
@@ -9,7 +11,7 @@ public class TokenDTO
     public string RefreshToken { get; set; } = default!;
     public long? RefreshTokenLifeTimeInSeconds { get; set; }
 
-    public bool RequirePasswordChange { get; set; }
+    public AuthPurpose Flow { get; set; } = AuthPurpose.None;
 
     public TokenUserDataDTO UserData { get; set; } = default!;
 }

@@ -1,7 +1,7 @@
 ﻿using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.App;
 
-namespace ShiftSoftware.ShiftIdentity.AspNetCore;
+namespace ShiftSoftware.ShiftIdentity.Core;
 
 public class ShiftIdentityOptions
 {

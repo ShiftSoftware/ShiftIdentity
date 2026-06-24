@@ -1,0 +1,183 @@
+@attribute [Authorize]
+@layout Shared.DefaultLayout
+@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(TotpEnrollmentForm)}")]
+@inject ShiftModal ShiftModal
+@inject MessageService Message
+@inject UserManagerService UserManager
+@inject NavigationManager NavManager
+@inject IIdentityStore storageService
+@inject ShiftIdentityLocalizer Loc
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@using MudBlazor
+@using ShiftSoftware.ShiftIdentity.Core
+@using ShiftSoftware.ShiftIdentity.Blazor
+
+<MudPaper Elevation="25" Class="pa-5">
+    @if (Enforce)
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-4">
+            @Loc["You must set up two-factor authentication to continue"]
+        </MudAlert>
+    }
+
+    @if (state == State.Loading)
+    {
+        <div class="d-flex justify-center pa-8">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        </div>
+    }
+    else if (state == State.LoadFailed)
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">
+            @Loc["Could not start two-factor setup. Please try again."]
+        </MudAlert>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="LoadAsync">
+            @Loc["Retry"]
+        </MudButton>
+    }
+    else
+    {
+        <MudText Typo="Typo.body1" Class="mb-4">
+            @Loc["Scan the QR code with your authenticator app, then enter the 6-digit code it shows to finish setup."]
+        </MudText>
+
+        <div class="d-flex justify-center mb-4">
+            <div style="width: 100%; max-width: 240px;" aria-label="@Loc["Two-factor authentication QR code"]">
+                @((MarkupString)qrSvg!)
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(enrollment?.Secret))
+        {
+            <MudText Typo="Typo.body2" Align="Align.Center" Class="mb-1">
+                @Loc["Can't scan it? Enter this key manually:"]
+            </MudText>
+            <MudText Typo="Typo.subtitle1" Align="Align.Center" Class="mb-4"
+                     Style="font-family: monospace; letter-spacing: .15em; word-break: break-all;">
+                @enrollment?.Secret
+            </MudText>
+        }
+
+        <EditForm Model="@dto" OnValidSubmit="VerifyAsync">
+            <DataAnnotationsValidator />
+
+            <MudTextField T="string" Label="@Loc["Code"]" @bind-Value="dto.Code"
+                          For="@(() => dto.Code)" InputMode="InputMode.numeric"
+                          Immediate="true" Disabled="submitting" autocomplete="one-time-code" />
+
+            <MudGrid Justify="Justify.FlexEnd" Class="mt-4">
+                @if (MudDialog is not null)
+                {
+                    <MudButton StartIcon="@Icons.Material.Filled.Cancel" OnClick="Cancel" Disabled="submitting">
+                        @Loc["Cancel"]
+                    </MudButton>
+                }
+
+                <MudButton Color="Color.Primary" ButtonType="ButtonType.Submit" Disabled="submitting">
+                    @if (submitting)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    else
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Save" Class="mr-2" />
+                    }
+                    <MudText>@Loc["Verify"]</MudText>
+                </MudButton>
+            </MudGrid>
+        </EditForm>
+    }
+</MudPaper>
+
+    @code {
+    private enum State { Loading, Ready, LoadFailed }
+
+    private readonly EnrollTotpDTO dto = new();
+
+    private State state = State.Loading;
+    private bool submitting;
+    private TotpDTO? enrollment;
+    private string? qrSvg;
+
+    [CascadingParameter]
+    protected IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public bool Enforce { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        state = State.Loading;
+
+        var response = await UserManager.StartTotpEnrollmentAsync();
+        var data = response.Data?.Entity;
+
+        if (!response.IsSuccess || data is null)
+        {
+            state = State.LoadFailed;
+            return;
+        }
+
+        enrollment = data;
+        qrSvg = PrepareSvg(data.Svg);
+        state = State.Ready;
+    }
+
+    private async Task VerifyAsync()
+    {
+        submitting = true;
+        try
+        {
+            var response = await UserManager.ConfirmTotpAsync(dto.Code, enrollment!);
+
+            if (!response.IsSuccess)
+            {
+                var message = response.Data?.Message;
+                Message.Error(response?.Data?.Message?.Body!, response?.Data?.Message?.Title);
+                return;
+            }
+
+            await storageService.StoreTokenAsync(response?.Data?.Entity!);
+
+            //Notify AuthenticationStateProvider and TypeAuth taht auth state has changed
+            await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+
+            if (MudDialog is not null)
+            {
+                ShiftModal.Close(MudDialog);
+                return;
+            }
+
+            NavManager.NavigateTo(ReturnUrl ?? "/", forceLoad: true);
+        }
+        finally
+        {
+            submitting = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        if (MudDialog is not null)
+            ShiftModal.Close(MudDialog);
+    }
+
+    // Makes the QR code scale to its container: drops the XML prolog so it renders cleanly
+    // inline, then forces a responsive size (the SVG itself only carries a viewBox).
+    private static string PrepareSvg(string svg)
+    {
+        var svgStart = svg.IndexOf("<svg", StringComparison.OrdinalIgnoreCase);
+        if (svgStart > 0)
+            svg = svg[svgStart..];
+
+        return svg.Replace("<svg ", "<svg style=\"width:100%;height:auto;display:block;\" ", StringComparison.OrdinalIgnoreCase);
+    }
+}

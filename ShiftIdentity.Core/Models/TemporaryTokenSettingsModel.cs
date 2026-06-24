@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
-namespace ShiftSoftware.ShiftIdentity.AspNetCore.Models;
+namespace ShiftSoftware.ShiftIdentity.Core.Models;
 
-public class RefreshTokenSettingsModel
+public class TemporaryTokenSettingsModel
 {
     public string Key { get; set; } = default!;
 
@@ -14,5 +12,5 @@ public class RefreshTokenSettingsModel
 
     public string Audience { get; set; } = default!;
 
-    public int ExpireSeconds { get; set; }
+    public int ExpireSeconds { get; set; } = 300;
 }

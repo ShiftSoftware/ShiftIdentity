@@ -1,8 +1,8 @@
-﻿using ShiftSoftware.ShiftEntity.Core;
-using ShiftSoftware.ShiftIdentity.AspNetCore.Models;
-using ShiftSoftware.ShiftIdentity.Core;
+﻿using ShiftSoftware.ShiftIdentity.Core.Models;
+using System;
+using System.Collections.Generic;
 
-namespace ShiftSoftware.ShiftIdentity.AspNetCore;
+namespace ShiftSoftware.ShiftIdentity.Core;
 
 public class ShiftIdentityConfiguration
 {
@@ -11,6 +11,10 @@ public class ShiftIdentityConfiguration
     public TokenSettingsModel Token { get; set; } = default!;
 
     public RefreshTokenSettingsModel RefreshToken { get; set; } = default!;
+
+    public MfaSettingsModel MfaSettings { get; set; } = default!;
+
+    public TemporaryTokenSettingsModel TemporaryTokenSettings { get; set; } = default!;
 
     public HashIdSettings HashIdSettings { get; set; } = default!;
 
