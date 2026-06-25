@@ -81,7 +81,7 @@ public class IdentityUserController : ShiftEntitySecureControllerAsync<UserRepos
         var users = await this.GetSelectedEntitiesAsync(ids);
         foreach (var user in users)
         {
-            await userRepo.SetTotpSecret(null, user.ID);
+            await userRepo.SetTotpSecret(null, user);
         }
 
         await userRepo.SaveChangesAsync();

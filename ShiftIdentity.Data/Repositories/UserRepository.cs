@@ -281,6 +281,13 @@ public class UserRepository :
         if (user is null)
             return null;
 
+        await SetTotpSecret(secret, user);
+
+        return user;
+    }
+
+    public async Task<User?> SetTotpSecret(byte[]? secret, User user)
+    {
         user.TotpSecret = secret;
 
         return user;
