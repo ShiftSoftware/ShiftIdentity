@@ -87,26 +87,7 @@ public class AuthService
 
         await userRepo.SaveChangesAsync();
 
-        TokenDTO tokenDTO;
-        var mfaEnabled = shiftIdentityConfigurations.MfaSettings.Enabled;
-
-        if (user.RequireChangePassword)
-        {
-            tokenDTO = tokenService.GenerateChangePasswordToken(user);
-        }
-        else if (mfaEnabled && shiftIdentityConfigurations.MfaSettings.Mandatory && user.TotpSecret == null)
-        {
-            tokenDTO = tokenService.GenerateMfaEnrollmentToken(user);
-        }
-        else if (mfaEnabled && user.TotpSecret != null)
-        {
-            tokenDTO = tokenService.GenerateMfaToken(user);
-        }
-        else
-        {
-            tokenDTO = tokenService.GenerateInternalJwtToken(user);
-        }
-
+        TokenDTO tokenDTO = tokenService.IssueLoginToken(user);
         return new LoginResultModel(tokenDTO);
     }
 
@@ -149,8 +130,7 @@ public class AuthService
 
             if (totpService.Validate(code, user.TotpSecret))
             {
-                var token = tokenService.GenerateInternalJwtToken(user);
-                return token;
+                return tokenService.IssueLoginToken(user, true);
             }
 
         }

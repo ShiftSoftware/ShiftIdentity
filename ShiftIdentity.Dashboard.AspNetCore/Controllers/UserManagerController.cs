@@ -135,7 +135,8 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
 
             await userRepo.SaveChangesAsync();
 
-            return Ok(new ShiftEntityResponse<UserDataDTO>(mapper.Map<UserDataDTO>(user)));
+            var token = authTokenService.IssueLoginToken(user);
+            return Ok(new ShiftEntityResponse<TokenDTO>(token!));
         }
 
         [HttpGet("SendEmailVerificationLink")]
@@ -393,7 +394,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
             {
                 var user = await userRepo.SetTotpSecret(totpService.DecodeSecret(dto.Secret), hashIdService.Decode<UserDTO>(userId));
                 await userRepo.SaveChangesAsync();
-                var token = authTokenService.GenerateInternalJwtToken(user);
+                var token = authTokenService.IssueLoginToken(user, true);
                 return Ok(new ShiftEntityResponse<TokenDTO>(token!));
             }
             else

@@ -45,6 +45,26 @@ public class TokenService
         return GenerateToken(user, true);
     }
 
+    public TokenDTO IssueLoginToken(User user, bool mfaSatisfiedThisSession = false)
+    {
+        if (user.RequireChangePassword)
+            return GenerateChangePasswordToken(user);
+
+        if (!mfaSatisfiedThisSession)
+        {
+            var mfa = shiftIdentityConfiguration.MfaSettings;
+            if (mfa.Enabled)
+            {
+                if (user.TotpSecret is null && mfa.Mandatory)
+                    return GenerateMfaEnrollmentToken(user);
+                if (user.TotpSecret is not null)
+                    return GenerateMfaToken(user);
+            }
+        }
+
+        return GenerateInternalJwtToken(user);
+    }
+
     public ClaimsPrincipal? GetPrincipalFromRefreshToken(string token)
     {
         var tokenValidationParameters = new TokenValidationParameters

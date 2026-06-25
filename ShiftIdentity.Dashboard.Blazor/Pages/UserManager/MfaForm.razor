@@ -5,8 +5,8 @@
 @inject MessageService Message
 @inject AuthService AuthService
 @inject NavigationManager NavManager
-@inject IIdentityStore storageService
 @inject ShiftIdentityLocalizer Loc
+@inject IIdentityStore storageService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @using ShiftSoftware.ShiftIdentity.Blazor
 
@@ -68,7 +68,7 @@
 
         await storageService.StoreTokenAsync(result?.Data?.Entity!);
 
-        //Notify AuthenticationStateProvider and TypeAuth taht auth state has changed
+        //Notify AuthenticationStateProvider and TypeAuth that auth state has changed
         await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
 

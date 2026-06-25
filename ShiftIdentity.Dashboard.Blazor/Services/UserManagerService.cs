@@ -25,9 +25,9 @@ public class UserManagerService
         return await http.GetAsync<ShiftEntityResponse<UserDataDTO>>(BASE_URL + "userdata");
     }
 
-    public async Task<HttpResponse<ShiftEntityResponse<UserDataDTO>>> ChangePasswordAsync(ChangePasswordDTO dto)
+    public async Task<HttpResponse<ShiftEntityResponse<TokenDTO>>> ChangePasswordAsync(ChangePasswordDTO dto)
     {
-        return await http.PutAsync<ShiftEntityResponse<UserDataDTO>, ChangePasswordDTO>(BASE_URL + "ChangePassword", dto);
+        return await http.PutAsync<ShiftEntityResponse<TokenDTO>, ChangePasswordDTO>(BASE_URL + "ChangePassword", dto);
     }
 
     /// <summary>
