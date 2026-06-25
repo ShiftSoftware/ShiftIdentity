@@ -15,6 +15,9 @@ public class TokenRefreshService
 
     public async Task<TokenDTO?> RefreshTokenAsync(string refreshToken)
     {
+        if (refreshToken == null)
+            return null;
+
         using var response = await http.PostAsJsonAsync<RefreshDTO>("auth/Refresh", new RefreshDTO { RefreshToken = refreshToken });
         if (response.IsSuccessStatusCode)
             return (await response.Content.ReadFromJsonAsync<ShiftEntityResponse<TokenDTO>>())?.Entity;

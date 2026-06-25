@@ -102,7 +102,16 @@ public class AuthController : ControllerBase
 
         var tokenDto = await authService.MfaLogin(userId, mfaDto.Code);
 
-        return Ok(new ShiftEntityResponse<TokenDTO>(tokenDto!));
+        if (tokenDto is null)
+            return BadRequest(new ShiftEntityResponse<TokenDTO>
+            {
+                Message = new Message
+                {
+                    Body = Loc["Invalid code"]
+                }
+            });
+
+        return Ok(new ShiftEntityResponse<TokenDTO>(tokenDto));
     }
 
     /// <summary>

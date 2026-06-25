@@ -35,14 +35,17 @@ internal class IdentityLocalStorageService : IIdentityStore
     public async Task<TokenDTO?> GetTokenAsync()
     {
         var tokenDto = await localStorage.GetItemAsync<TokenDTO>(tokenStorageKey);
-        if (tokenDto == null || string.IsNullOrWhiteSpace(tokenDto.Token))
+        if (tokenDto == null)
             return null;
 
         if (JwtUtils.IsExpired(tokenDto.Token, 10)) // 10 seconds early refresh
         {
-            tokenDto = await tokenRefreshService.RefreshTokenAsync(tokenDto.RefreshToken);
-            if (tokenDto is not null)
-                await StoreTokenAsync(tokenDto);
+            var refreshed = await tokenRefreshService.RefreshTokenAsync(tokenDto.RefreshToken);
+            if (refreshed is not null)
+            {
+                await StoreTokenAsync(refreshed);
+                return refreshed;
+            }
         }
 
         return tokenDto;

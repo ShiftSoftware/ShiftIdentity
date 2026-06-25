@@ -116,18 +116,25 @@
     {
         state = State.Loading;
 
-        var response = await UserManager.StartTotpEnrollmentAsync();
-        var data = response.Data?.Entity;
+        try
+        {
+            var response = await UserManager.StartTotpEnrollmentAsync();
+            var data = response.Data?.Entity;
 
-        if (!response.IsSuccess || data is null)
+            if (!response.IsSuccess || data is null)
+            {
+                state = State.LoadFailed;
+                return;
+            }
+
+            enrollment = data;
+            qrSvg = PrepareSvg(data.Svg);
+            state = State.Ready;
+        }
+        catch (Exception)
         {
             state = State.LoadFailed;
-            return;
         }
-
-        enrollment = data;
-        qrSvg = PrepareSvg(data.Svg);
-        state = State.Ready;
     }
 
     private async Task VerifyAsync()
@@ -157,6 +164,10 @@
             }
 
             NavManager.NavigateTo(ReturnUrl ?? "/", forceLoad: true);
+        }
+        catch (Exception)
+        {
+            Message.Error(Loc["Your session has expired. Please log in again."]);
         }
         finally
         {

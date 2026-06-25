@@ -35,7 +35,7 @@ public class HttpMessageHandlerService
     {
         var storedToken = await tokenStore.GetTokenAsync();
 
-        if (storedToken is null)
+        if (storedToken is null || string.IsNullOrWhiteSpace(storedToken.RefreshToken))
         {
             await tokenStore.RemoveTokenAsync();
             await messageService.ShowWarningMessageAsync("Your session has expired. Please login again (in another tab). ", "Login another tab");
@@ -43,7 +43,6 @@ public class HttpMessageHandlerService
         }
 
         var refreshToken = storedToken.RefreshToken;
-
         var result = await tokenRefreshService.RefreshTokenAsync(refreshToken);
 
         if (result is not null)
