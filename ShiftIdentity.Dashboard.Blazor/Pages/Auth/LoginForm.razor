@@ -39,7 +39,12 @@
                 <MudTextField T="string" Label="@Loc["Username"]" @bind-Value="loginDto.Username" For="@(() => loginDto.Username)" />
 
                 <MudTextField T="string" Label="@Loc["Password"]" @bind-Value="loginDto.Password"
-                              For="@(() => loginDto.Password)" InputType="InputType.Password" />
+                              For="@(() => loginDto.Password)"
+                              InputType="@passwordInput"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@passwordIcon"
+                              OnAdornmentClick="TogglePasswordVisibility"
+                              AdornmentAriaLabel="@Loc["Show or hide password"]" />
 
                 <br />
                 <MudButton Size="Size.Small"
@@ -64,6 +69,18 @@
 
 @code {
     LoginDTO loginDto { get; set; } = new LoginDTO();
+
+    // Password show/hide toggle (the end-adornment icon button flips both the input type and icon).
+    bool showPassword;
+    InputType passwordInput = InputType.Password;
+    string passwordIcon = Icons.Material.Filled.VisibilityOff;
+
+    private void TogglePasswordVisibility()
+    {
+        showPassword = !showPassword;
+        passwordInput = showPassword ? InputType.Text : InputType.Password;
+        passwordIcon = showPassword ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff;
+    }
 
     [CascadingParameter]
     private Task<AuthenticationState>? authenticationStateTask { get; set; }
