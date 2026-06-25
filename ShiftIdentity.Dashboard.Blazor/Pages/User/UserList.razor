@@ -54,6 +54,17 @@
             <ActionButton Color="Color.Error"
                           Variant="Variant.Outlined"
                           Size="Size.Small"
+                          StartIcon="@Icons.Material.Filled.LockReset"
+                          Confirm
+                          OnResult="ResetTotpResponse"
+                          T="UserListDTO"
+                          Endpoint="@($"{Constants.IdentityRoutePreifix}User/ResetTotp")">
+                @Loc["Reset TOTP"]
+            </ActionButton>
+
+            <ActionButton Color="Color.Error"
+                          Variant="Variant.Outlined"
+                          Size="Size.Small"
                           StartIcon="@Icons.Material.Filled.Email"
                           Confirm
                           OnResult="VerifyEmailsResponse"
@@ -224,6 +235,20 @@
         }
 
         return false;
+    }
+
+    private ValueTask<bool> ResetTotpResponse(ShiftEntityResponse<IList<UserListDTO>> res)
+    {
+        if (res.Message == null && res.Entity?.Count > 0)
+        {
+            this.MessageService.Success($"TOTP Authentication was reset for ({res.Entity.Count}) users.");
+        }
+        else
+        {
+            this.MessageService.Error("An error occurred while resetting TOTP Authentication.");
+        }
+
+        return ValueTask.FromResult(false);
     }
 
 

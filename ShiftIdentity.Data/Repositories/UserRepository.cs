@@ -275,7 +275,7 @@ public class UserRepository :
         return user;
     }
 
-    public async Task<User?> SetTotpSecret(byte[] secret, long userId)
+    public async Task<User?> SetTotpSecret(byte[]? secret, long userId)
     {
         var user = await FindAsync(userId, null, disableGlobalFilters: true, disableDefaultDataLevelAccess: true);
         if (user is null)

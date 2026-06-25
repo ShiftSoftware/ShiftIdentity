@@ -74,6 +74,21 @@ public class IdentityUserController : ShiftEntitySecureControllerAsync<UserRepos
         });
     }
 
+    [HttpPost("ResetTotp")]
+    [TypeAuth<ShiftIdentityActions>(nameof(ShiftIdentityActions.Users), TypeAuth.Core.Access.Write)]
+    public async Task<IActionResult> ResetTotp([FromBody] SelectStateDTO<UserListDTO> ids)
+    {
+        var users = await this.GetSelectedEntitiesAsync(ids);
+        foreach (var user in users)
+        {
+            await userRepo.SetTotpSecret(null, user.ID);
+        }
+
+        await userRepo.SaveChangesAsync();
+        return Ok(new ShiftEntityResponse<IEnumerable<UserInfoDTO>>(this.mapper.Map<IEnumerable<UserInfoDTO>>(users)));
+
+    }
+
     [HttpPost("VerifyEmails")]
     [TypeAuth<ShiftIdentityActions>(nameof(ShiftIdentityActions.Users), TypeAuth.Core.Access.Write)]
     public async Task<IActionResult> VerifyEmails([FromBody] SelectStateDTO<UserListDTO> ids)
