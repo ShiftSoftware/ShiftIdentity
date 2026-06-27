@@ -140,13 +140,28 @@ public static class IMvcBuilderExtensions
         return builder;
     }
 
+    /// <summary>
+    /// Registers <see cref="AuthService"/> and the services it composes — token issuance, auth codes,
+    /// password hashing, and TOTP. Both the identity-server host (<c>AddShiftIdentityDashboard</c>) and the
+    /// dev-only fake host (<see cref="AddFakeIdentityEndPoints"/>) call this, so a dependency added to
+    /// <see cref="AuthService"/>'s constructor only needs registering in one place — the two hosts can no
+    /// longer drift and leave the graph unsatisfiable (which is what broke consumers when TOTP was added).
+    /// </summary>
+    public static IServiceCollection AddShiftIdentityAuthCoreServices(this IServiceCollection services)
+    {
+        services.AddSingleton<AuthCodeStoreService>();
+        services.AddScoped<AuthCodeService>();
+        services.AddScoped<AuthService>();
+        services.AddScoped<TokenService>();
+        services.AddScoped<TotpService>();
+        services.AddScoped<HashService>();
+
+        return services;
+    }
+
     public static IMvcBuilder AddFakeIdentityEndPoints(this IMvcBuilder builder, TokenSettingsModel tokenConfiguration, TokenUserDataDTO userData, AppDTO app, string? userPassword, params string[] accessTrees)
     {
-        builder.Services.AddSingleton<AuthCodeStoreService>();
-        builder.Services.AddScoped<AuthCodeService>();
-        builder.Services.AddScoped<AuthService>();
-        builder.Services.AddScoped<TokenService>();
-        builder.Services.AddScoped<HashService>();
+        builder.Services.AddShiftIdentityAuthCoreServices();
 
         //Fixed configurations
         var configuration = new ShiftIdentityConfiguration

@@ -68,12 +68,7 @@ public static class IMvcBuilderExtensions
         builder.Services.TryAddSingleton(shiftIdentityConfiguration.ShiftIdentityFeatureLocking);
         builder.Services.TryAddSingleton(shiftIdentityConfiguration.DefaultDataLevelAccessOptions);
 
-        builder.Services.AddSingleton<AuthCodeStoreService>();
-        builder.Services.AddScoped<AuthCodeService>();
-        builder.Services.AddScoped<AuthService>();
-        builder.Services.AddScoped<TokenService>();
-        builder.Services.AddScoped<Core.HashService>();
-        builder.Services.AddScoped<TotpService>();
+        builder.Services.AddShiftIdentityAuthCoreServices();
 
         builder.Services.AddScoped<IUserRepository, UserRepository>();
         builder.Services.AddScoped<IAppRepository, AppRepository>();
