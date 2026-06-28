@@ -112,7 +112,7 @@
         <PropertyColumnExtended Title="@Loc["Name"]" Property="x => x.FullName" />
         <PropertyColumnExtended Title="@Loc["Username"]" Property="x => x.Username" />
         <PropertyColumnExtended Title="@Loc["Integration Id"]" Property="x => x.IntegrationId" />
-        <PropertyColumnExtended Title="@Loc["Phone"]" Property="x => x.Phone" CellNowrap="false">
+        <PropertyColumnExtended Title="@Loc["Phone"]" Property="x => x.Phone">
             <CellTemplate Context="cel">
                 <MudPaper Elevation="0" Class="d-flex align-items-center p-2">
                     <span class="align-middle">@cel?.Item?.Phone</span>
@@ -128,7 +128,7 @@
                 </MudPaper>
             </CellTemplate>
         </PropertyColumnExtended>
-        <PropertyColumnExtended Title="@Loc["Email"]" Property="x => x.Email" CellNowrap="false">
+        <PropertyColumnExtended Title="@Loc["Email"]" Property="x => x.Email">
             <CellTemplate Context="cel">
                 <MudPaper Elevation="0" Class="d-flex align-items-center p-2">
                     <span class="align-middle">@cel?.Item?.Email</span>
