@@ -14,11 +14,11 @@
            TypeAuthAction="ShiftIdentityActions.CompanyCalendars"
            EnableExport>
 
-    <PropertyColumn Property="x => x.Title" Title="@Loc["Title"]" />
-    <PropertyColumn Property="x => x.EntryType" Title="@Loc["Type"]" />
-    <PropertyColumn Property="x => x.StartDate" Title="@Loc["Start Date"]" Format="yyyy-MM-dd" />
-    <PropertyColumn Property="x => x.EndDate" Title="@Loc["End Date"]" Format="yyyy-MM-dd" />
-    <PropertyColumn Property="x => x.Priority" Title="@Loc["Priority"]" />
+    <PropertyColumnExtended Property="x => x.Title" Title="@Loc["Title"]" />
+    <PropertyColumnExtended Property="x => x.EntryType" Title="@Loc["Type"]" />
+    <PropertyColumnExtended Property="x => x.StartDate" Title="@Loc["Start Date"]" Format="yyyy-MM-dd" />
+    <PropertyColumnExtended Property="x => x.EndDate" Title="@Loc["End Date"]" Format="yyyy-MM-dd" />
+    <PropertyColumnExtended Property="x => x.Priority" Title="@Loc["Priority"]" />
 
     <ForeignColumn Title="@Loc["Company"]"
                    T="CompanyCalendarListDTO"

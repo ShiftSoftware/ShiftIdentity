@@ -109,10 +109,10 @@
         <ForeignFilter Property="x => x.Value" DTOType="typeof(AccessTreeListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}AccessTree")" Label="@Loc["Access Trees"]" TProperty="string" T="ShiftEntitySelectDTO" CollectionPrefix="@(["AccessTrees"])" lg="3" md="6" sm="12" xs="12" />
 
 
-        <PropertyColumn Title="@Loc["Name"]" Property="x => x.FullName" />
-        <PropertyColumn Title="@Loc["Username"]" Property="x => x.Username" />
-        <PropertyColumn Title="@Loc["Integration Id"]" Property="x => x.IntegrationId" />
-        <PropertyColumn Title="@Loc["Phone"]" Property="x => x.Phone">
+        <PropertyColumnExtended Title="@Loc["Name"]" Property="x => x.FullName" />
+        <PropertyColumnExtended Title="@Loc["Username"]" Property="x => x.Username" />
+        <PropertyColumnExtended Title="@Loc["Integration Id"]" Property="x => x.IntegrationId" />
+        <PropertyColumnExtended Title="@Loc["Phone"]" Property="x => x.Phone" CellNowrap="false">
             <CellTemplate Context="cel">
                 <MudPaper Elevation="0" Class="d-flex align-items-center p-2">
                     <span class="align-middle">@cel?.Item?.Phone</span>
@@ -127,8 +127,8 @@
                     }
                 </MudPaper>
             </CellTemplate>
-        </PropertyColumn>
-        <PropertyColumn Title="@Loc["Email"]" Property="x => x.Email">
+        </PropertyColumnExtended>
+        <PropertyColumnExtended Title="@Loc["Email"]" Property="x => x.Email" CellNowrap="false">
             <CellTemplate Context="cel">
                 <MudPaper Elevation="0" Class="d-flex align-items-center p-2">
                     <span class="align-middle">@cel?.Item?.Email</span>
@@ -143,18 +143,18 @@
                     }
                 </MudPaper>
             </CellTemplate>
-        </PropertyColumn>
-        <PropertyColumn Title="@Loc["Branch"]" Property="x => x.CompanyBranch" />
+        </PropertyColumnExtended>
+        <PropertyColumnExtended Title="@Loc["Branch"]" Property="x => x.CompanyBranch" />
         <PropertyColumnExtended Format="F" Property="x => x.LastSeen" Title="@Loc["Last Seen"]" />
 
-        <PropertyColumn Title="@Loc["Access Trees"]" Property="x => x.AccessTrees" Context="col">
+        <PropertyColumnExtended Title="@Loc["Access Trees"]" Property="x => x.AccessTrees" Context="col" CellNowrap="false">
             <CellTemplate>
                 @foreach (var accessTree in col.Item!.AccessTrees)
                 {
                     <MudChip Size="Size.Small" Color="Color.Primary">@accessTree.Text</MudChip>
                 }
             </CellTemplate>
-        </PropertyColumn>
+        </PropertyColumnExtended>
     </ChildContent>
 </ShiftList>
 

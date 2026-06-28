@@ -21,9 +21,9 @@
     <ForeignFilter Property="x => x.RegionID" Label="@Loc["Region"]" DTOType="typeof(RegionListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Region")" lg="6" md="6" sm="12" xs="12" />
     <StringFilter Property="x => x.IntegrationId" Label="@Loc["Integration ID"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="6" md="6" sm="12" xs="12" />
 
-    <PropertyColumn Title="@Loc["Name"]" Property="x => x.Name" />
-    <PropertyColumn Title="@Loc["Country"]" Property="x => x.Country" />
-    <PropertyColumn Title="@Loc["Region"]" Property="x => x.Region" />
-    <PropertyColumn Title="@Loc["Integration ID"]" Property="x => x.IntegrationId" />
-    <PropertyColumn Title="@Loc["Display Order"]" Property="x => x.DisplayOrder" />
+    <PropertyColumnExtended Title="@Loc["Name"]" Property="x => x.Name" />
+    <PropertyColumnExtended Title="@Loc["Country"]" Property="x => x.Country" />
+    <PropertyColumnExtended Title="@Loc["Region"]" Property="x => x.Region" />
+    <PropertyColumnExtended Title="@Loc["Integration ID"]" Property="x => x.IntegrationId" />
+    <PropertyColumnExtended Title="@Loc["Display Order"]" Property="x => x.DisplayOrder" />
 </ShiftList>

@@ -34,33 +34,33 @@
     <DateTimeFilter Property="x => x.TerminationDate" Label="@Loc["TerminationDate"]" Operator="ShiftBlazor.Enums.ODataOperator.Equal" lg="3" md="6" sm="12" xs="12" />
     <DateTimeFilter Property="x => x.CompanyTerminationDate" Label="@Loc["Company TerminationDate"]" Operator="ShiftBlazor.Enums.ODataOperator.Equal" lg="3" md="6" sm="12" xs="12" />
 
-    <PropertyColumn Title="@Loc["Name"]" Property="x => x.Name" />
-    <PropertyColumn Title="@Loc["Display Name"]" Property="x => x.DisplayName" />
-    <PropertyColumn Title="@Loc["Short Code"]" Property="x => x.ShortCode" />
-    <PropertyColumn Title="@Loc["City"]" Property="x => x.City" />
-    <PropertyColumn Title="@Loc["Company"]" Property="x => x.Company" />
-    <PropertyColumn Title="@Loc["Integration ID"]" Property="x => x.IntegrationId" />
-    <PropertyColumn Title="@Loc["Display Order"]" Property="x => x.DisplayOrder" />
+    <PropertyColumnExtended Title="@Loc["Name"]" Property="x => x.Name" />
+    <PropertyColumnExtended Title="@Loc["Display Name"]" Property="x => x.DisplayName" />
+    <PropertyColumnExtended Title="@Loc["Short Code"]" Property="x => x.ShortCode" />
+    <PropertyColumnExtended Title="@Loc["City"]" Property="x => x.City" />
+    <PropertyColumnExtended Title="@Loc["Company"]" Property="x => x.Company" />
+    <PropertyColumnExtended Title="@Loc["Integration ID"]" Property="x => x.IntegrationId" />
+    <PropertyColumnExtended Title="@Loc["Display Order"]" Property="x => x.DisplayOrder" />
 
-    <PropertyColumn Title="@Loc["Departments"]" Property="x => x.Departments" Context="col"> 
+    <PropertyColumnExtended Title="@Loc["Departments"]" Property="x => x.Departments" Context="col" CellNowrap="false">
         <CellTemplate>
             @foreach (var department in col.Item!.Departments)
             {
                 <MudChip Size="Size.Small" Color="Color.Primary">@department.Text</MudChip>
             }
         </CellTemplate>
-    </PropertyColumn>
+    </PropertyColumnExtended>
 
-    <PropertyColumn Title="@Loc["Services"]" Property="x => x.Services" Context="col">
+    <PropertyColumnExtended Title="@Loc["Services"]" Property="x => x.Services" Context="col" CellNowrap="false">
         <CellTemplate>  
             @foreach (var service in col.Item!.Services)
             {
                 <MudChip Size="Size.Small" Color="Color.Primary">@service.Text</MudChip>
             }
         </CellTemplate>
-    </PropertyColumn>
+    </PropertyColumnExtended>
 
-    <PropertyColumnExtended Filterable="false" Sortable="false" Title="@Loc["Publish Targets"]" Property="x => x.PublishTargets" Context="col">
+    <PropertyColumnExtended Filterable="false" Sortable="false" Title="@Loc["Publish Targets"]" Property="x => x.PublishTargets" Context="col" CellNowrap="false">
         <CellTemplate>
             @if(col.Item.PublishTargets != null && col.Item.PublishTargets.Any()) 
             {
@@ -71,6 +71,6 @@
             }
         </CellTemplate>
     </PropertyColumnExtended>
-    <PropertyColumn Property="x => x.TerminationDate" Format="yyyy-MM-dd" Title="@Loc["TerminationDate"]" />
-    <PropertyColumn Property="x => x.CompanyTerminationDate" Format="yyyy-MM-dd" Title="@Loc["Company TerminationDate"]" />
+    <PropertyColumnExtended Property="x => x.TerminationDate" Format="yyyy-MM-dd" Title="@Loc["TerminationDate"]" />
+    <PropertyColumnExtended Property="x => x.CompanyTerminationDate" Format="yyyy-MM-dd" Title="@Loc["Company TerminationDate"]" />
 </ShiftList>

@@ -21,13 +21,13 @@
     <ForeignFilter Property="x => x.ParentCompanyID" Label="@Loc["Parent Company"]" DTOType="typeof(CompanyListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Company")" lg="3" md="6" sm="12" xs="12" />
     <DateTimeFilter Property="x => x.TerminationDate" Label="@Loc["TerminationDate"]" Operator="ShiftBlazor.Enums.ODataOperator.Equal" lg="3" md="6" sm="12" xs="12" />
 
-    <PropertyColumn Property="x => x.Name" Title="@Loc["Name"]" />
-    <PropertyColumn Property="x => x.LegalName" Title="@Loc["Legal Name"]" />
-    <PropertyColumn Property="x => x.ShortCode" Title="@Loc["Short Code"]" />
-    <PropertyColumn Property="x => x.IntegrationId" Title="@Loc["Integration ID"]" />
+    <PropertyColumnExtended Property="x => x.Name" Title="@Loc["Name"]" />
+    <PropertyColumnExtended Property="x => x.LegalName" Title="@Loc["Legal Name"]" />
+    <PropertyColumnExtended Property="x => x.ShortCode" Title="@Loc["Short Code"]" />
+    <PropertyColumnExtended Property="x => x.IntegrationId" Title="@Loc["Integration ID"]" />
 
     <PropertyColumnExtended Title="@Loc["Company Type"]" Property="x => x.CompanyType"/>
-    <PropertyColumn Property="x => x.ParentCompanyName" Title="@Loc["Parent Company"]" />
-    <PropertyColumn Property="x => x.TerminationDate"Format="yyyy-MM-dd" Title="@Loc["TerminationDate"]" />
-    <PropertyColumn Property="x => x.DisplayOrder" Title="@Loc["Display Order"]" />
+    <PropertyColumnExtended Property="x => x.ParentCompanyName" Title="@Loc["Parent Company"]" />
+    <PropertyColumnExtended Property="x => x.TerminationDate"Format="yyyy-MM-dd" Title="@Loc["TerminationDate"]" />
+    <PropertyColumnExtended Property="x => x.DisplayOrder" Title="@Loc["Display Order"]" />
 </ShiftList>

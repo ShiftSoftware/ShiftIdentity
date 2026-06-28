@@ -17,7 +17,7 @@
 
     <StringFilter Property="x => x.DisplayName" Label="@Loc["Display Name"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="12" md="12" sm="12" xs="12" />
 
-    <PropertyColumn Property="x => x.DisplayName" Title="@Loc["Display Name"]" />
-    <PropertyColumn Property="x => x.AppId" Title="@Loc["App Id"]" />
-    <PropertyColumn Property="x => x.Description" Title="@Loc["Description"]" />
+    <PropertyColumnExtended Property="x => x.DisplayName" Title="@Loc["Display Name"]" />
+    <PropertyColumnExtended Property="x => x.AppId" Title="@Loc["App Id"]" />
+    <PropertyColumnExtended Property="x => x.Description" Title="@Loc["Description"]" />
 </ShiftList>
