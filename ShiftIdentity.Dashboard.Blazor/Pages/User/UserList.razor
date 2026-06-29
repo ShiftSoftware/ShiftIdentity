@@ -147,12 +147,13 @@
         <PropertyColumnExtended Title="@Loc["Branch"]" Property="x => x.CompanyBranch" />
         <PropertyColumnExtended Format="F" Property="x => x.LastSeen" Title="@Loc["Last Seen"]" />
 
-        <PropertyColumnExtended Title="@Loc["Access Trees"]" Property="x => x.AccessTrees" Context="col" CellNowrap="false">
+        <PropertyColumnExtended Title="@Loc["Access Trees"]" Property="x => x.AccessTrees" Context="col">
             <CellTemplate>
-                @foreach (var accessTree in col.Item!.AccessTrees)
-                {
-                    <MudChip Size="Size.Small" Color="Color.Primary">@accessTree.Text</MudChip>
-                }
+                <ShiftChipDisplay Items="col.Item!.AccessTrees">
+                    <ChipTemplate Context="accessTree">
+                        <MudChip Size="Size.Small" Color="Color.Primary">@accessTree.Text</MudChip>
+                    </ChipTemplate>
+                </ShiftChipDisplay>
             </CellTemplate>
         </PropertyColumnExtended>
     </ChildContent>

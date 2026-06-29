@@ -42,33 +42,33 @@
     <PropertyColumnExtended Title="@Loc["Integration ID"]" Property="x => x.IntegrationId" />
     <PropertyColumnExtended Title="@Loc["Display Order"]" Property="x => x.DisplayOrder" />
 
-    <PropertyColumnExtended Title="@Loc["Departments"]" Property="x => x.Departments" Context="col" CellNowrap="false">
+    <PropertyColumnExtended Title="@Loc["Departments"]" Property="x => x.Departments" Context="col">
         <CellTemplate>
-            @foreach (var department in col.Item!.Departments)
-            {
-                <MudChip Size="Size.Small" Color="Color.Primary">@department.Text</MudChip>
-            }
+            <ShiftChipDisplay Items="col.Item!.Departments">
+                <ChipTemplate Context="department">
+                    <MudChip Size="Size.Small" Color="Color.Primary">@department.Text</MudChip>
+                </ChipTemplate>
+            </ShiftChipDisplay>
         </CellTemplate>
     </PropertyColumnExtended>
 
-    <PropertyColumnExtended Title="@Loc["Services"]" Property="x => x.Services" Context="col" CellNowrap="false">
-        <CellTemplate>  
-            @foreach (var service in col.Item!.Services)
-            {
-                <MudChip Size="Size.Small" Color="Color.Primary">@service.Text</MudChip>
-            }
+    <PropertyColumnExtended Title="@Loc["Services"]" Property="x => x.Services" Context="col">
+        <CellTemplate>
+            <ShiftChipDisplay Items="col.Item!.Services">
+                <ChipTemplate Context="service">
+                    <MudChip Size="Size.Small" Color="Color.Primary">@service.Text</MudChip>
+                </ChipTemplate>
+            </ShiftChipDisplay>
         </CellTemplate>
     </PropertyColumnExtended>
 
-    <PropertyColumnExtended Filterable="false" Sortable="false" Title="@Loc["Publish Targets"]" Property="x => x.PublishTargets" Context="col" CellNowrap="false">
+    <PropertyColumnExtended Filterable="false" Sortable="false" Title="@Loc["Publish Targets"]" Property="x => x.PublishTargets" Context="col">
         <CellTemplate>
-            @if(col.Item.PublishTargets != null && col.Item.PublishTargets.Any()) 
-            {
-                @foreach (var target in col.Item!.PublishTargets)
-                {
+            <ShiftChipDisplay Items="col.Item!.PublishTargets">
+                <ChipTemplate Context="target">
                     <MudChip Size="Size.Small" Color="Color.Primary">@target.Describe()</MudChip>
-                }
-            }
+                </ChipTemplate>
+            </ShiftChipDisplay>
         </CellTemplate>
     </PropertyColumnExtended>
     <PropertyColumnExtended Property="x => x.TerminationDate" Format="yyyy-MM-dd" Title="@Loc["TerminationDate"]" />
