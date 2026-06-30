@@ -63,7 +63,7 @@
         }
         else
         {
-            <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pt-4">
+            <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pt-4" @bind-ActivePanelIndex="activeTabIndex">
                 <MudTabPanel Text="@($"{Loc["Users"]} ({lastResult.TotalMatchingUsers})")">
                     @if (lastResult.Users.Count == 0)
                     {
@@ -135,9 +135,9 @@
         }
     </DialogContent>
     <DialogActions>
-        @if (lastResult?.Users.Count > 0)
+        @if (CanExportActiveTab())
         {
-            <MudButton OnClick="ExportCsv" StartIcon="@Icons.Material.Filled.Download" Color="Color.Primary">
+            <MudButton OnClick="ExportActiveTab" StartIcon="@Icons.Material.Filled.Download" Color="Color.Primary">
                 @Loc["Export CSV"]
             </MudButton>
         }
@@ -152,6 +152,7 @@
     private string? lastDisplayName;
     private bool loading;
     private bool resultsOpen;
+    private int activeTabIndex;
 
     private readonly DialogOptions dialogOptions = new() { FullWidth = true, MaxWidth = MaxWidth.Medium };
 
@@ -201,7 +202,15 @@
         }
     }
 
-    private async Task ExportCsv()
+    // Tab 0 = Users, Tab 1 = Access Trees.
+    private bool CanExportActiveTab()
+        => lastResult is not null
+           && (activeTabIndex == 0 ? lastResult.Users.Count > 0 : lastResult.AccessTrees.Count > 0);
+
+    private Task ExportActiveTab()
+        => activeTabIndex == 0 ? ExportUsersCsv() : ExportAccessTreesCsv();
+
+    private async Task ExportUsersCsv()
     {
         if (lastResult is null || lastResult.Users.Count == 0)
             return;
@@ -226,10 +235,34 @@
               .Append('\n');
         }
 
+        await DownloadCsv(sb.ToString(), "reverse-typeauth-users");
+    }
+
+    private async Task ExportAccessTreesCsv()
+    {
+        if (lastResult is null || lastResult.AccessTrees.Count == 0)
+            return;
+
+        var sb = new StringBuilder();
+        sb.AppendLine("ID,RawID,Name,AssignedUsers");
+        foreach (var t in lastResult.AccessTrees)
+        {
+            sb.Append(CsvField(t.ID)).Append(',')
+              .Append(CsvField(t.RawID)).Append(',')
+              .Append(CsvField(t.Name)).Append(',')
+              .Append(t.AssignedUserCount.ToString())
+              .Append('\n');
+        }
+
+        await DownloadCsv(sb.ToString(), "reverse-typeauth-access-trees");
+    }
+
+    private async Task DownloadCsv(string body, string filenamePrefix)
+    {
         // \uFEFF BOM so Excel opens UTF-8 correctly.
-        var csv = "\uFEFF" + sb.ToString();
+        var csv = "\uFEFF" + body;
         var csvLiteral = JsonSerializer.Serialize(csv);
-        var filename = $"reverse-typeauth-lookup-{DateTime.Now:yyyyMMdd-HHmmss}.csv";
+        var filename = $"{filenamePrefix}-{DateTime.Now:yyyyMMdd-HHmmss}.csv";
 
         var script = $@"(function() {{
             const csv = {csvLiteral};
