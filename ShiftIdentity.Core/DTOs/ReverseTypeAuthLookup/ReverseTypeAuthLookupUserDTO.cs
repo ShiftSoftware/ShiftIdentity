@@ -19,5 +19,20 @@ public class ReverseTypeAuthLookupUserDTO
     public string? CompanyBranch { get; set; }
     public bool IsSuperAdmin { get; set; }
 
+    /// <summary>
+    /// All access trees assigned to the user (regardless of whether they grant the looked-up action).
+    /// </summary>
     public List<string> AccessTrees { get; set; } = new();
+
+    /// <summary>
+    /// True when the user's own user-specific ("self") access grants the looked-up action.
+    /// </summary>
+    public bool GrantedBySelf { get; set; }
+
+    /// <summary>
+    /// Names of the assigned access trees that actually grant the looked-up action
+    /// (a subset of <see cref="AccessTrees"/>). Combined with <see cref="GrantedBySelf"/>,
+    /// this is the exact source list: self, one tree, both, or several trees.
+    /// </summary>
+    public List<string> GrantingAccessTrees { get; set; } = new();
 }

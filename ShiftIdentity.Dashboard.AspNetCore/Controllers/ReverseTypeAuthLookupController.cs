@@ -71,42 +71,23 @@ public class ReverseTypeAuthLookupController : ControllerBase
             .Include(x => x.AccessTrees).ThenInclude(x => x.AccessTree)
             .ToListAsync();
 
-        var contextCache = new Dictionary<string, TypeAuthContext>(StringComparer.Ordinal);
+        // Cache: access-tree JSON -> context (registered action trees + that single tree's JSON).
+        // Shared by the access-trees pass and per-user source attribution.
+        var singleTreeContextCache = new Dictionary<string, TypeAuthContext>(StringComparer.Ordinal);
 
-        var matched = new List<ReverseTypeAuthLookupUserDTO>();
-        var superAdminCount = 0;
-
-        foreach (var user in users)
+        TypeAuthContext BuildSingleTreeContext(string treeJson)
         {
-            if (user.IsSuperAdmin)
+            if (!singleTreeContextCache.TryGetValue(treeJson, out var ctx))
             {
-                superAdminCount++;
-                matched.Add(MapUser(user, isSuperAdmin: true));
-                continue;
+                var b = new TypeAuthContextBuilder();
+                foreach (var t in registeredActionTrees)
+                    b.AddActionTree(t);
+                b.AddAccessTree(treeJson);
+                ctx = b.Build();
+                singleTreeContextCache[treeJson] = ctx;
             }
-
-            var effectiveTrees = CollectEffectiveTrees(user);
-            if (effectiveTrees.Count == 0)
-                continue;
-
-            var cacheKey = string.Join("\n", effectiveTrees.OrderBy(x => x, StringComparer.Ordinal));
-            if (!contextCache.TryGetValue(cacheKey, out var context))
-            {
-                var builder = new TypeAuthContextBuilder();
-                foreach (var tree in registeredActionTrees)
-                    builder.AddActionTree(tree);
-                foreach (var at in effectiveTrees)
-                    builder.AddAccessTree(at);
-
-                context = builder.Build();
-                contextCache[cacheKey] = context;
-            }
-
-            if (HasAccess(context, action, isDynamic, request))
-                matched.Add(MapUser(user, isSuperAdmin: false));
+            return ctx;
         }
-
-        var displayName = BuildDisplayName(ownerType, action);
 
         // Count active-user assignments per access tree (shown in the Access Trees tab).
         var assignedUserCounts = new Dictionary<long, int>();
@@ -128,12 +109,7 @@ public class ReverseTypeAuthLookupController : ControllerBase
             if (string.IsNullOrWhiteSpace(tree.Tree))
                 continue;
 
-            var builder = new TypeAuthContextBuilder();
-            foreach (var t in registeredActionTrees)
-                builder.AddActionTree(t);
-            builder.AddAccessTree(tree.Tree);
-
-            if (HasAccess(builder.Build(), action, isDynamic, request))
+            if (HasAccess(BuildSingleTreeContext(tree.Tree), action, isDynamic, request))
                 matchedTrees.Add(new ReverseTypeAuthLookupAccessTreeDTO
                 {
                     // Raw long as string — the [AccessTreeHashIdConverter] on the DTO encodes at serialization.
@@ -143,6 +119,58 @@ public class ReverseTypeAuthLookupController : ControllerBase
                     AssignedUserCount = assignedUserCounts.GetValueOrDefault(tree.ID)
                 });
         }
+
+        // Combined-context cache for the user match decision (keyed by the user's full effective tree set).
+        var contextCache = new Dictionary<string, TypeAuthContext>(StringComparer.Ordinal);
+
+        var matched = new List<ReverseTypeAuthLookupUserDTO>();
+        var superAdminCount = 0;
+
+        foreach (var user in users)
+        {
+            if (user.IsSuperAdmin)
+            {
+                superAdminCount++;
+                matched.Add(MapUser(user, isSuperAdmin: true, grantingAccessTrees: new List<string>(), grantedBySelf: false));
+                continue;
+            }
+
+            var effectiveTrees = CollectEffectiveTrees(user);
+            if (effectiveTrees.Count == 0)
+                continue;
+
+            var cacheKey = string.Join("\n", effectiveTrees.OrderBy(x => x, StringComparer.Ordinal));
+            if (!contextCache.TryGetValue(cacheKey, out var context))
+            {
+                var builder = new TypeAuthContextBuilder();
+                foreach (var tree in registeredActionTrees)
+                    builder.AddActionTree(tree);
+                foreach (var at in effectiveTrees)
+                    builder.AddAccessTree(at);
+
+                context = builder.Build();
+                contextCache[cacheKey] = context;
+            }
+
+            if (!HasAccess(context, action, isDynamic, request))
+                continue;
+
+            // Attribute the match to its source(s). Access is additive (the union grants iff at least one
+            // source grants), so evaluating each source on its own is exact — at least one is true here.
+            var grantingAccessTrees = new List<string>();
+            if (user.AccessTrees != null)
+                foreach (var uat in user.AccessTrees)
+                    if (uat.AccessTree != null && !string.IsNullOrWhiteSpace(uat.AccessTree.Tree)
+                        && HasAccess(BuildSingleTreeContext(uat.AccessTree.Tree), action, isDynamic, request))
+                        grantingAccessTrees.Add(uat.AccessTree.Name);
+
+            var grantedBySelf = !string.IsNullOrWhiteSpace(user.AccessTree)
+                && HasAccess(BuildSingleTreeContext(user.AccessTree), action, isDynamic, request);
+
+            matched.Add(MapUser(user, isSuperAdmin: false, grantingAccessTrees, grantedBySelf));
+        }
+
+        var displayName = BuildDisplayName(ownerType, action);
 
         return Ok(new ShiftEntityResponse<ReverseTypeAuthLookupResponseDTO>(new ReverseTypeAuthLookupResponseDTO
         {
@@ -225,7 +253,7 @@ public class ReverseTypeAuthLookupController : ControllerBase
         return $"{treeName} › {actionName}";
     }
 
-    private static ReverseTypeAuthLookupUserDTO MapUser(User user, bool isSuperAdmin)
+    private static ReverseTypeAuthLookupUserDTO MapUser(User user, bool isSuperAdmin, List<string> grantingAccessTrees, bool grantedBySelf)
         => new()
         {
             // Raw long as string — the [UserHashIdConverter] on the DTO encodes at serialization.
@@ -239,6 +267,8 @@ public class ReverseTypeAuthLookupController : ControllerBase
             AccessTrees = user.AccessTrees?
                 .Where(x => x.AccessTree != null)
                 .Select(x => x.AccessTree.Name)
-                .ToList() ?? new List<string>()
+                .ToList() ?? new List<string>(),
+            GrantingAccessTrees = grantingAccessTrees,
+            GrantedBySelf = grantedBySelf
         };
 }

@@ -80,6 +80,7 @@
                                 <MudTh>@Loc["Email"]</MudTh>
                                 <MudTh>@Loc["Branch"]</MudTh>
                                 <MudTh>@Loc["Access Trees"]</MudTh>
+                                <MudTh>@Loc["Granted By"]</MudTh>
                             </HeaderContent>
                             <RowTemplate>
                                 <MudTd><code>@context.ID</code></MudTd>
@@ -96,6 +97,23 @@
                                     @foreach (var tree in context.AccessTrees)
                                     {
                                         <MudChip T="string" Color="Color.Primary" Size="Size.Small">@tree</MudChip>
+                                    }
+                                </MudTd>
+                                <MudTd>
+                                    @if (context.IsSuperAdmin)
+                                    {
+                                        <MudChip T="string" Color="Color.Error" Size="Size.Small">@Loc["Super Admin"]</MudChip>
+                                    }
+                                    else
+                                    {
+                                        @if (context.GrantedBySelf)
+                                        {
+                                            <MudChip T="string" Color="Color.Info" Size="Size.Small">@Loc["Self"]</MudChip>
+                                        }
+                                        @foreach (var tree in context.GrantingAccessTrees)
+                                        {
+                                            <MudChip T="string" Color="Color.Primary" Size="Size.Small">@tree</MudChip>
+                                        }
                                     }
                                 </MudTd>
                             </RowTemplate>
@@ -202,9 +220,13 @@
             return;
 
         var sb = new StringBuilder();
-        sb.AppendLine("ID,RawID,Username,FullName,Email,Branch,IsSuperAdmin,AccessTrees");
+        sb.AppendLine("ID,RawID,Username,FullName,Email,Branch,IsSuperAdmin,AccessTrees,GrantedBy");
         foreach (var u in lastResult.Users)
         {
+            var grantedBy = u.IsSuperAdmin
+                ? "Super Admin"
+                : string.Join("; ", (u.GrantedBySelf ? new[] { "Self" } : Array.Empty<string>()).Concat(u.GrantingAccessTrees));
+
             sb.Append(CsvField(u.ID)).Append(',')
               .Append(CsvField(u.RawID)).Append(',')
               .Append(CsvField(u.Username)).Append(',')
@@ -212,7 +234,8 @@
               .Append(CsvField(u.Email)).Append(',')
               .Append(CsvField(u.CompanyBranch)).Append(',')
               .Append(u.IsSuperAdmin ? "true" : "false").Append(',')
-              .Append(CsvField(string.Join("; ", u.AccessTrees)))
+              .Append(CsvField(string.Join("; ", u.AccessTrees))).Append(',')
+              .Append(CsvField(grantedBy))
               .Append('\n');
         }
 
