@@ -6,7 +6,7 @@ namespace ShiftSoftware.ShiftIdentity.Core.Models;
 /// </summary>
 public class MfaSettingsModel
 {
-    public bool Enabled { get; set; } = true;
+    public bool Enabled { get; set; } = false;
     public bool Mandatory { get; set; } = false;
 
     /// <summary>TOTP (authenticator-app) method settings.</summary>

@@ -12,7 +12,7 @@ public class ShiftIdentityConfiguration
 
     public RefreshTokenSettingsModel RefreshToken { get; set; } = default!;
 
-    public MfaSettingsModel MfaSettings { get; set; } = default!;
+    public MfaSettingsModel MfaSettings { get; set; } = new();
 
     public TemporaryTokenSettingsModel TemporaryTokenSettings { get; set; } = default!;
 
