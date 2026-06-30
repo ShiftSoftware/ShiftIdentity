@@ -16,9 +16,19 @@
 @inject IJSRuntime JS
 
 <style>
+    /* Cap every column so no single long value (email, branch, name, ...) stretches the table.
+       Overflowing text is truncated with an ellipsis; the full value is on the cell's title tooltip. */
     .reverse-lookup-table td,
     .reverse-lookup-table th {
         white-space: nowrap;
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Chip columns get a little more room; ShiftChipDisplay collapses its own overflow into a "+N" chip. */
+    .reverse-lookup-table .chip-cell {
+        max-width: 260px;
     }
 </style>
 
@@ -71,7 +81,8 @@
                     }
                     else
                     {
-                        <MudTable Items="lastResult.Users" Class="reverse-lookup-table" Dense="true" Hover="true" Striped="true">
+                        <MudTable Items="lastResult.Users" Class="reverse-lookup-table" Dense="true" Hover="true" Striped="true"
+                                  Virtualize="true" FixedHeader="true" Height="55vh">
                             <HeaderContent>
                                 <MudTh>@Loc["ID"]</MudTh>
                                 <MudTh>@Loc["Raw ID"]</MudTh>
@@ -83,20 +94,20 @@
                                 <MudTh>@Loc["Granted By"]</MudTh>
                             </HeaderContent>
                             <RowTemplate>
-                                <MudTd><code>@context.ID</code></MudTd>
-                                <MudTd><code>@context.RawID</code></MudTd>
-                                <MudTd>@context.FullName</MudTd>
-                                <MudTd>@context.Username</MudTd>
-                                <MudTd>@context.Email</MudTd>
-                                <MudTd>@context.CompanyBranch</MudTd>
-                                <MudTd>
+                                <MudTd title="@context.ID"><code>@context.ID</code></MudTd>
+                                <MudTd title="@context.RawID"><code>@context.RawID</code></MudTd>
+                                <MudTd title="@context.FullName">@context.FullName</MudTd>
+                                <MudTd title="@context.Username">@context.Username</MudTd>
+                                <MudTd title="@context.Email">@context.Email</MudTd>
+                                <MudTd title="@context.CompanyBranch">@context.CompanyBranch</MudTd>
+                                <MudTd Class="chip-cell">
                                     <ShiftChipDisplay T="ChipItem" Items="@AccessTreeChips(context)">
                                         <ChipTemplate Context="chip">
                                             <MudChip T="string" Color="chip.Color" Size="Size.Small">@chip.Label</MudChip>
                                         </ChipTemplate>
                                     </ShiftChipDisplay>
                                 </MudTd>
-                                <MudTd>
+                                <MudTd Class="chip-cell">
                                     <ShiftChipDisplay T="ChipItem" Items="@GrantedByChips(context)">
                                         <ChipTemplate Context="chip">
                                             <MudChip T="string" Color="chip.Color" Size="Size.Small">@chip.Label</MudChip>
@@ -115,7 +126,8 @@
                     }
                     else
                     {
-                        <MudTable Items="lastResult.AccessTrees" Class="reverse-lookup-table" Dense="true" Hover="true" Striped="true">
+                        <MudTable Items="lastResult.AccessTrees" Class="reverse-lookup-table" Dense="true" Hover="true" Striped="true"
+                                  Virtualize="true" FixedHeader="true" Height="55vh">
                             <HeaderContent>
                                 <MudTh>@Loc["ID"]</MudTh>
                                 <MudTh>@Loc["Raw ID"]</MudTh>
@@ -123,9 +135,9 @@
                                 <MudTh>@Loc["Assigned Users"]</MudTh>
                             </HeaderContent>
                             <RowTemplate>
-                                <MudTd><code>@context.ID</code></MudTd>
-                                <MudTd><code>@context.RawID</code></MudTd>
-                                <MudTd>@context.Name</MudTd>
+                                <MudTd title="@context.ID"><code>@context.ID</code></MudTd>
+                                <MudTd title="@context.RawID"><code>@context.RawID</code></MudTd>
+                                <MudTd title="@context.Name">@context.Name</MudTd>
                                 <MudTd>@context.AssignedUserCount</MudTd>
                             </RowTemplate>
                         </MudTable>

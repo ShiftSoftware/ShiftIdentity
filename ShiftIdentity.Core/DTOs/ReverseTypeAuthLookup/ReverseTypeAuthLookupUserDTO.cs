@@ -1,5 +1,7 @@
+using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.ReverseTypeAuthLookup;
 
@@ -16,7 +18,13 @@ public class ReverseTypeAuthLookupUserDTO
     public string Username { get; set; } = default!;
     public string FullName { get; set; } = default!;
     public string? Email { get; set; }
+
+    /// <summary>
+    /// Branch name. Stored as localized-text JSON; the converter emits the value for the request culture.
+    /// </summary>
+    [JsonConverter(typeof(LocalizedTextJsonConverter))]
     public string? CompanyBranch { get; set; }
+
     public bool IsSuperAdmin { get; set; }
 
     /// <summary>
