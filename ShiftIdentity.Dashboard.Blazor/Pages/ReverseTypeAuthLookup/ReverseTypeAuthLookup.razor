@@ -90,31 +90,18 @@
                                 <MudTd>@context.Email</MudTd>
                                 <MudTd>@context.CompanyBranch</MudTd>
                                 <MudTd>
-                                    @if (context.IsSuperAdmin)
-                                    {
-                                        <MudChip T="string" Color="Color.Error" Size="Size.Small">@Loc["Super Admin"]</MudChip>
-                                    }
-                                    @foreach (var tree in context.AccessTrees)
-                                    {
-                                        <MudChip T="string" Color="Color.Primary" Size="Size.Small">@tree</MudChip>
-                                    }
+                                    <ShiftChipDisplay T="ChipItem" Items="@AccessTreeChips(context)">
+                                        <ChipTemplate Context="chip">
+                                            <MudChip T="string" Color="chip.Color" Size="Size.Small">@chip.Label</MudChip>
+                                        </ChipTemplate>
+                                    </ShiftChipDisplay>
                                 </MudTd>
                                 <MudTd>
-                                    @if (context.IsSuperAdmin)
-                                    {
-                                        <MudChip T="string" Color="Color.Error" Size="Size.Small">@Loc["Super Admin"]</MudChip>
-                                    }
-                                    else
-                                    {
-                                        @if (context.GrantedBySelf)
-                                        {
-                                            <MudChip T="string" Color="Color.Info" Size="Size.Small">@Loc["Self"]</MudChip>
-                                        }
-                                        @foreach (var tree in context.GrantingAccessTrees)
-                                        {
-                                            <MudChip T="string" Color="Color.Primary" Size="Size.Small">@tree</MudChip>
-                                        }
-                                    }
+                                    <ShiftChipDisplay T="ChipItem" Items="@GrantedByChips(context)">
+                                        <ChipTemplate Context="chip">
+                                            <MudChip T="string" Color="chip.Color" Size="Size.Small">@chip.Label</MudChip>
+                                        </ChipTemplate>
+                                    </ShiftChipDisplay>
                                 </MudTd>
                             </RowTemplate>
                         </MudTable>
@@ -272,5 +259,38 @@
     private void CloseResults()
     {
         resultsOpen = false;
+    }
+
+    private sealed record ChipItem(string Label, Color Color);
+
+    // All access trees assigned to the user (plus a Super Admin chip when applicable).
+    private List<ChipItem> AccessTreeChips(ReverseTypeAuthLookupUserDTO user)
+    {
+        var chips = new List<ChipItem>();
+
+        if (user.IsSuperAdmin)
+            chips.Add(new ChipItem(Loc["Super Admin"], Color.Error));
+
+        foreach (var tree in user.AccessTrees)
+            chips.Add(new ChipItem(tree, Color.Primary));
+
+        return chips;
+    }
+
+    // The source(s) that actually grant the looked-up action: Super Admin, Self, and/or specific trees.
+    private List<ChipItem> GrantedByChips(ReverseTypeAuthLookupUserDTO user)
+    {
+        if (user.IsSuperAdmin)
+            return new List<ChipItem> { new(Loc["Super Admin"], Color.Error) };
+
+        var chips = new List<ChipItem>();
+
+        if (user.GrantedBySelf)
+            chips.Add(new ChipItem(Loc["Self"], Color.Info));
+
+        foreach (var tree in user.GrantingAccessTrees)
+            chips.Add(new ChipItem(tree, Color.Primary));
+
+        return chips;
     }
 }
