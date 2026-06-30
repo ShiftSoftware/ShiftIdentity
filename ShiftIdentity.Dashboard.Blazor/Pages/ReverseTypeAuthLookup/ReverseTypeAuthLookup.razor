@@ -48,6 +48,7 @@
                 {
                     <span> · @Loc["includes {0} super-admin(s)", lastResult.SuperAdminCount]</span>
                 }
+                <span> · @Loc["Matching access trees"]: @lastResult.TotalMatchingAccessTrees</span>
             </MudText>
         }
     </TitleContent>
@@ -56,41 +57,76 @@
         {
             <MudProgressCircular Indeterminate="true" />
         }
-        else if (lastResult is null || lastResult.Users.Count == 0)
+        else if (lastResult is null)
         {
-            <MudAlert Severity="Severity.Info">@Loc["No users match this access."]</MudAlert>
+            <MudAlert Severity="Severity.Info">@Loc["No results."]</MudAlert>
         }
         else
         {
-            <MudTable Items="lastResult.Users" Class="reverse-lookup-table" Dense="true" Hover="true" Striped="true">
-                <HeaderContent>
-                    <MudTh>@Loc["ID"]</MudTh>
-                    <MudTh>@Loc["Raw ID"]</MudTh>
-                    <MudTh>@Loc["Full Name"]</MudTh>
-                    <MudTh>@Loc["Username"]</MudTh>
-                    <MudTh>@Loc["Email"]</MudTh>
-                    <MudTh>@Loc["Branch"]</MudTh>
-                    <MudTh>@Loc["Access Trees"]</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd><code>@context.ID</code></MudTd>
-                    <MudTd><code>@context.RawID</code></MudTd>
-                    <MudTd>@context.FullName</MudTd>
-                    <MudTd>@context.Username</MudTd>
-                    <MudTd>@context.Email</MudTd>
-                    <MudTd>@context.CompanyBranch</MudTd>
-                    <MudTd>
-                        @if (context.IsSuperAdmin)
-                        {
-                            <MudChip T="string" Color="Color.Error" Size="Size.Small">@Loc["Super Admin"]</MudChip>
-                        }
-                        @foreach (var tree in context.AccessTrees)
-                        {
-                            <MudChip T="string" Color="Color.Primary" Size="Size.Small">@tree</MudChip>
-                        }
-                    </MudTd>
-                </RowTemplate>
-            </MudTable>
+            <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pt-4">
+                <MudTabPanel Text="@($"{Loc["Users"]} ({lastResult.TotalMatchingUsers})")">
+                    @if (lastResult.Users.Count == 0)
+                    {
+                        <MudAlert Severity="Severity.Info">@Loc["No users match this access."]</MudAlert>
+                    }
+                    else
+                    {
+                        <MudTable Items="lastResult.Users" Class="reverse-lookup-table" Dense="true" Hover="true" Striped="true">
+                            <HeaderContent>
+                                <MudTh>@Loc["ID"]</MudTh>
+                                <MudTh>@Loc["Raw ID"]</MudTh>
+                                <MudTh>@Loc["Full Name"]</MudTh>
+                                <MudTh>@Loc["Username"]</MudTh>
+                                <MudTh>@Loc["Email"]</MudTh>
+                                <MudTh>@Loc["Branch"]</MudTh>
+                                <MudTh>@Loc["Access Trees"]</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd><code>@context.ID</code></MudTd>
+                                <MudTd><code>@context.RawID</code></MudTd>
+                                <MudTd>@context.FullName</MudTd>
+                                <MudTd>@context.Username</MudTd>
+                                <MudTd>@context.Email</MudTd>
+                                <MudTd>@context.CompanyBranch</MudTd>
+                                <MudTd>
+                                    @if (context.IsSuperAdmin)
+                                    {
+                                        <MudChip T="string" Color="Color.Error" Size="Size.Small">@Loc["Super Admin"]</MudChip>
+                                    }
+                                    @foreach (var tree in context.AccessTrees)
+                                    {
+                                        <MudChip T="string" Color="Color.Primary" Size="Size.Small">@tree</MudChip>
+                                    }
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+                </MudTabPanel>
+
+                <MudTabPanel Text="@($"{Loc["Access Trees"]} ({lastResult.TotalMatchingAccessTrees})")">
+                    @if (lastResult.AccessTrees.Count == 0)
+                    {
+                        <MudAlert Severity="Severity.Info">@Loc["No access trees match this access."]</MudAlert>
+                    }
+                    else
+                    {
+                        <MudTable Items="lastResult.AccessTrees" Class="reverse-lookup-table" Dense="true" Hover="true" Striped="true">
+                            <HeaderContent>
+                                <MudTh>@Loc["ID"]</MudTh>
+                                <MudTh>@Loc["Raw ID"]</MudTh>
+                                <MudTh>@Loc["Name"]</MudTh>
+                                <MudTh>@Loc["Assigned Users"]</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd><code>@context.ID</code></MudTd>
+                                <MudTd><code>@context.RawID</code></MudTd>
+                                <MudTd>@context.Name</MudTd>
+                                <MudTd>@context.AssignedUserCount</MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+                </MudTabPanel>
+            </MudTabs>
         }
     </DialogContent>
     <DialogActions>

@@ -108,12 +108,50 @@ public class ReverseTypeAuthLookupController : ControllerBase
 
         var displayName = BuildDisplayName(ownerType, action);
 
+        // Count active-user assignments per access tree (shown in the Access Trees tab).
+        var assignedUserCounts = new Dictionary<long, int>();
+        foreach (var user in users)
+            if (user.AccessTrees != null)
+                foreach (var uat in user.AccessTrees)
+                    if (uat.AccessTree != null)
+                        assignedUserCounts[uat.AccessTreeID] = assignedUserCounts.GetValueOrDefault(uat.AccessTreeID) + 1;
+
+        // Named access trees that grant the requested access on the action.
+        var matchedTrees = new List<ReverseTypeAuthLookupAccessTreeDTO>();
+        var accessTrees = await db.AccessTrees
+            .AsNoTracking()
+            .Where(x => !x.IsDeleted)
+            .ToListAsync();
+
+        foreach (var tree in accessTrees)
+        {
+            if (string.IsNullOrWhiteSpace(tree.Tree))
+                continue;
+
+            var builder = new TypeAuthContextBuilder();
+            foreach (var t in registeredActionTrees)
+                builder.AddActionTree(t);
+            builder.AddAccessTree(tree.Tree);
+
+            if (HasAccess(builder.Build(), action, isDynamic, request))
+                matchedTrees.Add(new ReverseTypeAuthLookupAccessTreeDTO
+                {
+                    // Raw long as string — the [AccessTreeHashIdConverter] on the DTO encodes at serialization.
+                    ID = tree.ID.ToString(),
+                    RawID = tree.ID.ToString(),
+                    Name = tree.Name,
+                    AssignedUserCount = assignedUserCounts.GetValueOrDefault(tree.ID)
+                });
+        }
+
         return Ok(new ShiftEntityResponse<ReverseTypeAuthLookupResponseDTO>(new ReverseTypeAuthLookupResponseDTO
         {
             Users = matched,
             TotalMatchingUsers = matched.Count,
             SuperAdminCount = superAdminCount,
-            ActionDisplayName = displayName
+            ActionDisplayName = displayName,
+            AccessTrees = matchedTrees,
+            TotalMatchingAccessTrees = matchedTrees.Count
         }));
     }
 
