@@ -156,6 +156,16 @@
                 </ShiftChipDisplay>
             </CellTemplate>
         </PropertyColumnExtended>
+
+        <PropertyColumnExtended Filterable="false" Sortable="false" Title="@Loc["Permissions"]" Property="x => x.ID" Context="col">
+            <CellTemplate>
+                <MudIconButton Icon="@Icons.Material.Filled.Policy"
+                               Size="Size.Small"
+                               Color="Color.Info"
+                               Title="@Loc["View Effective Permissions"]"
+                               OnClick="@(() => OpenEffectivePermissions(col.Item!.ID))" />
+            </CellTemplate>
+        </PropertyColumnExtended>
     </ChildContent>
 </ShiftList>
 
@@ -170,6 +180,19 @@
     private async Task OpenImportModal(long? id)
     {
         await ShiftList!.OpenDialog(typeof(UserImportForm));
+    }
+
+    private async Task OpenEffectivePermissions(string? key)
+    {
+        if (string.IsNullOrEmpty(key))
+            return;
+
+        var parameters = new DialogParameters<EffectivePermissionsDialog>();
+        parameters.Add(x => x.Key, key);
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+
+        await DialogService.ShowAsync<EffectivePermissionsDialog>(Loc["Effective Permissions"], parameters, options);
     }
 
     // private async Task AssignRandomPasswords()

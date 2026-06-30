@@ -5,6 +5,7 @@
 @inherits ShiftForm<UserForm, ShiftSoftware.ShiftIdentity.Core.DTOs.User.UserDTO>
 @inject HttpClient Http
 @inject ODataQuery odataQuery
+@inject IDialogService DialogService
 @inject ShiftIdentityLocalizer Loc
 
 @using ShiftSoftware.ShiftEntity.Model.Dtos
@@ -25,6 +26,23 @@
                  OnTaskFinished="@(()=> ready=true)"
                  OnSubmit="()=> { TheItem.AccessTree =  actionTree!.GenerateAccessTree(); }"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.User.UserDTO">
+
+    <ToolbarEndTemplate>
+        @if (!string.IsNullOrEmpty(Key?.ToString()))
+        {
+            <MudTooltip Text="@Loc["View Effective Permissions"]">
+                <MudButtonExtended Variant="Variant.Text"
+                                   Color="Color.Info"
+                                   Style="min-width:40px;"
+                                   aria-label="@Loc["View Effective Permissions"]"
+                                   OnClick="OpenEffectivePermissions">
+                    <MudIcon Icon="@Icons.Material.Filled.Policy" />
+                </MudButtonExtended>
+            </MudTooltip>
+        }
+    </ToolbarEndTemplate>
+
+    <ChildContent>
 
     <MudTextField ReadOnly="@ReadOnly"
                   Disabled="@Disabled"
@@ -115,6 +133,7 @@
     {
         <ActionTree @ref="actionTree" @bind-Tree="TheItem.AccessTree" ReadOnly="@ReadOnly" Disabled="@Disabled" />
     }
+    </ChildContent>
 </ShiftEntityForm>
 
 @code {
@@ -187,6 +206,21 @@
             return;
 
         TheItem.AccessTrees = TheItem.AccessTrees.Where(x => !x.Value.Equals(item.Value)).ToList();
+    }
+
+    private async Task OpenEffectivePermissions()
+    {
+        var key = Key?.ToString();
+
+        if (string.IsNullOrEmpty(key))
+            return;
+
+        var parameters = new DialogParameters<EffectivePermissionsDialog>();
+        parameters.Add(x => x.Key, key);
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+
+        await DialogService.ShowAsync<EffectivePermissionsDialog>(Loc["Effective Permissions"], parameters, options);
     }
 }
 

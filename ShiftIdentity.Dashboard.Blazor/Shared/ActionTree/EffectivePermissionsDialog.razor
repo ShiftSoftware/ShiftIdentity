@@ -1,0 +1,63 @@
+@inject HttpService HttpService
+@inject ShiftIdentityLocalizer Loc
+
+<MudDialog>
+    <DialogContent>
+        @if (loading)
+        {
+            <div class="d-flex justify-center pa-6">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            </div>
+        }
+        else if (error is not null)
+        {
+            <MudAlert Severity="Severity.Error">@error</MudAlert>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">
+                @Loc["Combined permissions from the user's access trees and user-specific access."]
+            </MudAlert>
+
+            <ActionTree Tree="@accessTree" ReadOnly="true" Disabled="true" />
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Color="Color.Primary">@Loc["Ok"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    /// <summary>Hash-encoded user id whose effective permissions are shown.</summary>
+    [Parameter] public string Key { get; set; } = default!;
+
+    private string accessTree = "{}";
+    private bool loading = true;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var response = await HttpService
+                .GetAsync<ShiftEntityResponse<UserEffectivePermissionsDTO>>($"IdentityUser/{Key}/EffectivePermissions");
+
+            if (response.IsSuccess && response.Data?.Entity is not null)
+                accessTree = response.Data.Entity.AccessTree ?? "{}";
+            else
+                error = Loc["An error occurred while loading the permissions"];
+        }
+        catch
+        {
+            error = Loc["An error occurred while loading the permissions"];
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    void Close() => MudDialog.Close();
+}

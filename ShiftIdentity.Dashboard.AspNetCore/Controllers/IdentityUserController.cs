@@ -48,6 +48,20 @@ public class IdentityUserController : ShiftEntitySecureControllerAsync<UserRepos
         this.sendUserInfos = sendUserInfos;
     }
 
+    [HttpGet("{key}/EffectivePermissions")]
+    [TypeAuth<ShiftIdentityActions>(nameof(ShiftIdentityActions.Users), TypeAuth.Core.Access.Read)]
+    public async Task<IActionResult> EffectivePermissions(string key)
+    {
+        var userId = hashIdService.Decode<UserDTO>(key);
+
+        var accessTree = await userRepo.GenerateEffectiveAccessTreeAsync(userId);
+
+        return Ok(new ShiftEntityResponse<UserEffectivePermissionsDTO>(new UserEffectivePermissionsDTO
+        {
+            AccessTree = accessTree,
+        }));
+    }
+
     [HttpPost("AssignRandomPasswords")]
     [TypeAuth<ShiftIdentityActions>(nameof(ShiftIdentityActions.Users), TypeAuth.Core.Access.Write)]
     public async Task<IActionResult> AssignRandomPasswords([FromBody] SelectStateDTO<UserListDTO> ids, [FromQuery(Name = "shareWithUser")] bool shareWithUser, [FromQuery(Name = "passwordLength")] int passwordLength = 20)

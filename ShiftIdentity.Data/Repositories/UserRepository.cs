@@ -229,6 +229,38 @@ public class UserRepository :
         return entity;
     }
 
+    /// <summary>
+    /// Builds the user's effective/combined access tree by unioning their user-specific
+    /// access (<see cref="User.AccessTree"/>) with every assigned access tree, then serializing
+    /// the merged result to a single access-tree JSON string. Passing the combined context as its
+    /// own reducer means no reduction is applied — the output is the full set TypeAuth enforces.
+    /// </summary>
+    public async Task<string> GenerateEffectiveAccessTreeAsync(long userId)
+    {
+        var user = await db.Users
+            .Include(x => x.AccessTrees).ThenInclude(x => x.AccessTree)
+            .FirstOrDefaultAsync(x => x.ID == userId && !x.IsDeleted);
+
+        if (user is null)
+            throw new ShiftEntityException(new Message(Loc["Error"], Loc["User not found"]), (int)HttpStatusCode.NotFound);
+
+        var builder = new TypeAuthContextBuilder();
+
+        foreach (var type in typeAuthService.GetRegisteredActionTrees())
+            builder.AddActionTree(type);
+
+        if (!string.IsNullOrWhiteSpace(user.AccessTree))
+            builder.AddAccessTree(user.AccessTree);
+
+        foreach (var assigned in user.AccessTrees)
+            if (!string.IsNullOrWhiteSpace(assigned.AccessTree?.Tree))
+                builder.AddAccessTree(assigned.AccessTree.Tree);
+
+        var combined = builder.Build();
+
+        return combined.GenerateAccessTree(combined);
+    }
+
     public override ValueTask<User> DeleteAsync(User entity, long? userId, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
     {
         if (shiftIdentityFeatureLocking.UserFeatureIsLocked)
