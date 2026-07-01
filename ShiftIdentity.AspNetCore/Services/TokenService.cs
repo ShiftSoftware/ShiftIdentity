@@ -221,6 +221,37 @@ public class TokenService
         return GenerateTemporaryToken(user, AuthPurpose.ChangePassword);
     }
 
+    /// <summary>
+    /// Resolves the settings used to sign and validate temporary (pre-login) tokens — the change-password,
+    /// MFA, and MFA-enrollment flows. These tokens are HMAC-SHA512 signed exactly like refresh tokens, so
+    /// when a consumer upgrades without configuring
+    /// <see cref="ShiftIdentityConfiguration.TemporaryTokenSettings"/> we fall back to the (already mandatory)
+    /// refresh-token settings instead of throwing a <see cref="NullReferenceException"/>. Both generation and
+    /// validation call this, so the signing key/issuer can never drift between the two.
+    /// </summary>
+    private TemporaryTokenSettingsModel GetTemporaryTokenSettings()
+    {
+        var temp = shiftIdentityConfiguration.TemporaryTokenSettings;
+        var refresh = shiftIdentityConfiguration.RefreshToken;
+        var token = shiftIdentityConfiguration.Token;
+
+        var key = !string.IsNullOrWhiteSpace(temp?.Key) ? temp!.Key : refresh?.Key;
+
+        if (string.IsNullOrWhiteSpace(key))
+            throw new InvalidOperationException(
+                $"ShiftIdentity: cannot issue temporary tokens because neither " +
+                $"{nameof(ShiftIdentityConfiguration.TemporaryTokenSettings)}.{nameof(TemporaryTokenSettingsModel.Key)} nor " +
+                $"{nameof(ShiftIdentityConfiguration.RefreshToken)}.{nameof(RefreshTokenSettingsModel.Key)} is configured.");
+
+        return new TemporaryTokenSettingsModel
+        {
+            Key = key,
+            Issuer = temp?.Issuer ?? refresh?.Issuer ?? token?.Issuer ?? string.Empty,
+            Audience = temp?.Audience ?? refresh?.Audience ?? token?.Audience ?? string.Empty,
+            ExpireSeconds = temp is not null && temp.ExpireSeconds > 0 ? temp.ExpireSeconds : 300,
+        };
+    }
+
     private TokenDTO GenerateTemporaryToken(User user, AuthPurpose purpose)
     {
         var userId = hashIdService.Encode<Core.DTOs.User.UserDTO>(user.ID);
@@ -232,12 +263,13 @@ public class TokenService
             new Claim(ShiftIdentityClaims.TokenPurpose, purpose.ToString()),
         };
 
-        var expire = shiftIdentityConfiguration.TemporaryTokenSettings.ExpireSeconds;
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(shiftIdentityConfiguration.TemporaryTokenSettings.Key));
-        
+        var settings = GetTemporaryTokenSettings();
+        var expire = settings.ExpireSeconds;
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.Key));
+
         var token = new JwtSecurityToken(
-            issuer: shiftIdentityConfiguration.TemporaryTokenSettings.Issuer,
-            audience: shiftIdentityConfiguration.TemporaryTokenSettings.Audience,
+            issuer: settings.Issuer,
+            audience: settings.Audience,
             claims: claims,
             expires: DateTime.UtcNow.AddSeconds(expire),
             signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature));
@@ -262,6 +294,8 @@ public class TokenService
 
     public ClaimsPrincipal? ValidateTemporaryToken(string token)
     {
+        var settings = GetTemporaryTokenSettings();
+
         var tokenValidationParameters = new TokenValidationParameters
         {
             ValidateAudience = false,
@@ -269,8 +303,8 @@ public class TokenService
             ValidateLifetime = true,
             RequireExpirationTime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = shiftIdentityConfiguration.TemporaryTokenSettings.Issuer,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(shiftIdentityConfiguration.TemporaryTokenSettings.Key)),
+            ValidIssuer = settings.Issuer,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.Key)),
             ClockSkew = TimeSpan.Zero,
             LifetimeValidator = (DateTime? notBefore, DateTime? expires, SecurityToken securityToken,
                                      TokenValidationParameters validationParameters) =>
