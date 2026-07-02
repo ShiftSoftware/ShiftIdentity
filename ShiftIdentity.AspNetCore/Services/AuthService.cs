@@ -151,7 +151,12 @@ public class AuthService
             if (userId is null)
                 return null;
 
-            var user = await userRepo.FindAsync(hashIdService.Decode<UserDTO>(userId), disableDefaultDataLevelAccess: true, disableGlobalFilters: true);
+            // Accept both formats: hash-encoded (new) and raw numeric (pre-change) refresh tokens.
+            var decodedUserId = hashIdService.Decode<UserDTO>(userId);
+            if (decodedUserId <= 0 && long.TryParse(userId, out var rawUserId))
+                decodedUserId = rawUserId;
+
+            var user = await userRepo.FindAsync(decodedUserId, disableDefaultDataLevelAccess: true, disableGlobalFilters: true);
             if(user is null || !user.IsActive || user.IsDeleted)
                 return null;
 
