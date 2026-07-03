@@ -39,8 +39,6 @@ public class User : ShiftEntity<User>,
 
     public DateTime? LockDownUntil { get; set; }
 
-    public bool IsSuperAdmin { get; set; }
-
     public bool IsActive { get; set; }
 
     public bool BuiltIn { get; set; }

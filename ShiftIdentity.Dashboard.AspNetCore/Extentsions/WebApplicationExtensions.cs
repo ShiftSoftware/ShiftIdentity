@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using ShiftSoftware.ShiftIdentity.Core;
@@ -17,20 +17,7 @@ public static class WebApplicationExtensions
 
         var db = scopedServices.GetRequiredService<ShiftIdentityDbContext>();
 
-        var actionTrees = new List<Type>();
-
-        var typeAuthService = scopedServices.GetService<ITypeAuthService>();
-
-        if (typeAuthService is not null)
-        {
-            foreach (var actionTree in typeAuthService.GetRegisteredActionTrees())
-            {
-                actionTrees.Add(actionTree);
-            }
-        }
-
-        if (!actionTrees.Contains(typeof(ShiftIdentityActions)))
-            actionTrees.Add(typeof(ShiftIdentityActions));
+        var actionTrees = GetRegisteredActionTrees(scopedServices);
 
         await new DBSeed(db, actionTrees, adminUserName, adminPassword, dBSeedOptions).SeedAsync();
 
@@ -44,33 +31,9 @@ public static class WebApplicationExtensions
 
         var db = scopedServices.GetRequiredService<ShiftIdentityDbContext>();
 
-        //Get list of users
         var users = await db.Users.Where(x => username.Contains(x.Username)).ToListAsync();
 
-        //Get the full access trees
-        var actionTrees = new List<Type>();
-
-        var typeAuthService = scopedServices.GetService<ITypeAuthService>();
-
-        if (typeAuthService is not null)
-        {
-            foreach (var actionTree in typeAuthService.GetRegisteredActionTrees())
-            {
-                actionTrees.Add(actionTree);
-            }
-        }
-
-        if (!actionTrees.Contains(typeof(ShiftIdentityActions)))
-            actionTrees.Add(typeof(ShiftIdentityActions));
-
-        var tree = new Dictionary<string, object>();
-
-        foreach (var item in actionTrees)
-        {
-            tree[item.Name] = new List<Access> { Access.Read, Access.Write, Access.Delete, Access.Maximum };
-        }
-
-        var jsonTree = System.Text.Json.JsonSerializer.Serialize(tree);
+        var jsonTree = FullAccessTree.BuildJson(GetRegisteredActionTrees(scopedServices));
 
         foreach (var user in users)
         {
@@ -81,5 +44,22 @@ public static class WebApplicationExtensions
         await db.SaveChangesAsync();
 
         return app;
+    }
+
+    // The registered action trees (from TypeAuth), always including ShiftIdentity's own actions — the set
+    // a built-in admin is granted full access over.
+    private static List<Type> GetRegisteredActionTrees(IServiceProvider services)
+    {
+        var actionTrees = new List<Type>();
+
+        var typeAuthService = services.GetService<ITypeAuthService>();
+
+        if (typeAuthService is not null)
+            actionTrees.AddRange(typeAuthService.GetRegisteredActionTrees());
+
+        if (!actionTrees.Contains(typeof(ShiftIdentityActions)))
+            actionTrees.Add(typeof(ShiftIdentityActions));
+
+        return actionTrees;
     }
 }

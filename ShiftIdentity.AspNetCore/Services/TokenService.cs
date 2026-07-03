@@ -129,9 +129,6 @@ public class TokenService
 
         claims.Add(new Claim(ShiftIdentityClaims.ExternalToken, external.ToString().ToLower()));
 
-        if (user.IsSuperAdmin)
-            claims.Add(new Claim(ClaimTypes.Role, "superadmin"));
-
         if (user.Email != null)
             claims.Add(new Claim(ClaimTypes.Email, user.Email));
 

@@ -2,7 +2,6 @@
 using ShiftSoftware.ShiftEntity.Model.Enums;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
-using ShiftSoftware.TypeAuth.Core;
 
 namespace ShiftSoftware.ShiftIdentity.Data;
 
@@ -128,14 +127,7 @@ public class DBSeed
     {
         var user = await db.Users.FirstOrDefaultAsync(x => x.Username == Core.Constants.BuiltInUsername);
 
-        var tree = new Dictionary<string, object>();
-
-        foreach (var item in actionTrees)
-        {
-            tree[item.Name] = new List<Access> { Access.Read, Access.Write, Access.Delete, Access.Maximum };
-        }
-
-        var jsonTree = System.Text.Json.JsonSerializer.Serialize(tree);
+        var jsonTree = FullAccessTree.BuildJson(actionTrees);
 
         if (user == null)
         {
