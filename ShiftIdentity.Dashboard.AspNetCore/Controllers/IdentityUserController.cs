@@ -6,13 +6,13 @@ using ShiftSoftware.ShiftEntity.Core.Services;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Web;
-using ShiftSoftware.ShiftIdentity.AspNetCore;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
 using ShiftSoftware.ShiftIdentity.Data.Repositories;
 using ShiftSoftware.TypeAuth.AspNetCore;
 using ShiftSoftware.TypeAuth.Core;
+using System.Net;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers;
 
@@ -52,6 +52,13 @@ public class IdentityUserController : ShiftEntitySecureControllerAsync<UserRepos
     [TypeAuth<ShiftIdentityActions>(nameof(ShiftIdentityActions.Users), TypeAuth.Core.Access.Read)]
     public async Task<IActionResult> EffectivePermissions(string key)
     {
+        // AND-gate against AccessTrees Read (attribute handles Users Read).
+        if (!typeAuth.CanRead(ShiftIdentityActions.AccessTrees))
+            return StatusCode((int)HttpStatusCode.Forbidden, new ShiftEntityResponse<UserEffectivePermissionsDTO>
+            {
+                Message = new Message("Forbidden", "Read access to both Users and Access Trees is required.")
+            });
+
         var userId = hashIdService.Decode<UserDTO>(key);
 
         var accessTree = await userRepo.GenerateEffectiveAccessTreeAsync(userId);
