@@ -10,7 +10,6 @@ using ShiftSoftware.TypeAuth.AspNetCore;
 using ShiftSoftware.TypeAuth.Core;
 using ShiftSoftware.TypeAuth.Core.Actions;
 using System.Net;
-using System.Reflection;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers;
 
@@ -44,14 +43,16 @@ public class ReverseTypeAuthLookupController : ControllerBase
                 Message = new Message("Validation Error", "ActionPath is required.")
             });
 
-        var resolved = ResolveAction(request.ActionPath);
-        if (resolved is null)
+        // Resolve the action from its path via TypeAuth's own action-tree index (the same index it
+        // evaluates against) instead of re-walking the action tree types by reflection here.
+        var actionNode = typeAuthService.FindActionTreeNode(request.ActionPath);
+        if (actionNode?.Action is null)
             return NotFound(new ShiftEntityResponse<ReverseTypeAuthLookupResponseDTO>
             {
                 Message = new Message("Not Found", $"Action '{request.ActionPath}' was not found in any registered action tree.")
             });
 
-        var (ownerType, action) = resolved.Value;
+        var action = actionNode.Action;
         var isDynamic = action is DynamicAction;
 
         if (isDynamic && !request.AnyDynamicRow && string.IsNullOrWhiteSpace(request.DynamicId))
@@ -60,10 +61,10 @@ public class ReverseTypeAuthLookupController : ControllerBase
                 Message = new Message("Validation Error", "Dynamic actions require either DynamicId or AnyDynamicRow=true.")
             });
 
-        // Registered action trees — same set every user context will be built against.
+        // Registered action trees — the action-tree set every single-tree context is evaluated against.
         var registeredActionTrees = typeAuthService.GetRegisteredActionTrees();
 
-        // Load candidate users — active, not deleted. Include access trees.
+        // Load candidate users — active, not deleted. Include their named access trees.
         var users = await db.Users
             .AsNoTracking()
             .Where(x => !x.IsDeleted && x.IsActive)
@@ -71,33 +72,41 @@ public class ReverseTypeAuthLookupController : ControllerBase
             .Include(x => x.AccessTrees).ThenInclude(x => x.AccessTree)
             .ToListAsync();
 
-        // Cache: access-tree JSON -> context (registered action trees + that single tree's JSON).
-        // Shared by the access-trees pass and per-user source attribution.
-        var singleTreeContextCache = new Dictionary<string, TypeAuthContext>(StringComparer.Ordinal);
-
-        TypeAuthContext BuildSingleTreeContext(string treeJson)
+        // Builds a context holding the registered action trees plus a single access tree, so one tree
+        // can be evaluated on its own. Access is purely additive (merging trees only ever adds grants),
+        // so a subject is granted the action iff at least one of their trees grants it — evaluating each
+        // tree in isolation is exact, and there is never a need to build a combined per-subject context.
+        TypeAuthContext BuildContext(string treeJson)
         {
-            if (!singleTreeContextCache.TryGetValue(treeJson, out var ctx))
-            {
-                var b = new TypeAuthContextBuilder();
-                foreach (var t in registeredActionTrees)
-                    b.AddActionTree(t);
-                b.AddAccessTree(treeJson);
-                ctx = b.Build();
-                singleTreeContextCache[treeJson] = ctx;
-            }
+            var builder = new TypeAuthContextBuilder();
+            foreach (var t in registeredActionTrees)
+                builder.AddActionTree(t);
+            builder.AddAccessTree(treeJson);
+            return builder.Build();
+        }
+
+        // Named access trees are shared across many users, so their contexts are cached by the tree's
+        // (cheap-to-hash) id. A user's inline "direct" tree is unique per user with no reuse, so it is
+        // built ad hoc rather than cached.
+        var namedTreeContexts = new Dictionary<long, TypeAuthContext>();
+        TypeAuthContext NamedTreeContext(long accessTreeId, string treeJson)
+        {
+            if (!namedTreeContexts.TryGetValue(accessTreeId, out var ctx))
+                namedTreeContexts[accessTreeId] = ctx = BuildContext(treeJson);
             return ctx;
         }
 
-        // Count active-user assignments per access tree (shown in the Access Trees tab).
-        var assignedUserCounts = new Dictionary<long, int>();
-        foreach (var user in users)
-            if (user.AccessTrees != null)
-                foreach (var uat in user.AccessTrees)
-                    if (uat.AccessTree != null)
-                        assignedUserCounts[uat.AccessTreeID] = assignedUserCounts.GetValueOrDefault(uat.AccessTreeID) + 1;
+        // Active-user assignment count per named access tree (shown in the Access Trees tab).
+        var activeUserCountByAccessTreeId = users
+            .Where(u => u.AccessTrees != null)
+            .SelectMany(u => u.AccessTrees)
+            .Where(uat => uat.AccessTree != null)
+            .GroupBy(uat => uat.AccessTreeID)
+            .ToDictionary(g => g.Key, g => g.Count());
 
-        // Named access trees that grant the requested access on the action.
+        // Access Trees tab: every named tree that grants the access, queried independently of users.
+        // Intentionally NOT derived from the loaded users — a tree can grant the access while assigned to
+        // zero active users, and a reverse-lookup/audit still needs to surface it (AssignedUserCount 0).
         var matchedTrees = new List<ReverseTypeAuthLookupAccessTreeDTO>();
         var accessTrees = await db.AccessTrees
             .AsNoTracking()
@@ -109,74 +118,48 @@ public class ReverseTypeAuthLookupController : ControllerBase
             if (string.IsNullOrWhiteSpace(tree.Tree))
                 continue;
 
-            if (HasAccess(BuildSingleTreeContext(tree.Tree), action, isDynamic, request))
+            if (HasAccess(NamedTreeContext(tree.ID, tree.Tree), action, isDynamic, request))
+            {
                 matchedTrees.Add(new ReverseTypeAuthLookupAccessTreeDTO
                 {
                     // Raw long as string — the [AccessTreeHashIdConverter] on the DTO encodes at serialization.
                     ID = tree.ID.ToString(),
-                    RawID = tree.ID.ToString(),
                     Name = tree.Name,
-                    AssignedUserCount = assignedUserCounts.GetValueOrDefault(tree.ID)
+                    AssignedUserCount = activeUserCountByAccessTreeId.GetValueOrDefault(tree.ID)
                 });
+            }
         }
 
-        // Combined-context cache for the user match decision (keyed by the user's full effective tree set).
-        var contextCache = new Dictionary<string, TypeAuthContext>(StringComparer.Ordinal);
-
+        // Users tab: a user matches iff any of their access-tree sources grants the action. Because access
+        // is additive, evaluating each source on its own both decides the match and attributes it — the
+        // direct tree feeds GrantedDirectly, each granting named tree feeds GrantingAccessTrees — so there
+        // is no separate combined-context pass and no source is evaluated twice.
         var matched = new List<ReverseTypeAuthLookupUserDTO>();
-        var superAdminCount = 0;
 
         foreach (var user in users)
         {
-            if (user.IsSuperAdmin)
-            {
-                superAdminCount++;
-                matched.Add(MapUser(user, isSuperAdmin: true, grantingAccessTrees: new List<string>(), grantedBySelf: false));
-                continue;
-            }
-
-            var effectiveTrees = CollectEffectiveTrees(user);
-            if (effectiveTrees.Count == 0)
-                continue;
-
-            var cacheKey = string.Join("\n", effectiveTrees.OrderBy(x => x, StringComparer.Ordinal));
-            if (!contextCache.TryGetValue(cacheKey, out var context))
-            {
-                var builder = new TypeAuthContextBuilder();
-                foreach (var tree in registeredActionTrees)
-                    builder.AddActionTree(tree);
-                foreach (var at in effectiveTrees)
-                    builder.AddAccessTree(at);
-
-                context = builder.Build();
-                contextCache[cacheKey] = context;
-            }
-
-            if (!HasAccess(context, action, isDynamic, request))
-                continue;
-
-            // Attribute the match to its source(s). Access is additive (the union grants iff at least one
-            // source grants), so evaluating each source on its own is exact — at least one is true here.
             var grantingAccessTrees = new List<string>();
             if (user.AccessTrees != null)
                 foreach (var uat in user.AccessTrees)
                     if (uat.AccessTree != null && !string.IsNullOrWhiteSpace(uat.AccessTree.Tree)
-                        && HasAccess(BuildSingleTreeContext(uat.AccessTree.Tree), action, isDynamic, request))
+                        && HasAccess(NamedTreeContext(uat.AccessTreeID, uat.AccessTree.Tree), action, isDynamic, request))
                         grantingAccessTrees.Add(uat.AccessTree.Name);
 
-            var grantedBySelf = !string.IsNullOrWhiteSpace(user.AccessTree)
-                && HasAccess(BuildSingleTreeContext(user.AccessTree), action, isDynamic, request);
+            var grantedDirectly = !string.IsNullOrWhiteSpace(user.AccessTree)
+                && HasAccess(BuildContext(user.AccessTree), action, isDynamic, request);
 
-            matched.Add(MapUser(user, isSuperAdmin: false, grantingAccessTrees, grantedBySelf));
+            if (!grantedDirectly && grantingAccessTrees.Count == 0)
+                continue;
+
+            matched.Add(MapUser(user, grantingAccessTrees, grantedDirectly));
         }
 
-        var displayName = BuildDisplayName(ownerType, action);
+        var displayName = BuildDisplayName(actionNode);
 
         return Ok(new ShiftEntityResponse<ReverseTypeAuthLookupResponseDTO>(new ReverseTypeAuthLookupResponseDTO
         {
             Users = matched,
             TotalMatchingUsers = matched.Count,
-            SuperAdminCount = superAdminCount,
             ActionDisplayName = displayName,
             AccessTrees = matchedTrees,
             TotalMatchingAccessTrees = matchedTrees.Count
@@ -199,76 +182,37 @@ public class ReverseTypeAuthLookupController : ControllerBase
         return context.Can(action, request.Access, request.DynamicId!);
     }
 
-    private static List<string> CollectEffectiveTrees(User user)
-    {
-        var trees = new List<string>();
-
-        if (!string.IsNullOrWhiteSpace(user.AccessTree))
-            trees.Add(user.AccessTree);
-
-        if (user.AccessTrees != null)
-            foreach (var accessTree in user.AccessTrees)
-                if (!string.IsNullOrWhiteSpace(accessTree.AccessTree?.Tree))
-                    trees.Add(accessTree.AccessTree.Tree);
-
-        return trees;
-    }
-
-    private (Type ownerType, ActionBase action)? ResolveAction(string actionPath)
-    {
-        var segments = actionPath.Split('.');
-        if (segments.Length < 2)
-            return null;
-
-        foreach (var rootType in typeAuthService.GetRegisteredActionTrees())
-        {
-            if (!string.Equals(rootType.Name, segments[0], StringComparison.Ordinal))
-                continue;
-
-            var currentType = rootType;
-            for (int i = 1; i < segments.Length - 1; i++)
-            {
-                var nested = currentType.GetNestedType(segments[i]);
-                if (nested is null)
-                    return null;
-                currentType = nested;
-            }
-
-            var fieldName = segments[^1];
-            var field = currentType.GetField(fieldName, BindingFlags.Public | BindingFlags.Static);
-            if (field?.GetValue(null) is ActionBase action)
-                return (currentType, action);
-
-            return null;
-        }
-
-        return null;
-    }
-
-    private static string BuildDisplayName(Type ownerType, ActionBase action)
-    {
-        var treeAttribute = ownerType.GetCustomAttribute<ShiftSoftware.TypeAuth.Core.ActionTree>();
-        var treeName = treeAttribute?.Name ?? ownerType.Name;
-        var actionName = string.IsNullOrWhiteSpace(action.Name) ? (action.Path?.Split('.').LastOrDefault() ?? "") : action.Name;
-        return $"{treeName} › {actionName}";
-    }
-
-    private static ReverseTypeAuthLookupUserDTO MapUser(User user, bool isSuperAdmin, List<string> grantingAccessTrees, bool grantedBySelf)
+    private static ReverseTypeAuthLookupUserDTO MapUser(User user, List<string> grantingAccessTrees, bool grantedDirectly)
         => new()
         {
             // Raw long as string — the [UserHashIdConverter] on the DTO encodes at serialization.
             ID = user.ID.ToString(),
-            RawID = user.ID.ToString(),
             Username = user.Username,
             FullName = user.FullName,
             Email = user.Email,
             CompanyBranch = user.CompanyBranch?.Name,
-            IsSuperAdmin = isSuperAdmin,
             AccessTrees = user.AccessTrees?
                 .Where(x => x.AccessTree != null)
                 .Select(x => x.AccessTree.Name)
                 .ToList() ?? new List<string>(),
             GrantingAccessTrees = grantingAccessTrees,
-            GrantedBySelf = grantedBySelf
+            GrantedDirectly = grantedDirectly
         };
+
+    // Friendly "Tree › Action" name (e.g. "Identity › Users"), read from the action tree nodes rather
+    // than re-derived by reflection: the parent grouping node carries the tree name, the action node the
+    // action name.
+    private string BuildDisplayName(ActionTreeNode actionNode)
+    {
+        var path = actionNode.Path ?? "";
+        var lastDot = path.LastIndexOf('.');
+        var parentNode = lastDot > 0 ? typeAuthService.FindActionTreeNode(path.Substring(0, lastDot)) : null;
+
+        var treeName = parentNode?.DisplayName ?? parentNode?.ID ?? "";
+        var actionName = string.IsNullOrWhiteSpace(actionNode.DisplayName)
+            ? (path.Split('.').LastOrDefault() ?? "")
+            : actionNode.DisplayName;
+
+        return $"{treeName} › {actionName}";
+    }
 }

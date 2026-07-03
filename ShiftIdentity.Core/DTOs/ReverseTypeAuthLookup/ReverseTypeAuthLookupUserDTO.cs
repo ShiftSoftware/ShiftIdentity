@@ -10,11 +10,6 @@ public class ReverseTypeAuthLookupUserDTO
     [UserHashIdConverter]
     public string ID { get; set; } = default!;
 
-    /// <summary>
-    /// Raw numeric primary key as string — for power users running SQL against the ShiftIdentity schema.
-    /// </summary>
-    public string RawID { get; set; } = default!;
-
     public string Username { get; set; } = default!;
     public string FullName { get; set; } = default!;
     public string? Email { get; set; }
@@ -25,22 +20,22 @@ public class ReverseTypeAuthLookupUserDTO
     [JsonConverter(typeof(LocalizedTextJsonConverter))]
     public string? CompanyBranch { get; set; }
 
-    public bool IsSuperAdmin { get; set; }
-
     /// <summary>
     /// All access trees assigned to the user (regardless of whether they grant the looked-up action).
     /// </summary>
     public List<string> AccessTrees { get; set; } = new();
 
     /// <summary>
-    /// True when the user's own user-specific ("self") access grants the looked-up action.
+    /// True when the access tree assigned directly to the user (the inline <c>User.AccessTree</c>,
+    /// as opposed to a named/shared access tree) grants the looked-up action.
+    /// "Directly" here means the assignment source, not data-level "Self/Own" scoping.
     /// </summary>
-    public bool GrantedBySelf { get; set; }
+    public bool GrantedDirectly { get; set; }
 
     /// <summary>
-    /// Names of the assigned access trees that actually grant the looked-up action
-    /// (a subset of <see cref="AccessTrees"/>). Combined with <see cref="GrantedBySelf"/>,
-    /// this is the exact source list: self, one tree, both, or several trees.
+    /// Names of the assigned (named) access trees that actually grant the looked-up action
+    /// (a subset of <see cref="AccessTrees"/>). Combined with <see cref="GrantedDirectly"/>,
+    /// this is the exact source list: the direct tree, one named tree, both, or several trees.
     /// </summary>
     public List<string> GrantingAccessTrees { get; set; } = new();
 }

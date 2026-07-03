@@ -8,8 +8,6 @@ public class ReverseTypeAuthLookupResponseDTO
 
     public int TotalMatchingUsers { get; set; }
 
-    public int SuperAdminCount { get; set; }
-
     /// <summary>
     /// Named access trees that grant the requested access on the action.
     /// </summary>

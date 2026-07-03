@@ -54,10 +54,6 @@
             </MudText>
             <MudText Typo="Typo.caption">
                 @Loc["Matching users"]: @lastResult.TotalMatchingUsers
-                @if (lastResult.SuperAdminCount > 0)
-                {
-                    <span> · @Loc["includes {0} super-admin(s)", lastResult.SuperAdminCount]</span>
-                }
                 <span> · @Loc["Matching access trees"]: @lastResult.TotalMatchingAccessTrees</span>
             </MudText>
         }
@@ -85,7 +81,6 @@
                                   Virtualize="true" FixedHeader="true" Height="55vh">
                             <HeaderContent>
                                 <MudTh>@Loc["ID"]</MudTh>
-                                <MudTh>@Loc["Raw ID"]</MudTh>
                                 <MudTh>@Loc["Full Name"]</MudTh>
                                 <MudTh>@Loc["Username"]</MudTh>
                                 <MudTh>@Loc["Email"]</MudTh>
@@ -95,7 +90,6 @@
                             </HeaderContent>
                             <RowTemplate>
                                 <MudTd title="@context.ID"><code>@context.ID</code></MudTd>
-                                <MudTd title="@context.RawID"><code>@context.RawID</code></MudTd>
                                 <MudTd title="@context.FullName">@context.FullName</MudTd>
                                 <MudTd title="@context.Username">@context.Username</MudTd>
                                 <MudTd title="@context.Email">@context.Email</MudTd>
@@ -130,13 +124,11 @@
                                   Virtualize="true" FixedHeader="true" Height="55vh">
                             <HeaderContent>
                                 <MudTh>@Loc["ID"]</MudTh>
-                                <MudTh>@Loc["Raw ID"]</MudTh>
                                 <MudTh>@Loc["Name"]</MudTh>
                                 <MudTh>@Loc["Assigned Users"]</MudTh>
                             </HeaderContent>
                             <RowTemplate>
                                 <MudTd title="@context.ID"><code>@context.ID</code></MudTd>
-                                <MudTd title="@context.RawID"><code>@context.RawID</code></MudTd>
                                 <MudTd title="@context.Name">@context.Name</MudTd>
                                 <MudTd>@context.AssignedUserCount</MudTd>
                             </RowTemplate>
@@ -228,20 +220,16 @@
             return;
 
         var sb = new StringBuilder();
-        sb.AppendLine("ID,RawID,Username,FullName,Email,Branch,IsSuperAdmin,AccessTrees,GrantedBy");
+        sb.AppendLine("ID,Username,FullName,Email,Branch,AccessTrees,GrantedBy");
         foreach (var u in lastResult.Users)
         {
-            var grantedBy = u.IsSuperAdmin
-                ? "Super Admin"
-                : string.Join("; ", (u.GrantedBySelf ? new[] { "Self" } : Array.Empty<string>()).Concat(u.GrantingAccessTrees));
+            var grantedBy = string.Join("; ", (u.GrantedDirectly ? new[] { "Direct" } : Array.Empty<string>()).Concat(u.GrantingAccessTrees));
 
             sb.Append(CsvField(u.ID)).Append(',')
-              .Append(CsvField(u.RawID)).Append(',')
               .Append(CsvField(u.Username)).Append(',')
               .Append(CsvField(u.FullName)).Append(',')
               .Append(CsvField(u.Email)).Append(',')
               .Append(CsvField(u.CompanyBranch)).Append(',')
-              .Append(u.IsSuperAdmin ? "true" : "false").Append(',')
               .Append(CsvField(string.Join("; ", u.AccessTrees))).Append(',')
               .Append(CsvField(grantedBy))
               .Append('\n');
@@ -256,11 +244,10 @@
             return;
 
         var sb = new StringBuilder();
-        sb.AppendLine("ID,RawID,Name,AssignedUsers");
+        sb.AppendLine("ID,Name,AssignedUsers");
         foreach (var t in lastResult.AccessTrees)
         {
             sb.Append(CsvField(t.ID)).Append(',')
-              .Append(CsvField(t.RawID)).Append(',')
               .Append(CsvField(t.Name)).Append(',')
               .Append(t.AssignedUserCount.ToString())
               .Append('\n');
@@ -308,13 +295,10 @@
 
     private sealed record ChipItem(string Label, Color Color);
 
-    // All access trees assigned to the user (plus a Super Admin chip when applicable).
+    // All access trees assigned to the user.
     private List<ChipItem> AccessTreeChips(ReverseTypeAuthLookupUserDTO user)
     {
         var chips = new List<ChipItem>();
-
-        if (user.IsSuperAdmin)
-            chips.Add(new ChipItem(Loc["Super Admin"], Color.Error));
 
         foreach (var tree in user.AccessTrees)
             chips.Add(new ChipItem(tree, Color.Primary));
@@ -322,16 +306,13 @@
         return chips;
     }
 
-    // The source(s) that actually grant the looked-up action: Super Admin, Self, and/or specific trees.
+    // The source(s) that actually grant the looked-up action: the user's direct access tree and/or specific named trees.
     private List<ChipItem> GrantedByChips(ReverseTypeAuthLookupUserDTO user)
     {
-        if (user.IsSuperAdmin)
-            return new List<ChipItem> { new(Loc["Super Admin"], Color.Error) };
-
         var chips = new List<ChipItem>();
 
-        if (user.GrantedBySelf)
-            chips.Add(new ChipItem(Loc["Self"], Color.Info));
+        if (user.GrantedDirectly)
+            chips.Add(new ChipItem(Loc["Direct"], Color.Info));
 
         foreach (var tree in user.GrantingAccessTrees)
             chips.Add(new ChipItem(tree, Color.Primary));
