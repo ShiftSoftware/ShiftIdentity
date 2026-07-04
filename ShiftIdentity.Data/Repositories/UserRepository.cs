@@ -23,13 +23,15 @@ public class UserRepository :
     private readonly ITypeAuthService typeAuthService;
     private readonly IMapper mapper;
     private readonly ShiftIdentityFeatureLocking shiftIdentityFeatureLocking;
+    private readonly ShiftIdentityConfiguration configuration;
     private readonly ShiftIdentityLocalizer Loc;
 
     public UserRepository(ShiftIdentityDbContext db, 
         ITypeAuthService typeAuthService, 
         IMapper mapper,
         ShiftIdentityDefaultDataLevelAccessOptions shiftIdentityDefaultDataLevelAccessOptions,
-        ShiftIdentityFeatureLocking shiftIdentityFeatureLocking, 
+        ShiftIdentityFeatureLocking shiftIdentityFeatureLocking,
+        ShiftIdentityConfiguration configuration,
         ShiftIdentityLocalizer Loc) : base(db, r =>
         r.IncludeRelatedEntitiesWithFindAsync(
             x => x.Include(y => y.AccessTrees).ThenInclude(y => y.AccessTree),
@@ -43,6 +45,7 @@ public class UserRepository :
         this.typeAuthService = typeAuthService;
         this.mapper = mapper;
         this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
+        this.configuration = configuration;
         this.Loc = Loc;
         this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
     }
@@ -176,8 +179,8 @@ public class UserRepository :
             entity.PasswordHash = hash.PasswordHash;
             entity.Salt = hash.Salt;
 
-            //Set flag to enforce password change
-            entity.RequireChangePassword = true;
+            // Same source AssignRandomPasswords uses
+            entity.RequireChangePassword = configuration.Security.RequirePasswordChange;
         }
 
         var accessTreeIds = dto.AccessTrees.Select(x => x.Value.ToLong());
