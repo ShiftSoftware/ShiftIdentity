@@ -24,9 +24,9 @@ public class TotpService
     {
         var digits = settings.Digits;
         var period = settings.Period;
-        var issuer = settings.IssuerName == null ? user : $"{settings.IssuerName} ({user})";
+        var issuer = settings.IssuerName;
         var secretKey = GenerateSecretKey();
-        var uri = new OtpUri(OtpType.Totp, secretKey, issuer, digits: digits, period: period).ToString();
+        var uri = new OtpUri(OtpType.Totp, secretKey, user, issuer, OtpHashMode.Sha1, digits: digits, period: period).ToString();
 
         return (Base32Encoding.ToString(secretKey), uri);
     }

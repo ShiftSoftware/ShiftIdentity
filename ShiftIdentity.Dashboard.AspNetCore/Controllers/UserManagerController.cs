@@ -348,7 +348,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
                     }
                 });
 
-            var user = User.FindFirstValue(ClaimTypes.GivenName) ?? User.FindFirstValue(ClaimTypes.Name);
+            var user = User.FindFirstValue(ClaimTypes.Name);
             var (secret, uri) = totpService.GenerateSecret(user ?? userId);
 
             // Sign the secret (bound to the user + an expiry) so it can't be swapped in transit
