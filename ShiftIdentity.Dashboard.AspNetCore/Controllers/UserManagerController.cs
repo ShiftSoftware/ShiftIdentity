@@ -323,6 +323,9 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
             user.PasswordHash = hash.PasswordHash;
             user.Salt = hash.Salt;
             user.VerificationSASToken = null;
+            // The user just chose this password themselves via the reset link, so don't force
+            // another change on next login.
+            user.RequireChangePassword = false;
             await userRepo.SaveChangesAsync();
 
             return Ok(new ShiftEntityResponse<UserDataDTO>
