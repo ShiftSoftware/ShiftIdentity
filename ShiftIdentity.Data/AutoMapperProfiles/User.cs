@@ -16,6 +16,10 @@ public class User : Profile
                     opt => opt.MapFrom(src => src.AccessTrees.Select(y => new ShiftEntitySelectDTO { Value = y.AccessTreeID.ToString(), Text = y.AccessTree.Name }))
                 )
             .ForMember(
+                    dest => dest.TotpEnabled,
+                    opt => opt.MapFrom(src => src.TotpSecret != null)
+                )
+            .ForMember(
                     dest => dest.CompanyBranchID,
                     opt => opt.MapFrom(src => new ShiftEntitySelectDTO { Value= src.CompanyBranchID.ToString()!, Text = src.CompanyBranch!.Name })
                 );
@@ -24,6 +28,10 @@ public class User : Profile
             .ForMember(
                     dest => dest.CompanyBranch,
                     opt => opt.MapFrom(src => src.CompanyBranch!.Name)
+                )
+            .ForMember(
+                    dest => dest.TotpEnabled,
+                    opt => opt.MapFrom(src => src.TotpSecret != null)
                 )
             .ForMember(
                 dest => dest.LastSeen,

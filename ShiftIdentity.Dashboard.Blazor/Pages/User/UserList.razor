@@ -144,6 +144,24 @@
                 </MudPaper>
             </CellTemplate>
         </PropertyColumnExtended>
+        <PropertyColumnExtended Filterable="false" Sortable="false" Title="@Loc["TOTP"]" Property="x => x.TotpEnabled">
+            <CellTemplate Context="cel">
+                @if (cel?.Item?.TotpEnabled == true)
+                {
+                    <MudIcon Size="@Size.Small"
+                             Icon="@Icons.Material.Filled.Lock"
+                             Style="color:#2ECC71"
+                             Title="@Loc["Authenticator app (TOTP) is set up"]" />
+                }
+                else
+                {
+                    <MudIcon Size="@Size.Small"
+                             Icon="@Icons.Material.Filled.LockOpen"
+                             Style="color:#B0B0B0"
+                             Title="@Loc["No authenticator app (TOTP)"]" />
+                }
+            </CellTemplate>
+        </PropertyColumnExtended>
         <PropertyColumnExtended Title="@Loc["Branch"]" Property="x => x.CompanyBranch" />
         <PropertyColumnExtended Format="F" Property="x => x.LastSeen" Title="@Loc["Last Seen"]" />
 
@@ -266,12 +284,9 @@
         if (res.Message == null && res.Entity?.Count > 0)
         {
             this.MessageService.Success($"TOTP Authentication was reset for ({res.Entity.Count}) users.");
+            return ValueTask.FromResult(true);
         }
-        else
-        {
-            this.MessageService.Error("An error occurred while resetting TOTP Authentication.");
-        }
-
+        this.MessageService.Error("An error occurred while resetting TOTP Authentication.");
         return ValueTask.FromResult(false);
     }
 

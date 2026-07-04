@@ -27,6 +27,8 @@ public class UserDTO : ShiftEntityViewAndUpsertDTO
 
     public string? AccessTree { get; set; }
 
+    public bool TotpEnabled { get; set; }
+
     #endregion
 
     #region Contacts

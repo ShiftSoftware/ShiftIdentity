@@ -29,6 +29,7 @@ public class UserListDTO : ShiftEntityListDTO
     public string? Email { get; set; }
     public bool EmailVerified { get; set; }
     public bool IsActive { get; set; }
+    public bool TotpEnabled { get; set; }
     public DateTimeOffset LastSeen { get; set; }
 
     [AccessTreeHashIdConverter]
