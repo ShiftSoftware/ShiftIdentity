@@ -2,6 +2,7 @@
 using ShiftSoftware.ShiftEntity.Model.Enums;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.Entities;
+using System.Text.Json;
 
 namespace ShiftSoftware.ShiftIdentity.Data;
 
@@ -42,12 +43,13 @@ public class DBSeed
 
     private async Task<Country> SeedCountryAsync()
     {
-        var country = await db.Countries.FirstOrDefaultAsync(x => x.Name == Core.Constants.BuiltInCountry);
+        var country = await db.Countries.FirstOrDefaultAsync(x => x.BuiltIn);
         if (country == null) {
             country = new();
         }
 
-        country.Name = Core.Constants.BuiltInCountry;
+        var lang = dbSeedOptions?.DefaultCulture.TwoLetterISOLanguageName;
+        country.Name = BuildLocalizedText(lang ?? "en", Constants.BuiltInCountry);
         country.ShortCode = dbSeedOptions?.CountryShortCode;
         country.IntegrationId = dbSeedOptions?.CountryExternalId;
         country.CallingCode = dbSeedOptions?.CountryCallingCode ?? Core.Constants.BuiltInCountryCallingCode;
@@ -58,12 +60,13 @@ public class DBSeed
 
     private async Task<Region> SeedRegionAsync(Country country)
     {
-        var region = await db.Regions.FirstOrDefaultAsync(x => x.Name == Core.Constants.BuiltInRegion);
+        var region = await db.Regions.FirstOrDefaultAsync(x => x.BuiltIn);
 
         if (region == null)
             region = new();
 
-        region.Name = Core.Constants.BuiltInRegion;
+        var lang = dbSeedOptions?.DefaultCulture.TwoLetterISOLanguageName;
+        region.Name = BuildLocalizedText(lang ?? "en", Constants.BuiltInRegion);
         region.ShortCode = dbSeedOptions?.RegionShortCode;
         region.IntegrationId = dbSeedOptions?.RegionExternalId;
         region.BuiltIn = true;
@@ -74,12 +77,13 @@ public class DBSeed
 
     private async Task<City> SeedCityAsync(Region region)
     {
-        var city = await db.Cities.FirstOrDefaultAsync(x => x.Name == Core.Constants.BuiltInCity);
+        var city = await db.Cities.FirstOrDefaultAsync(x => x.BuiltIn);
 
         if (city == null)
             city = new();
 
-        city.Name = Core.Constants.BuiltInCity;
+        var lang = dbSeedOptions?.DefaultCulture.TwoLetterISOLanguageName;
+        city.Name = BuildLocalizedText(lang ?? "en", Constants.BuiltInCity);
         city.Region = region;
         city.BuiltIn = true;
 
@@ -88,12 +92,13 @@ public class DBSeed
 
     private async Task<Company> SeedCompanyAsync()
     {
-        var company = await db.Companies.FirstOrDefaultAsync(x => x.Name == Core.Constants.BuiltInCompany);
+        var company = await db.Companies.FirstOrDefaultAsync(x => x.BuiltIn);
 
         if (company == null)
             company = new();
 
-        company.Name = Core.Constants.BuiltInCompany;
+        var lang = dbSeedOptions?.DefaultCulture.TwoLetterISOLanguageName;
+        company.Name = BuildLocalizedText(lang ?? "en", Constants.BuiltInCompany);
         company.CompanyType = CompanyTypes.SupplierOrServiceProvider;
         company.BuiltIn = true;
 
@@ -106,12 +111,13 @@ public class DBSeed
 
     private async Task<CompanyBranch> SeedCompanyBranchAsync(City city, Company company)
     {
-        var companyBranch = await db.CompanyBranches.FirstOrDefaultAsync(x => x.Name == Core.Constants.BuiltInBranch);
+        var companyBranch = await db.CompanyBranches.FirstOrDefaultAsync(x => x.BuiltIn);
 
         if (companyBranch == null)
             companyBranch = new();
 
-        companyBranch.Name = Core.Constants.BuiltInBranch;
+        var lang = dbSeedOptions?.DefaultCulture.TwoLetterISOLanguageName;
+        companyBranch.Name = BuildLocalizedText(lang ?? "en", Constants.BuiltInBranch);
         companyBranch.City = city;
         companyBranch.Region = city.Region;
         companyBranch.Company = company;
@@ -155,4 +161,7 @@ public class DBSeed
 
         user.Salt = hash.Salt;
     }
+
+    private static string BuildLocalizedText(string language, string value)
+        => JsonSerializer.Serialize(new Dictionary<string, string> { [language] = value });
 }

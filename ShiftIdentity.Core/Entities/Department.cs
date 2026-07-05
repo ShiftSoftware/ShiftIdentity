@@ -16,6 +16,7 @@ public class Department : ShiftEntity<Department>, IShiftEntityReplication
     /// <inheritdoc />
     public string? LastReplicationStamp { get; set; }
 
+    [Column(TypeName = "json")]
     public string Name { get; set; } = default!;
     public string? IntegrationId { get; set; }
 }

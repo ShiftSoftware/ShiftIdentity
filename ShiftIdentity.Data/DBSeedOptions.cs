@@ -1,4 +1,5 @@
 ﻿using ShiftSoftware.ShiftEntity.Model.Enums;
+using System.Globalization;
 
 namespace ShiftSoftware.ShiftIdentity.Data;
 
@@ -18,4 +19,6 @@ public class DBSeedOptions
 
     public string? CompanyBranchShortCode { get; set; }
     public string? CompanyBranchExternalId { get; set; }
+
+    public CultureInfo DefaultCulture { get; set; } = new CultureInfo("en-US");
 }
