@@ -19,9 +19,7 @@ public class Company : ShiftEntity<Company>, IEntityHasCompany<Company>, IShiftE
     /// <inheritdoc />
     public string? LastReplicationStamp { get; set; }
 
-    [Column(TypeName = "json")]
     public string Name { get; set; } = default!;
-    [Column(TypeName = "json")]
     public string? LegalName { get; set; }
     public string? IntegrationId { get; set; }
     public string? ShortCode { get; set; }
@@ -29,7 +27,6 @@ public class Company : ShiftEntity<Company>, IEntityHasCompany<Company>, IShiftE
     public string? Logo { get; set; }
     public string? HQPhone { get; set; }
     public string? HQEmail { get; set; }
-    [Column(TypeName = "json")]
     public string? HQAddress { get; set; }
     public string? Website { get; set; }
     public bool BuiltIn { get; set; }

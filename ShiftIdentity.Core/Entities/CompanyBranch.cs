@@ -26,7 +26,6 @@ public class CompanyBranch :
     /// <inheritdoc />
     public string? LastReplicationStamp { get; set; }
 
-    [Column(TypeName = "json")]
     public string Name { get; set; } = default!;
     public string? Phone { get; set; }
     public List<TaggedTextDTO> Phones { get; set; } = new();

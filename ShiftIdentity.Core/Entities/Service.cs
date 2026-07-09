@@ -15,7 +15,6 @@ public class Service : ShiftEntity<Service>, IShiftEntityReplication
     /// <inheritdoc />
     public string? LastReplicationStamp { get; set; }
 
-    [Column(TypeName = "json")]
     public string Name { get; set; } = default!;
     public string? IntegrationId { get; set; }
 }

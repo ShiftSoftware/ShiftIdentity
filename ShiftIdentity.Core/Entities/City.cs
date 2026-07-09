@@ -18,7 +18,6 @@ public class City : ShiftEntity<City>, IEntityHasCity<City>, IEntityHasRegion<Ci
     /// <inheritdoc />
     public string? LastReplicationStamp { get; set; }
 
-    [Column(TypeName = "json")]
     public string Name { get; set; } = default!;
     public string? IntegrationId { get; set; }
     public long? RegionID { get; set; }

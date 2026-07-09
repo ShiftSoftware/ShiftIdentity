@@ -21,7 +21,6 @@ public class Country : ShiftEntity<Country>, IEntityHasCountry<Country>, IShiftE
     /// <inheritdoc />
     public string? LastReplicationStamp { get; set; }
 
-    [Column(TypeName = "json")]
     public string Name { get; set; } = default!;
     public string? IntegrationId { get; set; }
     public string? ShortCode { get; set; }
