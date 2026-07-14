@@ -11,7 +11,7 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
 [Table("Companies", Schema = "ShiftIdentity")]
-public class Company : ShiftEntity<Company>, IEntityHasCompany<Company>, IShiftEntityReplication
+public class Company : ShiftEntity<Company>, IEntityHasCompany<Company>, IShiftEntityReplication, IShiftEntityProtectable
 {
     /// <inheritdoc />
     public DateTimeOffset? LastReplicationDate { get; set; }
@@ -29,7 +29,7 @@ public class Company : ShiftEntity<Company>, IEntityHasCompany<Company>, IShiftE
     public string? HQEmail { get; set; }
     public string? HQAddress { get; set; }
     public string? Website { get; set; }
-    public bool BuiltIn { get; set; }
+    public bool IsProtected { get; set; }
     public DateTime? TerminationDate { get; set; }
     public Dictionary<string, CustomField>? CustomFields { get; set; }
 

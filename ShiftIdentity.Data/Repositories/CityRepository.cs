@@ -31,7 +31,7 @@ public class CityRepository : ShiftRepository<ShiftIdentityDbContext, City, City
 
     public override async ValueTask<City> UpsertAsync(City entity, CityDTO dto, ActionTypes actionType, long? userId, Guid? idempotencyKey, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
     {
-        if (entity.BuiltIn)
+        if (entity.IsProtected)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
         entity.CountryID = (await this.regionRepo.FindAsync(dto.Region.Value.ToLong(), asOf: null, disableDefaultDataLevelAccess: true, disableGlobalFilters: true))?.CountryID;
@@ -41,7 +41,7 @@ public class CityRepository : ShiftRepository<ShiftIdentityDbContext, City, City
 
     public override ValueTask<City> DeleteAsync(City entity, long? userId, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
     {
-        if (entity.BuiltIn)
+        if (entity.IsProtected)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
         return base.DeleteAsync(entity, userId, disableDefaultDataLevelAccess, disableGlobalFilters);

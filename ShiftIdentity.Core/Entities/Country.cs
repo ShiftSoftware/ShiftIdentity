@@ -13,7 +13,7 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
 [Table("Countries", Schema = "ShiftIdentity")]
-public class Country : ShiftEntity<Country>, IEntityHasCountry<Country>, IShiftEntityReplication
+public class Country : ShiftEntity<Country>, IEntityHasCountry<Country>, IShiftEntityReplication, IShiftEntityProtectable
 {
     /// <inheritdoc />
     public DateTimeOffset? LastReplicationDate { get; set; }
@@ -25,7 +25,7 @@ public class Country : ShiftEntity<Country>, IEntityHasCountry<Country>, IShiftE
     public string? IntegrationId { get; set; }
     public string? ShortCode { get; set; }
     public string CallingCode { get; set; } = default!;
-    public bool BuiltIn { get; set; }
+    public bool IsProtected { get; set; }
     public virtual IEnumerable<Region> Regions { get; set; }
     public long? CountryID { get; set; }
     public string? Flag { get; set; }

@@ -33,20 +33,20 @@ public class IdentitySyncController : ControllerBase
         await db.UserLogs.ExecuteDeleteAsync();
         await db.UserAccessTrees.ExecuteDeleteAsync();
         await db.TeamUsers.ExecuteDeleteAsync();
-        await db.Users.Where(x => !x.BuiltIn).ExecuteDeleteAsync();
+        await db.Users.Where(x => !x.IsProtected).ExecuteDeleteAsync();
         await db.AccessTrees.ExecuteDeleteAsync();
         await db.CompanyBranchBrands.ExecuteDeleteAsync();
         await db.CompanyBranchDepartments.ExecuteDeleteAsync();
         await db.CompanyBranchServices.ExecuteDeleteAsync();
-        await db.CompanyBranches.Where(x => !x.BuiltIn).ExecuteDeleteAsync();
-        await db.Cities.Where(x => !x.BuiltIn).ExecuteDeleteAsync();
-        await db.Regions.Where(x => !x.BuiltIn).ExecuteDeleteAsync();
-        await db.Countries.Where(x => !x.BuiltIn).ExecuteDeleteAsync();
+        await db.CompanyBranches.Where(x => !x.IsProtected).ExecuteDeleteAsync();
+        await db.Cities.Where(x => !x.IsProtected).ExecuteDeleteAsync();
+        await db.Regions.Where(x => !x.IsProtected).ExecuteDeleteAsync();
+        await db.Countries.Where(x => !x.IsProtected).ExecuteDeleteAsync();
         await db.Departments.ExecuteDeleteAsync();
         await db.Services.ExecuteDeleteAsync();
         await db.Brands.ExecuteDeleteAsync();
         await db.Teams.ExecuteDeleteAsync();
-        await db.Companies.Where(x => !x.BuiltIn).ExecuteDeleteAsync();
+        await db.Companies.Where(x => !x.IsProtected).ExecuteDeleteAsync();
 
         await this.CopyCountries();
         await this.CopyRegions();
@@ -126,7 +126,7 @@ public class IdentitySyncController : ControllerBase
     {
         var liveData = await liveDb
             .Countries
-            .Where(x => !x.BuiltIn)
+            .Where(x => !x.IsProtected)
             .AsNoTracking()
             .ToListAsync();
 
@@ -155,7 +155,7 @@ public class IdentitySyncController : ControllerBase
     {
         var liveData = await liveDb
             .Regions
-            .Where(x => !x.BuiltIn)
+            .Where(x => !x.IsProtected)
             .AsNoTracking()
             .ToListAsync();
 
@@ -184,7 +184,7 @@ public class IdentitySyncController : ControllerBase
     {
         var liveData = await liveDb
             .Cities
-            .Where(x => !x.BuiltIn)
+            .Where(x => !x.IsProtected)
             .AsNoTracking()
             .ToListAsync();
 
@@ -297,7 +297,7 @@ public class IdentitySyncController : ControllerBase
     {
         var liveData = await liveDb
             .Companies
-            .Where(x => !x.BuiltIn)
+            .Where(x => !x.IsProtected)
             .AsNoTracking()
             .ToListAsync();
 
@@ -326,7 +326,7 @@ public class IdentitySyncController : ControllerBase
     {
         var liveData = await liveDb
             .CompanyBranches
-            .Where(x => !x.BuiltIn)
+            .Where(x => !x.IsProtected)
             .AsNoTracking()
             .ToListAsync();
 
@@ -383,7 +383,7 @@ public class IdentitySyncController : ControllerBase
     {
         var liveData = await liveDb
             .Users
-            .Where(x => !x.BuiltIn)
+            .Where(x => !x.IsProtected)
             .AsNoTracking()
             .ToListAsync();
 

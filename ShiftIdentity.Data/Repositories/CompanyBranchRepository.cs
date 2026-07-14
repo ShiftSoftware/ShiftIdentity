@@ -48,7 +48,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
 
         public override async ValueTask<CompanyBranch> UpsertAsync(CompanyBranch entity, CompanyBranchDTO dto, ActionTypes actionType, long? userId, Guid? idempotencyKey, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
         {
-            if (entity.BuiltIn)
+            if (entity.IsProtected)
                 throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
             var oldRegionId = entity.RegionID;
@@ -182,7 +182,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
 
         public override ValueTask<CompanyBranch> DeleteAsync(CompanyBranch entity, long? userId, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
         {
-            if (entity.BuiltIn)
+            if (entity.IsProtected)
                 throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
             return base.DeleteAsync(entity, userId, disableDefaultDataLevelAccess, disableGlobalFilters);

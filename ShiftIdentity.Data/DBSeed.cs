@@ -51,7 +51,7 @@ public class DBSeed
         country.ShortCode = dbSeedOptions?.CountryShortCode;
         country.IntegrationId = dbSeedOptions?.CountryExternalId;
         country.CallingCode = dbSeedOptions?.CountryCallingCode ?? Core.Constants.BuiltInCountryCallingCode;
-        country.BuiltIn = true;
+        country.IsProtected = true;
 
         return country;
     }
@@ -66,7 +66,7 @@ public class DBSeed
         region.Name = Core.Constants.BuiltInRegion;
         region.ShortCode = dbSeedOptions?.RegionShortCode;
         region.IntegrationId = dbSeedOptions?.RegionExternalId;
-        region.BuiltIn = true;
+        region.IsProtected = true;
         region.Country = country;
 
         return region;
@@ -81,7 +81,7 @@ public class DBSeed
 
         city.Name = Core.Constants.BuiltInCity;
         city.Region = region;
-        city.BuiltIn = true;
+        city.IsProtected = true;
 
         return city;
     }
@@ -95,7 +95,7 @@ public class DBSeed
 
         company.Name = Core.Constants.BuiltInCompany;
         company.CompanyType = CompanyTypes.SupplierOrServiceProvider;
-        company.BuiltIn = true;
+        company.IsProtected = true;
 
         company.ShortCode = dbSeedOptions?.CompanyShortCode;
         company.IntegrationId = dbSeedOptions?.CompanyExternalId;
@@ -115,7 +115,7 @@ public class DBSeed
         companyBranch.City = city;
         companyBranch.Region = city.Region;
         companyBranch.Company = company;
-        companyBranch.BuiltIn = true;
+        companyBranch.IsProtected = true;
 
         companyBranch.ShortCode = dbSeedOptions?.CompanyBranchShortCode;
         companyBranch.IntegrationId = dbSeedOptions?.CompanyBranchExternalId;
@@ -139,7 +139,7 @@ public class DBSeed
         user.FullName = "Super User";
         user.IsActive = true;
         user.Username = this.adminUserName;
-        user.BuiltIn = true;
+        user.IsProtected = true;
         user.RequireChangePassword = false;
 
         user.Country = country;

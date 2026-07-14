@@ -36,7 +36,7 @@ public static class WebApplicationExtensions
         var jsonTree = FullAccessTree.BuildJson(GetRegisteredActionTrees(scopedServices));
 
         // Grant full access only. These are real admin users, not seed data, so they are intentionally
-        // NOT marked BuiltIn — that flag blocks editing, deleting, and password resets (see UserRepository).
+        // NOT marked IsProtected — that flag blocks editing, deleting, and password resets (see UserRepository).
         foreach (var user in users)
         {
             user.AccessTree = jsonTree;

@@ -15,7 +15,8 @@ public class User : ShiftEntity<User>,
     IEntityHasRegion<User>,
     IEntityHasCompany<User>, 
     IEntityHasCompanyBranch<User>,
-    IShiftEntityReplication
+    IShiftEntityReplication,
+    IShiftEntityProtectable
 {
     /// <inheritdoc />
     public DateTimeOffset? LastReplicationDate { get; set; }
@@ -41,7 +42,7 @@ public class User : ShiftEntity<User>,
 
     public bool IsActive { get; set; }
 
-    public bool BuiltIn { get; set; }
+    public bool IsProtected { get; set; }
 
     public string? AccessTree { get; set; }
 

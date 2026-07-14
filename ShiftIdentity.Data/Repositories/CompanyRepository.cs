@@ -27,7 +27,7 @@ public class CompanyRepository : ShiftRepository<ShiftIdentityDbContext, Company
 
     public override ValueTask<Company> UpsertAsync(Company entity, CompanyDTO dto, ActionTypes actionType, long? userId, Guid? idempotencyKey, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
     {
-        if (entity.BuiltIn)
+        if (entity.IsProtected)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
         if (!string.IsNullOrWhiteSpace(dto.HQPhone))
@@ -82,7 +82,7 @@ public class CompanyRepository : ShiftRepository<ShiftIdentityDbContext, Company
 
     public override ValueTask<Company> DeleteAsync(Company entity, long? userId, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
     {
-        if (entity.BuiltIn)
+        if (entity.IsProtected)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
         return base.DeleteAsync(entity, userId, disableDefaultDataLevelAccess, disableGlobalFilters);

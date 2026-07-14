@@ -10,7 +10,7 @@ namespace ShiftSoftware.ShiftIdentity.Core.Entities;
 
 [TemporalShiftEntity]
 [Table("Cities", Schema = "ShiftIdentity")]
-public class City : ShiftEntity<City>, IEntityHasCity<City>, IEntityHasRegion<City>, IEntityHasCountry<City>, IShiftEntityReplication
+public class City : ShiftEntity<City>, IEntityHasCity<City>, IEntityHasRegion<City>, IEntityHasCountry<City>, IShiftEntityReplication, IShiftEntityProtectable
 {
     /// <inheritdoc />
     public DateTimeOffset? LastReplicationDate { get; set; }
@@ -22,7 +22,7 @@ public class City : ShiftEntity<City>, IEntityHasCity<City>, IEntityHasRegion<Ci
     public string? IntegrationId { get; set; }
     public long? RegionID { get; set; }
     public virtual Region? Region { get; set; } = default!;
-    public bool BuiltIn { get; set; }
+    public bool IsProtected { get; set; }
     public virtual ICollection<CompanyBranch> CompanyBranches { get; set; }
     public long? CountryID { get; set; }
     public long? CityID { get; set; }

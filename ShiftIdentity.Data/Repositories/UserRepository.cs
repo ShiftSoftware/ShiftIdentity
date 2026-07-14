@@ -55,7 +55,7 @@ public class UserRepository :
         if (shiftIdentityFeatureLocking.UserFeatureIsLocked)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["User Feature is locked"]));
 
-        if (entity.BuiltIn)
+        if (entity.IsProtected)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
         long id = 0;
@@ -269,7 +269,7 @@ public class UserRepository :
         if (shiftIdentityFeatureLocking.UserFeatureIsLocked)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["User Feature is locked"]));
 
-        if (entity.BuiltIn)
+        if (entity.IsProtected)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
         return base.DeleteAsync(entity, userId, disableDefaultDataLevelAccess, disableGlobalFilters);
@@ -336,7 +336,7 @@ public class UserRepository :
             return null;
 
         //Check if the user is built-in
-        if (user.BuiltIn)
+        if (user.IsProtected)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
         //Check if the username is duplicate
@@ -379,7 +379,7 @@ public class UserRepository :
 
         foreach (var user in users)
         {
-            if (user.BuiltIn)
+            if (user.IsProtected)
                 continue;
 
             var password = PasswordGenerator.GeneratePassword(passwordLength);
@@ -404,7 +404,7 @@ public class UserRepository :
     {
         foreach (var user in users)
         {
-            if (user.BuiltIn)
+            if (user.IsProtected)
                 continue;
 
             if (!string.IsNullOrWhiteSpace(user.Phone))

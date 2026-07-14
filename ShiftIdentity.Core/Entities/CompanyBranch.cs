@@ -18,7 +18,8 @@ public class CompanyBranch :
     IEntityHasCompany<CompanyBranch>, 
     IEntityHasCountry<CompanyBranch>,
     IEntityHasCompanyBranch<CompanyBranch>,
-    IShiftEntityReplication
+    IShiftEntityReplication,
+    IShiftEntityProtectable
 {
     /// <inheritdoc />
     public DateTimeOffset? LastReplicationDate { get; set; }
@@ -41,7 +42,7 @@ public class CompanyBranch :
     public string? WorkingDays { get; set; }
     public string? IntegrationId { get; set; } = default!;
     public string? ShortCode { get; set; }
-    public bool BuiltIn { get; set; }
+    public bool IsProtected { get; set; }
     public DateTime? TerminationDate { get; set; }
     public Dictionary<string, CustomField>? CustomFields { get; set; }
 

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using ShiftSoftware.ShiftEntity.Core;
+using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
 using ShiftSoftware.ShiftIdentity.Core;
@@ -67,6 +68,13 @@ public static class IMvcBuilderExtensions
         builder.Services.TryAddSingleton(shiftIdentityConfiguration);
         builder.Services.TryAddSingleton(shiftIdentityConfiguration.ShiftIdentityFeatureLocking);
         builder.Services.TryAddSingleton(shiftIdentityConfiguration.DefaultDataLevelAccessOptions);
+        // Also register the default data-level options under the framework base type so the built-in / attribute-driven
+        // ShiftRepository path (which has no per-entity constructor to assign it) picks it up automatically.
+        builder.Services.TryAddSingleton<DefaultDataLevelAccessOptions>(shiftIdentityConfiguration.DefaultDataLevelAccessOptions);
+
+        // Generalized feature locking: one save-time validator replaces the 13 per-repository SaveChangesAsync
+        // overrides. The built-in ShiftRepository invokes every registered IShiftEntitySaveValidator before saving.
+        builder.Services.AddScoped<IShiftEntitySaveValidator, FeatureLockSaveValidator>();
 
         builder.Services.AddShiftIdentityAuthCoreServices();
 
