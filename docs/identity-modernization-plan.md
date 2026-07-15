@@ -42,14 +42,16 @@ For each entity, pick the **lowest rung** that satisfies its needs:
 | Rung | When to use | Target shape |
 |------|-------------|--------------|
 | **A. Pure CRUD attribute** | No custom endpoints. No custom repo logic (after cross-cutting guards are framework-handled — see §3). Mapping is convention-friendly. | `[ShiftEntitySecureEndpoint<List,View,ActionTree>("api/…", nameof(Actions.X))] { UseGeneratedMapper = true }` on the entity. **No repository class, no controller, no AutoMapper profile.** |
-| **B. CRUD attribute + light config** | No custom endpoints, but needs `Include`s, data-level access, or a small mapper tweak. | Rung A **plus** `IConfiguresShiftRepository<E,L,V>` on the entity (includes / `UseGeneratedMapper(cfg)` / data-level). Still no repo class, no controller. |
-| **C. CRUD attribute + custom repository** | Genuine business logic in `Upsert`/`Delete`/`SaveChanges`/`ApplyPostODataProcessing` (validation, TypeAuth tree generation, M:N child sync, uniqueness, side-effects). | `[ShiftEntitySecureEndpoint<List,View,ActionTree,TRepository>(…)]` → keep a custom `TRepository`, but **strip all pure-mapping code out of it** into the generated mapper. |
+| **B. CRUD attribute + entity-side hooks** | No custom endpoints, but needs `Include`s / data-level / a mapper tweak, **and/or genuine write logic** (validation, duplicate checks, TypeAuth tree generation, M:N child sync). | Rung A **plus**, on the entity: `IConfiguresShiftRepository<E,L,V>` (includes / `UseGeneratedMapper(cfg)` / data-level) and/or `IUpsertsShiftRepository<E,L,V>` / `IDeletesShiftRepository<E,L,V>` (§3.4). **Still no repo class, no controller.** |
+| **C. CRUD attribute + custom repository** | Only for what has **no entity-side hook**: `ApplyPostODataProcessing`, `GetIQueryable`, `PrintAsync`, `SaveChangesAsync`, or extra public methods other code calls. | `[ShiftEntitySecureEndpoint<List,View,ActionTree,TRepository>(…)]` → keep a **thin** `TRepository` holding *only* those; push write logic to the entity hooks and mapping to the generated mapper. |
 | **D. CRUD extension + custom endpoints** | Needs extra endpoints beyond the 8 standard CRUD routes. | Do **not** rely on the attribute alone. Call `MapShiftEntitySecureCrud<…>(prefix, action)` manually in wiring, then add sibling `MapPost/MapGet` for the custom endpoints on the same prefix. Combine with rung B or C for the repo/mapper. **Delete the MVC controller entirely** — base CRUD *and* the custom endpoints are all minimal APIs. |
 
-**The mapping-vs-Upsert rule (the key cleanup):**
-- Code in a repo `Upsert` that just copies `dto.X → entity.X` (field assignment, FK↔`ShiftEntitySelectDTO`, file/JSON columns) is **the mapper's job** → move to `MapToEntity` (generated).
-- Code that *validates*, *checks uniqueness*, *generates TypeAuth trees*, *syncs M:N join rows*, *hashes passwords*, or *enforces guards* is **genuine business logic** → stays in the custom repo `Upsert`.
-- The AutoMapper `Profile` (view + list projections) → moves to the generated mapper (`MapToView` / `MapToList`), with `ForView`/`ForList`/`ForViewChild(ren)` config only for the non-conventional members.
+**The three-way split (the key cleanup).** For every line of an existing repo `Upsert`/`Delete`, decide which of these it is:
+1. **Mapping** — copies `dto.X → entity.X` (field assignment, FK↔`ShiftEntitySelectDTO`, file/JSON columns, child objects/collections) ⇒ **the mapper's job**, and mostly *automatic* now (see below). Delete it.
+2. **Write logic** — *validates*, *checks duplicates/uniqueness*, *generates TypeAuth trees*, *syncs M:N join rows*, *hashes passwords* ⇒ **the entity's job** via `IUpsertsShiftRepository` / `IDeletesShiftRepository` (§3.4). It does **not** need a repository class any more.
+3. **Persistence/query concerns** — `ApplyPostODataProcessing`, `GetIQueryable`, `PrintAsync` ⇒ the only things that still justify a **custom repository** (rung C).
+
+**Mapping is mostly automatic (§3.5).** The generated mapper composes child objects/collections **automatically to depth 10** — `ForViewChild(ren)`/`ForEntityChild(ren)`/`ForListChild(ren)` are **no longer needed** for ordinary deep mapping. Explicit `ForView`/`ForList` config is still needed only for **non-conventional** members: M:N join → `List<ShiftEntitySelectDTO>` projections, parsed values (lat/long), `CustomFields` password-stripping, and flattened display-orders.
 
 ---
 
@@ -74,6 +76,40 @@ Every repo sets `ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIde
 
 **Implemented:** the built-in `ShiftRepository` (`InitCommon`) now resolves a DI-registered `DefaultDataLevelAccessOptions` and uses it as the baseline (a custom repo's ctor-body assignment still wins; absent a registration the old `new()` default stands, so other consumers are unaffected). ShiftIdentity additionally registers its `ShiftIdentityDefaultDataLevelAccessOptions` under the base type in `AddShiftIdentityDashboard`. Acceptance met — see `Phase0EnablerTests`.
 
+### 3.4 Entity-driven upsert/delete hooks — ✅ ALREADY IN THE FRAMEWORK (no work needed; **changes the ladder**)
+Write logic no longer forces a repository class. An entity can take over upsert/delete directly:
+
+```csharp
+public class AccessTree : ShiftEntity<AccessTree>,
+    IUpsertsShiftRepository<AccessTree, AccessTreeListDTO, AccessTreeDTO>
+{
+    public async ValueTask<AccessTree> UpsertAsync(
+        AccessTree entity, AccessTreeDTO dto, ActionTypes actionType, long? userId, Guid? idempotencyKey,
+        bool disableDefaultDataLevelAccess, bool disableGlobalFilters,
+        ShiftRepositoryUpsertContext<AccessTree, AccessTreeListDTO, AccessTreeDTO> context)
+    {
+        // duplicate check / validation / tree generation here …
+        var saved = await context.Base();   // == base.UpsertAsync(…): mapping, audit, protected-row guard, data-level
+        // … post-logic
+        return saved;
+    }
+}
+```
+
+- Interfaces: `IUpsertsShiftRepository<E,L,V>` / `IDeletesShiftRepository<E,L,V>` (`ShiftEntity.EFCore`). Signature = the repository method verbatim + a trailing `ShiftRepositoryUpsertContext`/`ShiftRepositoryDeleteContext` exposing `Services`, `Repository`, and `Base()`.
+- `context.Base()` is **optional** — calling it runs the framework default (mapping, tagging, audit stamping, protected-row guard, data-level check); skipping it replaces the default wholesale. Insert *and* update both arrive at the upsert hook — branch on `actionType`.
+- **Keyed by the DTO triple**, like `IConfiguresShiftRepository` — implement once per triple.
+- **Fires even with a custom repository** (unlike `IConfiguresShiftRepository`, which is built-in-only): repo override → entity hook → default, as long as the override calls `base`. So an entity's rule survives someone later adding a repository for an unrelated reason.
+- Working precedent to copy: `StockPlusPlus.Data/Entities/Country.cs` (implements both, for the `CountryGeneratedDTO` triple).
+
+> **Ladder impact:** the only entity-side hooks that exist are `IConfiguresShiftRepository`, `IUpsertsShiftRepository`, `IDeletesShiftRepository`. There is **no** entity hook for `ApplyPostODataProcessing`, `GetIQueryable`, `PrintAsync` or `SaveChangesAsync` — those (and extra public methods) are the *only* remaining reasons to keep a repository class (rung C).
+
+### 3.5 Automatic deep mapping (max depth 10) — ✅ ALREADY IN THE FRAMEWORK
+The source-generated mapper composes child objects/collections **automatically, up to 10 nested levels** (`ShiftEntityMapperDefaults.MaxDepth = 10`) in the View, Entity and List directions — **no explicit `ForXxxChild(ren)` needed**.
+- Tune with `[ShiftEntityMapperMaxDepth(n)]` (on a `ShiftRepository<…>` subclass, a `[ShiftEntityMapper]` partial, or the assembly) or fluent `map.MaxDepth(n)`. Explicit `ForXxxChild(ren)` still composes **beyond** the cap and makes auto-deep step aside for that member.
+- Prune with `[ShiftEntityMapperIgnore]` on a property or `map.Ignore(…)` / `IgnoreView/Entity/List/Copy` — the member is omitted from the generated code entirely (complex subtrees pruned).
+- **Still needs explicit config** (auto-deep does *not* cover these): `List<ShiftEntitySelectDTO>` projections over M:N join rows, parsed scalars (lat/long), `CustomFields` password-stripping, flattened display-orders. (`ShiftEntitySelectDTO`/`ShiftFileDTO` aren't "pairable" children — they have their own FK / file-JSON conventions.)
+
 > **Rule for the whole effort:** if adopting a pattern needs a framework capability that doesn't exist yet, **build it in `ShiftEntity` first**, land it, then continue the entity migration. Record every such framework change in the Progress Log (§6) and in the eventual `.shift` roll-up.
 
 ---
@@ -82,23 +118,23 @@ Every repo sets `ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIde
 
 Repos live in `ShiftIdentity.Data/Repositories/`, controllers in `ShiftIdentity.Dashboard.AspNetCore/Controllers/`, AutoMapper profiles in `ShiftIdentity.Data/AutoMapperProfiles/`.
 
-Legend — **Rung** is the target from §2. **Guards** = BuiltIn(B)/FeatureLock(L). **Blockers** = what must exist before it can move.
+Legend — **Rung** is the target from §2. **Guards** = Protected-row(P, §3.2)/FeatureLock(L, §3.1). **Blockers** = what must exist before it can move.
 
 | Entity | Repo overrides today | Custom endpoints | Target rung | Notes |
 |--------|----------------------|------------------|-------------|-------|
 | **Brand** | SaveChanges(L) | 0 | **A** | Simplest. Only blocker: §3.1. Pilot for Tier 1. |
 | **Service** | SaveChanges(L) | 0 | **A** | As Brand. |
 | **Department** | SaveChanges(L) | 0 | **A** | As Brand. |
-| **Country** | Upsert(B), Delete(B), SaveChanges(L) | 0 | **A** | Needs §3.1 + §3.2. Mirrors the already-modernized `StockPlusPlus` Country sample — copy that. |
-| **Region** | Upsert(B), Delete(B), SaveChanges(L), Include(Country) | 0 | **B** | As Country + `Include` via `IConfiguresShiftRepository`. |
-| **City** | Upsert(B), Delete(B), SaveChanges(L), Include(Region→Country) | 0 | **B** | As Region. |
-| **App** | Upsert(?), SaveChanges(L) | 0 | **B/C** | `App,AppDTO,AppDTO` (same DTO for list+view). **Read `AppRepository.Upsert` at implementation** to decide B vs C. |
-| **AccessTree** | Upsert(TypeAuth tree gen — business), SaveChanges(L) | 0 | **C** | Keep repo for tree generation + name-uniqueness. Mapper is trivial → generated. |
-| **CompanyCalendar** | SaveChanges(L), Include | 1 (`GetCalendarEvents`) | **D** (+B) | Custom endpoint → CRUD extension. Otherwise light. |
-| **Company** | Upsert(business: phone, circular-ref), Delete(B), ApplyPostODataProcessing, SaveChanges(L), CustomFields map | 0 | **C** | Keep repo for phone/circular-ref/post-OData. Move CustomFields + `ParentCompany`/`Brands` projections to generated mapper w/ config. |
-| **Team** | Upsert(M:N Users + Branches sync, business), SaveChanges(L) | 0 | **C** | Keep repo for M:N sync + duplicate-user check. Mapper → generated (has `Include`s). |
-| **CompanyBranch** | Upsert(B, M:N Services/Departments/Brands), Delete(B), ApplyPostODataProcessing, SaveChanges(L) | 0 | **C** | Largest non-User (206 lines). Heavy mapper (lat/long parse, CustomFields, display-orders, M:N select projections) → generated + `ForView/ForList/ForViewChildren` config. Is BuiltIn-guarded (was missing from the earlier §3.2 list). |
-| **User** | Upsert(466-line business), Delete(B), SaveChanges | **6** (+ `UserManagerController` 9) | **D** (+C) | **Last.** CRUD extension for base + custom endpoints; keep heavy repo; move field-copy + view/list projection to generated mapper. |
+| **Country** | Upsert(P), Delete(P), SaveChanges(L) | 0 | **A** | Needs §3.1 + §3.2. Mirrors the already-modernized `StockPlusPlus` Country sample — copy that. |
+| **Region** | Upsert(P), Delete(P), SaveChanges(L), Include(Country) | 0 | **B** | As Country + `Include` via `IConfiguresShiftRepository`. |
+| **City** | Upsert(P), Delete(P), SaveChanges(L), Include(Region→Country) | 0 | **B** | As Region. |
+| **App** | Upsert(?), SaveChanges(L) | 0 | **B** | `App,AppDTO,AppDTO` (same DTO for list+view). **Read `AppRepository.Upsert` at implementation**: whatever logic it holds now goes in `IUpsertsShiftRepository` on the entity — no repo class either way. |
+| **AccessTree** | Upsert(TypeAuth tree gen — business), SaveChanges(L) | 0 | **B** ⬅ *was C* | Tree generation + name-uniqueness → `IUpsertsShiftRepository` on the entity; lock → §3.1 validator. Nothing left ⇒ **delete the repo**. Mapper trivial → generated. |
+| **CompanyCalendar** | SaveChanges(L), Include | 1 (`GetCalendarEvents`) | **D** (+B) | Custom endpoint → CRUD extension. `Include` → `IConfiguresShiftRepository`; lock → validator ⇒ **no repo class**. |
+| **Company** | Upsert(business: phone, circular-ref), Delete(P), ApplyPostODataProcessing, SaveChanges(L), CustomFields map | 0 | **C** (thin) | Phone/circular-ref → `IUpsertsShiftRepository`; Delete guard → §3.2; lock → validator. Repo survives **only** for `ApplyPostODataProcessing`. Mapper: `CustomFields` + `ParentCompany`/`Brands` still need `ForView`/`ForList`. |
+| **Team** | Upsert(M:N Users + Branches sync, business), SaveChanges(L) | 0 | **B** ⬅ *was C* | Duplicate-user check + M:N sync → `IUpsertsShiftRepository`; `Include`s → `IConfiguresShiftRepository`; lock → validator. Nothing left ⇒ **delete the repo**. |
+| **CompanyBranch** | Upsert(P, M:N Services/Departments/Brands), Delete(P), ApplyPostODataProcessing, SaveChanges(L) | 0 | **C** (thin) | M:N sync → `IUpsertsShiftRepository`; guards → §3.2/§3.1. Repo survives **only** for `ApplyPostODataProcessing`. Mapper is lighter than feared (auto-deep, §3.5) — only lat/long parse, CustomFields, display-orders and the M:N `ShiftEntitySelectDTO` projections need `ForView`/`ForList`. |
+| **User** | Upsert(466-line business), Delete(P), SaveChanges | **6** (+ `UserManagerController` 9) | **D** (+C) | **Last.** CRUD extension for base + custom endpoints. Upsert logic → `IUpsertsShiftRepository`; but the repo **stays** for its many public methods (`GenerateEffectiveAccessTreeAsync`, `ChangePasswordAsync`, `SetTotpSecret`, `UpdateUserDataAsync`, `AssignRandomPasswords`, `VerifyPhonesAsync`, `UserImportAsync`, `GetUserBy…`) + `IUserRepository`. |
 
 **Not entity CRUD (off the entity ladder), but still in scope for minimal-API conversion:**
 - **Standalone (non-CRUD) controllers** → converted to minimal APIs in **Phase 5**, not left as controllers:
@@ -123,7 +159,7 @@ Each phase is independently shippable. Do not start a phase until the previous o
 - [ ] **0.5** ⏸ **Partially verified.** `ShiftIdentityActions.*` are `public readonly static ReadWriteDeleteAction` fields, which `nameof(...)` + the framework's `ShiftEntityEndpointActionResolver` resolve. Runtime confirmation lands with Brand (Phase 1).
 - [ ] **0.6** ⏸ **Deferred to Phase 1.** `Blazor`/`Dashboard.Blazor` generator changes (if any) are only needed once discovery is driven from the data assembly — revisit with the first attribute entity.
 
-**Pilot proof (this phase):** the three framework enablers are proven end-to-end in `ShiftEntity.Tests/Repository/Phase0EnablerTests.cs` (9 tests, all green; full ShiftEntity suite 356 green). The full attribute-endpoint end-to-end on a *real identity entity* is folded into Phase 1's Brand (ShiftIdentity has no test host yet, and wiring the attribute pipeline before an entity uses it is premature). **Exit criterion for the remaining 0.4–0.6:** Brand (Rung A) serves list/view/create/update/delete + TypeAuth + feature-lock + BuiltIn guard with no repo/controller/profile.
+**Pilot proof (this phase):** the three framework enablers are proven end-to-end in `ShiftEntity.Tests/Repository/Phase0EnablerTests.cs` (9 tests, all green; full ShiftEntity suite 356 green). The full attribute-endpoint end-to-end on a *real identity entity* is folded into Phase 1's Brand (ShiftIdentity has no test host yet, and wiring the attribute pipeline before an entity uses it is premature). **Exit criterion for the remaining 0.4–0.6:** Brand (Rung A) serves list/view/create/update/delete + TypeAuth + feature-lock + protected-row guard with no repo/controller/profile.
 
 ### Phase 1 — Tier 1: pure CRUD attribute (Brand → Service → Department)
 For **each** entity, in order:
@@ -132,24 +168,24 @@ For **each** entity, in order:
 - [ ] **Department**: same shape.
 - [ ] Keep the **route strings identical** to today's `api/[controller]` output so clients/Blazor don't break (e.g. `IdentityBrand`). Verify the produced route matches the old controller route exactly.
 
-### Phase 2 — Tier 2: CRUD attribute + BuiltIn guard + light config (Country → Region → City → App)
+### Phase 2 — Tier 2: CRUD attribute + protected-row guard + light config (Country → Region → City → App)
 - [ ] **Country**: Rung A. Delete repo/controller/profile; `UseGeneratedMapper = true`. Cross-check against the `StockPlusPlus` `api/country-generated` sample as the reference implementation.
 - [ ] **Region**: Rung B. Add `IConfiguresShiftRepository<Region,RegionListDTO,RegionDTO>` on `Region` for `Include(Country)` + `UseGeneratedMapper`. Delete repo/controller/profile.
 - [ ] **City**: Rung B. `Include(Region→Country)`. Delete repo/controller/profile.
-- [ ] **App**: read `AppRepository.Upsert` → if guard-only, Rung B; if it has real logic, Rung C (keep a slim repo). Note `App` uses `AppDTO` for both list & view.
+- [ ] **App**: Rung B. Read `AppRepository.Upsert` and move whatever it holds into `IUpsertsShiftRepository<App,AppDTO,AppDTO>` on the entity; lock → validator. Delete repo/controller/profile. Note `App` uses `AppDTO` for both list & view.
 
-### Phase 3 — Tier 3: custom repository, mapping extracted (AccessTree → Company → Team → CompanyBranch → CompanyCalendar)
-For each: keep a custom `TRepository` wired via `[ShiftEntitySecureEndpoint<List,View,ActionTree,TRepository>(…)]`, **delete the controller**, **delete the AutoMapper profile** (replace with generated mapper + config), and **strip pure mapping out of `Upsert`**.
-- [ ] **AccessTree**: repo keeps TypeAuth tree generation + name-uniqueness; `Name` assignment stays only if it's post-tree logic; mapper generated. Remove feature-lock override (Phase 0.1).
-- [ ] **Company**: repo keeps phone validation + circular-reference check + `ApplyPostODataProcessing`; move `ParentCompany`/`Brands`/`CustomFields` projections to the generated mapper (`ForView`/`ForList` for `CustomFields` password-stripping and the `Brands` aggregation). Remove BuiltIn + lock overrides.
-- [ ] **Team**: repo keeps duplicate-user check + M:N `TeamUsers`/`TeamCompanyBranches` sync + `Tags`; mapper generated (with `Include`s via config). Remove lock override.
-- [ ] **CompanyBranch**: repo keeps M:N children sync + `ApplyPostODataProcessing`; generated mapper handles lat/long parse (`ForView`), display-order projections (`ForList`), CustomFields, and the M:N select-DTO projections (`ForViewChildren`/`ForListChildren`). Remove BuiltIn + lock overrides. This is the hardest mapper — budget extra time.
-- [ ] **CompanyCalendar** (rung B + D — the simplest custom-endpoint case; do it here as the warm-up for the minimal-API pattern that Phase 4/5 reuse): base CRUD via the CRUD extension (light repo → `IConfiguresShiftRepository` for the `Include`; remove lock override); re-add the one custom endpoint `GetCalendarEvents` (`POST`) as a sibling minimal API on the same prefix; delete `IdentityCompanyCalendarController` and the profile.
+### Phase 3 — Tier 3: write logic → entity hooks, mapping → generated (AccessTree → Team → Company → CompanyBranch → CompanyCalendar)
+For each: **delete the controller**, **delete the AutoMapper profile** (generated mapper — deep children are automatic, §3.5), move write logic to `IUpsertsShiftRepository`/`IDeletesShiftRepository` on the entity (§3.4), and keep a repository **only** if something has no entity hook (`ApplyPostODataProcessing` etc.). Order runs cheapest→hardest.
+- [ ] **AccessTree** → **Rung B, repo deleted**. TypeAuth tree generation + name-uniqueness (+ the `Name` assignment) → `IUpsertsShiftRepository<AccessTree,AccessTreeListDTO,AccessTreeDTO>` calling `context.Base()`; lock override → §3.1 validator. Mapper trivial → generated. *Good first proof of the entity-hook pattern.*
+- [ ] **Team** → **Rung B, repo deleted**. Duplicate-user check + M:N `TeamUsers`/`TeamCompanyBranches` sync + `Tags` → `IUpsertsShiftRepository`; `Include`s → `IConfiguresShiftRepository`; lock → validator.
+- [ ] **Company** → **Rung C (thin)**. Phone validation + circular-reference check → `IUpsertsShiftRepository`; BuiltIn/lock overrides → §3.2/§3.1. Repo survives **only** for `ApplyPostODataProcessing`. Mapper: `ForView`/`ForList` for `CustomFields` password-stripping, `ParentCompany`, and the `Brands` aggregation.
+- [ ] **CompanyBranch** → **Rung C (thin)**. M:N children sync → `IUpsertsShiftRepository`; guards → §3.2/§3.1. Repo survives **only** for `ApplyPostODataProcessing`. Mapper is lighter than the earlier estimate (auto-deep, §3.5): only lat/long parse (`ForView`), display-orders (`ForList`), `CustomFields`, and the M:N `ShiftEntitySelectDTO` projections need explicit config.
+- [ ] **CompanyCalendar** (rung B + D — the simplest custom-endpoint case; do it here as the warm-up for the minimal-API pattern that Phase 4/5 reuse): base CRUD via the CRUD extension (`Include` → `IConfiguresShiftRepository`; lock → validator ⇒ **no repo class**); re-add the one custom endpoint `GetCalendarEvents` (`POST`) as a sibling minimal API on the same prefix; delete `IdentityCompanyCalendarController` and the profile.
 
 ### Phase 4 — Tier 4: User (custom endpoints + heavy repo)
 - [ ] **4.1** Map base CRUD via **CRUD extension** (`MapShiftEntitySecureCrud<UserRepository,User,UserListDTO,UserDTO>(…)`) so custom endpoints can sit alongside.
 - [ ] **4.2** Re-add the 6 custom `IdentityUserController` endpoints (`EffectivePermissions`, `AssignRandomPasswords`, `ResetTotp`, `VerifyEmails`, `VerifyPhones`, `ImportUsers`) as sibling minimal-API endpoints on the same prefix, preserving routes + TypeAuth attributes.
-- [ ] **4.3** Keep `UserRepository` business logic (uniqueness, password hashing, access-tree generation, verification-flag resets); move the plain `dto.X → entity.X` field copies + view/list projection into the generated mapper.
+- [ ] **4.3** Split the 466-line `UserRepository`: the **upsert logic** (uniqueness, password hashing, access-tree generation, verification-flag resets) → `IUpsertsShiftRepository<User,UserListDTO,UserDTO>` on the `User` entity (§3.4); the plain `dto.X → entity.X` field copies + view/list projection → the generated mapper (§3.5). The repo **stays** (it's `IUserRepository` and holds the public methods the endpoints call), but shrinks to those methods — no `UpsertAsync`/`DeleteAsync` overrides.
 - [ ] **4.4** Delete `IdentityUserController` — nothing MVC remains for User. (`UserManagerController`, which is tied to User's account flows, is converted in **Phase 5**.)
 
 ### Phase 5 — Standalone (non-CRUD) controllers → minimal APIs
@@ -174,7 +210,7 @@ Convert every remaining `ControllerBase` controller to minimal-API endpoint grou
 ## 6. Testing strategy
 
 - After **every** entity: `dotnet build` the identity solution + run the identity test suite.
-- Add/keep an integration test per migrated entity asserting the 5 CRUD operations + TypeAuth (Read/Write/Delete) + the feature-lock and BuiltIn guards still fire.
+- Add/keep an integration test per migrated entity asserting the 5 CRUD operations + TypeAuth (Read/Write/Delete) + the feature-lock and protected-row guards still fire, **and that any logic moved to an entity `IUpserts`/`IDeletes` hook still runs** (e.g. the duplicate/uniqueness checks).
 - **Route-compatibility check:** assert each migrated entity's produced routes byte-match the old `api/[controller]` routes (clients depend on them). Same for every controller converted to a minimal API (Phases 3–5) — the route, verb, TypeAuth requirement, and response shape must be unchanged.
 - **No-controllers assertion:** a test that reflects over the ShiftIdentity assemblies and fails if any `ControllerBase` subclass remains (allow-list any deliberately-kept view-rendering MVC controller).
 - Reference tests already in the `StockPlusPlus` sample (in the `ShiftTemplates` repo) for the generated-mapper patterns: `Tests/SourceGeneratedMappingTests.cs`, `Tests/DeepMappingTests.cs`, `Tests/AttributeEndpointTests.cs`, `Tests/AttributeEndpointMapperDiscoveryTests.cs`.
@@ -183,7 +219,7 @@ Convert every remaining `ControllerBase` controller to minimal-API endpoint grou
 
 ## 7. Conclusion (fill in when done — then roll up into `.shift`)
 
-_To be written at the end. Capture: which entities landed on which rung; the final mechanism chosen for feature-locking and the BuiltIn guard; any new `ShiftEntity` APIs added; the minimal-API conversion of all controllers (and any MVC controller kept as a deliberate exception); surprises; and remaining follow-ups (join entities). Then copy this into `C:\repos\ShiftSoftware\.shift\repos\shift-identity\` and thin this file to a pointer._
+_To be written at the end. Capture: which entities landed on which rung; how many repository classes were deleted outright (entity hooks vs thin repos); the final mechanism chosen for feature-locking and the protected-row guard; any new `ShiftEntity` APIs added; the minimal-API conversion of all controllers (and any MVC controller kept as a deliberate exception); surprises; and remaining follow-ups (join entities). Then copy this into `C:\repos\ShiftSoftware\.shift\repos\shift-identity\` and thin this file to a pointer._
 
 ---
 
@@ -193,6 +229,7 @@ _To be written at the end. Capture: which entities landed on which rung; the fin
 |------|--------------|--------------|-------------------|-------|
 | 2026-07-13 | — | Plan created | — | Inventory + classification complete; no code changed yet. |
 | 2026-07-14 | — | Scope change: **all** controllers → minimal APIs | — | Bespoke/standalone controllers (UserManager, PublicUser, Sync, ReverseTypeAuthLookup, both AuthControllers) now in scope as new **Phase 5**; CRUD+custom-endpoint controllers (User, CompanyCalendar) fully deleted, custom endpoints become minimal APIs; end state = zero MVC controllers. Cleanup renumbered to Phase 6. |
+| 2026-07-16 | Plan revision | Absorbed two framework capabilities that landed independently (ShiftEntity commits `9888442` entity-driven upsert/delete hooks, `32be85d`/`1349fa4` auto deep-mapping). | **§3.4** entity write hooks (`IUpsertsShiftRepository`/`IDeletesShiftRepository`, `context.Base()`); **§3.5** auto deep mapping to depth 10 (`ShiftEntityMapperDefaults.MaxDepth`, `[ShiftEntityMapperMaxDepth]`, `[ShiftEntityMapperIgnore]`). No code written — plan-only update. | **Ladder changed:** write logic no longer forces a repository class, so rung B now covers it and rung C is reserved for `ApplyPostODataProcessing`/`GetIQueryable`/`Print`/`SaveChanges`/extra public methods. **Reclassified: AccessTree C→B and Team C→B (repos deleted entirely); Company + CompanyBranch → thin C (only `ApplyPostODataProcessing`); User keeps its repo for `IUserRepository` + public methods.** Explicit `ForXxxChild(ren)` dropped from the CompanyBranch/Team/User mapper steps (deep children are automatic). |
 | 2026-07-14 | Rename (full) | `IShiftEntityBuiltInProtected`/`BuiltIn` → **`IShiftEntityProtectable`/`IsProtected`** everywhere (effect-based framework name). | **ShiftEntity:** renamed interface + member + 2 guard sites + message + Phase0 tests; renamed all **8 Cosmos replication models** `BuiltIn`→`IsProtected` (breaking wire change, per decision). | **ShiftIdentity:** 6 entities → plain `bool IsProtected` (**SQL column renamed**, no `[Column]` shim); renamed 15 repo + 11 sync + 6 seed call sites; removed the 8 temporary AutoMapper `ForMember` bridges (convention now maps by name). `Constants.BuiltIn*` row-name strings kept. **Migration:** `StockPlusPlus.Data/Migrations/20260714083851_RenameBuiltInToIsProtected.cs` (EF-generated, 6 `RenameColumn`s, reversible). ShiftEntity 356 tests green; ShiftIdentity.sln + StockPlusPlus.Data build clean. ⚠ downstream Cosmos consumers/stored docs must be coordinated. |
 | 2026-07-14 | Phase 0 (0.1–0.3) | Implemented + tested the three framework enablers; identity glue wired. 0.4–0.6 deferred to Phase 1 (Brand). | **ShiftEntity:** `IShiftEntityBuiltInProtected` (Core) + Upsert/Delete guard; `IShiftEntitySaveValidator` (EFCore) + `RunSaveValidators()` in `ShiftRepository.SaveChangesAsync`; built-in repo baselines `DefaultDataLevelAccessOptions` from DI in `InitCommon`. Tests: `ShiftEntity.Tests/Repository/Phase0EnablerTests.cs` (9 green; full suite 356 green). | **ShiftIdentity:** Country/Region/City/Company/CompanyBranch/User implement the marker; `ShiftIdentityFeatureLocking.GetLockedMessageKey(Type)`; `FeatureLockSaveValidator`; `AddShiftIdentityDashboard` registers the validator + the base-type data-level default. `ShiftIdentity.sln` + `StockPlusPlus.Data` build clean against the modified framework. **Note:** per-repo feature-lock overrides & BuiltIn guards still present (redundant, harmless) — removed per entity in Phases 1–4. Corrected §3.2 BuiltIn set (App→out, CompanyBranch→in). |
 
@@ -209,9 +246,15 @@ Entity-attribute variants (placed **on the entity class**, `AllowMultiple`):
 
 Wiring: `services.RegisterShiftRepositories(dataAssembly)` + `app.MapShiftEntityEndpoints<ShiftIdentityDbContext>()`.
 Built-in repo fallback: when no `TRepository`, the map path closes `ShiftRepository<DB,E,L,V>` automatically.
-Light per-entity config without a repo class: implement `IConfiguresShiftRepository<E,L,V>` **on the entity** (`Include`s, `UseGeneratedMapper(cfg)`, data-level, filters).
-Generated mapper: `[ShiftEntityMapper]` partial (customize via `Configure`) or `UseGeneratedMapper()`; conventions covered = scalars, `long↔string`, `enum↔int`, FK↔`ShiftEntitySelectDTO`, file JSON↔`List<ShiftFileDTO>`, audit fields, `MapToList` projection, deep children via pair mappers. Per-property overrides via `ShiftMapperBuilder`: `ForView/ForEntity/ForList/ForCopy` + `ForViewChild(ren)/ForEntityChild(ren)/ForListChild(ren)`.
-Mapping seam in `ShiftRepository`: the four `MapToView/MapToEntity/MapToList/CopyEntity` virtuals are mapper concerns (absorb into the generated mapper); `Upsert/Delete/SaveChanges/GetIQueryable/ApplyPostODataProcessing/Print` are business/persistence (keep in a custom repo).
+
+**The three entity-side hooks (all keyed by the DTO triple — this is what removes repository classes):**
+- `IConfiguresShiftRepository<E,L,V>` — `Include`s, `UseGeneratedMapper(cfg)`, data-level, filters. **Built-in-repo only** (a custom repo configures itself via its options builder).
+- `IUpsertsShiftRepository<E,L,V>` — take over upsert; `context.Base()` = `base.UpsertAsync(…)`. **Fires even with a custom repo** (if it calls base).
+- `IDeletesShiftRepository<E,L,V>` — take over delete; `context.Base()` = `base.DeleteAsync(…)`. Same firing rules.
+- There is **no** entity hook for `ApplyPostODataProcessing` / `GetIQueryable` / `PrintAsync` / `SaveChangesAsync` — those are the only remaining reasons for a repository class.
+
+Generated mapper: `[ShiftEntityMapper]` partial (customize via `Configure`) or `UseGeneratedMapper()`; conventions covered = scalars, `long↔string`, `enum↔int`, FK↔`ShiftEntitySelectDTO`, file JSON↔`List<ShiftFileDTO>`, audit fields, `MapToList` projection, and **automatic deep child composition to depth 10** (`ShiftEntityMapperDefaults.MaxDepth`; tune via `[ShiftEntityMapperMaxDepth(n)]` / `map.MaxDepth(n)`; prune via `[ShiftEntityMapperIgnore]` / `map.Ignore(…)`). Per-property overrides via `ShiftMapperBuilder`: `ForView/ForEntity/ForList/ForCopy`; `ForViewChild(ren)/ForEntityChild(ren)/ForListChild(ren)` are only for composing **beyond** the depth cap or overriding a member's auto-deep.
+Mapping seam in `ShiftRepository`: the four `MapToView/MapToEntity/MapToList/CopyEntity` virtuals are mapper concerns (absorb into the generated mapper); `Upsert`/`Delete` now have entity hooks; `SaveChanges/GetIQueryable/ApplyPostODataProcessing/Print` remain repository-only.
 
 ## Appendix B — Key source locations
 - Attributes: `ShiftEntity.Core/Endpoints/ShiftEntityEndpointAttributes.cs`
