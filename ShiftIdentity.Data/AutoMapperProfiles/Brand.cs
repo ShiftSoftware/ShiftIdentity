@@ -1,15 +1,15 @@
 ﻿using AutoMapper;
 using ShiftSoftware.ShiftEntity.Model.Replication.IdentityModels;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.Brand;
 
 namespace ShiftSoftware.ShiftIdentity.Data.AutoMapperProfiles;
 
+// The entity↔DTO maps (Brand↔BrandDTO, Brand→BrandListDTO) are gone: the "api/IdentityBrand" endpoint is
+// attribute-driven and uses the SOURCE-GENERATED mapper (see Brand entity). Only the Cosmos REPLICATION maps
+// below remain — they have no generated equivalent and are still used by the replication pipeline.
 public class Brand : Profile
 {
     public Brand()
     {
-        CreateMap<Core.Entities.Brand, BrandDTO>().ReverseMap();
-        CreateMap<Core.Entities.Brand, BrandListDTO>();
         CreateMap<Core.Entities.Brand, BrandModel>()
             .ForMember(
                 dest => dest.id,

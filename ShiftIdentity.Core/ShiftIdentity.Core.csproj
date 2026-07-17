@@ -40,7 +40,14 @@
 	<ItemGroup>
 	
 	  <ProjectReference Include="..\..\ShiftEntity\ShiftEntity.Core\ShiftEntity.Core.csproj" Condition="Exists('..\..\ShiftEntity\ShiftEntity.Core\ShiftEntity.Core.csproj')" />
-	
+
+	  <!-- Dev-mode analyzer reference: the mapper source generator must run on THIS assembly, because the
+	       [ShiftEntity*Endpoint*] attributes — and therefore the (entity, list, view) triples it generates
+	       mappers for — are declared here. In package mode the generator ships inside the
+	       ShiftSoftware.ShiftEntity package referenced above, so this is only needed when the sibling
+	       ShiftEntity repo is cloned (development mode). -->
+	  <ProjectReference Include="..\..\ShiftEntity\ShiftEntity.SourceGenerator\ShiftEntity.SourceGenerator.csproj" Condition="Exists('..\..\ShiftEntity\ShiftEntity.SourceGenerator\ShiftEntity.SourceGenerator.csproj')" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+
 	  <ProjectReference Include="..\..\ShiftFrameworkLocalization\ShiftSoftwareLocalization\ShiftSoftwareLocalization.csproj" />
 	  <ProjectReference Include="..\..\TypeAuth\TypeAuth.Core\TypeAuth.Core.csproj" Condition="Exists('..\..\TypeAuth\TypeAuth.Core\TypeAuth.Core.csproj')" />
 	</ItemGroup>

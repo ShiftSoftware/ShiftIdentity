@@ -1,16 +1,15 @@
 ﻿
 using AutoMapper;
 using ShiftSoftware.ShiftEntity.Model.Replication.IdentityModels;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.Department;
 
 namespace ShiftSoftware.ShiftIdentity.Data.AutoMapperProfiles;
 
+// Entity↔DTO maps removed — "api/IdentityDepartment" is attribute-driven and uses the SOURCE-GENERATED mapper
+// (see the Department entity). Only the Cosmos REPLICATION maps below remain.
 public class Department : Profile
 {
     public Department()
     {
-        CreateMap<Core.Entities.Department, DepartmentDTO>().ReverseMap();
-        CreateMap<Core.Entities.Department, DepartmentListDTO>();
         CreateMap<Core.Entities.Department, DepartmentModel>()
             .ForMember(
                 dest => dest.id,
