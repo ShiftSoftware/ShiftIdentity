@@ -165,9 +165,11 @@
         <PropertyColumnExtended Title="@Loc["Branch"]" Property="x => x.CompanyBranch" />
         <PropertyColumnExtended Format="F" Property="x => x.LastSeen" Title="@Loc["Last Seen"]" />
 
+        @* Count-only mode (MaxVisible=0): most users have more access trees than fit inline, so the
+           popup click is needed anyway — one count chip beats a truncated row of chips + "+N". *@
         <PropertyColumnExtended Title="@Loc["Access Trees"]" Property="x => x.AccessTrees" Context="col">
             <CellTemplate>
-                <ShiftChipDisplay Items="col.Item!.AccessTrees">
+                <ShiftChipDisplay Items="col.Item!.AccessTrees" MaxVisible="0" CountModeIcon="@Icons.Material.Filled.AccountTree" Title="@Loc["Access Trees"]">
                     <ChipTemplate Context="accessTree">
                         <MudChip Size="Size.Small" Color="Color.Primary">@accessTree.Text</MudChip>
                     </ChipTemplate>
