@@ -1,69 +1,17 @@
-﻿
 using AutoMapper;
-using ShiftSoftware.ShiftEntity.Model;
-using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.Replication.IdentityModels;
-using ShiftSoftware.ShiftIdentity.Core;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
 
 namespace ShiftSoftware.ShiftIdentity.Data.AutoMapperProfiles;
 
+// The entity↔DTO maps (Company↔CompanyDTO, Company→CompanyListDTO) are gone: the "api/IdentityCompany" endpoint is
+// attribute-driven and routes through the thin CompanyRepository, whose base-ctor builder opts into the
+// SOURCE-GENERATED mapper (ForView CustomFields/ParentCompany, ForList ParentCompanyName/ParentCompanyID/Brands).
+// The CustomFields write-merge moved to the Company entity's IUpsertsShiftRepository hook. Only the Cosmos
+// REPLICATION map below remains — it has no generated equivalent and drives the replication pipeline.
 public class Company : Profile
 {
     public Company()
     {
-        CreateMap<Data.Entities.Company, CompanyDTO>()
-            .ForMember(
-                    dest => dest.ParentCompany,
-                    opt => opt.MapFrom(src => new ShiftEntitySelectDTO { Value = src.ParentCompanyID.ToString()! })
-                )
-            .ForMember(
-                dest => dest.CustomFields,
-                opt => opt.MapFrom(src => src.CustomFields == null ? null : src.CustomFields
-                .ToDictionary(x => x.Key, x =>
-                new CustomFieldDTO
-                {
-                    DisplayName = x.Value.DisplayName,
-                    IsPassword = x.Value.IsPassword,
-                    IsEncrypted = x.Value.IsEncrypted,
-                    Value = x.Value.IsPassword ? null : x.Value.Value,
-                    HasValue = x.Value.Value != null
-                }))
-            );
-
-        CreateMap<CompanyDTO, Data.Entities.Company>()
-            .ForMember(x=> x.CustomFields, x=> x.Ignore())
-            .AfterMap((src, dest) =>
-            {
-                // Assuming both src and dest have a property CustomFields of type Dictionary or similar
-                foreach (var key in src.CustomFields.Keys)
-                {
-                    var srcField = src.CustomFields[key];
-                    // Check if the field is a password and its value is null
-                    if (srcField.IsPassword && srcField.Value == null)
-                        continue;
-
-                    dest.CustomFields[key] = new CustomField
-                    {
-                        Value = srcField.Value,
-                        DisplayName = srcField.DisplayName,
-                        IsPassword = srcField.IsPassword,
-                        IsEncrypted = srcField.IsEncrypted
-                    };
-                }
-            });
-
-        CreateMap<Data.Entities.Company, CompanyListDTO>()
-            .ForMember(
-                    dest => dest.Brands,
-                    opt => opt.MapFrom(src => src.CompanyBranches!.SelectMany(x=> x.CompanyBranchBrands!).Select(x=> x.BrandID).Distinct()
-                        .Select(x => new ShiftEntitySelectDTO() { Value = x.ToString() }))
-                )
-            .ForMember(
-                m => m.ParentCompanyName,
-                opt => opt.MapFrom(x => x.ParentCompany == null ? null : x.ParentCompany.Name)
-            );
-
         CreateMap<Data.Entities.Company, CompanyModel>()
             .ForMember(
                 dest => dest.id,

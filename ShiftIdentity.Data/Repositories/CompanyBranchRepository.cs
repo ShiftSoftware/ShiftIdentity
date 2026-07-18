@@ -1,197 +1,80 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.EFCore;
-using ShiftSoftware.ShiftEntity.Model;
+using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.City;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.Region;
 using ShiftSoftware.ShiftIdentity.Data.Entities;
-using ShiftSoftware.ShiftIdentity.Core.Localization;
-using System.Net;
-using System.Text.Json;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Repositories
 {
+    // THIN repository (Rung C): CompanyBranch's CRUD is attribute-driven, but the endpoint routes through this
+    // repository (not the built-in one) solely because ApplyPostODataProcessing shapes the list query — there is
+    // no entity hook for that. All write logic (City/Region derivation, M:N sync, CustomFields, phone, lat/long)
+    // moved to the CompanyBranch entity's IUpsertsShiftRepository hook; the protected-row guard + feature lock are
+    // central. The Includes + generated-mapper config live HERE in the base-ctor builder (not
+    // IConfiguresShiftRepository — built-in-only + SHENGEN006; and UseGeneratedMapper=true is illegal on the
+    // custom-repository attribute variant).
     public class CompanyBranchRepository : ShiftRepository<ShiftIdentityDbContext, CompanyBranch, CompanyBranchListDTO, CompanyBranchDTO>
     {
-        // City / Region no longer have hand-written repository subclasses (they're attribute-driven now), so we
-        // inject the framework's built-in ShiftRepository<DB,E,L,V> for each. RegisterShiftRepositories registers
-        // ShiftRepository<,,,> as an open generic, so these closed types resolve without a subclass — letting us
-        // keep the original CityRepository/RegionRepository FindAsync calls verbatim.
-        private readonly ShiftRepository<ShiftIdentityDbContext, City, CityListDTO, CityDTO> cityRepository;
-        private readonly ShiftRepository<ShiftIdentityDbContext, Region, RegionListDTO, RegionDTO> regionRepo;
-        private readonly ShiftIdentityFeatureLocking shiftIdentityFeatureLocking;
-        private readonly ShiftIdentityLocalizer Loc;
-        private readonly IConfiguration configuration;
-
-        public CompanyBranchRepository(
-            ShiftIdentityDbContext db,
-            ShiftRepository<ShiftIdentityDbContext, City, CityListDTO, CityDTO> cityRepository,
-            ShiftRepository<ShiftIdentityDbContext, Region, RegionListDTO, RegionDTO> regionRepo,
-            ShiftIdentityFeatureLocking shiftIdentityFeatureLocking,
-            ShiftIdentityLocalizer Loc,
-            ShiftIdentityDefaultDataLevelAccessOptions shiftIdentityDefaultDataLevelAccessOptions,
-            IConfiguration configuration
-        ) : base(db, r =>
+        public CompanyBranchRepository(ShiftIdentityDbContext db) : base(db, r =>
+        {
             r.IncludeRelatedEntitiesWithFindAsync(
                 x => x.Include(y => y.Company),
-                x => x.Include(y => y.City).ThenInclude(y=> y.Region).ThenInclude(y=> y.Country), //Region is Required for Replication Model
+                x => x.Include(y => y.City).ThenInclude(y => y.Region).ThenInclude(y => y.Country), //Region is Required for Replication Model
                 x => x.Include(y => y.CompanyBranchDepartments).ThenInclude(y => y.Department),
                 x => x.Include(y => y.CompanyBranchServices).ThenInclude(y => y.Service),
                 x => x.Include(y => y.CompanyBranchBrands).ThenInclude(y => y.Brand)
-            )
-        )
-        {
-            this.cityRepository = cityRepository;
-            this.regionRepo = regionRepo;
-            this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
-            this.Loc = Loc;
-            this.configuration = configuration;
-            this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
-        }
+            );
 
-        public override async ValueTask<CompanyBranch> UpsertAsync(CompanyBranch entity, CompanyBranchDTO dto, ActionTypes actionType, long? userId, Guid? idempotencyKey, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
-        {
-            if (entity.IsProtected)
-                throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
-
-            var oldRegionId = entity.RegionID;
-            var oldCountryId = entity.CountryID;
-
-            entity.Name = dto.Name;
-            entity.ShortCode = dto.ShortCode;
-            entity.IntegrationId = dto.IntegrationId;
-            entity.CompanyID = dto.Company.Value.ToLong();
-            entity.CityID = dto.City.Value.ToLong();
-            entity.Phones = dto.Phones;
-            entity.Emails = dto.Emails;
-            entity.TerminationDate = dto.TerminationDate;
-            entity.RegionID = (await this.cityRepository.FindAsync(entity.CityID.Value, asOf: null, disableDefaultDataLevelAccess: true, disableGlobalFilters: true))!.RegionID;
-
-            if (entity.RegionID is not null)
-                entity.CountryID = (await this.regionRepo.FindAsync(entity.RegionID.GetValueOrDefault(), asOf: null, disableDefaultDataLevelAccess: true, disableGlobalFilters: true))?.CountryID;
-
-            if (actionType == ActionTypes.Insert)
-                entity.CustomFields = dto.CustomFields?.ToDictionary(x => x.Key, x => new CustomField
-                {
-                    Value = x.Value.Value,
-                    IsPassword = x.Value.IsPassword,
-                    DisplayName = x.Value.DisplayName,
-                    IsEncrypted = x.Value.IsEncrypted
-                });
-            else if (actionType == ActionTypes.Update)
-            {
-                foreach (var customField in dto.CustomFields)
-                {
-                    if (customField.Value.IsPassword && customField.Value.Value is null)
-                        continue;
-
-                    entity.CustomFields[customField.Key] = new CustomField
+            r.UseGeneratedMapper(map => map
+                // ── VIEW ── (Company/City ShiftEntitySelectDTOs get Value+Text from the FK convention + Includes)
+                .ForView(d => d.Latitude, e => string.IsNullOrWhiteSpace(e.Latitude) ? (decimal?)null : decimal.Parse(e.Latitude))
+                .ForView(d => d.Longitude, e => string.IsNullOrWhiteSpace(e.Longitude) ? (decimal?)null : decimal.Parse(e.Longitude))
+                .ForView(d => d.CustomFields, e => e.CustomFields == null ? null : e.CustomFields
+                    .ToDictionary(x => x.Key, x => new CustomFieldDTO
                     {
-                        IsEncrypted = customField.Value.IsEncrypted,
-                        IsPassword = customField.Value.IsPassword,
-                        DisplayName = customField.Value.DisplayName,
-                        Value = customField.Value.Value
-                    };
-                }
-            }
+                        DisplayName = x.Value.DisplayName,
+                        IsPassword = x.Value.IsPassword,
+                        IsEncrypted = x.Value.IsEncrypted,
+                        Value = x.Value.IsPassword ? null : x.Value.Value,
+                        HasValue = x.Value.Value != null
+                    }))
+                .ForView(d => d.Departments, e => e.CompanyBranchDepartments == null ? new List<ShiftEntitySelectDTO>() : e.CompanyBranchDepartments.Select(y => new ShiftEntitySelectDTO { Value = y.DepartmentID.ToString()!, Text = y.Department!.Name }).ToList())
+                .ForView(d => d.Services, e => e.CompanyBranchServices == null ? new List<ShiftEntitySelectDTO>() : e.CompanyBranchServices.Select(y => new ShiftEntitySelectDTO { Value = y.ServiceID.ToString()!, Text = y.Service!.Name }).ToList())
+                .ForView(d => d.Brands, e => e.CompanyBranchBrands == null ? new List<ShiftEntitySelectDTO>() : e.CompanyBranchBrands.Select(y => new ShiftEntitySelectDTO { Value = y.BrandID.ToString()!, Text = y.Brand!.Name }).ToList())
 
-            if (actionType == ActionTypes.Update)
-            {
-                if (entity.RegionID != oldRegionId || entity.CompanyID != dto.Company.Value.ToLong())
-                    throw new ShiftEntityException(new Message(Loc["Error"], Loc["Company and Region can not be changed after creation."]));
+                // ── ENTITY ── (lat/long decimal?→string; the hook owns CustomFields/Phone/ShortPhone)
+                .ForEntity(e => e.Latitude, dto => dto.Latitude.ToString())
+                .ForEntity(e => e.Longitude, dto => dto.Longitude.ToString())
+                .IgnoreEntity(e => e.CustomFields)
+                .IgnoreEntity(e => e.Phone)
+                .IgnoreEntity(e => e.ShortPhone)
 
-                if (entity.CountryID != oldCountryId && oldCountryId is not null)
-                    throw new ShiftEntityException(new Message(Loc["Error"], Loc["Country can not be changed after creation."]));
-            }
-
-            //Update departments
-            var deletedDepartments = entity.CompanyBranchDepartments.Where(x => !dto.Departments.Select(s => s.Value.ToLong())
-                .Any(s => s == x.DepartmentID));
-            var addedDepartments = dto.Departments.Where(x => !entity.CompanyBranchDepartments.Select(s => s.DepartmentID)
-                .Any(s => s == x.Value.ToLong()));
-
-            db.CompanyBranchDepartments.RemoveRange(deletedDepartments);
-            await db.CompanyBranchDepartments.AddRangeAsync(addedDepartments.Select(x => new CompanyBranchDepartment
-            {
-                DepartmentID = x.Value.ToLong(),
-                CompanyBranch = entity
-            }).ToList());
-
-            //Update services
-            var deletedServices = entity.CompanyBranchServices.Where(x => !dto.Services.Select(s => s.Value.ToLong())
-                .Any(s => s == x.ServiceID));
-            var addedServices = dto.Services.Where(x => !entity.CompanyBranchServices.Select(s => s.ServiceID)
-                .Any(s => s == x.Value.ToLong()));
-
-            db.CompanyBranchServices.RemoveRange(deletedServices);
-            await db.CompanyBranchServices.AddRangeAsync(addedServices.Select(x => new CompanyBranchService
-            {
-                ServiceID = x.Value.ToLong(),
-                CompanyBranch = entity
-            }).ToList());
-
-            //Update brands
-            var deletedBrands = entity.CompanyBranchBrands.Where(x => !dto.Brands.Select(s => s.Value.ToLong())
-                           .Any(s => s == x.BrandID));
-            var addedBrands = dto.Brands.Where(x => !entity.CompanyBranchBrands.Select(s => s.BrandID)
-                .Any(s => s == x.Value.ToLong()));
-
-            db.CompanyBranchBrands.RemoveRange(deletedBrands);
-            await db.CompanyBranchBrands.AddRangeAsync(addedBrands.Select(x => new CompanyBranchBrand
-            {
-                BrandID = x.Value.ToLong(),
-                CompanyBranch = entity
-            }).ToList());
-
-            entity.Email = dto.Email;
-            entity.Address = dto.Address;
-
-            entity.Longitude = dto.Longitude.ToString();
-            entity.Latitude = dto.Latitude.ToString();
-            entity.Photos = JsonSerializer.Serialize(dto.Photos);
-            entity.MobilePhotos = JsonSerializer.Serialize(dto.MobilePhotos);
-            entity.WorkingHours = dto.WorkingHours;
-            entity.WorkingDays = dto.WorkingDays;
-            entity.DisplayName = dto.DisplayName;
-            entity.DisplayOrder = dto.DisplayOrder;
-            entity.Description = dto.Description;
-            entity.PublishTargets = dto.PublishTargets?.ToList();
-            //ef core may not set the entity state as Modified if only the collections are changed (CompanyBranchDepartments, CompanyBranchServices)
-            if (actionType == ActionTypes.Update)
-                db.Entry(entity).State = EntityState.Modified;
-
-            if (!string.IsNullOrWhiteSpace(dto.Phone))
-            {
-                if (!configuration.GetSection("ShiftIdentity").Exists() || configuration.GetSection("ShiftIdentity:DisablePhoneNumberValidation").Value == "False")
-                {
-                    if (!Core.ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(dto.Phone))
-                        throw new ShiftEntityException(new Message(Loc["Validation Error"], Loc["Invalid Phone Number"]));
-
-                    entity.Phone = Core.ValidatorsAndFormatters.PhoneNumber.GetFormattedPhone(dto.Phone);
-                }
-                else
-                    entity.Phone = dto.Phone;
-            }
-            else
-                entity.Phone = null;
-
-            if (!string.IsNullOrWhiteSpace(dto.ShortPhone))
-                entity.ShortPhone = dto.ShortPhone;
-            else
-                entity.ShortPhone = null;
-
-            return entity;
-        }
-
-        public override ValueTask<CompanyBranch> DeleteAsync(CompanyBranch entity, long? userId, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
+                // ── LIST ── (flattened names/display-orders + M:N projections; reproduce the profile ListDTO ForMembers)
+                .ForList(d => d.Company, e => e.Company != null ? e.Company.Name : null)
+                .ForList(d => d.Region, e => e.Region != null ? e.Region.Name : null)
+                .ForList(d => d.City, e => e.City != null ? e.City.Name : null)
+                // Scope-id projections are the reason this list is served by the generated mapper again (not AutoMapper):
+                // the DTO uses Id (CompanyId/CityId/RegionId, string) but the entity uses ID (CompanyID/…, long?), and
+                // BOTH the case AND the type differ — the generated list convention is case-sensitive and doesn't do
+                // long?→string, so without these ForLists the filter target CompanyId is never projected. A LIST filter
+                // then has no scalar to bind to (data-level / the Team-form branch picker's OData $filter=CompanyId eq X),
+                // so EF inlines the whole collection-bearing projection into the WHERE and can't translate it. Projecting
+                // CompanyId lets EF bind the Where to e.CompanyID and push it down; the collections stay in the SELECT.
+                .ForList(d => d.CompanyId, e => e.CompanyID.HasValue ? e.CompanyID.Value.ToString() : null)
+                .ForList(d => d.CityId, e => e.CityID.HasValue ? e.CityID.Value.ToString() : null)
+                .ForList(d => d.RegionId, e => e.RegionID.HasValue ? e.RegionID.Value.ToString() : null)
+                .ForList(d => d.CompanyTerminationDate, e => e.Company != null ? e.Company.TerminationDate : null)
+                .ForList(d => d.CountryDisplayOrder, e => e.City != null && e.City.Region != null && e.City.Region.Country != null ? e.City.Region.Country.DisplayOrder : null)
+                .ForList(d => d.RegionDisplayOrder, e => e.City != null && e.City.Region != null ? e.City.Region.DisplayOrder : null)
+                .ForList(d => d.CityDisplayOrder, e => e.City != null ? e.City.DisplayOrder : null)
+                .ForList(d => d.CompanyDisplayOrder, e => e.Company != null ? e.Company.DisplayOrder : null)
+                .ForList(d => d.Brands, e => e.CompanyBranchBrands.Select(x => new ShiftEntitySelectDTO { Value = x.BrandID.ToString(), Text = x.Brand!.Name }).ToList())
+                .ForList(d => d.Departments, e => e.CompanyBranchDepartments.Select(y => new ShiftEntitySelectDTO { Value = y.DepartmentID.ToString()!, Text = y.Department!.Name }))
+                .ForList(d => d.Services, e => e.CompanyBranchServices.Select(y => new ShiftEntitySelectDTO { Value = y.ServiceID.ToString()!, Text = y.Service!.Name })));
+        })
         {
-            if (entity.IsProtected)
-                throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
-
-            return base.DeleteAsync(entity, userId, disableDefaultDataLevelAccess, disableGlobalFilters);
         }
 
         public override ValueTask<IQueryable<CompanyBranchListDTO>> ApplyPostODataProcessing(IQueryable<CompanyBranchListDTO> queryable)
@@ -200,14 +83,6 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
                 queryable = queryable.Where(x => x.TerminationDate == null && x.CompanyTerminationDate == null);
 
             return new(queryable);
-        }
-
-        public override Task<int> SaveChangesAsync()
-        {
-            if (shiftIdentityFeatureLocking.CompanyBranchFeatureIsLocked)
-                throw new ShiftEntityException(new Message(Loc["Error"], Loc["Company Branch Feature is locked"]));
-
-            return base.SaveChangesAsync();
         }
     }
 }

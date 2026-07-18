@@ -87,20 +87,18 @@ public static class IMvcBuilderExtensions
 
         builder.Services.AddScoped<IUserRepository, UserRepository>();
         builder.Services.AddScoped<IAppRepository, AppRepository>();
-        builder.Services.AddScoped<AccessTreeRepository>();
 
         builder.Services.AddScoped<UserRepository>();
 
         builder.Services.AddScoped<IClaimService, ClaimService>();
 
-        // Brand / Service / Department / Country / Region / City / App CRUD is attribute-driven — those entities
-        // carry [ShiftEntitySecureEndpoint<…>] and use the built-in repository + source-generated mapper, so they
-        // need no repository registration here (RegisterShiftRepositories wires them). App keeps a slim
-        // AppRepository, registered above only as IAppRepository for the OAuth AuthCodeService.
+        // Brand / Service / Department / Country / Region / City / App / AccessTree / Team / CompanyCalendar CRUD is
+        // attribute-driven — those entities carry [ShiftEntitySecureEndpoint<…>] and use the built-in repository +
+        // source-generated mapper, so they need no repository registration here (RegisterShiftRepositories wires them).
+        // Company and CompanyBranch keep a THIN repository (Rung C) only for ApplyPostODataProcessing; their
+        // attribute endpoint routes through that repository, so it stays registered here.
         builder.Services.AddScoped<CompanyRepository>();
         builder.Services.AddScoped<CompanyBranchRepository>();
-        builder.Services.AddScoped<TeamRepository>();
-        builder.Services.AddScoped<CompanyCalendarRepository>();
         builder.Services.AddScoped<CalendarService>();
 
         builder.Services.AddScoped<ShiftIdentityDbContext>(x=> x.GetRequiredService<TDbContext>());

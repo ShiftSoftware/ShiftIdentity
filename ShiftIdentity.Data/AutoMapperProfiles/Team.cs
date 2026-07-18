@@ -1,36 +1,17 @@
-﻿using AutoMapper;
-using ShiftSoftware.ShiftEntity.Model.Dtos;
+using AutoMapper;
 using ShiftSoftware.ShiftEntity.Model.Replication.IdentityModels;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.Team;
 using ShiftSoftware.ShiftIdentity.Data.Entities;
 
 namespace ShiftSoftware.ShiftIdentity.Data.AutoMapperProfiles;
 
+// The entity↔DTO maps (Team↔TeamDTO, Team→TeamListDTO) are gone: the "api/IdentityTeam" endpoint is
+// attribute-driven and uses the SOURCE-GENERATED mapper (see Team entity — its IConfiguresShiftRepository
+// reproduces the M:N Users/CompanyBranches projections, Tags, and the flattened Company name). Only the Cosmos
+// REPLICATION maps below remain — they have no generated equivalent and drive the replication pipeline.
 public class Team : Profile
 {
     public Team()
     {
-        CreateMap<Data.Entities.Team, TeamDTO>()
-            .ForMember(
-                    dest => dest.Company,
-                    opt => opt.MapFrom(src => new ShiftEntitySelectDTO { Value = src.CompanyID.ToString()!, Text = src.Company!.Name })
-                )
-            .ForMember(x => x.Users, opt => opt.MapFrom(x => x.TeamUsers.Select(y => new ShiftEntitySelectDTO { Value = y.UserID.ToString()!, Text = y.User.Username })))
-            .ForMember(x => x.CompanyBranches, opt => opt.MapFrom(x => x.TeamCompanyBranches.Select(y => new ShiftEntitySelectDTO { Value = y.CompanyBranchID.ToString()!, Text = y.CompanyBranch.Name })))
-            .ReverseMap()
-            .ForMember(x => x.TeamUsers, m => m.MapFrom(x => x.Users.Select(s =>
-                new TeamUser
-                {
-                    UserID = s.Value.ToLong()
-                }
-            )))
-            .ForMember(x => x.TeamCompanyBranches, m => m.MapFrom(x => x.CompanyBranches.Select(s =>
-                new TeamCompanyBranch
-                {
-                    CompanyBranchID = s.Value.ToLong()
-                }
-            )));
-
         CreateMap<Data.Entities.Team, TeamModel>()
             .ForMember(
                 dest => dest.id,
@@ -43,11 +24,5 @@ public class Team : Profile
             .ForMember(x => x.IntegrationId, x => x.MapFrom(x => x.CompanyBranch.IntegrationId))
             .ForMember(x => x.BranchID, x => x.MapFrom(x => x.CompanyBranch.ID))
             .ForMember(x => x.ItemType, x => x.MapFrom(x => CompanyBranchContainerItemTypes.Branch));
-
-        CreateMap<Data.Entities.Team, TeamListDTO>()
-            .ForMember(
-                dest => dest.Company,
-                opt => opt.MapFrom(src => src.Company!.Name)
-            );
     }
 }

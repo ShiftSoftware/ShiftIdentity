@@ -1,106 +1,64 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using ShiftSoftware.ShiftEntity.Core;
+using Microsoft.EntityFrameworkCore;
 using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
+using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
 using ShiftSoftware.ShiftIdentity.Data.Entities;
-using ShiftSoftware.ShiftIdentity.Core.Localization;
-using System.Net;
 using System.Linq;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
+// THIN repository (Rung C): Company's CRUD is attribute-driven, but the endpoint routes through this repository
+// (not the built-in one) solely because ApplyPostODataProcessing must shape the list query — there is no entity
+// hook for that. Everything else moved off: write logic → the Company entity's IUpsertsShiftRepository hook
+// (phone/circular-ref/CustomFields merge), the protected-row guard + feature lock are central. The mapper config
+// lives HERE in the base-ctor builder (not IConfiguresShiftRepository — that is built-in-only and would trip
+// SHENGEN006 against this builder; and UseGeneratedMapper=true is illegal on the custom-repository attribute).
 public class CompanyRepository : ShiftRepository<ShiftIdentityDbContext, Company, CompanyListDTO, CompanyDTO>
 {
-    private readonly ShiftIdentityFeatureLocking shiftIdentityFeatureLocking;
-    private readonly ShiftIdentityLocalizer Loc;
-    private readonly IConfiguration configuration;
-    public CompanyRepository(ShiftIdentityDbContext db, ShiftIdentityDefaultDataLevelAccessOptions shiftIdentityDefaultDataLevelAccessOptions, ShiftIdentityFeatureLocking shiftIdentityFeatureLocking, ShiftIdentityLocalizer Loc, IConfiguration configuration) : base(db)
+    public CompanyRepository(
+        ShiftIdentityDbContext db,
+        ShiftIdentityDefaultDataLevelAccessOptions shiftIdentityDefaultDataLevelAccessOptions)
+        : base(db, o => o.UseGeneratedMapper(map => map
+
+            // VIEW — CustomFields with read-side password strip (reproduces the profile Company→CompanyDTO ForMember).
+            .ForView(d => d.CustomFields, e => e.CustomFields == null ? null : e.CustomFields
+                .ToDictionary(x => x.Key, x => new CustomFieldDTO
+                {
+                    DisplayName = x.Value.DisplayName,
+                    IsPassword = x.Value.IsPassword,
+                    IsEncrypted = x.Value.IsEncrypted,
+                    Value = x.Value.IsPassword ? null : x.Value.Value,
+                    HasValue = x.Value.Value != null
+                }))
+
+            // VIEW — ParentCompany select DTO (Value only; the profile left Text null — no Include on ParentCompany).
+            .ForView(d => d.ParentCompany, e => new ShiftEntitySelectDTO { Value = e.ParentCompanyID.ToString()! })
+
+            // ENTITY — leave the loaded CustomFields dict intact so the hook's password-preserving merge owns it.
+            .IgnoreEntity(e => e.CustomFields)
+
+            // LIST — flattened parent name + the Brands aggregation (reproduce the profile Company→CompanyListDTO).
+            .ForList(d => d.ParentCompanyName, e => e.ParentCompany == null ? null : e.ParentCompany.Name)
+            // ParentCompanyID is string in the DTO but long? on the entity — the generated list convention doesn't do
+            // long?→string, so project it explicitly (also keeps it filterable: a $filter=ParentCompanyID eq X needs a
+            // bound scalar or EF inlines the Brands-aggregation-bearing projection into the WHERE, same failure mode
+            // as CompanyBranch's scope-ids).
+            .ForList(d => d.ParentCompanyID, e => e.ParentCompanyID.HasValue ? e.ParentCompanyID.Value.ToString() : null)
+            .ForList(d => d.Brands, e => e.CompanyBranches!
+                .SelectMany(x => x.CompanyBranchBrands!)
+                .Select(x => x.BrandID).Distinct()
+                .Select(x => new ShiftEntitySelectDTO { Value = x.ToString() }).ToList())))
     {
-        this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
-        this.Loc = Loc;
-        this.configuration = configuration;
         this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
-    }
-
-    public override ValueTask<Company> UpsertAsync(Company entity, CompanyDTO dto, ActionTypes actionType, long? userId, Guid? idempotencyKey, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
-    {
-        if (entity.IsProtected)
-            throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
-
-        if (!string.IsNullOrWhiteSpace(dto.HQPhone))
-        {
-            if (!configuration.GetSection("ShiftIdentity").Exists() || configuration.GetSection("ShiftIdentity:DisablePhoneNumberValidation").Value == "False")
-            {
-                if (!Core.ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(dto.HQPhone))
-                    throw new ShiftEntityException(new Message(Loc["Validation Error"], Loc["Invalid Phone Number"]));
-
-                dto.HQPhone = Core.ValidatorsAndFormatters.PhoneNumber.GetFormattedPhone(dto.HQPhone);
-            }
-            else
-            {
-                dto.HQPhone = dto.HQPhone;
-            }
-        }
-        else
-            entity.HQPhone = null;
-
-        var parentCompanyId = String.IsNullOrWhiteSpace(dto.ParentCompany?.Value)? null: dto.ParentCompany?.Value?.ToLong();
-
-        if (actionType == ActionTypes.Update && parentCompanyId != null)
-        {
-            // Prevent self-reference
-            if (parentCompanyId == entity.ID)
-                throw new ShiftEntityException(new Message(Loc["Validation Error"], Loc["Parent company and the child company should not be the same"]));
-
-            // Prevent circular reference
-            var parentId = parentCompanyId;
-            do
-            {
-                var parent = db.Companies
-                    .AsNoTracking()
-                    .FirstOrDefault(x => x.ID == parentId);
-
-                if (parent == null)
-                    break;
-
-                if (parent.ID == entity.ID)
-                    throw new ShiftEntityException(new Message(Loc["Validation Error"], Loc["Circular reference is not allowed"]));
-
-                parentId = parent.ParentCompanyID;
-            } while (parentCompanyId != null);
-        }
-
-        var result = base.UpsertAsync(entity, dto, actionType, userId, idempotencyKey, disableDefaultDataLevelAccess, disableGlobalFilters);
-
-        entity.ParentCompanyID = parentCompanyId;
-
-        return result;
-    }
-
-    public override ValueTask<Company> DeleteAsync(Company entity, long? userId, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
-    {
-        if (entity.IsProtected)
-            throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
-
-        return base.DeleteAsync(entity, userId, disableDefaultDataLevelAccess, disableGlobalFilters);
     }
 
     public override ValueTask<IQueryable<CompanyListDTO>> ApplyPostODataProcessing(IQueryable<CompanyListDTO> queryable)
     {
-        if(!queryable.HasWhereOnProperty(x => x.TerminationDate))
+        if (!queryable.HasWhereOnProperty(x => x.TerminationDate))
             queryable = queryable.Where(x => x.TerminationDate == null);
 
-        return new (queryable);
-    }
-
-    public override Task<int> SaveChangesAsync()
-    {
-        if (shiftIdentityFeatureLocking.CompanyFeatureIsLocked)
-            throw new ShiftEntityException(new Message(Loc["Error"], Loc["Company Feature is locked"]));
-
-        return base.SaveChangesAsync();
+        return new(queryable);
     }
 }
