@@ -1,6 +1,5 @@
-﻿using AutoMapper;
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
@@ -16,220 +15,63 @@ using System.Net;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
+// THIN(ish) repository (Rung C): User's base CRUD is attribute-driven (the [ShiftEntitySecureEndpoint] on the User
+// entity routes here). The repo SURVIVES because it's IUserRepository and holds the public methods the custom
+// endpoints (UserEndpoints) + auth/account flows call. The heavy upsert moved to the User entity's
+// IUpsertsShiftRepository hook; the mapper config lives in the base-ctor builder below. No UpsertAsync/DeleteAsync
+// overrides — feature-lock + protected guard are central (Phase 0).
 public class UserRepository :
     ShiftRepository<ShiftIdentityDbContext, User, UserListDTO, UserDTO>,
     IUserRepository
 {
     private readonly ITypeAuthService typeAuthService;
     private readonly IMapper mapper;
-    private readonly ShiftIdentityFeatureLocking shiftIdentityFeatureLocking;
-    private readonly ShiftIdentityConfiguration configuration;
     private readonly ShiftIdentityLocalizer Loc;
 
-    public UserRepository(ShiftIdentityDbContext db, 
-        ITypeAuthService typeAuthService, 
+    public UserRepository(ShiftIdentityDbContext db,
+        ITypeAuthService typeAuthService,
         IMapper mapper,
         ShiftIdentityDefaultDataLevelAccessOptions shiftIdentityDefaultDataLevelAccessOptions,
-        ShiftIdentityFeatureLocking shiftIdentityFeatureLocking,
-        ShiftIdentityConfiguration configuration,
         ShiftIdentityLocalizer Loc) : base(db, r =>
+    {
         r.IncludeRelatedEntitiesWithFindAsync(
             x => x.Include(y => y.AccessTrees).ThenInclude(y => y.AccessTree),
             x => x.Include(y => y.UserLog),
             x => x.Include(y => y.TeamUsers),
             x => x.Include(y => y.CompanyBranch),
             x => x.Include(y => y.Company)
-        )
-    )
+        );
+
+        r.UseGeneratedMapper(map => map
+            // ── VIEW ── (the FK convention can't fill CompanyBranchID: the DTO member is already named …ID, so the
+            // convention appends another ID and misses — provide it explicitly, like the old profile map)
+            .ForView(d => d.CompanyBranchID, e => new ShiftEntitySelectDTO { Value = e.CompanyBranchID.ToString()!, Text = e.CompanyBranch != null ? e.CompanyBranch.Name : null })
+            .ForView(d => d.TotpEnabled, e => e.TotpSecret != null)
+            .ForView(d => d.AccessTrees, e => e.AccessTrees.Select(y => new ShiftEntitySelectDTO { Value = y.AccessTreeID.ToString()!, Text = y.AccessTree.Name }).ToList())
+            .IgnoreView(d => d.Password) // write-only; no entity source
+
+            // ── ENTITY (write) ── Base() maps Username/IsActive/FullName/BirthDate; the hook owns Email/Phone/AccessTree/
+            // password/CompanyBranch-derivation/UserAccessTrees, so those are Ignore'd (or ForEntity'd) here.
+            .ForEntity(e => e.IntegrationId, dto => string.IsNullOrWhiteSpace(dto.IntegrationId) ? null : dto.IntegrationId)
+            .IgnoreEntity(e => e.Email)
+            .IgnoreEntity(e => e.Phone)
+            .IgnoreEntity(e => e.AccessTree)
+
+            // ── LIST ── flattened CompanyBranch name, the scope-ids CompanyBranchID/CompanyID (string←long?, must be
+            // ForList — case matches but the list convention doesn't do long?→string; see the CompanyBranch note),
+            // TotpEnabled, LastSeen (UserLog fallback), and the AccessTrees M:N projection.
+            .ForList(d => d.CompanyBranch, e => e.CompanyBranch != null ? e.CompanyBranch.Name : null)
+            .ForList(d => d.CompanyBranchID, e => e.CompanyBranchID.HasValue ? e.CompanyBranchID.Value.ToString() : null)
+            .ForList(d => d.CompanyID, e => e.CompanyID.HasValue ? e.CompanyID.Value.ToString() : null)
+            .ForList(d => d.TotpEnabled, e => e.TotpSecret != null)
+            .ForList(d => d.LastSeen, e => ((e.UserLog == null || e.UserLog.LastSeen == null) ? e.LastSeen : e.UserLog.LastSeen) ?? default)
+            .ForList(d => d.AccessTrees, e => e.AccessTrees.Select(y => new ShiftEntitySelectDTO { Value = y.AccessTreeID.ToString()!, Text = y.AccessTree.Name })));
+    })
     {
         this.typeAuthService = typeAuthService;
         this.mapper = mapper;
-        this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
-        this.configuration = configuration;
         this.Loc = Loc;
         this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
-    }
-
-    public override async ValueTask<User> UpsertAsync(User entity, UserDTO dto, ActionTypes actionType, long? userId, Guid? idempotencyKey, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
-    {
-        if (shiftIdentityFeatureLocking.UserFeatureIsLocked)
-            throw new ShiftEntityException(new Message(Loc["Error"], Loc["User Feature is locked"]));
-
-        if (entity.IsProtected)
-            throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
-
-        long id = 0;
-
-        if (actionType == ActionTypes.Update)
-            id = dto.ID!.ToLong();
-
-        //Check if the username is duplicate
-        if (await db.Users.AnyAsync(x => !x.IsDeleted && x.Username.ToLower() == dto.Username.ToLower() && x.ID != id))
-            throw new ShiftEntityException(new Message(Loc["Duplicate"], Loc["The username {0} exist", dto.Username]));
-
-        if (!string.IsNullOrWhiteSpace(dto.IntegrationId))
-        {
-            //Check if the username is duplicate
-            if (await db.Users.AnyAsync(x => !x.IsDeleted && x.IntegrationId != null && x.IntegrationId.ToLower() == dto.IntegrationId.ToLower() && x.ID != id))
-                throw new ShiftEntityException(new Message(Loc["Duplicate"], Loc["The Integration ID {0} already exists", dto.IntegrationId]));
-        }
-
-        //Check if the email is duplicate
-        dto.Email = dto.Email?.Trim();
-        if (!string.IsNullOrWhiteSpace(dto.Email))
-        {
-            if (await db.Users.AnyAsync(x => !x.IsDeleted && x.Email!.ToLower() == dto.Email.ToLower() && x.ID != id))
-            {
-                throw new ShiftEntityException(new Message(Loc["Duplicate"], Loc["The email {0} exist", dto.Email]));
-            }
-        }
-        else
-        {
-            dto.Email = null;
-        }
-
-            //Check if the phone is duplicate
-            string? formattedPhone = null;
-        if (!string.IsNullOrWhiteSpace(dto.Phone))
-        {
-            if (!Core.ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(dto.Phone))
-                throw new ShiftEntityException(new Message(Loc["Validation Error"], Loc["Invalid Phone Number"]));
-
-            formattedPhone = Core.ValidatorsAndFormatters.PhoneNumber.GetFormattedPhone(dto.Phone);
-        }
-
-        if (await db.Users.AnyAsync(x => !x.IsDeleted && x.Phone.ToLower() == (formattedPhone ?? "").ToLower() && x.ID != id))
-            throw new ShiftEntityException(new Message(Loc["Duplicate"], Loc["The phone {0} exist", dto.Phone]));
-
-        if (actionType == ActionTypes.Insert)
-        {
-            if (string.IsNullOrWhiteSpace(dto.Password))
-                throw new ShiftEntityException(new Message(Loc["Validation Error"], Loc["Password can not be empty."]));
-        }
-
-        // Capture old values before mutation to reset verification flags on change
-        var oldEmail = entity.Email;
-        var oldPhone = entity.Phone;
-
-        entity.Username = dto.Username;
-        entity.IntegrationId = string.IsNullOrWhiteSpace(dto.IntegrationId) ? null : dto.IntegrationId;
-        entity.IsActive = dto.IsActive;
-        entity.Email = dto.Email;
-        entity.FullName = dto.FullName;
-        entity.BirthDate = dto.BirthDate;
-        entity.Phone = formattedPhone;
-
-        // Reset verification flags when email or phone changes (replaces ResetUserTrigger)
-        if (actionType == ActionTypes.Update)
-        {
-            if (!string.Equals(entity.Email, oldEmail, StringComparison.OrdinalIgnoreCase))
-            {
-                entity.EmailVerified = false;
-                entity.VerificationSASToken = null;
-            }
-
-            if (!string.Equals(entity.Phone, oldPhone, StringComparison.OrdinalIgnoreCase))
-            {
-                entity.PhoneVerified = false;
-            }
-        }
-
-        //if (dto.CompanyBranchID != null)
-        {
-            entity.CompanyBranchID = dto.CompanyBranchID!.Value.ToLong();
-
-            var companyBranch = await db.CompanyBranches
-                .Include(x => x.Region)
-                .FirstOrDefaultAsync(x => x.ID == entity.CompanyBranchID);
-
-            entity.CountryID = companyBranch!.Region?.CountryID;
-            entity.RegionID = companyBranch!.RegionID!.Value;
-
-            entity.CompanyID = companyBranch.CompanyID!.Value;
-        }
-
-        var typeAuthContextBuilder_Producer = new TypeAuthContextBuilder();
-        var typeAuthContextBuilder_Preserver = new TypeAuthContextBuilder();
-
-        TypeAuthContext typeAuth_Producer;
-        TypeAuthContext? typeAuth_Preserver = null;
-
-        foreach (var type in typeAuthService.GetRegisteredActionTrees())
-        {
-            typeAuthContextBuilder_Producer.AddActionTree(type);
-            typeAuthContextBuilder_Preserver.AddActionTree(type);
-        }
-
-        typeAuthContextBuilder_Producer.AddAccessTree(dto.AccessTree!);
-
-        if (entity.ID != default)
-        {
-            typeAuthContextBuilder_Preserver.AddAccessTree(entity.AccessTree!);
-            typeAuth_Preserver = typeAuthContextBuilder_Preserver.Build();
-        }
-
-        typeAuth_Producer = typeAuthContextBuilder_Producer.Build();
-
-        entity.AccessTree = typeAuth_Producer.GenerateAccessTree((typeAuthService as TypeAuthContext)!, typeAuth_Preserver);
-
-        if (!string.IsNullOrEmpty(dto.Password))
-        {
-            var hash = HashService.GenerateHash(dto.Password);
-
-            entity.PasswordHash = hash.PasswordHash;
-            entity.Salt = hash.Salt;
-
-            // Same source AssignRandomPasswords uses
-            entity.RequireChangePassword = configuration.Security.RequirePasswordChange;
-        }
-
-        var accessTreeIds = dto.AccessTrees.Select(x => x.Value.ToLong());
-
-        var trees = await db.AccessTrees.Where(x => accessTreeIds.Contains(x.ID)).ToDictionaryAsync(x => x.ID, x => x);
-
-        var inaccessibleAccessTress = new Dictionary<AccessTree, Dictionary<TypeAuth.Core.Actions.ActionBase, string>>();
-
-        foreach (var tree in trees.Values)
-        {
-            var tAuthBuilderForThisTree = new TypeAuthContextBuilder();
-
-            foreach (var type in typeAuthService.GetRegisteredActionTrees())
-            {
-                tAuthBuilderForThisTree.AddActionTree(type);
-            }
-
-            tAuthBuilderForThisTree.AddAccessTree(tree.Tree);
-
-            var tAuthForThisTree = tAuthBuilderForThisTree.Build();
-
-            var inAccessibleActions = (typeAuthService as TypeAuthContext)!.FindInAccessibleActionsOn(tAuthForThisTree);
-
-            if (inAccessibleActions.Count > 0)
-            {
-                inaccessibleAccessTress[tree] = inAccessibleActions;
-            }
-        }
-
-        if (inaccessibleAccessTress.Count > 0)
-        {
-            throw new ShiftEntityException(new Message(
-                Loc["Error"],
-                Loc["Below Access Trees contain accesses that you can not grant"],
-                inaccessibleAccessTress.Select(x => new Message(x.Key.Name, null!, x.Value.Select(y => new Message(y.Key.Name!, y.Value.ToString()!)).ToList())).ToList()
-            ));
-        }
-
-        var removedAccessTrees = entity.AccessTrees.Where(x => !accessTreeIds.Contains(x.AccessTreeID)).ToList();
-        var addedAccessTrees = accessTreeIds.Where(x => !entity.AccessTrees.Any(y => y.AccessTreeID == x)).ToList();
-
-        db.UserAccessTrees.RemoveRange(removedAccessTrees);
-        await db.UserAccessTrees.AddRangeAsync(addedAccessTrees.Select(x => new UserAccessTree
-        {
-            AccessTreeID = x,
-            User = entity
-        }));
-
-        return entity;
     }
 
     /// <summary>
@@ -262,17 +104,6 @@ public class UserRepository :
         var combined = builder.Build();
 
         return combined.GenerateAccessTree(combined);
-    }
-
-    public override ValueTask<User> DeleteAsync(User entity, long? userId, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
-    {
-        if (shiftIdentityFeatureLocking.UserFeatureIsLocked)
-            throw new ShiftEntityException(new Message(Loc["Error"], Loc["User Feature is locked"]));
-
-        if (entity.IsProtected)
-            throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
-
-        return base.DeleteAsync(entity, userId, disableDefaultDataLevelAccess, disableGlobalFilters);
     }
 
     public async Task<User?> GetUserByUsernameAsync(string username)
@@ -450,9 +281,12 @@ public class UserRepository :
                 IsActive = true,
             };
 
+            // Routes through the base UpsertAsync → the User entity's IUpsertsShiftRepository hook → Base(). Base()
+            // maps + audits + guards but does NOT dbSet.Add (only the CRUD handler does), so the explicit Add below
+            // is still required for this direct call.
             var user = await UpsertAsync(new User(), userDto, ActionTypes.Insert, userId: null, idempotencyKey: null, disableDefaultDataLevelAccess: false, disableGlobalFilters: false);
             user.EmailVerified = true;
-            
+
             if(!string.IsNullOrWhiteSpace(user.Phone))
                 user.PhoneVerified = true;
 

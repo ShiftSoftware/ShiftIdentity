@@ -16,7 +16,8 @@ public static class EndpointRouteBuilderExtensions
     public static IEndpointRouteBuilder MapShiftIdentityDashboard(this IEndpointRouteBuilder app)
     {
         app.MapCompanyCalendarEndpoints();
-        // Phases 4-5: app.MapUserEndpoints(); app.MapUserManagerEndpoints(); app.MapAuthEndpoints(); …
+        app.MapUserEndpoints();
+        // Phase 5: app.MapUserManagerEndpoints(); app.MapAuthEndpoints(); …
         return app;
     }
 }
