@@ -10,12 +10,12 @@ public class Department : Profile
 {
     public Department()
     {
-        CreateMap<Core.Entities.Department, DepartmentModel>()
+        CreateMap<Data.Entities.Department, DepartmentModel>()
             .ForMember(
                 dest => dest.id,
                 opt => opt.MapFrom(src => src.ID.ToString())
             );
-        CreateMap<Core.Entities.Department, CompanyBranchSubItemModel>()
+        CreateMap<Data.Entities.Department, CompanyBranchSubItemModel>()
             .ForMember(dest => dest.ItemType, opt => opt.MapFrom(src => CompanyBranchContainerItemTypes.Department))
             .ForMember(
                 dest => dest.id,

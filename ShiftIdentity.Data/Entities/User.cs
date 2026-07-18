@@ -6,7 +6,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using ShiftSoftware.ShiftEntity.Model.Flags;
 using ShiftSoftware.ShiftEntity.Model.Replication;
 
-namespace ShiftSoftware.ShiftIdentity.Core.Entities;
+namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 
 [TemporalShiftEntity]
 [Table("Users", Schema = "ShiftIdentity")]

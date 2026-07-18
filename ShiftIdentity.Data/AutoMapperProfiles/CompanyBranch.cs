@@ -11,7 +11,7 @@ public class CompanyBranch : Profile
 {
     public CompanyBranch()
     {
-        CreateMap<Core.Entities.CompanyBranch, CompanyBranchDTO>()
+        CreateMap<Data.Entities.CompanyBranch, CompanyBranchDTO>()
             .ForMember(
                     dest => dest.Company,
                     opt => opt.MapFrom(src => new ShiftEntitySelectDTO { Value = src.CompanyID.ToString()!, Text = src.Company!.Name })
@@ -55,7 +55,7 @@ public class CompanyBranch : Profile
             );
 
 
-        CreateMap<Core.Entities.CompanyBranch, CompanyBranchListDTO>()
+        CreateMap<Data.Entities.CompanyBranch, CompanyBranchListDTO>()
             .ForMember(
                     dest => dest.Company,
                     opt => opt.MapFrom(src => src.Company.Name)
@@ -97,7 +97,7 @@ public class CompanyBranch : Profile
                     opt => opt.MapFrom(src => src.Company != null ? src.Company.DisplayOrder : null)
                 );
 
-        CreateMap<Core.Entities.CompanyBranch, CompanyBranchModel>()
+        CreateMap<Data.Entities.CompanyBranch, CompanyBranchModel>()
             .ForMember(dest => dest.BranchID, opt => opt.MapFrom(src => src.ID))
             .ForMember(dest => dest.ItemType, opt => opt.MapFrom(src => CompanyBranchContainerItemTypes.Branch))
             .ForMember(

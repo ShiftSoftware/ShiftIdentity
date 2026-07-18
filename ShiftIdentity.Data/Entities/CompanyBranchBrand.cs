@@ -3,12 +3,11 @@ using ShiftSoftware.ShiftEntity.Model.Replication;
 using System;
 using System.ComponentModel.DataAnnotations.Schema;
 
-
-namespace ShiftSoftware.ShiftIdentity.Core.Entities;
+namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 
 [TemporalShiftEntity]
-[Table("CompanyBranchServices", Schema = "ShiftIdentity")]
-public class CompanyBranchService : ShiftEntity<CompanyBranchService>, IShiftEntityReplication
+[Table("CompanyBranchBrands", Schema = "ShiftIdentity")]
+public class CompanyBranchBrand : ShiftEntity<CompanyBranchBrand>, IShiftEntityReplication
 {
     /// <inheritdoc />
     public DateTimeOffset? LastReplicationDate { get; set; }
@@ -18,8 +17,8 @@ public class CompanyBranchService : ShiftEntity<CompanyBranchService>, IShiftEnt
 
     public long ID { get; set; }
     public long CompanyBranchID { get; set; }
-    public long ServiceID { get; set; }
+    public long BrandID { get; set; }
 
-    public virtual Service Service { get; set; } = default!;
+    public virtual Brand Brand { get; set; } = default!;
     public virtual CompanyBranch CompanyBranch { get; set; } = default!;
 }

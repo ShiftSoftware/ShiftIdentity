@@ -6,7 +6,9 @@ using ShiftSoftware.ShiftIdentity.Core.DTOs.Brand;
 using System;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace ShiftSoftware.ShiftIdentity.Core.Entities;
+using ShiftSoftware.ShiftIdentity.Core;
+
+namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 
 // Attribute-driven endpoint: Brand has no controller and no repository class. The secure CRUD routes are
 // generated from the attribute below (built-in repository + source-generated mapper), gated by the

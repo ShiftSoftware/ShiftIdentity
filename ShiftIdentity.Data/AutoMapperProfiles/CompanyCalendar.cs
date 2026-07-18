@@ -4,7 +4,7 @@ using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Brand;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyCalendar;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Department;
-using ShiftSoftware.ShiftIdentity.Core.Entities;
+using ShiftSoftware.ShiftIdentity.Data.Entities;
 
 namespace ShiftSoftware.ShiftIdentity.Data.AutoMapperProfiles;
 
@@ -31,11 +31,11 @@ public class CompanyCalendar : Profile
         CreateMap<CompanyCalendarWeekendRule, CompanyCalendarWeekendRuleItemDTO>().ReverseMap();
 
         // Entity <-> ListDTO
-        CreateMap<Core.Entities.CompanyCalendar, CompanyCalendarListDTO>()
+        CreateMap<Data.Entities.CompanyCalendar, CompanyCalendarListDTO>()
             .ForMember(x => x.CompanyID, x => x.MapFrom(s => s.CompanyID.HasValue ? s.CompanyID.ToString()! : null));
 
         // Entity <-> DTO
-        CreateMap<Core.Entities.CompanyCalendar, CompanyCalendarDTO>()
+        CreateMap<Data.Entities.CompanyCalendar, CompanyCalendarDTO>()
             .ForMember(x => x.Company, x => x.MapFrom(s => s.CompanyID.HasValue ? new ShiftEntitySelectDTO { Value = s.CompanyID.ToString()! } : null))
             .ForMember(x => x.Branches, x => x.MapFrom(s => s.Branches.Select(b => new ShiftEntitySelectDTO { Value = b.CompanyBranchID.ToString() }).ToList()))
         .ReverseMap()

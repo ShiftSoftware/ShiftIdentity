@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace ShiftSoftware.ShiftIdentity.Core.Entities;
+namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 
 [Table("CompanyCalendarBranches", Schema = "ShiftIdentity")]
 public class CompanyCalendarBranch

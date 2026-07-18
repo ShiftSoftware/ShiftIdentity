@@ -7,7 +7,7 @@ using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
 using ShiftSoftware.ShiftIdentity.Core;
-using ShiftSoftware.ShiftIdentity.Core.IRepositories;
+using ShiftSoftware.ShiftIdentity.Data.IRepositories;
 using ShiftSoftware.ShiftIdentity.Data;
 using ShiftSoftware.ShiftIdentity.Data.Repositories;
 using ShiftSoftware.ShiftIdentity.Data.Services;
@@ -76,11 +76,12 @@ public static class IMvcBuilderExtensions
         // overrides. The built-in ShiftRepository invokes every registered IShiftEntitySaveValidator before saving.
         builder.Services.AddScoped<IShiftEntitySaveValidator, FeatureLockSaveValidator>();
 
-        // Attribute-driven CRUD endpoints: scans ShiftIdentity.Core for entities decorated with
-        // [ShiftEntitySecureEndpoint<…>] (e.g. Brand) and registers their built-in repository, TypeAuth action,
-        // DTO-map entry and source-generated mapper. This is the DI half; the host maps the routes with
-        // app.MapShiftEntityEndpoints<DB>() after calling AddShiftEntityWeb(x => x.AddShiftIdentityDataAssembly()).
-        builder.Services.RegisterShiftRepositories(typeof(ShiftIdentityActions).Assembly);
+        // Attribute-driven CRUD endpoints: scans ShiftIdentity.Data (where the entities live, alongside the
+        // DbContext + EF Core) for entities decorated with [ShiftEntitySecureEndpoint<…>] (e.g. Brand) and
+        // registers their built-in repository, TypeAuth action, DTO-map entry and source-generated mapper.
+        // This is the DI half; the host maps the routes with app.MapShiftEntityEndpoints<DB>() after calling
+        // AddShiftEntityWeb(x => x.AddShiftIdentityDataAssembly()).
+        builder.Services.RegisterShiftRepositories(typeof(Marker).Assembly);
 
         builder.Services.AddShiftIdentityAuthCoreServices();
 
@@ -89,18 +90,16 @@ public static class IMvcBuilderExtensions
         builder.Services.AddScoped<AccessTreeRepository>();
 
         builder.Services.AddScoped<UserRepository>();
-        builder.Services.AddScoped<AppRepository>();
-        
+
         builder.Services.AddScoped<IClaimService, ClaimService>();
 
-        builder.Services.AddScoped<CityRepository>();
-        builder.Services.AddScoped<RegionRepository>();
-        // Brand / Service / Department repositories deleted — those entities are attribute-driven
-        // (built-in repository + source-generated mapper); RegisterShiftRepositories wires their DI below.
+        // Brand / Service / Department / Country / Region / City / App CRUD is attribute-driven — those entities
+        // carry [ShiftEntitySecureEndpoint<…>] and use the built-in repository + source-generated mapper, so they
+        // need no repository registration here (RegisterShiftRepositories wires them). App keeps a slim
+        // AppRepository, registered above only as IAppRepository for the OAuth AuthCodeService.
         builder.Services.AddScoped<CompanyRepository>();
         builder.Services.AddScoped<CompanyBranchRepository>();
         builder.Services.AddScoped<TeamRepository>();
-        builder.Services.AddScoped<CountryRepository>();
         builder.Services.AddScoped<CompanyCalendarRepository>();
         builder.Services.AddScoped<CalendarService>();
 

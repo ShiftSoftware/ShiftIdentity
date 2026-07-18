@@ -2,7 +2,7 @@
 using System;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace ShiftSoftware.ShiftIdentity.Core.Entities;
+namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 
 [Table("UserLogs", Schema = "ShiftIdentity")]
 public class UserLog : ShiftEntity<UserLog>

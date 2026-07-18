@@ -14,7 +14,7 @@ using ShiftSoftware.ShiftIdentity.Core.Authorization;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.App;
 using ShiftSoftware.ShiftIdentity.Core.Enums;
-using ShiftSoftware.ShiftIdentity.Core.IRepositories;
+using ShiftSoftware.ShiftIdentity.Data.IRepositories;
 using ShiftSoftware.ShiftIdentity.Core.Localization;
 using ShiftSoftwareLocalization.Identity;
 using System.Security.Cryptography;

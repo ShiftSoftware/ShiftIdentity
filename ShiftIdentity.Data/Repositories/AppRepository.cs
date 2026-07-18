@@ -1,53 +1,23 @@
-﻿using Microsoft.EntityFrameworkCore;
-using ShiftSoftware.ShiftEntity.Core;
-using ShiftSoftware.ShiftEntity.EFCore;
-using ShiftSoftware.ShiftEntity.Model;
-using ShiftSoftware.ShiftIdentity.Core;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.App;
-using ShiftSoftware.ShiftIdentity.Core.Entities;
-using ShiftSoftware.ShiftIdentity.Core.IRepositories;
-using ShiftSoftware.ShiftIdentity.Core.Localization;
+using Microsoft.EntityFrameworkCore;
+using ShiftSoftware.ShiftIdentity.Data.Entities;
+using ShiftSoftware.ShiftIdentity.Data.IRepositories;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 
-public class AppRepository :
-    ShiftRepository<ShiftIdentityDbContext, App, AppDTO, AppDTO>,
-    IAppRepository
+// App's CRUD is attribute-driven now (built-in repository + source-generated mapper; the duplicate-AppId check
+// lives on the App entity's IUpsertsShiftRepository hook, and feature locking on FeatureLockSaveValidator). This
+// slim repository survives ONLY to implement IAppRepository for the OAuth AuthCodeService (GetAppAsync) — it is no
+// longer a ShiftRepository and no longer participates in the CRUD pipeline, so there's no repository-for-the-same-
+// triple collision with the built-in/attribute endpoint.
+public class AppRepository : IAppRepository
 {
+    private readonly ShiftIdentityDbContext db;
 
-    private readonly ShiftIdentityFeatureLocking shiftIdentityFeatureLocking;
-    private readonly ShiftIdentityLocalizer Loc;
-    public AppRepository(ShiftIdentityDbContext db, ShiftIdentityDefaultDataLevelAccessOptions shiftIdentityDefaultDataLevelAccessOptions, ShiftIdentityFeatureLocking shiftIdentityFeatureLocking, ShiftIdentityLocalizer Loc) : base(db)
+    public AppRepository(ShiftIdentityDbContext db)
     {
-        this.shiftIdentityFeatureLocking = shiftIdentityFeatureLocking;
-        this.Loc = Loc;
-        this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
+        this.db = db;
     }
 
-    public override async ValueTask<App> UpsertAsync(App entity, AppDTO dto, ActionTypes actionType, long? userId, Guid? idempotencyKey, bool disableDefaultDataLevelAccess, bool disableGlobalFilters)
-    {
-        long id = 0;
-
-        if (actionType == ActionTypes.Update)
-            id = dto.ID!.ToLong();
-
-        //Check if the access-tree-name in the same scope is duplicate
-        if (await db.Apps.AnyAsync(x => !x.IsDeleted && x.AppId.ToLower() == dto.AppId.ToLower() && x.ID != id))
-            throw new ShiftEntityException(new Message(Loc["Duplicate"], Loc["The App ID {0} already exists.", dto.AppId]));
-
-        return await base.UpsertAsync(entity, dto, actionType, userId, idempotencyKey, disableDefaultDataLevelAccess, disableGlobalFilters);
-    }
-
-    public async Task<App?> GetAppAsync(string appId)
-    {
-        return await db.Apps.FirstOrDefaultAsync(x => x.AppId == appId && !x.IsDeleted);
-    }
-
-    public override Task<int> SaveChangesAsync()
-    {
-        if (shiftIdentityFeatureLocking.AppFeatureIsLocked)
-            throw new ShiftEntityException(new Message(Loc["Error"], Loc["App Feature is locked"]));
-
-        return base.SaveChangesAsync();
-    }
+    public Task<App?> GetAppAsync(string appId)
+        => db.Apps.FirstOrDefaultAsync(x => x.AppId == appId && !x.IsDeleted);
 }

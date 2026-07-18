@@ -10,7 +10,7 @@ public class User : Profile
 {
     public User()
     {
-        CreateMap<Core.Entities.User, UserDTO>()
+        CreateMap<Data.Entities.User, UserDTO>()
             .ForMember(
                     dest => dest.AccessTrees,
                     opt => opt.MapFrom(src => src.AccessTrees.Select(y => new ShiftEntitySelectDTO { Value = y.AccessTreeID.ToString(), Text = y.AccessTree.Name }))
@@ -24,7 +24,7 @@ public class User : Profile
                     opt => opt.MapFrom(src => new ShiftEntitySelectDTO { Value= src.CompanyBranchID.ToString()!, Text = src.CompanyBranch!.Name })
                 );
 
-        CreateMap<Core.Entities.User, UserListDTO>()
+        CreateMap<Data.Entities.User, UserListDTO>()
             .ForMember(
                     dest => dest.CompanyBranch,
                     opt => opt.MapFrom(src => src.CompanyBranch!.Name)
@@ -42,13 +42,13 @@ public class User : Profile
                 opt => opt.MapFrom(src => src.AccessTrees.Select(y => new ShiftEntitySelectDTO { Value = y.AccessTreeID.ToString()!, Text = y.AccessTree!.Name }))
             );
 
-        CreateMap<Core.Entities.User, UserModel>()
+        CreateMap<Data.Entities.User, UserModel>()
             .ForMember(
                 dest => dest.id,
                 opt => opt.MapFrom(src => src.ID.ToString())
             );
 
-        CreateMap<Core.Entities.User, UserDataDTO>().ReverseMap();
-        CreateMap<Core.Entities.User, UserInfoDTO>();
+        CreateMap<Data.Entities.User, UserDataDTO>().ReverseMap();
+        CreateMap<Data.Entities.User, UserInfoDTO>();
     }
 }

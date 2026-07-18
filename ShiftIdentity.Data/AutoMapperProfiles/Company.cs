@@ -12,7 +12,7 @@ public class Company : Profile
 {
     public Company()
     {
-        CreateMap<Core.Entities.Company, CompanyDTO>()
+        CreateMap<Data.Entities.Company, CompanyDTO>()
             .ForMember(
                     dest => dest.ParentCompany,
                     opt => opt.MapFrom(src => new ShiftEntitySelectDTO { Value = src.ParentCompanyID.ToString()! })
@@ -31,7 +31,7 @@ public class Company : Profile
                 }))
             );
 
-        CreateMap<CompanyDTO, Core.Entities.Company>()
+        CreateMap<CompanyDTO, Data.Entities.Company>()
             .ForMember(x=> x.CustomFields, x=> x.Ignore())
             .AfterMap((src, dest) =>
             {
@@ -53,7 +53,7 @@ public class Company : Profile
                 }
             });
 
-        CreateMap<Core.Entities.Company, CompanyListDTO>()
+        CreateMap<Data.Entities.Company, CompanyListDTO>()
             .ForMember(
                     dest => dest.Brands,
                     opt => opt.MapFrom(src => src.CompanyBranches!.SelectMany(x=> x.CompanyBranchBrands!).Select(x=> x.BrandID).Distinct()
@@ -64,7 +64,7 @@ public class Company : Profile
                 opt => opt.MapFrom(x => x.ParentCompany == null ? null : x.ParentCompany.Name)
             );
 
-        CreateMap<Core.Entities.Company, CompanyModel>()
+        CreateMap<Data.Entities.Company, CompanyModel>()
             .ForMember(
                 dest => dest.id,
                 opt => opt.MapFrom(src => src.ID.ToString())

@@ -1,31 +1,18 @@
 ﻿
 using AutoMapper;
-using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.Replication.IdentityModels;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.Region;
 
 namespace ShiftSoftware.ShiftIdentity.Data.AutoMapperProfiles;
 
+// The entity↔DTO maps (Region↔RegionDTO, Region→RegionListDTO) are gone: the "api/IdentityRegion" endpoint is
+// attribute-driven and uses the SOURCE-GENERATED mapper (see Region entity, whose IConfiguresShiftRepository
+// reproduces the Country include + the flattened Country/CountryDisplayOrder list columns). Only the Cosmos
+// REPLICATION maps below remain — they have no generated equivalent and are still used by the replication pipeline.
 public class Region : Profile
 {
     public Region()
     {
-        CreateMap<Core.Entities.Region, RegionDTO>()
-            .ForMember(
-                dest => dest.Country,
-                opt => opt.MapFrom(src => new ShiftEntitySelectDTO { Value = src.CountryID.ToString()!, Text = src.Country!.Name })
-            )
-            .ReverseMap()
-            .ForMember(
-                dest => dest.CountryID,
-                opt => opt.MapFrom(src => src.Country.Value.ToLong())
-            );
-
-        CreateMap<Core.Entities.Region, RegionListDTO>()
-            .ForMember(x => x.Country, x => x.MapFrom(src => src.Country != null ? src.Country.Name : null))
-            .ForMember(x => x.CountryDisplayOrder, x => x.MapFrom(src => src.Country != null ? src.Country.DisplayOrder : null));
-
-        CreateMap<Core.Entities.Region, RegionModel>()
+        CreateMap<Data.Entities.Region, RegionModel>()
             .ForMember(
                 dest => dest.CountryID,
                 opt => opt.MapFrom(src => src.CountryID)
@@ -43,7 +30,7 @@ public class Region : Profile
                 opt => opt.MapFrom(src => src.ID.ToString())
             );
 
-        CreateMap<Core.Entities.Region, CityRegionModel>()
+        CreateMap<Data.Entities.Region, CityRegionModel>()
             .ForMember(
                 dest => dest.CountryID,
                 opt => opt.MapFrom(src => src.CountryID)

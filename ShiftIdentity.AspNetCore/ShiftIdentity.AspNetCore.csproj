@@ -44,6 +44,11 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\ShiftIdentity.Core\ShiftIdentity.Core.csproj" />
+		<!-- The ShiftIdentity entities (User, App, …) and repository interfaces live in ShiftIdentity.Data
+		     (moved out of .Core so they can carry EF Core repository hooks without leaking EF Core into the
+		     Blazor RCLs). AspNetCore's auth/token services use those entities + IUserRepository/IAppRepository,
+		     so it references the data layer directly. -->
+		<ProjectReference Include="..\ShiftIdentity.Data\ShiftIdentity.Data.csproj" />
 		<ProjectReference Include="..\..\ShiftEntity\ShiftEntity.Web\ShiftEntity.Web.csproj" Condition="Exists('..\..\ShiftEntity\ShiftEntity.Web\ShiftEntity.Web.csproj')" />
 		<ProjectReference Include="..\..\TypeAuth\TypeAuth.Core\TypeAuth.Core.csproj" Condition="Exists('..\..\TypeAuth\TypeAuth.Core\TypeAuth.Core.csproj')" />
 		<!--<ProjectReference Include="..\..\AzureFunctionsAspNetCoreAuthorization\ShiftSoftware.Azure.Functions.AspNetCore.Authorization\ShiftSoftware.Azure.Functions.AspNetCore.Authorization.csproj" Condition="Exists('..\..\AzureFunctionsAspNetCoreAuthorization\ShiftSoftware.Azure.Functions.AspNetCore.Authorization\ShiftSoftware.Azure.Functions.AspNetCore.Authorization.csproj')" />-->

@@ -8,7 +8,7 @@ using ShiftSoftware.ShiftIdentity.Core.DTOs.Company;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyCalendar;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Department;
-using ShiftSoftware.ShiftIdentity.Core.Entities;
+using ShiftSoftware.ShiftIdentity.Data.Entities;
 using ShiftSoftware.ShiftIdentity.Data;
 using ShiftSoftware.ShiftIdentity.Data.Repositories;
 using ShiftSoftware.ShiftIdentity.Data.Services;

@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace ShiftSoftware.ShiftIdentity.Core.Entities;
+namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 
 [TemporalShiftEntity]
 [Table("AccessTrees", Schema = "ShiftIdentity")]

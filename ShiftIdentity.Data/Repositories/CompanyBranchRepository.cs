@@ -5,7 +5,9 @@ using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
-using ShiftSoftware.ShiftIdentity.Core.Entities;
+using ShiftSoftware.ShiftIdentity.Core.DTOs.City;
+using ShiftSoftware.ShiftIdentity.Core.DTOs.Region;
+using ShiftSoftware.ShiftIdentity.Data.Entities;
 using ShiftSoftware.ShiftIdentity.Core.Localization;
 using System.Net;
 using System.Text.Json;
@@ -14,16 +16,20 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
 {
     public class CompanyBranchRepository : ShiftRepository<ShiftIdentityDbContext, CompanyBranch, CompanyBranchListDTO, CompanyBranchDTO>
     {
-        private readonly CityRepository cityRepository;
-        private readonly RegionRepository regionRepo;
+        // City / Region no longer have hand-written repository subclasses (they're attribute-driven now), so we
+        // inject the framework's built-in ShiftRepository<DB,E,L,V> for each. RegisterShiftRepositories registers
+        // ShiftRepository<,,,> as an open generic, so these closed types resolve without a subclass — letting us
+        // keep the original CityRepository/RegionRepository FindAsync calls verbatim.
+        private readonly ShiftRepository<ShiftIdentityDbContext, City, CityListDTO, CityDTO> cityRepository;
+        private readonly ShiftRepository<ShiftIdentityDbContext, Region, RegionListDTO, RegionDTO> regionRepo;
         private readonly ShiftIdentityFeatureLocking shiftIdentityFeatureLocking;
         private readonly ShiftIdentityLocalizer Loc;
         private readonly IConfiguration configuration;
 
         public CompanyBranchRepository(
             ShiftIdentityDbContext db,
-            CityRepository cityRepository,
-            RegionRepository regionRepo,
+            ShiftRepository<ShiftIdentityDbContext, City, CityListDTO, CityDTO> cityRepository,
+            ShiftRepository<ShiftIdentityDbContext, Region, RegionListDTO, RegionDTO> regionRepo,
             ShiftIdentityFeatureLocking shiftIdentityFeatureLocking,
             ShiftIdentityLocalizer Loc,
             ShiftIdentityDefaultDataLevelAccessOptions shiftIdentityDefaultDataLevelAccessOptions,

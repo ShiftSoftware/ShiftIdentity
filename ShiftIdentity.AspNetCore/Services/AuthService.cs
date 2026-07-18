@@ -6,7 +6,7 @@ using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 using ShiftSoftware.ShiftIdentity.Core.Enums;
-using ShiftSoftware.ShiftIdentity.Core.IRepositories;
+using ShiftSoftware.ShiftIdentity.Data.IRepositories;
 using ShiftSoftware.ShiftIdentity.Core.Localization;
 using System.Security.Claims;
 
@@ -81,7 +81,7 @@ public class AuthService
 
         //Update lastseen
         if(user.UserLog is null)
-            user.UserLog = new Core.Entities.UserLog { LastSeen = DateTimeOffset.UtcNow };
+            user.UserLog = new Data.Entities.UserLog { LastSeen = DateTimeOffset.UtcNow };
         else
             user.UserLog.LastSeen = DateTimeOffset.UtcNow;
 
@@ -164,7 +164,7 @@ public class AuthService
 
             //Update lastseen
             if (user.UserLog is null)
-                user.UserLog = new Core.Entities.UserLog { LastSeen = DateTimeOffset.UtcNow };
+                user.UserLog = new Data.Entities.UserLog { LastSeen = DateTimeOffset.UtcNow };
             else
                 user.UserLog.LastSeen = DateTimeOffset.UtcNow;
 

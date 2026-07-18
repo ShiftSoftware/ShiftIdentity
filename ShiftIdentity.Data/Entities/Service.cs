@@ -1,19 +1,20 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Model.Replication;
-using ShiftSoftware.ShiftIdentity.Core.DTOs.Department;
+using ShiftSoftware.ShiftIdentity.Core.DTOs.Service;
 using System;
 using System.ComponentModel.DataAnnotations.Schema;
 
+using ShiftSoftware.ShiftIdentity.Core;
 
-namespace ShiftSoftware.ShiftIdentity.Core.Entities;
+namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 
 // Attribute-driven endpoint — see Brand for the full rationale. No controller, no repository class; feature
 // locking is enforced centrally by FeatureLockSaveValidator. The route reproduces the old
-// IdentityDepartmentController's "api/[controller]" output exactly.
+// IdentityServiceController's "api/[controller]" output exactly.
 [TemporalShiftEntity]
-[Table("Departments", Schema = "ShiftIdentity")]
-[ShiftEntitySecureEndpoint<DepartmentListDTO, DepartmentDTO, ShiftIdentityActions>("api/IdentityDepartment", nameof(ShiftIdentityActions.Departments), UseGeneratedMapper = true)]
-public class Department : ShiftEntity<Department>, IShiftEntityReplication
+[Table("Services", Schema = "ShiftIdentity")]
+[ShiftEntitySecureEndpoint<ServiceListDTO, ServiceDTO, ShiftIdentityActions>("api/IdentityService", nameof(ShiftIdentityActions.Services), UseGeneratedMapper = true)]
+public class Service : ShiftEntity<Service>, IShiftEntityReplication
 {
     /// <inheritdoc />
     public DateTimeOffset? LastReplicationDate { get; set; }

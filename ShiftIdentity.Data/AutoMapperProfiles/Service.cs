@@ -10,12 +10,12 @@ public class Service : Profile
 {
     public Service()
     {
-        CreateMap<Core.Entities.Service, ServiceModel>()
+        CreateMap<Data.Entities.Service, ServiceModel>()
             .ForMember(
                 dest => dest.id,
                 opt => opt.MapFrom(src => src.ID.ToString())
             );
-        CreateMap<Core.Entities.Service, CompanyBranchSubItemModel>()
+        CreateMap<Data.Entities.Service, CompanyBranchSubItemModel>()
             .ForMember(dest => dest.ItemType, opt => opt.MapFrom(src => CompanyBranchContainerItemTypes.Service))
             .ForMember(
                 dest => dest.id,

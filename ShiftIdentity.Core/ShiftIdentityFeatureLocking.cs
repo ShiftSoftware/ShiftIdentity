@@ -1,5 +1,4 @@
 using System;
-using ShiftSoftware.ShiftIdentity.Core.Entities;
 
 namespace ShiftSoftware.ShiftIdentity.Core;
 
@@ -19,25 +18,30 @@ public class ShiftIdentityFeatureLocking
     public bool TeamFeatureIsLocked { get; set; }
     public bool CompanyCalendarFeatureIsLocked { get; set; }
 
-    // Entity type → (is-this-feature-locked, localization key) map. This is what lets the generalized
+    // Entity-type-NAME → (is-this-feature-locked, localization key) map. This is what lets the generalized
     // FeatureLockSaveValidator enforce feature locking on every repository save WITHOUT a per-repository
     // SaveChangesAsync override. The message keys are the exact strings the old per-repository overrides threw,
     // so existing localization entries keep resolving.
-    private static readonly (Type EntityType, Func<ShiftIdentityFeatureLocking, bool> IsLocked, string MessageKey)[] FeatureMap =
+    //
+    // Keyed by the entity type's simple NAME (not typeof(...)) so this config class — part of the ShiftIdentity.Core
+    // configuration surface — does not depend on the entity types, which live in ShiftIdentity.Data. The entity
+    // names are unique, and FeatureLockSaveValidator passes the concrete entity type, so name-matching is
+    // behaviorally identical to the previous typeof() comparison.
+    private static readonly (string EntityTypeName, Func<ShiftIdentityFeatureLocking, bool> IsLocked, string MessageKey)[] FeatureMap =
     {
-        (typeof(Country),         f => f.CountryFeatureIsLocked,         "Country Feature is locked"),
-        (typeof(Region),          f => f.RegionFeatureIsLocked,          "Region Feature is locked"),
-        (typeof(City),            f => f.CityFeatureIsLocked,            "City Feature is locked"),
-        (typeof(Brand),           f => f.BrandFeatureIsLocked,           "Brand Feature is locked"),
-        (typeof(Department),      f => f.DepartmentFeatureIsLocked,      "Department Feature is locked"),
-        (typeof(Service),         f => f.ServiceFeatureIsLocked,         "Service Feature is locked"),
-        (typeof(Company),         f => f.CompanyFeatureIsLocked,         "Company Feature is locked"),
-        (typeof(CompanyBranch),   f => f.CompanyBranchFeatureIsLocked,   "Company Branch Feature is locked"),
-        (typeof(App),             f => f.AppFeatureIsLocked,             "App Feature is locked"),
-        (typeof(AccessTree),      f => f.AccessTreeFeatureIsLocked,      "Access Tree Feature is locked"),
-        (typeof(User),            f => f.UserFeatureIsLocked,            "User Feature is locked"),
-        (typeof(Team),            f => f.TeamFeatureIsLocked,            "Team Feature is locked"),
-        (typeof(CompanyCalendar), f => f.CompanyCalendarFeatureIsLocked, "Company Calendar feature is locked."),
+        ("Country",         f => f.CountryFeatureIsLocked,         "Country Feature is locked"),
+        ("Region",          f => f.RegionFeatureIsLocked,          "Region Feature is locked"),
+        ("City",            f => f.CityFeatureIsLocked,            "City Feature is locked"),
+        ("Brand",           f => f.BrandFeatureIsLocked,           "Brand Feature is locked"),
+        ("Department",      f => f.DepartmentFeatureIsLocked,      "Department Feature is locked"),
+        ("Service",         f => f.ServiceFeatureIsLocked,         "Service Feature is locked"),
+        ("Company",         f => f.CompanyFeatureIsLocked,         "Company Feature is locked"),
+        ("CompanyBranch",   f => f.CompanyBranchFeatureIsLocked,   "Company Branch Feature is locked"),
+        ("App",             f => f.AppFeatureIsLocked,             "App Feature is locked"),
+        ("AccessTree",      f => f.AccessTreeFeatureIsLocked,      "Access Tree Feature is locked"),
+        ("User",            f => f.UserFeatureIsLocked,            "User Feature is locked"),
+        ("Team",            f => f.TeamFeatureIsLocked,            "Team Feature is locked"),
+        ("CompanyCalendar", f => f.CompanyCalendarFeatureIsLocked, "Company Calendar feature is locked."),
     };
 
     /// <summary>
@@ -46,8 +50,8 @@ public class ShiftIdentityFeatureLocking
     /// </summary>
     public string? GetLockedMessageKey(Type entityType)
     {
-        foreach (var (type, isLocked, messageKey) in FeatureMap)
-            if (type == entityType && isLocked(this))
+        foreach (var (name, isLocked, messageKey) in FeatureMap)
+            if (name == entityType.Name && isLocked(this))
                 return messageKey;
 
         return null;

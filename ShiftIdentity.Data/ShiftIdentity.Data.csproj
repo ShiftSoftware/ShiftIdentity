@@ -21,6 +21,13 @@
 	<ItemGroup>
 		<ProjectReference Include="..\ShiftIdentity.Core\ShiftIdentity.Core.csproj" />
 		<ProjectReference Include="..\..\ShiftEntity\ShiftEntity.EFCore\ShiftEntity.EFCore.csproj" Condition="Exists('..\..\ShiftEntity\ShiftEntity.EFCore\ShiftEntity.EFCore.csproj')" />
+
+		<!-- Dev-mode analyzer reference: the mapper source generator must run on THIS assembly, because the
+		     ShiftIdentity entities (which carry the [ShiftEntity*Endpoint*] attributes and the (entity, list, view)
+		     triples the generator emits mappers for) live here in ShiftIdentity.Data. In package mode the generator
+		     ships inside the ShiftSoftware.ShiftEntity package, so this is only needed when the sibling ShiftEntity
+		     repo is cloned (development mode). -->
+		<ProjectReference Include="..\..\ShiftEntity\ShiftEntity.SourceGenerator\ShiftEntity.SourceGenerator.csproj" Condition="Exists('..\..\ShiftEntity\ShiftEntity.SourceGenerator\ShiftEntity.SourceGenerator.csproj')" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>
 
 	<ItemGroup>

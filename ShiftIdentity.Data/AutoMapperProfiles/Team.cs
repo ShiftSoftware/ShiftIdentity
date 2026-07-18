@@ -2,7 +2,7 @@
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.Replication.IdentityModels;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Team;
-using ShiftSoftware.ShiftIdentity.Core.Entities;
+using ShiftSoftware.ShiftIdentity.Data.Entities;
 
 namespace ShiftSoftware.ShiftIdentity.Data.AutoMapperProfiles;
 
@@ -10,7 +10,7 @@ public class Team : Profile
 {
     public Team()
     {
-        CreateMap<Core.Entities.Team, TeamDTO>()
+        CreateMap<Data.Entities.Team, TeamDTO>()
             .ForMember(
                     dest => dest.Company,
                     opt => opt.MapFrom(src => new ShiftEntitySelectDTO { Value = src.CompanyID.ToString()!, Text = src.Company!.Name })
@@ -31,7 +31,7 @@ public class Team : Profile
                 }
             )));
 
-        CreateMap<Core.Entities.Team, TeamModel>()
+        CreateMap<Data.Entities.Team, TeamModel>()
             .ForMember(
                 dest => dest.id,
                 opt => opt.MapFrom(src => src.ID.ToString())
@@ -44,7 +44,7 @@ public class Team : Profile
             .ForMember(x => x.BranchID, x => x.MapFrom(x => x.CompanyBranch.ID))
             .ForMember(x => x.ItemType, x => x.MapFrom(x => CompanyBranchContainerItemTypes.Branch));
 
-        CreateMap<Core.Entities.Team, TeamListDTO>()
+        CreateMap<Data.Entities.Team, TeamListDTO>()
             .ForMember(
                 dest => dest.Company,
                 opt => opt.MapFrom(src => src.Company!.Name)

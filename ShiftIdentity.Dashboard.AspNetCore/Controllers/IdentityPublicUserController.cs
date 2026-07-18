@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.OData.Query;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Web.Services;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
-using ShiftSoftware.ShiftIdentity.Core.IRepositories;
+using ShiftSoftware.ShiftIdentity.Data.IRepositories;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers
 {
