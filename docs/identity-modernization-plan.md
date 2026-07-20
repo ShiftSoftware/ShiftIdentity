@@ -252,12 +252,12 @@ Convert every remaining `ControllerBase` controller to minimal-API endpoint grou
 - [x] **5.6 `ShiftIdentity.AspNetCore/Controllers/MVC/AuthController`** (1 endpoint) — ✅ DONE (2026-07-20). It's a **pure redirect** (`RedirectResult`, no view) → converted. Added `GET Auth/AuthCode` to `ShiftIdentityAuthEndpoints` (`AuthEndpoints.cs`, alongside its `api/Auth/*` siblings), `[AllowAnonymous]` → `.AllowAnonymous()`, `Redirect(...)` → `Results.Redirect(...)`, `[FromQuery] GenerateAuthCodeDTO` → `[AsParameters]`. **Behavior note:** the controller was mapped unconditionally by `MapControllers()`; the minimal API is now under `#if internalShiftIdentityHosting` (via the folded aggregator), consistent with 5.5 — auth belongs to the identity server. The fake-identity `AddFakeIdentityEndPoints` still maps its own `Identity/Auth/AuthCode` (chains into this `Auth/AuthCode`); that opt-in extension is unchanged.
 - [x] **5.7** — ✅ ASSESSED (2026-07-20). **ShiftIdentity now has ZERO `ControllerBase` subclasses** (verified by grep). MVC plumbing is **retained by necessity, not leftover**: (a) the sample host keeps its OWN controllers (Product, Invoice, File, …) so `AddControllers()`/`MapControllers()` stay; (b) `AddShiftIdentity` is an `IMvcBuilder` extension that adds a **global MVC `AuthorizeFilter`** protecting those host controllers — dropping it changes host behavior; (c) converting `AddShiftIdentity`/`AddShiftIdentityDashboard` from `IMvcBuilder` → `IServiceCollection` extensions is a **breaking public-API change** out of scope here. No dead ShiftIdentity application-part registration exists to remove (the only `AddApplicationPart` is already commented out). Follow-up (framework, deferred): decouple `AddShiftIdentity` from MVC + provide a minimal-API fallback-authorization equivalent, so a pure identity host (no controllers) can drop MVC entirely.
 
-### Phase 6 — Cleanup & consolidation
-- [ ] Delete only the AutoMapper profile **files that trimming left empty** (expected: `AccessTree`, `App` — see the §2 inventory). **Do NOT touch `General.cs`** — it holds only Cosmos replication maps (`CompanyBranchService/Department/Brand → CompanyBranchSubItemModel`) and no entity triple maps. Every other profile must still contain its `→ *Model` replication maps.
-- [ ] Ensure `AzureFunctions` + `Blazor` hosts discover the attribute endpoints consistently.
-- [ ] Assert **no `Controller`/`ControllerBase` classes remain** in ShiftIdentity (except any deliberately-kept view-rendering MVC controller, recorded as an exception).
-- [ ] Full regression: `dotnet build` + all identity tests; smoke-test the Dashboard Blazor UI against each migrated route.
-- [ ] Write the **conclusion** (see §7) and execute the **§Housekeeping** roll-up into `.shift`.
+### Phase 6 — Cleanup & consolidation — ✅ DONE (2026-07-20)
+- [x] **Empty profiles** — already handled in Phases 2-3: `App.cs` (Phase 2) + `AccessTree.cs` (Phase 3) were deleted when trimming left them empty. Verified 2026-07-20: no empty profile files remain; all 11 surviving profiles still carry their `→ *Model` replication maps (Brand/City/Company/CompanyBranch/Country/Department/Region/Service/Team/User + `General`'s three `CompanyBranch{Service,Department,Brand} → CompanyBranchSubItemModel`). `General.cs` untouched. Runtime-proven: the dev host boots and logs `CosmosDB Syncing Succeeded` for the migrated entities.
+- [x] **AzureFunctions + Blazor consistency** — verified, no change needed. The identity attribute-driven CRUD is discovered/hosted by the **API host only** (`app.MapShiftEntityEndpoints<DB>()`). The **Functions** host registers identity DI (`AddShiftIdentity`, `AddActionTree<ShiftIdentityActions>`, `AddAutoMapper(ShiftIdentity.Data)`) for token validation + its own functions, but does **not** `Map` the CRUD/dashboard endpoints (it's a Worker, not the identity server). **Blazor** is a WASM client. So there is a single endpoint host and no cross-host discovery divergence; the framework's `AddShiftEntityFunctions`/`AddShiftEntityWeb` share one core (JSON policy + HashId resolver + discovery), so a Functions host that *did* map them would be consistent.
+- [x] **No-controllers assertion** — `StockPlusPlus.Test/Tests/NoIdentityControllersTests.cs` reflects over `ShiftIdentity.AspNetCore` + `ShiftIdentity.Dashboard.AspNetCore` and fails if any `ControllerBase` subclass exists. Green (zero found). No allow-list (nothing kept).
+- [x] **Full regression** — `StockPlusPlus.API` builds clean; **`StockPlusPlus.Test` 151/151 green** (the 2 excluded are `IdentityCosmosSetupTests`/`IdentityReferenceCosmosDataServiceTests`, which need the Cosmos emulator on `localhost:8081` — infra, not code). Dashboard Blazor UI smoke-test against migrated routes still **owed to Aza** (no automated identity CRUD/UI test exists — see the per-phase "Residual" notes).
+- [x] **Conclusion** written below (§7). **Housekeeping roll-up into `.shift`** (move the conclusion into `.shift/repos/shift-identity/` + thin this file to a pointer) is the one remaining step — deferred to Aza's go-ahead since it commits to a separate repo and removes a doc referenced by `CLAUDE.md`.
 
 ---
 
@@ -272,9 +272,40 @@ Convert every remaining `ControllerBase` controller to minimal-API endpoint grou
 
 ---
 
-## 7. Conclusion (fill in when done — then roll up into `.shift`)
+## 7. Conclusion (2026-07-20)
 
-_To be written at the end. Capture: which entities landed on which rung; how many repository classes were deleted outright (entity hooks vs thin repos); the final mechanism chosen for feature-locking and the protected-row guard; any new `ShiftEntity` APIs added; the minimal-API conversion of all controllers (and any MVC controller kept as a deliberate exception); surprises; and remaining follow-ups (join entities). Then copy this into `C:\repos\ShiftSoftware\.shift\repos\shift-identity\` and thin this file to a pointer._
+**Outcome:** ShiftIdentity's data/endpoint layer is fully modernized onto the newer ShiftEntity patterns. **Every MVC/API controller is gone** (guarded by a reflection test); CRUD is attribute-driven through the built-in repository + source-generated mappers; bespoke write logic lives in entity `IUpserts/IDeletes` hooks; and the standalone controllers are hand-written minimal-API endpoint groups. Byte-identical routes throughout. Sample suite **151/151** (+2 infra-only Cosmos tests).
+
+### Where each entity landed (the "rung ladder")
+- **Rung A/B — repo deleted, built-in `ShiftRepository` + generated mapper:** Brand, Service, Department, Country, Region, City, AccessTree, Team. Write logic (where any) → `IUpsertsShiftRepository` on the entity (e.g. AccessTree's TypeAuth tree-gen, Team's M:N sync, City/Region derivation).
+- **Rung C — thin custom repo kept (only for `ApplyPostODataProcessing` or a consumed method):** Company, CompanyBranch (post-OData), App (`IAppRepository.GetAppAsync`, consumed by `AuthCodeService`), User (kept for its ~8 public methods + `IUserRepository`). Their endpoints use the repository-typed attribute `[…, TRepository]`; mapper config lives in the repo's base-ctor builder.
+- **Repositories deleted outright:** AccessTree, Team, CompanyCalendar, IdentityUser's base (logic → hooks). **Kept:** Company, CompanyBranch, App (de-`ShiftRepository`'d to a plain class), User, and the replication `IShiftEntityPrepareForReplicationAsync` hooks (CompanyBranchDepartment/Service).
+
+### Controllers → minimal APIs (Phases 3-5)
+All 6 standalone/CRUD controllers converted, each in its own `Endpoints/*Endpoints.cs`, aggregated by **`MapShiftIdentityDashboard()`** (which now also folds in **`MapShiftIdentityAuthEndpoints()`** — one host call wires the whole identity server, under `#if internalShiftIdentityHosting`). API `AuthController`→`AuthEndpoints`; the MVC `AuthController` was a **pure redirect** (fake-identity dev shim's backend) → converted, not kept. **No view-rendering controller exception was needed.** MVC plumbing (`AddControllers`/`MapControllers` + `AddShiftIdentity`'s global `AuthorizeFilter`) is **retained** — the sample host still has its own app controllers; fully removing MVC would mean converting `AddShiftIdentity`/`AddShiftIdentityDashboard` from `IMvcBuilder` to `IServiceCollection` extensions (a breaking public-API change) — deferred.
+
+### Mapping abstraction
+AutoMapper is out of the read/write path for migrated entities — replaced by **source-generated mappers** configured in the repo/entity builder (`ForView/ForEntity/ForList`, `Ignore*`, `ForViewChildren`). AutoMapper profiles were **trimmed, not deleted** — they still hold the Cosmos `→ *Model` replication maps ("TRIM, never DELETE"); only fully-empty profiles (App, AccessTree) were removed.
+
+### Feature-locking & protected-row guard
+Both are now **central** (framework-side), not per-repo: the deleted `DeleteAsync` overrides' feature-lock + `IsProtected` checks are enforced by the built-in repository/CRUD handler for every entity uniformly. Feature-lock config stays in `ShiftIdentityConfiguration.ShiftIdentityFeatureLocking`.
+
+### Framework APIs / patterns exercised (ShiftEntity side)
+`IUpsertsShiftRepository`/`IDeletesShiftRepository`/`IConfiguresShiftRepository` entity hooks; `[ShiftEntityEndpoint]`/`[ShiftEntitySecureEndpoint]` (± `TRepository`, ± mapper); the source generator + `ShiftMapperBuilder` (`UseGeneratedMapper`); `ShiftEntityCrudHandler` (new()-able, for selected-entity ops in minimal APIs); the minimal-API JSON-policy fix (naming + Azure converters applied to `Http.Json.JsonOptions`, not just MVC); `RequireTypeAuth*` + `StepUpPolicy.For(...)` endpoint filters.
+
+### Surprises / hard-won lessons
+1. **Scope-id `ForList` projections** — the generated LIST convention is case-**sensitive** and doesn't do `long?→string`, so any list-DTO scalar whose name/type differs from its entity member (e.g. `CompanyId`←`CompanyID`) must be explicitly `ForList`-projected or the collection-bearing projection becomes untranslatable under a filter. (Company/CompanyBranch/User.)
+2. **Minimal-API JSON casing** — the framework applied the PascalCase naming policy to MVC's `JsonOptions` only; minimal APIs served camelCase, so dashboard dialogs read empty fields. Fixed framework-side for both pipelines.
+3. **`[FromServices]` on possibly-unregistered DI params** — a GET handler injecting `LiveShiftIdentityDbContext` (unregistered in the Test host) made minimal APIs infer it as a request body → map-time throw → host-startup cascade (63 test failures). Always `[FromServices]` such params.
+4. **`[StepUp(p)]` defaults to `allowAccessToken: true`** — only the MFA-login endpoint uses `false`.
+5. **Token-keyed URLs** — VerifyEmail/ResetPassword `Url.Action` → **named endpoints + `GetPathByName`**, byte-identical so previously-issued SAS links keep validating.
+6. **Namespace rename** `…Core.Entities`→`…Data.Entities` was a deliberate breaking change; EF migration snapshots needed no action (relational model unchanged).
+
+### Remaining follow-ups
+- **Dashboard UI smoke-test** across the migrated routes (owed — no automated identity CRUD/UI test exists; ShiftIdentity ships none).
+- **Behavior tightening to confirm:** User create/update/import now enforce the framework data-level Write check (the old override skipped it).
+- **Deferred framework work:** decouple `AddShiftIdentity` from `IMvcBuilder` (+ a minimal-API fallback-authorization equivalent) so a pure identity host can drop MVC entirely.
+- **Housekeeping:** roll this doc up into `.shift/repos/shift-identity/` and thin it to a pointer (§Housekeeping).
 
 ---
 
