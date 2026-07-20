@@ -9,7 +9,6 @@ using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Web;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
-using ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Controllers;
 using ShiftSoftware.ShiftIdentity.Data.Entities;
 using ShiftSoftware.ShiftIdentity.Data.Repositories;
 using ShiftSoftware.TypeAuth.AspNetCore.EndpointFilters;
@@ -119,10 +118,9 @@ internal static class UserEndpoints
 
                     var encodedId = hashIdService.Encode<UserDTO>(user.ID);
 
-                    // Link to UserManagerController.VerifyEmail (still an MVC controller until Phase 5).
-                    var userManagerControllerName = nameof(UserManagerController).Replace("Controller", "");
-                    var url = linkGenerator.GetPathByAction(httpContext, nameof(UserManagerController.VerifyEmail), userManagerControllerName,
-                        new { userId = encodedId });
+                    // Link to the (now minimal-API) VerifyEmail endpoint by name, so this SAS uniqueId matches the
+                    // one UserManagerEndpoints.VerifyEmail reconstructs on validation (both use GetPathByName).
+                    var url = linkGenerator.GetPathByName(httpContext, UserManagerEndpoints.VerifyEmailRouteName, new { userId = encodedId });
                     var uniqueId = $"{url}-{user.Email}";
                     var (token, expires) = TokenService.GenerateSASToken(uniqueId, encodedId,
                         DateTime.UtcNow.AddSeconds(options.SASToken.ExpiresInSeconds), options.SASToken.Key);
