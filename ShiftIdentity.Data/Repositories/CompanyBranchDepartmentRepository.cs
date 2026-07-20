@@ -21,10 +21,9 @@ internal class CompanyBranchDepartmentRepository : IShiftEntityPrepareForReplica
 
     public async ValueTask<CompanyBranchDepartment> PrepareForReplicationAsync(CompanyBranchDepartment entity, ReplicationChangeType changeType)
     {
-        var branch = await db.CompanyBranches.Include(x => x.Company)
-            .SingleOrDefaultAsync(x => x.ID == entity.CompanyBranchID);
-
-        entity.CompanyBranch = branch;
+        // Load the Department nav (null on the freshly-saved join, not lazy-loaded) so the replicated
+        // CompanyBranchSubItemModel carries the real Name/IntegrationId instead of nulls. One query.
+        entity.Department = await db.Departments.SingleOrDefaultAsync(x => x.ID == entity.DepartmentID);
 
         return entity;
     }

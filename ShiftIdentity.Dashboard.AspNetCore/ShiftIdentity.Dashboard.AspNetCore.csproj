@@ -22,6 +22,9 @@
 		<ProjectReference Include="..\ShiftIdentity.AspNetCore\ShiftIdentity.AspNetCore.csproj" />
 		<ProjectReference Include="..\ShiftIdentity.Data\ShiftIdentity.Data.csproj" />
 		<ProjectReference Include="..\..\ShiftEntity\ShiftEntity.EFCore\ShiftEntity.EFCore.csproj" Condition="Exists('..\..\ShiftEntity\ShiftEntity.EFCore\ShiftEntity.EFCore.csproj')" />
+		<!-- Cosmos replication setup (SetUpAllIdentityReplications) lives here — scoped to internal-hosting consumers
+		     (external hosts don't reference the dashboard, and never replicate). Brings Microsoft.Azure.Cosmos transitively. -->
+		<ProjectReference Include="..\..\ShiftEntity\ShiftEntity.CosmosDbReplication\ShiftEntity.CosmosDbReplication.csproj" Condition="Exists('..\..\ShiftEntity\ShiftEntity.CosmosDbReplication\ShiftEntity.CosmosDbReplication.csproj')" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -31,6 +34,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="ShiftSoftware.ShiftEntity.EFCore" Version="$(ShiftFrameworkVersion)" Condition="!Exists('..\..\ShiftEntity\ShiftEntity.EFCore\ShiftEntity.EFCore.csproj')" />
+		<PackageReference Include="ShiftSoftware.ShiftEntity.CosmosDbReplication" Version="$(ShiftFrameworkVersion)" Condition="!Exists('..\..\ShiftEntity\ShiftEntity.CosmosDbReplication\ShiftEntity.CosmosDbReplication.csproj')" />
 	</ItemGroup>
 
 </Project>

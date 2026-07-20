@@ -22,10 +22,10 @@ internal class CompanyBranchServiceRepository : IShiftEntityPrepareForReplicatio
 
     public async ValueTask<CompanyBranchService> PrepareForReplicationAsync(CompanyBranchService entity, ReplicationChangeType changeType)
     {
-        var branch = await db.CompanyBranches.Include(x => x.Company)
-            .SingleOrDefaultAsync(x => x.ID == entity.CompanyBranchID);
-
-        entity.CompanyBranch = branch;
+        // The replicated CompanyBranchSubItemModel takes Name/IntegrationId from the Service nav, which is null on the
+        // freshly-saved join (the sync sets only the FK) and isn't lazy-loaded — load it here (one query) so the
+        // sub-item carries real values instead of nulls.
+        entity.Service = await db.Services.SingleOrDefaultAsync(x => x.ID == entity.ServiceID);
 
         return entity;
     }
