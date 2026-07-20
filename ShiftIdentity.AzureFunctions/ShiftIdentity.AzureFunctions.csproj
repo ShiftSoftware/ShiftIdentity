@@ -24,6 +24,7 @@
 		<!--<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.1" />-->
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
 		<PackageReference Include="ShiftSoftware.ShiftEntity.Web" Version="$(ShiftFrameworkVersion)" Condition="!Exists('..\..\ShiftEntity\ShiftEntity.Web\ShiftEntity.Web.csproj')" />
+		<PackageReference Include="ShiftSoftware.ShiftEntity.CosmosDbReplication" Version="$(ShiftFrameworkVersion)" Condition="!Exists('..\..\ShiftEntity\ShiftEntity.CosmosDbReplication\ShiftEntity.CosmosDbReplication.csproj')" />
 		<PackageReference Include="ShiftSoftware.TypeAuth.Core" Version="$(TypeAuthVersion)" Condition="!Exists('..\..\TypeAuth\TypeAuth.Core\TypeAuth.Core.csproj')" />
 		<PackageReference Include="ShiftSoftware.Azure.Functions.AspNetCore.Authorization" Version="$(AzureFunctionsAspNetCoreAuthorizationVersion)" Condition="!Exists('..\..\AzureFunctionsAspNetCoreAuthorization\ShiftSoftware.Azure.Functions.AspNetCore.Authorization\ShiftSoftware.Azure.Functions.AspNetCore.Authorization.csproj')" />
 	</ItemGroup>
@@ -35,7 +36,9 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\ShiftIdentity.Core\ShiftIdentity.Core.csproj" />
+		<ProjectReference Include="..\ShiftIdentity.Data\ShiftIdentity.Data.csproj" />
 		<ProjectReference Include="..\..\ShiftEntity\ShiftEntity.Web\ShiftEntity.Web.csproj" Condition="Exists('..\..\ShiftEntity\ShiftEntity.Web\ShiftEntity.Web.csproj')" />
+		<ProjectReference Include="..\..\ShiftEntity\ShiftEntity.CosmosDbReplication\ShiftEntity.CosmosDbReplication.csproj" Condition="Exists('..\..\ShiftEntity\ShiftEntity.CosmosDbReplication\ShiftEntity.CosmosDbReplication.csproj')" />
 		<ProjectReference Include="..\..\TypeAuth\TypeAuth.Core\TypeAuth.Core.csproj" Condition="Exists('..\..\TypeAuth\TypeAuth.Core\TypeAuth.Core.csproj')" />
 		<ProjectReference Include="..\..\AzureFunctionsAspNetCoreAuthorization\ShiftSoftware.Azure.Functions.AspNetCore.Authorization\ShiftSoftware.Azure.Functions.AspNetCore.Authorization.csproj" Condition="Exists('..\..\AzureFunctionsAspNetCoreAuthorization\ShiftSoftware.Azure.Functions.AspNetCore.Authorization\ShiftSoftware.Azure.Functions.AspNetCore.Authorization.csproj')" />
 	</ItemGroup>
