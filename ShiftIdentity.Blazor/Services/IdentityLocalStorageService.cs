@@ -2,52 +2,26 @@
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 namespace ShiftSoftware.ShiftIdentity.Blazor.Services;
 
-internal class IdentityLocalStorageService : IIdentityStore
+internal class IdentityLocalStorageService : IdentityStoreBase
 {
-    private readonly ILocalStorageService localStorage;
-    private readonly ISyncLocalStorageService syncLocalStorage;
-    private readonly TokenRefreshService tokenRefreshService;
-
-    private const string tokenStorageKey = "token";
-
-    public IdentityLocalStorageService(ILocalStorageService localStorage, ISyncLocalStorageService syncLocalStorage, TokenRefreshService tokenRefreshService)
+    public IdentityLocalStorageService(ILocalStorageService localStorage, ISyncLocalStorageService syncLocalStorage,
+        TokenRefreshService tokenRefreshService)
+        : base(localStorage, syncLocalStorage, tokenRefreshService)
     {
-        this.localStorage = localStorage;
-        this.syncLocalStorage = syncLocalStorage;
-        this.tokenRefreshService = tokenRefreshService;
     }
 
-    public async Task StoreTokenAsync(TokenDTO tokenDto)
+    protected override async Task<TokenDTO?> ReadAsync()
     {
-        await localStorage.SetItemAsync(tokenStorageKey, tokenDto);
+        return await localStorage.GetItemAsync<TokenDTO>(TokenStorageKey);
     }
 
-    public async Task RemoveTokenAsync()
+    public override async Task StoreTokenAsync(TokenDTO tokenDto)
     {
-        await localStorage.RemoveItemAsync(tokenStorageKey);
+        await localStorage.SetItemAsync(TokenStorageKey, tokenDto);
     }
 
-    public string? GetToken()
+    public override async Task RemoveTokenAsync()
     {
-        return syncLocalStorage.GetItem<TokenDTO>(tokenStorageKey)?.Token;
-    }
-
-    public async Task<TokenDTO?> GetTokenAsync()
-    {
-        var tokenDto = await localStorage.GetItemAsync<TokenDTO>(tokenStorageKey);
-        if (tokenDto == null)
-            return null;
-
-        if (JwtUtils.IsExpired(tokenDto.Token, 10)) // 10 seconds early refresh
-        {
-            var refreshed = await tokenRefreshService.RefreshTokenAsync(tokenDto.RefreshToken);
-            if (refreshed is not null)
-            {
-                await StoreTokenAsync(refreshed);
-                return refreshed;
-            }
-        }
-
-        return tokenDto;
+        await localStorage.RemoveItemAsync(TokenStorageKey);
     }
 }

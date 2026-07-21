@@ -16,15 +16,21 @@ namespace ShiftSoftware.ShiftIdentity.Blazor.Extensions;
 public static class IServiceCollectionExtensions
 {
     public static IServiceCollection AddShiftIdentity(this IServiceCollection services,
-        string appId, string baseUrl, string frontEndBaseUrl, bool noNeedAuthCode = false, Type? localizationResource = null)
+        string appId, string baseUrl, string frontEndBaseUrl, bool noNeedAuthCode = false, Type? localizationResource = null,
+        Action<ShiftIdentityBlazorOptions>? configure = null)
     {
         if (services == null)
         {
             throw new ArgumentNullException(nameof(services));
         }
 
+        // Built up front rather than in a factory, because the token store registration below depends on it.
+        var options = new ShiftIdentityBlazorOptions(appId, baseUrl, frontEndBaseUrl, noNeedAuthCode);
+        configure?.Invoke(options);
+
         services.AddBlazoredLocalStorage();
-        services.TryAddSingleton(x => new ShiftIdentityBlazorOptions(appId, baseUrl, frontEndBaseUrl, noNeedAuthCode));
+        services.TryAddSingleton(options);
+        services.TryAddScoped<CookieService>();
         services.TryAddScoped<CodeVerifierService>();
         services.TryAddScoped<ShiftIdentityService>();
         services.TryAddScoped<IShiftIdentityProvider, ShiftIdentityProvider>();
@@ -39,7 +45,12 @@ public static class IServiceCollectionExtensions
         services.TryAddScoped<HttpMessageHandlerService>();
 
         services.AddTransient<TokenMessageHandlerWithAutoRefresh>();
-        services.TryAddScoped<IIdentityStore, IdentityLocalStorageService>();
+
+        if (options.RefreshTokenStorage == RefreshTokenStorage.Cookie)
+            services.TryAddScoped<IIdentityStore, IdentityCookieStore>();
+        else
+            services.TryAddScoped<IIdentityStore, IdentityLocalStorageService>();
+
         services.AddScoped<MessageService>();
         services.AddScoped<CodeVerifierStorageService>();
 
