@@ -7,17 +7,14 @@ namespace ShiftSoftware.ShiftIdentity.Blazor.Handlers;
 
 public class TokenMessageHandlerWithAutoRefresh : DelegatingHandler
 {
-    private readonly HttpMessageHandlerService httpMessageHandlerService;
     private readonly IIdentityStore tokenStore;
     private readonly MessageService msg;
 
-    public TokenMessageHandlerWithAutoRefresh(HttpMessageHandlerService httpMessageHandlerService, IIdentityStore tokenProvider,
-        MessageService msg)
+    public TokenMessageHandlerWithAutoRefresh(IIdentityStore tokenProvider, MessageService msg)
     {
         //add this to solve "The inner handler has not been assigned"
         InnerHandler = new HttpClientHandler();
 
-        this.httpMessageHandlerService = httpMessageHandlerService;
         tokenStore = tokenProvider;
         this.msg = msg;
     }

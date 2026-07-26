@@ -36,13 +36,13 @@ public static class IServiceCollectionExtensions
         services.TryAddScoped<IShiftIdentityProvider, ShiftIdentityProvider>();
         services.TryAddScoped<TokenRefreshService>();
 
-        // Register a dedicated HttpClient for HttpMessageHandlerService to avoid DI loop
+        // Register a dedicated HttpClient for TokenRefreshService to avoid a DI loop
+        // (the refresh call must not flow through TokenMessageHandlerWithAutoRefresh).
         services.AddScoped<ShiftIdentityHttpClient>(sp =>
         {
             var options = sp.GetRequiredService<ShiftIdentityBlazorOptions>();
             return new ShiftIdentityHttpClient { BaseAddress = new Uri(options.BaseUrl) };
         });
-        services.TryAddScoped<HttpMessageHandlerService>();
 
         services.AddTransient<TokenMessageHandlerWithAutoRefresh>();
 
