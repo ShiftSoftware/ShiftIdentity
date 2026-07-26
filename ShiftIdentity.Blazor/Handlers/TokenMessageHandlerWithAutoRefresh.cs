@@ -10,6 +10,17 @@ public class TokenMessageHandlerWithAutoRefresh : DelegatingHandler
     private readonly IIdentityStore tokenStore;
     private readonly MessageService msg;
 
+    // On a dead-session 401 (the refresh token was rejected upstream, so an empty bearer went out) we remove
+    // the stored token and show this banner. Removing it is essential, not optional: while the dead token
+    // lingers, the sync GetToken() used for auth state does no expiry check, so the app still believes the
+    // user is signed in — every request 401s AND the login page bounces them back to "/" as already-authed,
+    // a deadlock where they can neither use the app nor sign in. Removal does NOT redirect this tab (auth
+    // state isn't re-notified, so an in-progress form / filtered list survives); it only lets a fresh load —
+    // the banner's "another tab" link — reach login. The success branch clears the banner once a session
+    // returns (e.g. after they sign in on the other tab).
+    private const string SessionExpiredMessage = "Your session has expired. Please login again (in another tab). ";
+    private const string SessionExpiredLinkText = "Login another tab";
+
     public TokenMessageHandlerWithAutoRefresh(IIdentityStore tokenProvider, MessageService msg)
     {
         //add this to solve "The inner handler has not been assigned"
@@ -28,6 +39,11 @@ public class TokenMessageHandlerWithAutoRefresh : DelegatingHandler
 
         if(result.IsSuccessStatusCode)
             await this.msg.RemoveWarningMessageAsync();
+        else if (result.StatusCode == HttpStatusCode.Unauthorized && string.IsNullOrWhiteSpace(token))
+        {
+            await tokenStore.RemoveTokenAsync();
+            await this.msg.ShowWarningMessageAsync(SessionExpiredMessage, SessionExpiredLinkText);
+        }
 
         return result;
     }
@@ -41,6 +57,11 @@ public class TokenMessageHandlerWithAutoRefresh : DelegatingHandler
 
         if (result.IsSuccessStatusCode)
             this.msg.RemoveWarningMessageAsync().Wait();
+        else if (result.StatusCode == HttpStatusCode.Unauthorized && string.IsNullOrWhiteSpace(token))
+        {
+            tokenStore.RemoveTokenAsync().Wait();
+            this.msg.ShowWarningMessageAsync(SessionExpiredMessage, SessionExpiredLinkText).Wait();
+        }
 
         return result;
     }
