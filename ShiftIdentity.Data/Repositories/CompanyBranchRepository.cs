@@ -1,5 +1,6 @@
 using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
+using ShiftSoftware.ShiftEntity.Model.Enums;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch;
 using ShiftSoftware.ShiftIdentity.Data.Entities;
@@ -47,6 +48,10 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
                 // ── ENTITY ── (lat/long decimal?→string; the hook owns CustomFields/Phone/ShortPhone)
                 .ForEntity(e => e.Latitude, dto => dto.Latitude.ToString())
                 .ForEntity(e => e.Longitude, dto => dto.Longitude.ToString())
+                // PublishTargets: DTO is IReadOnlyCollection<PublishTarget> (MudSelectExtended's SelectedValues),
+                // entity is List<PublishTarget>. There's no implicit conversion that way, so the convention doesn't
+                // cover the write side and the member would be silently dropped on save (same as Team.Tags).
+                .ForEntity(e => e.PublishTargets, dto => dto.PublishTargets != null ? dto.PublishTargets.ToList() : new List<PublishTarget>())
                 .IgnoreEntity(e => e.CustomFields)
                 .IgnoreEntity(e => e.Phone)
                 .IgnoreEntity(e => e.ShortPhone)
