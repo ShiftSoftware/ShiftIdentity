@@ -30,8 +30,10 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
 
             r.UseGeneratedMapper(map => map
                 // ── VIEW ── (Company/City ShiftEntitySelectDTOs get Value+Text from the FK convention + Includes)
-                .ForView(d => d.Latitude, e => string.IsNullOrWhiteSpace(e.Latitude) ? (decimal?)null : decimal.Parse(e.Latitude))
-                .ForView(d => d.Longitude, e => string.IsNullOrWhiteSpace(e.Longitude) ? (decimal?)null : decimal.Parse(e.Longitude))
+                // Latitude/Longitude are string on the entity and decimal? on the DTO. Both directions are now
+                // convention-covered, and the convention parses and formats with the INVARIANT culture — the
+                // hand-written pair used decimal.Parse / ToString without one, so on a server whose locale uses
+                // a comma for the decimal point "51.5074" read back as 515074 and saved values were unparsable.
                 .ForView(d => d.CustomFields, e => e.CustomFields == null ? null : e.CustomFields
                     .ToDictionary(x => x.Key, x => new CustomFieldDTO
                     {
@@ -45,13 +47,10 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
                 .ForView(d => d.Services, e => e.CompanyBranchServices == null ? new List<ShiftEntitySelectDTO>() : e.CompanyBranchServices.Select(y => new ShiftEntitySelectDTO { Value = y.ServiceID.ToString()!, Text = y.Service!.Name }).ToList())
                 .ForView(d => d.Brands, e => e.CompanyBranchBrands == null ? new List<ShiftEntitySelectDTO>() : e.CompanyBranchBrands.Select(y => new ShiftEntitySelectDTO { Value = y.BrandID.ToString()!, Text = y.Brand!.Name }).ToList())
 
-                // ── ENTITY ── (lat/long decimal?→string; the hook owns CustomFields/Phone/ShortPhone)
-                .ForEntity(e => e.Latitude, dto => dto.Latitude.ToString())
-                .ForEntity(e => e.Longitude, dto => dto.Longitude.ToString())
-                // PublishTargets: DTO is IReadOnlyCollection<PublishTarget> (MudSelectExtended's SelectedValues),
-                // entity is List<PublishTarget>. There's no implicit conversion that way, so the convention doesn't
-                // cover the write side and the member would be silently dropped on save (same as Team.Tags).
-                .ForEntity(e => e.PublishTargets, dto => dto.PublishTargets != null ? dto.PublishTargets.ToList() : new List<PublishTarget>())
+                // ── ENTITY ── (the hook owns CustomFields/Phone/ShortPhone)
+                // PublishTargets is IReadOnlyCollection<PublishTarget> on the DTO (MudSelectExtended's
+                // SelectedValues) and List<PublishTarget> on the entity. Same element type, different container,
+                // which the collection convention now adapts — it used to be silently dropped on save.
                 .IgnoreEntity(e => e.CustomFields)
                 .IgnoreEntity(e => e.Phone)
                 .IgnoreEntity(e => e.ShortPhone)

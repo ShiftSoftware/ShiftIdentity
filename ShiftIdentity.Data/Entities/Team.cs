@@ -69,8 +69,8 @@ public class Team : ShiftEntity<Team>, IEntityHasCompany<Team>, IEntityHasTeam<T
                 .Select(y => new ShiftEntitySelectDTO { Value = y.UserID.ToString(), Text = y.User.Username }).ToList())
             .ForView(d => d.CompanyBranches, e => e.TeamCompanyBranches
                 .Select(y => new ShiftEntitySelectDTO { Value = y.CompanyBranchID.ToString(), Text = y.CompanyBranch.Name }).ToList())
-            // ENTITY — Tags (List<string>); the write side has no implicit conversion, so it isn't convention-covered.
-            .ForEntity(e => e.Tags, dto => dto.Tags != null ? dto.Tags.ToList() : new List<string>())
+            // Tags is IReadOnlyCollection<string> on the DTO and List<string> on the entity. Same element type,
+            // different container, which the collection convention now adapts on both legs.
             // LIST — flattened Company name (through nav) + CompanyId (case-mismatch to entity CompanyID).
             .ForList(d => d.Company, e => e.Company != null ? e.Company.Name : null)
             .ForList(d => d.CompanyId, e => e.CompanyID.HasValue ? e.CompanyID.Value.ToString() : null));
@@ -93,7 +93,7 @@ public class Team : ShiftEntity<Team>, IEntityHasCompany<Team>, IEntityHasTeam<T
         if (dto.Users.GroupBy(item => item.Value).Any(group => group.Count() > 1))
             throw new ShiftEntityException(new Message(loc["Error"], loc["Duplicate users are not allowed."]));
 
-        // Base() maps scalars (Name, CompanyID from Company FK, IntegrationId, Tags via ForEntity), audit-stamps,
+        // Base() maps scalars (Name, CompanyID from Company FK, IntegrationId, Tags by convention), audit-stamps,
         // and runs the company-scoped data-level write check. It leaves the M:N join navigations untouched.
         var saved = await context.Base();
 
