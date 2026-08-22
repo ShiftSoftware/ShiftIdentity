@@ -57,12 +57,12 @@ public class UserRepository :
             .IgnoreEntity(e => e.Phone)
             .IgnoreEntity(e => e.AccessTree)
 
-            // ── LIST ── flattened CompanyBranch name, the scope-ids CompanyBranchID/CompanyID (string←long?, must be
-            // ForList — case matches but the list convention doesn't do long?→string; see the CompanyBranch note),
-            // TotpEnabled, LastSeen (UserLog fallback), and the AccessTrees M:N projection.
+            // ── LIST ── flattened CompanyBranch name, TotpEnabled, LastSeen (UserLog fallback), and the
+            // AccessTrees M:N projection. The scope-ids CompanyBranchID/CompanyID used to need a ForList as
+            // well; they no longer do — their names match the entity's ORDINALLY, so the list convention bakes
+            // long?→string itself. (CompanyBranch's CompanyId/CityId/RegionId still need theirs: those differ by
+            // CASE, and case-insensitive matching is not implemented.)
             .ForList(d => d.CompanyBranch, e => e.CompanyBranch != null ? e.CompanyBranch.Name : null)
-            .ForList(d => d.CompanyBranchID, e => e.CompanyBranchID.HasValue ? e.CompanyBranchID.Value.ToString() : null)
-            .ForList(d => d.CompanyID, e => e.CompanyID.HasValue ? e.CompanyID.Value.ToString() : null)
             .ForList(d => d.TotpEnabled, e => e.TotpSecret != null)
             .ForList(d => d.LastSeen, e => ((e.UserLog == null || e.UserLog.LastSeen == null) ? e.LastSeen : e.UserLog.LastSeen) ?? default)
             .ForList(d => d.AccessTrees, e => e.AccessTrees.Select(y => new ShiftEntitySelectDTO { Value = y.AccessTreeID.ToString()!, Text = y.AccessTree.Name })));

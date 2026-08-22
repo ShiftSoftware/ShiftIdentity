@@ -41,11 +41,10 @@ public class CompanyRepository : ShiftRepository<ShiftIdentityDbContext, Company
 
             // LIST — flattened parent name + the Brands aggregation (reproduce the profile Company→CompanyListDTO).
             .ForList(d => d.ParentCompanyName, e => e.ParentCompany == null ? null : e.ParentCompany.Name)
-            // ParentCompanyID is string in the DTO but long? on the entity — the generated list convention doesn't do
-            // long?→string, so project it explicitly (also keeps it filterable: a $filter=ParentCompanyID eq X needs a
-            // bound scalar or EF inlines the Brands-aggregation-bearing projection into the WHERE, same failure mode
-            // as CompanyBranch's scope-ids).
-            .ForList(d => d.ParentCompanyID, e => e.ParentCompanyID.HasValue ? e.ParentCompanyID.Value.ToString() : null)
+            // ParentCompanyID needs nothing here: string? on the DTO ← long? on the entity, and the names match
+            // ORDINALLY, so the list convention bakes the same bound scalar in the same position. It therefore
+            // stays filterable — $filter=ParentCompanyID eq X still translates, and EF still does not inline the
+            // Brands aggregation into the WHERE.
             .ForList(d => d.Brands, e => e.CompanyBranches!
                 .SelectMany(x => x.CompanyBranchBrands!)
                 .Select(x => x.BrandID).Distinct()
