@@ -71,9 +71,11 @@ public class Team : ShiftEntity<Team>, IEntityHasCompany<Team>, IEntityHasTeam<T
                 .Select(y => new ShiftEntitySelectDTO { Value = y.CompanyBranchID.ToString(), Text = y.CompanyBranch.Name }).ToList())
             // Tags is IReadOnlyCollection<string> on the DTO and List<string> on the entity. Same element type,
             // different container, which the collection convention now adapts on both legs.
-            // LIST — flattened Company name (through nav) + CompanyId (case-mismatch to entity CompanyID).
-            .ForList(d => d.Company, e => e.Company != null ? e.Company.Name : null)
-            .ForList(d => d.CompanyId, e => e.CompanyID.HasValue ? e.CompanyID.Value.ToString() : null));
+            // LIST — the flattened Company name still needs a ForList: reaching through a navigation is not a
+            // convention, by design. CompanyId no longer does — matching ignores case by default now, so it
+            // binds to the entity's CompanyID, and long? -> string is a standard list conversion. It is still
+            // a LIST FILTER target, so it must keep being projected; the convention is what projects it.
+            .ForList(d => d.Company, e => e.Company != null ? e.Company.Name : null));
     }
 
     public async ValueTask<Team> UpsertAsync(
