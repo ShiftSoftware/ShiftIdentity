@@ -59,16 +59,16 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories
                 .ForList(d => d.Company, e => e.Company != null ? e.Company.Name : null)
                 .ForList(d => d.Region, e => e.Region != null ? e.Region.Name : null)
                 .ForList(d => d.City, e => e.City != null ? e.City.Name : null)
-                // Scope-id projections are the reason this list is served by the generated mapper again (not AutoMapper):
-                // the DTO uses Id (CompanyId/CityId/RegionId, string) but the entity uses ID (CompanyID/…, long?), and
-                // BOTH the case AND the type differ — the generated list convention is case-sensitive and doesn't do
-                // long?→string, so without these ForLists the filter target CompanyId is never projected. A LIST filter
-                // then has no scalar to bind to (data-level / the Team-form branch picker's OData $filter=CompanyId eq X),
-                // so EF inlines the whole collection-bearing projection into the WHERE and can't translate it. Projecting
-                // CompanyId lets EF bind the Where to e.CompanyID and push it down; the collections stay in the SELECT.
-                .ForList(d => d.CompanyId, e => e.CompanyID.HasValue ? e.CompanyID.Value.ToString() : null)
-                .ForList(d => d.CityId, e => e.CityID.HasValue ? e.CityID.Value.ToString() : null)
-                .ForList(d => d.RegionId, e => e.RegionID.HasValue ? e.RegionID.Value.ToString() : null)
+                // The scope ids — CompanyId/CityId/RegionId (string) from CompanyID/CityID/RegionID (long?) —
+                // are now projected by convention: matching ignores case by default, and long? -> string is a
+                // standard list conversion. They used to need a hand-written ForList each because the generator
+                // did neither.
+                //
+                // Worth keeping in mind if anyone is tempted to IgnoreList them: they are the targets of a LIST
+                // filter (data-level access, and the Team form's branch picker sending $filter=CompanyId eq X).
+                // With no scalar to bind to, EF inlines this whole collection-bearing projection into the WHERE
+                // and cannot translate it. Projecting them lets EF bind the Where to e.CompanyID and push it
+                // down, leaving the collections in the SELECT.
                 .ForList(d => d.CompanyTerminationDate, e => e.Company != null ? e.Company.TerminationDate : null)
                 .ForList(d => d.CountryDisplayOrder, e => e.City != null && e.City.Region != null && e.City.Region.Country != null ? e.City.Region.Country.DisplayOrder : null)
                 .ForList(d => d.RegionDisplayOrder, e => e.City != null && e.City.Region != null ? e.City.Region.DisplayOrder : null)
