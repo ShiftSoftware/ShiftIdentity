@@ -1,4 +1,4 @@
-using AutoMapper;
+using ShiftSoftware.ShiftIdentity.Data.Mappers;
 using Microsoft.EntityFrameworkCore;
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.EFCore;
@@ -25,12 +25,10 @@ public class UserRepository :
     IUserRepository
 {
     private readonly ITypeAuthService typeAuthService;
-    private readonly IMapper mapper;
     private readonly ShiftIdentityLocalizer Loc;
 
     public UserRepository(ShiftIdentityDbContext db,
         ITypeAuthService typeAuthService,
-        IMapper mapper,
         ShiftIdentityDefaultDataLevelAccessOptions shiftIdentityDefaultDataLevelAccessOptions,
         ShiftIdentityLocalizer Loc) : base(db, r =>
     {
@@ -69,7 +67,6 @@ public class UserRepository :
     })
     {
         this.typeAuthService = typeAuthService;
-        this.mapper = mapper;
         this.Loc = Loc;
         this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
     }
@@ -193,7 +190,7 @@ public class UserRepository :
         }
 
         //Assign values
-        this.mapper.Map(dto, user);
+        dto.ApplyProfileEdits(user);
         user.Phone = formattedPhone;
 
         return user;
@@ -223,7 +220,7 @@ public class UserRepository :
             //Set flag to enforce password change
             user.RequireChangePassword = enforceChange;
 
-            var userInfo = this.mapper.Map<UserInfoDTO>(user);
+            var userInfo = user.ToInfoDTO();
             userInfo.PlainTextPassword = password;
             userInfos.Add(userInfo);
         }

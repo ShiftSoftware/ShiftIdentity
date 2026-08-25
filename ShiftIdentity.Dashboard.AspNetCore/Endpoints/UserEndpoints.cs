@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
@@ -14,7 +14,7 @@ using ShiftSoftware.ShiftIdentity.Data.Repositories;
 using ShiftSoftware.TypeAuth.AspNetCore.EndpointFilters;
 using ShiftSoftware.TypeAuth.Core;
 using System.Net;
-using AutoMapper;
+using ShiftSoftware.ShiftIdentity.Data.Mappers;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Endpoints;
 
@@ -53,15 +53,15 @@ internal static class UserEndpoints
             async (SelectStateDTO<UserListDTO> ids,
                    HttpContext httpContext,
                    UserRepository userRepo,
-                   IMapper mapper,
                    ShiftIdentityConfiguration options,
                    [FromQuery(Name = "shareWithUser")] bool? shareWithUser,
                    [FromQuery(Name = "passwordLength")] int? passwordLength,
                    IEnumerable<ISendUserInfo>? sendUserInfos) =>
             {
-                var users = userRepo.AssignRandomPasswords(await GetSelectedUsersAsync(httpContext, ids), passwordLength ?? 20, options.Security.RequirePasswordChange);
-
-                var userInfos = mapper.Map<IEnumerable<UserInfoDTO>>(users);
+                // AssignRandomPasswords already returns UserInfoDTO (it is the only thing that knows the generated
+                // plaintext password). This used to round-trip that through AutoMapper as a UserInfoDTO ->
+                // UserInfoDTO identity map, which copied every member onto fresh instances to no purpose.
+                var userInfos = userRepo.AssignRandomPasswords(await GetSelectedUsersAsync(httpContext, ids), passwordLength ?? 20, options.Security.RequirePasswordChange);
 
                 await userRepo.SaveChangesAsync();
 
@@ -84,14 +84,14 @@ internal static class UserEndpoints
 
         // POST api/IdentityUser/ResetTotp — Users Write.
         app.MapPost("api/IdentityUser/ResetTotp",
-            async (SelectStateDTO<UserListDTO> ids, HttpContext httpContext, UserRepository userRepo, IMapper mapper) =>
+            async (SelectStateDTO<UserListDTO> ids, HttpContext httpContext, UserRepository userRepo) =>
             {
                 var users = await GetSelectedUsersAsync(httpContext, ids);
                 foreach (var user in users)
                     await userRepo.SetTotpSecret(null, user);
 
                 await userRepo.SaveChangesAsync();
-                return Results.Ok(new ShiftEntityResponse<IEnumerable<UserInfoDTO>>(mapper.Map<IEnumerable<UserInfoDTO>>(users)));
+                return Results.Ok(new ShiftEntityResponse<IEnumerable<UserInfoDTO>>(users.ToInfoDTOs()));
             })
             .RequireTypeAuthWrite(ShiftIdentityActions.Users);
 
@@ -101,7 +101,6 @@ internal static class UserEndpoints
             async (SelectStateDTO<UserListDTO> ids,
                    HttpContext httpContext,
                    UserRepository userRepo,
-                   IMapper mapper,
                    ShiftIdentityConfiguration options,
                    IHashIdService hashIdService,
                    LinkGenerator linkGenerator,
@@ -138,19 +137,19 @@ internal static class UserEndpoints
                 foreach (var data in datas)
                     if (sendEmailVerifications is not null)
                         foreach (var sendEmailVerification in sendEmailVerifications)
-                            await sendEmailVerification.SendEmailVerificationAsync(data.fullUrl, mapper.Map<UserDataDTO>(data.user));
+                            await sendEmailVerification.SendEmailVerificationAsync(data.fullUrl, data.user.ToDataDTO());
 
-                return Results.Ok(new ShiftEntityResponse<IEnumerable<UserInfoDTO>>(mapper.Map<IEnumerable<UserInfoDTO>>(users)));
+                return Results.Ok(new ShiftEntityResponse<IEnumerable<UserInfoDTO>>(users.ToInfoDTOs()));
             })
             .RequireTypeAuthWrite(ShiftIdentityActions.Users);
 
         // POST api/IdentityUser/VerifyPhones — Users Write.
         app.MapPost("api/IdentityUser/VerifyPhones",
-            async (SelectStateDTO<UserListDTO> ids, HttpContext httpContext, UserRepository userRepo, IMapper mapper) =>
+            async (SelectStateDTO<UserListDTO> ids, HttpContext httpContext, UserRepository userRepo) =>
             {
                 var users = userRepo.VerifyPhonesAsync(await GetSelectedUsersAsync(httpContext, ids));
 
-                var userInfos = mapper.Map<IEnumerable<UserListDTO>>(users);
+                var userInfos = users.ToListDTOs();
 
                 await userRepo.SaveChangesAsync();
 

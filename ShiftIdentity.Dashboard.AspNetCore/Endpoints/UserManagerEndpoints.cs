@@ -1,4 +1,4 @@
-using AutoMapper;
+using ShiftSoftware.ShiftIdentity.Data.Mappers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -41,17 +41,17 @@ internal static class UserManagerEndpoints
     {
         // GET api/UserManager/UserData — the current user's own data.
         app.MapGet("api/UserManager/UserData",
-            async (IClaimService claimService, UserRepository userRepo, IMapper mapper) =>
+            async (IClaimService claimService, UserRepository userRepo) =>
             {
                 var loginUser = claimService.GetUser();
                 var user = await userRepo.FindAsync(loginUser.ID.ToLong(), null, disableDefaultDataLevelAccess: true, disableGlobalFilters: true);
-                return new ShiftEntityResponse<UserDataDTO>(mapper.Map<UserDataDTO>(user));
+                return new ShiftEntityResponse<UserDataDTO>(user?.ToDataDTO()!);
             })
             .RequireAuthorization();
 
         // PUT api/UserManager/UserData — update the current user's own data.
         app.MapPut("api/UserManager/UserData",
-            async (UserDataDTO dto, IClaimService claimService, UserRepository userRepo, IMapper mapper) =>
+            async (UserDataDTO dto, IClaimService claimService, UserRepository userRepo) =>
             {
                 var loginUser = claimService.GetUser();
                 User? user;
@@ -70,7 +70,7 @@ internal static class UserManagerEndpoints
 
                 await userRepo.SaveChangesAsync();
 
-                return Results.Ok(new ShiftEntityResponse<UserDataDTO>(mapper.Map<UserDataDTO>(user)));
+                return Results.Ok(new ShiftEntityResponse<UserDataDTO>(user.ToDataDTO()));
             })
             .RequireAuthorization();
 
@@ -102,7 +102,7 @@ internal static class UserManagerEndpoints
 
         // GET api/UserManager/SendEmailVerificationLink — emails the current user a SAS-token verification link.
         app.MapGet("api/UserManager/SendEmailVerificationLink",
-            async (HttpContext httpContext, IClaimService claimService, UserRepository userRepo, IMapper mapper,
+            async (HttpContext httpContext, IClaimService claimService, UserRepository userRepo,
                    IHashIdService hashIdService, ShiftIdentityConfiguration options, LinkGenerator linkGenerator,
                    IEnumerable<ISendEmailVerification>? sendEmailVerifications) =>
             {
@@ -133,7 +133,7 @@ internal static class UserManagerEndpoints
 
                 if (sendEmailVerifications is not null)
                     foreach (var sendEmailVerification in sendEmailVerifications)
-                        await sendEmailVerification.SendEmailVerificationAsync(fullUrl, mapper.Map<UserDataDTO>(user));
+                        await sendEmailVerification.SendEmailVerificationAsync(fullUrl, user.ToDataDTO());
 
                 return Results.Ok();
             })
@@ -172,7 +172,7 @@ internal static class UserManagerEndpoints
 
         // GET api/UserManager/SendPasswordResetLink — anonymous; emails a reset link to a verified account.
         app.MapGet("api/UserManager/SendPasswordResetLink",
-            async ([FromQuery] string email, HttpContext httpContext, UserRepository userRepo, IMapper mapper,
+            async ([FromQuery] string email, HttpContext httpContext, UserRepository userRepo,
                    IHashIdService hashIdService, ShiftIdentityConfiguration options, LinkGenerator linkGenerator,
                    IEnumerable<ISendEmailResetPassword>? sendEmailResetPasswords) =>
             {
@@ -201,7 +201,7 @@ internal static class UserManagerEndpoints
 
                 if (sendEmailResetPasswords is not null)
                     foreach (var sendEmailResetPassword in sendEmailResetPasswords)
-                        await sendEmailResetPassword.SendEmailResetPasswordAsync(fullUrl, mapper.Map<UserDataDTO>(user));
+                        await sendEmailResetPassword.SendEmailResetPasswordAsync(fullUrl, user.ToDataDTO());
 
                 return Results.Ok();
             })

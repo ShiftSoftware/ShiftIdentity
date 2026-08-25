@@ -149,7 +149,7 @@ The source-generated mapper composes child objects/collections **automatically, 
 
 ## 4. Entity inventory & classification
 
-Repos live in `ShiftIdentity.Data/Repositories/`, controllers in `ShiftIdentity.Dashboard.AspNetCore/Controllers/`, AutoMapper profiles in `ShiftIdentity.Data/AutoMapperProfiles/`.
+Repos live in `ShiftIdentity.Data/Repositories/`, controllers in `ShiftIdentity.Dashboard.AspNetCore/Controllers/`. Mapping lives in `ShiftIdentity.Data/Mappers/UserProjections.cs` and `ShiftIdentity.Data/Replication/IdentityReplicationMappingExtensions.cs` — all 11 AutoMapper profiles and the `ShiftIdentity.Data/AutoMapperProfiles/` folder were deleted when AutoMapper was removed from the framework.
 
 Legend — **Rung** is the target from §2. **Guards** = Protected-row(P, §3.2)/FeatureLock(L, §3.1). **Blockers** = what must exist before it can move.
 

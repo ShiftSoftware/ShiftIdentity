@@ -5,13 +5,6 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Extentsions;
 
 public static class ShiftEntityOptionsExtensions
 {
-    public static ShiftEntityOptions AddShiftIdentityAutoMapper(this ShiftEntityOptions shiftEntityOptions)
-    {
-        shiftEntityOptions.AddAutoMapper(typeof(Marker).Assembly);
-
-        return shiftEntityOptions;
-    }
-
     /// <summary>
     /// Registers the ShiftIdentity.Data assembly as a data assembly, so the host's
     /// <c>app.MapShiftEntityEndpoints&lt;DB&gt;()</c> discovers ShiftIdentity's attribute-driven CRUD endpoints

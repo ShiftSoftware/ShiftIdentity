@@ -1,4 +1,4 @@
-using ShiftSoftware.ShiftEntity.Core;
+﻿using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Model.Replication;
 using ShiftSoftware.ShiftEntity.Model.Replication.IdentityModels;
 using ShiftSoftware.ShiftIdentity.Data.Entities;
@@ -9,11 +9,12 @@ namespace ShiftSoftware.ShiftIdentity.Data.Replication;
 
 /// <summary>
 /// Manual, AutoMapper-free <c>Entity → *Model</c> mappings for Cosmos replication. Each method reproduces the
-/// corresponding AutoMapper profile in <c>AutoMapperProfiles/*.cs</c> EXACTLY — the explicit <c>ForMember</c>
+/// AutoMapper profile that used to live in <c>AutoMapperProfiles/*.cs</c> EXACTLY — the explicit <c>ForMember</c>
 /// overrides, the members AutoMapper filled by convention, AND the <see cref="ReplicationModel"/> base/audit fields —
-/// so replicated Cosmos documents are byte-identical. The AutoMapper profiles are intentionally KEPT (backward
-/// compatibility); these methods are what the <c>SetUp*Replication</c> extensions pass as the manual mapping delegate,
-/// removing AutoMapper from the replication path.
+/// so replicated Cosmos documents stayed byte-identical across the switch. These methods are what the
+/// <c>SetUp*Replication</c> extensions pass as the mapping delegate. The profiles themselves were deleted once
+/// nothing read them (AutoMapper removal, Step F2); the parity they were written against is pinned by the golden
+/// fixtures in <c>StockPlusPlus.Test/Tests/Parity</c>.
 /// </summary>
 public static class IdentityReplicationMappingExtensions
 {
