@@ -1,35 +1,37 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(AccessTreeForm)}/{{Key?}}")]
-@inherits ShiftForm<AccessTreeForm, ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree.AccessTreeDTO>
 @using System.Text.Json
 @using Microsoft.CSharp
 @inject ShiftIdentityLocalizer Loc
 
-<ShiftEntityForm @bind-Mode="Mode"
-                 @bind-Value="TheItem"
-                 @ref="FormContainer"
+<ShiftEntityForm @bind-Value="_theItem"
                  Endpoint="@($"{Constants.IdentityRoutePreifix}AccessTree")"
                  Title="@Loc["Access Tree"]"
                  @bind-Key="@Key"
                  AllowSaveAsNew
                  TypeAuthAction="ShiftIdentityActions.AccessTrees"
-                 OnSubmit="()=> { TheItem.Tree =  actionTree!.GenerateAccessTree(); }">
+                 OnSubmit="()=> { _theItem.Tree =  actionTree!.GenerateAccessTree(); }">
 
-    <MudTextField ReadOnly="@ReadOnly"
-                  Disabled="@Disabled"
+    <MudTextField ReadOnly="@context.ReadOnly"
+                  Disabled="@context.Disabled"
                   OnlyValidateIfDirty="true"
                   Label="@Loc["Name"]"
-                  @bind-Value="TheItem.Name"
-                  For="@(() => TheItem.Name)" />
+                  @bind-Value="context.Item.Name"
+                  For="@(() => context.Item.Name)" />
 
 
     <br />
     <br />
 
-    <ActionTree @ref="actionTree" @bind-Tree="TheItem.Tree" ReadOnly="@ReadOnly" Disabled="@Disabled" />
+    <ActionTree @ref="actionTree" @bind-Tree="context.Item.Tree" ReadOnly="@context.ReadOnly" Disabled="@context.Disabled" />
 </ShiftEntityForm>
 
 @code {
+    [Parameter]
+    public object? Key { get; set; }
+
+    private ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree.AccessTreeDTO _theItem = new();
+
     Shared.ActionTree.ActionTree? actionTree;
 }

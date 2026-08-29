@@ -2,7 +2,6 @@
 @layout Shared.DefaultLayout
 
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(UserForm)}/{{Key?}}")]
-@inherits ShiftForm<UserForm, ShiftSoftware.ShiftIdentity.Core.DTOs.User.UserDTO>
 @inject HttpClient Http
 @inject ODataQuery odataQuery
 @inject IDialogService DialogService
@@ -11,20 +10,19 @@
 @using ShiftSoftware.ShiftEntity.Model.Dtos
 @using ShiftSoftware.ShiftBlazor.Enums
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.User
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch
 @using ShiftSoftware.ShiftIdentity.Core
 @using MudBlazor
 
-<ShiftEntityForm @bind-Mode="Mode"
-                 @bind-Value="TheItem"
-                 @ref="FormContainer"
+<ShiftEntityForm @bind-Value="_theItem"
                  Endpoint="@($"{Constants.IdentityRoutePreifix}User")"
                  Title="@Loc["User"]"
                  AllowSaveAsNew
                  @bind-Key="@Key"
                  TypeAuthAction="ShiftIdentityActions.Users"
                  OnTaskFinished="@(()=> ready=true)"
-                 OnSubmit="()=> { TheItem.AccessTree =  actionTree!.GenerateAccessTree(); }"
+                 OnSubmit="()=> { _theItem.AccessTree =  actionTree!.GenerateAccessTree(); }"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.User.UserDTO">
 
     <ToolbarEndTemplate>
@@ -44,44 +42,44 @@
 
     <ChildContent>
 
-        <MudTextField ReadOnly="@ReadOnly"
-                      Disabled="@Disabled"
+        <MudTextField ReadOnly="@context.ReadOnly"
+                      Disabled="@context.Disabled"
                       OnlyValidateIfDirty="true"
                       Label="@Loc["Full Name"]"
-                      @bind-Value="TheItem.FullName"
-                      For="@(() => TheItem.FullName)" />
+                      @bind-Value="context.Item.FullName"
+                      For="@(() => context.Item.FullName)" />
 
-        <MudTextField ReadOnly="@ReadOnly"
-                      Disabled="@Disabled"
+        <MudTextField ReadOnly="@context.ReadOnly"
+                      Disabled="@context.Disabled"
                       OnlyValidateIfDirty="true"
                       Label="@Loc["Username"]"
-                      @bind-Value="TheItem.Username"
-                      For="@(() => TheItem.Username)" />
+                      @bind-Value="context.Item.Username"
+                      For="@(() => context.Item.Username)" />
 
-        <MudTextField ReadOnly="@ReadOnly"
-                      Disabled="@Disabled"
+        <MudTextField ReadOnly="@context.ReadOnly"
+                      Disabled="@context.Disabled"
                       OnlyValidateIfDirty="true"
                       Label="@Loc["Integration Id"]"
-                      @bind-Value="TheItem.IntegrationId"
-                      For="@(() => TheItem.IntegrationId)" />
+                      @bind-Value="context.Item.IntegrationId"
+                      For="@(() => context.Item.IntegrationId)" />
 
         <MudTextField InputType="@passwordInputType"
-                      ReadOnly="@ReadOnly"
-                      Disabled="@Disabled"
+                      ReadOnly="@context.ReadOnly"
+                      Disabled="@context.Disabled"
                       OnlyValidateIfDirty="true"
                       Label="@Loc["Password"]"
-                      @bind-Value="TheItem.Password"
-                      For="@(() => TheItem.Password)"
+                      @bind-Value="context.Item.Password"
+                      For="@(() => context.Item.Password)"
                       HelperText="Choose a strong password"
                       Adornment="Adornment.End"
-                      AdornmentIcon="@GetPasswordAdornmentIcon()"
-                      OnAdornmentClick="@OnPasswordAdornmentClick"
-                      AdornmentAriaLabel="@GetPasswordAdornmentAriaLabel()" />
+                      AdornmentIcon="@GetPasswordAdornmentIcon(context.Item)"
+                      OnAdornmentClick="@(() => OnPasswordAdornmentClick(context.Item, context.ReadOnly || context.Disabled))"
+                      AdornmentAriaLabel="@GetPasswordAdornmentAriaLabel(context.Item)" />
 
         @if (!string.IsNullOrEmpty(Key?.ToString()))
         {
             <MudField Label="@Loc["Authenticator App (TOTP)"]" Variant="Variant.Text" Class="mt-2">
-                @if (TheItem.TotpEnabled)
+                @if (context.Item.TotpEnabled)
                 {
                     <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.Lock">@Loc["Enabled"]</MudChip>
                 }
@@ -92,38 +90,38 @@
             </MudField>
         }
 
-        <MudTextField ReadOnly="@ReadOnly"
-                      Disabled="@Disabled"
+        <MudTextField ReadOnly="@context.ReadOnly"
+                      Disabled="@context.Disabled"
                       OnlyValidateIfDirty="true"
                       Label="@Loc["Phone"]"
-                      @bind-Value="TheItem.Phone"
-                      For="@(() => TheItem.Phone)" />
+                      @bind-Value="context.Item.Phone"
+                      For="@(() => context.Item.Phone)" />
 
-        <MudTextField ReadOnly="@ReadOnly"
-                      Disabled="@Disabled"
+        <MudTextField ReadOnly="@context.ReadOnly"
+                      Disabled="@context.Disabled"
                       OnlyValidateIfDirty="true"
                       Label="@Loc["Email"]"
-                      @bind-Value="TheItem.Email"
-                      For="@(() => TheItem.Email)" />
+                      @bind-Value="context.Item.Email"
+                      For="@(() => context.Item.Email)" />
 
-        <MudDatePicker ReadOnly="@ReadOnly"
-                       Disabled="@Disabled"
+        <MudDatePicker ReadOnly="@context.ReadOnly"
+                       Disabled="@context.Disabled"
                        Clearable
-                       @bind-Date="TheItem.BirthDate"
-                       For="@(() => TheItem.BirthDate)"
+                       @bind-Date="context.Item.BirthDate"
+                       For="@(() => context.Item.BirthDate)"
                        Label="@Loc["Birth Date"]" />
 
         <MudItem>
-            <MudCheckBox ReadOnly="@ReadOnly"
-                         Disabled="@Disabled"
-                         For="@(() => TheItem.IsActive)"
+            <MudCheckBox ReadOnly="@context.ReadOnly"
+                         Disabled="@context.Disabled"
+                         For="@(() => context.Item.IsActive)"
                          Label="@Loc["Active"]"
-                         @bind-Value="@TheItem.IsActive"></MudCheckBox>
+                         @bind-Value="@context.Item.IsActive"></MudCheckBox>
         </MudItem>
 
         <ShiftAutocomplete Label="@Loc["Company Branch"]"
-                           For="@(() => TheItem.CompanyBranchID)"
-                           @bind-Value="TheItem.CompanyBranchID"
+                           For="@(() => context.Item.CompanyBranchID)"
+                           @bind-Value="context.Item.CompanyBranchID"
                            TEntitySet="CompanyBranchListDTO"
                            EntitySet="IdentityCompanyBranch" />
 
@@ -134,22 +132,27 @@
 
         <br />
 
-        @foreach (var item in TheItem.AccessTrees)
+        @foreach (var item in context.Item.AccessTrees)
         {
-            <MudChip T="string" Color="Color.Primary" OnClose="() => RemoveAccessTreetItem(item)">@item.Text</MudChip>
+            <MudChip T="string" Color="Color.Primary" OnClose="() => RemoveAccessTreetItem(item, context.Mode)">@item.Text</MudChip>
         }
 
         <br />
         <br />
 
-        @if (ready || Mode == FormModes.View || Mode == FormModes.Create)
+        @if (ready || context.Mode == FormModes.View || context.Mode == FormModes.Create)
         {
-            <ActionTree @ref="actionTree" @bind-Tree="TheItem.AccessTree" ReadOnly="@ReadOnly" Disabled="@Disabled" />
+            <ActionTree @ref="actionTree" @bind-Tree="context.Item.AccessTree" ReadOnly="@context.ReadOnly" Disabled="@context.Disabled" />
         }
     </ChildContent>
 </ShiftEntityForm>
 
 @code {
+    [Parameter]
+    public object? Key { get; set; }
+
+    private UserDTO _theItem = new();
+
     private bool ready = false;
     private bool showPassword = false;
     private InputType passwordInputType => showPassword ? InputType.Text : InputType.Password;
@@ -160,34 +163,34 @@
 
     protected override void OnInitialized()
     {
-        if (TheItem.ID == default)
-            TheItem.AccessTree = "{}";
+        if (_theItem.ID == default)
+            _theItem.AccessTree = "{}";
     }
 
-    private string GetPasswordAdornmentIcon()
+    private string GetPasswordAdornmentIcon(UserDTO item)
     {
-        if (string.IsNullOrEmpty(TheItem.Password))
+        if (string.IsNullOrEmpty(item.Password))
             return Icons.Material.Filled.VpnKey;
         else
             return showPassword ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff;
     }
 
-    private string GetPasswordAdornmentAriaLabel()
+    private string GetPasswordAdornmentAriaLabel(UserDTO item)
     {
-        if (string.IsNullOrEmpty(TheItem.Password))
+        if (string.IsNullOrEmpty(item.Password))
             return "Generate Password";
         else
             return showPassword ? "Hide Password" : "Show Password";
     }
 
-    private void OnPasswordAdornmentClick()
+    private void OnPasswordAdornmentClick(UserDTO item, bool locked)
     {
-        if (ReadOnly || Disabled)
+        if (locked)
             return;
 
-        if (string.IsNullOrEmpty(TheItem.Password))
+        if (string.IsNullOrEmpty(item.Password))
         {
-            TheItem.Password = PasswordGenerator.GeneratePassword(8);
+            item.Password = PasswordGenerator.GeneratePassword(8);
             showPassword = true; // Hide after generating
         }
         else
@@ -202,23 +205,23 @@
         get { return null; }
         set
         {
-            var currentList = TheItem.AccessTrees.ToList();
+            var currentList = _theItem.AccessTrees.ToList();
 
             if (!currentList.Any(x => x.Value.Equals(value!.Value)))
             {
                 currentList.Add(value!);
             }
 
-            TheItem.AccessTrees = currentList;
+            _theItem.AccessTrees = currentList;
         }
     }
 
-    public void RemoveAccessTreetItem(ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO item)
+    public void RemoveAccessTreetItem(ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO item, FormModes mode)
     {
-        if (Mode <= ShiftBlazor.Enums.FormModes.Archive)
+        if (mode <= ShiftBlazor.Enums.FormModes.Archive)
             return;
 
-        TheItem.AccessTrees = TheItem.AccessTrees.Where(x => !x.Value.Equals(item.Value)).ToList();
+        _theItem.AccessTrees = _theItem.AccessTrees.Where(x => !x.Value.Equals(item.Value)).ToList();
     }
 
     private async Task OpenEffectivePermissions()

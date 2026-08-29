@@ -5,13 +5,10 @@
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyCalendar
 @using ShiftSoftware.ShiftIdentity.Core.Enums
 
-@inherits ShiftForm<CompanyCalendarForm, CompanyCalendarDTO>
 @inject ShiftIdentityLocalizer Loc
 @inject ShiftIdentityDashboardBlazorOptions Options
 
-<ShiftEntityForm @bind-Mode="Mode"
-                 @bind-Value="TheItem"
-                 @ref="FormContainer"
+<ShiftEntityForm @bind-Value="_theItem"
                  Endpoint="@($"{Constants.IdentityRoutePreifix}CompanyCalendar")"
                  Title="@Loc["Company Calendar Entry"]"
                  TypeAuthAction="ShiftIdentityActions.CompanyCalendars"
@@ -27,15 +24,15 @@
                 <MudItem xs="12" md="6">
                     <MudTextFieldExtended OnlyValidateIfDirty="true"
                                           Label="@Loc["Title"]"
-                                          @bind-Value="TheItem.Title"
-                                          For="@(() => TheItem.Title)" />
+                                          @bind-Value="context.Item.Title"
+                                          For="@(() => context.Item.Title)" />
                 </MudItem>
 
                 <MudItem xs="12" md="6">
                     <MudSelect T="CalendarEntryType?"
                                Label="@Loc["Entry Type"]"
-                               @bind-Value="TheItem.EntryType"
-                               For="@(() => TheItem.EntryType)"
+                               @bind-Value="context.Item.EntryType"
+                               For="@(() => context.Item.EntryType)"
                                Variant="Variant.Text">
                         <MudSelectItem T="CalendarEntryType?" Value="CalendarEntryType.Workday">@Loc["Workday"]</MudSelectItem>
                         <MudSelectItem T="CalendarEntryType?" Value="CalendarEntryType.Holiday">@Loc["Holiday"]</MudSelectItem>
@@ -44,21 +41,21 @@
 
                 <MudItem xs="12" md="4">
                     <MudDatePickerExtended Label="@Loc["Start Date"]"
-                                           @bind-Date="TheItem.StartDate"
-                                           For="@(() => TheItem.StartDate)" />
+                                           @bind-Date="context.Item.StartDate"
+                                           For="@(() => context.Item.StartDate)" />
                 </MudItem>
 
                 <MudItem xs="12" md="4">
                     <MudDatePickerExtended Label="@Loc["End Date"]"
-                                           @bind-Date="TheItem.EndDate"
-                                           For="@(() => TheItem.EndDate)" />
+                                           @bind-Date="context.Item.EndDate"
+                                           For="@(() => context.Item.EndDate)" />
                 </MudItem>
 
                 <MudItem xs="12" md="4">
                     <MudNumericFieldExtended T="int"
                                              Label="@Loc["Priority"]"
-                                             @bind-Value="TheItem.Priority"
-                                             For="@(() => TheItem.Priority)"
+                                             @bind-Value="context.Item.Priority"
+                                             For="@(() => context.Item.Priority)"
                                              Min="0" />
                 </MudItem>
 
@@ -66,8 +63,8 @@
                     <ShiftAutocomplete Label="@Loc["Company"]"
                                        TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Company.CompanyListDTO"
                                        EntitySet="@($"{Constants.IdentityRoutePreifix}Company")"
-                                       For="() => TheItem.Company"
-                                       @bind-Value="TheItem.Company" />
+                                       For="() => context.Item.Company"
+                                       @bind-Value="context.Item.Company" />
                 </MudItem>
 
                 <MudItem xs="12" md="6">
@@ -75,17 +72,17 @@
                                        TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO"
                                        EntitySet="@($"{Constants.IdentityRoutePreifix}CompanyBranch")"
                                        MultiSelect
-                                       @bind-SelectedValues="TheItem.Branches" />
+                                       @bind-SelectedValues="context.Item.Branches" />
                 </MudItem>
             </MudGrid>
         </MudCardContent>
     </MudCard>
 
-    @if (TheItem.EntryType == CalendarEntryType.Workday)
+    @if (context.Item.EntryType == CalendarEntryType.Workday)
     {
         <MudDivider Class="my-4" />
 
-        <MultiItemField DisableCounter DisableDragAndDrop="false" DisableReorder ControlVariant="Variant.Filled" @bind-Value="TheItem.ShiftGroups" T="CompanyCalendarShiftGroupDTO">
+        <MultiItemField DisableCounter DisableDragAndDrop="false" DisableReorder ControlVariant="Variant.Filled" @bind-Value="context.Item.ShiftGroups" T="CompanyCalendarShiftGroupDTO">
             <FieldHeader Context="HeaderContext">
                 <MudText Typo="Typo.h6" Class="mb-2">@Loc["Shift Groups"]</MudText>
             </FieldHeader>
@@ -161,7 +158,7 @@
         @* ── Workday-specific: Weekend Groups ── *@
         <MudDivider Class="my-4" />
 
-        <MultiItemField DisableCounter DisableDragAndDrop="false" DisableReorder ControlVariant="Variant.Filled" @bind-Value="TheItem.WeekendGroups" T="CompanyCalendarWeekendGroupDTO">
+        <MultiItemField DisableCounter DisableDragAndDrop="false" DisableReorder ControlVariant="Variant.Filled" @bind-Value="context.Item.WeekendGroups" T="CompanyCalendarWeekendGroupDTO">
             <FieldHeader Context="HeaderContext">
                 <MudText Typo="Typo.h6" Class="mb-2">@Loc["Weekend Groups"]</MudText>
             </FieldHeader>
@@ -230,6 +227,11 @@
 </ShiftEntityForm>
 
 @code {
+    [Parameter]
+    public object? Key { get; set; }
+
+    private CompanyCalendarDTO _theItem = new();
+
     [Parameter] public DateTime? InitialStartDate { get; set; }
     [Parameter] public DateTime? InitialEndDate { get; set; }
     [Parameter] public ShiftEntitySelectDTO? InitialCompany { get; set; }
@@ -254,16 +256,16 @@
             .ToArray();
 
         if (InitialStartDate is not null)
-            TheItem.StartDate = InitialStartDate;
+            _theItem.StartDate = InitialStartDate;
 
         if (InitialEndDate is not null)
-            TheItem.EndDate = InitialEndDate;
+            _theItem.EndDate = InitialEndDate;
 
         if (InitialCompany is not null)
-            TheItem.Company = InitialCompany;
+            _theItem.Company = InitialCompany;
 
         if (InitialBranches is not null)
-            TheItem.Branches = InitialBranches;
+            _theItem.Branches = InitialBranches;
     }
 
     private string DayOfWeekToString(int day) => day switch

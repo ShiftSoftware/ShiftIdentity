@@ -1,14 +1,11 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(DepartmentForm)}/{{Key?}}")]
-@inherits ShiftForm<DepartmentForm, ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentDTO>
 @inject HttpClient Http
 @inject ShiftIdentityLocalizer Loc
 
 
-<ShiftEntityForm @bind-Mode="Mode"
-                 @bind-Value="TheItem"
-                 @ref="FormContainer"
+<ShiftEntityForm @bind-Value="_theItem"
                  Endpoint="@($"{Constants.IdentityRoutePreifix}Department")"
                  Title="@Loc["Department"]"
                  AllowSaveAsNew
@@ -16,12 +13,17 @@
                  TypeAuthAction="ShiftIdentityActions.Departments"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentDTO">
 
-    <LocalizedTextField @bind-Value="TheItem.Name" For="() => TheItem.Name" Label="@Loc["Name"]" />
+    <LocalizedTextField @bind-Value="context.Item.Name" For="() => context.Item.Name" Label="@Loc["Name"]" />
 
-    <MudTextFieldExtended @bind-Value="TheItem.IntegrationId" Label="@Loc["Integration ID"]" For="() => TheItem.IntegrationId" />
+    <MudTextFieldExtended @bind-Value="context.Item.IntegrationId" Label="@Loc["Integration ID"]" For="() => context.Item.IntegrationId" />
 </ShiftEntityForm>
 
 @code {
+    [Parameter]
+    public object? Key { get; set; }
+
+    private ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentDTO _theItem = new();
+
     [Parameter]
     public string? DepartmentName { get; set; }
 
@@ -29,7 +31,7 @@
     {
         if (!string.IsNullOrWhiteSpace(DepartmentName))
         {
-            TheItem.Name = DepartmentName;
+            _theItem.Name = DepartmentName;
         }
     }
 }

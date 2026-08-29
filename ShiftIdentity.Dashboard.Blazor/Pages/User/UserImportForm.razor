@@ -1,10 +1,6 @@
 ﻿@inject ShiftIdentityLocalizer Loc
 
-@inherits ShiftForm<UserImportForm, UserImportDTO>
-
-<ShiftEntityForm @bind-Mode="Mode"
-                 @bind-Value="TheItem"
-                 @ref="FormContainer"
+<ShiftEntityForm @bind-Value="_theItem"
                  Endpoint="IdentityUser/ImportUsers"
                  Title="@Loc["Import User From CSV"]"
                  TypeAuthAction="ShiftIdentityActions.Users"
@@ -29,11 +25,16 @@
     </MudFileUpload>
 
     <MudCheckBoxExtended Label="@Loc["Send login info to the user"]"
-                         @bind-Value="TheItem.SendLoginInfoByEmail"
-                         For="@(() => TheItem.SendLoginInfoByEmail)" />
+                         @bind-Value="context.Item.SendLoginInfoByEmail"
+                         For="@(() => context.Item.SendLoginInfoByEmail)" />
 </ShiftEntityForm>
 
 @code {
+    [Parameter]
+    public object? Key { get; set; }
+
+    private UserImportDTO _theItem = new();
+
     private IBrowserFile? selectedFile;
 
     private void SelectFile(IBrowserFile file)
@@ -60,6 +61,6 @@
     async Task OnSubmit()
     {
         var users = await ParseCSVAsync();
-        TheItem.Users = users.ToList();
+        _theItem.Users = users.ToList();
     }
 }

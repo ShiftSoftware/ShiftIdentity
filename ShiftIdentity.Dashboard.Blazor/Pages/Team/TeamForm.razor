@@ -9,16 +9,12 @@
 
 
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(TeamForm)}/{{Key?}}")]
-@inherits ShiftForm<TeamForm, ShiftSoftware.ShiftIdentity.Core.DTOs.Team.TeamDTO>
 @inject HttpClient Http
 @inject ODataQuery odataQuery
 @inject ShiftIdentityLocalizer Loc
 @inject ShiftIdentityDashboardBlazorOptions Options
 
-<ShiftEntityForm @bind-Mode="Mode"
-                 @bind-Value="TheItem"
-                 @ref="FormContainer"
-                 AllowSaveAsNew
+<ShiftEntityForm AllowSaveAsNew
                  Endpoint="@($"{Constants.IdentityRoutePreifix}Team")"
                  Title="@Loc["Team"]"
                  @bind-Key="@Key"
@@ -26,35 +22,35 @@
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.Team.TeamDTO">
     <MudGrid Spacing="4">
         <MudItem lg="4" md="12" sm="12" xs="12">
-            <MudTextField ReadOnly="@ReadOnly"
-                          Disabled="@Disabled"
+            <MudTextField ReadOnly="@context.ReadOnly"
+                          Disabled="@context.Disabled"
                           OnlyValidateIfDirty="true"
                           Label="@Loc["Team Name"]"
-                          @bind-Value="TheItem.Name"
-                          For="@(() => TheItem.Name)" />
+                          @bind-Value="context.Item.Name"
+                          For="@(() => context.Item.Name)" />
         </MudItem>
         <MudItem lg="4" md="12" sm="12" xs="12">
-            <MudTextField ReadOnly="@ReadOnly"
-                          Disabled="@Disabled"
+            <MudTextField ReadOnly="@context.ReadOnly"
+                          Disabled="@context.Disabled"
                           OnlyValidateIfDirty="true"
                           Label="@Loc["Integration ID"]"
-                          @bind-Value="TheItem.IntegrationId"
-                          For="@(() => TheItem.IntegrationId)" />
+                          @bind-Value="context.Item.IntegrationId"
+                          For="@(() => context.Item.IntegrationId)" />
         </MudItem>
         <MudItem lg="4" md="12" sm="12" xs="12">
             <ShiftAutocomplete Label="@Loc["Company"]"
-                               For="@(() => TheItem.Company)"
-                               Value="TheItem.Company"
-                               ValueChanged="(v) => { TheItem.Company = v; TheItem.CompanyBranches = new(); TheItem.Users = new(); }"
+                               For="@(() => context.Item.Company)"
+                               Value="context.Item.Company"
+                               ValueChanged="(v) => { context.Item.Company = v; context.Item.CompanyBranches = new(); context.Item.Users = new(); }"
                                EntitySet="IdentityCompany"
                                TEntitySet="CompanyListDTO" />
         </MudItem>
         <MudItem lg="12" md="12" sm="12" xs="12">
             <ShiftAutocomplete Label="@Loc["Company Branch"]"
                                TEntitySet="CompanyBranchListDTO"
-                               Filter="@(x=> x.Add(nameof(CompanyBranchListDTO.CompanyId), ShiftBlazor.Enums.ODataOperator.Equal, TheItem.Company.Value))"
-                               Disabled="TheItem.Company == null"
-                               @bind-SelectedValues="TheItem.CompanyBranches"
+                               Filter="@(x=> x.Add(nameof(CompanyBranchListDTO.CompanyId), ShiftBlazor.Enums.ODataOperator.Equal, context.Item.Company.Value))"
+                               Disabled="context.Item.Company == null"
+                               @bind-SelectedValues="context.Item.CompanyBranches"
                                EntitySet="IdentityCompanyBranch"
                                MultiSelect />
         </MudItem>
@@ -62,9 +58,9 @@
         <MudItem lg="12" md="12" sm="12" xs="12">
             <ShiftAutocomplete Label="@Loc["Users"]"
                                TEntitySet="UserListDTO"
-                               Filter="@(x=> x.Add(nameof(UserListDTO.CompanyID), ShiftBlazor.Enums.ODataOperator.Equal, TheItem.Company.Value))"
-                               Disabled="TheItem.Company == null"
-                               @bind-SelectedValues="TheItem.Users"
+                               Filter="@(x=> x.Add(nameof(UserListDTO.CompanyID), ShiftBlazor.Enums.ODataOperator.Equal, context.Item.Company.Value))"
+                               Disabled="context.Item.Company == null"
+                               @bind-SelectedValues="context.Item.Users"
                                EntitySet="IdentityUser"
                                MultiSelect />
         </MudItem>
@@ -72,7 +68,7 @@
         <MudItem lg="12" md="12" sm="12" xs="12">
             <MudSelectExtended MultiSelection="true"
                                OnlyValidateIfDirty="true"
-                               @bind-SelectedValues="TheItem.Tags"
+                               @bind-SelectedValues="context.Item.Tags"
                                T="string"
                                Label="@Loc["Tags"]">
                 @foreach (var state in Options.TeamTags)
@@ -83,3 +79,8 @@
         </MudItem>
     </MudGrid>
 </ShiftEntityForm>
+
+@code {
+    [Parameter]
+    public object? Key { get; set; }
+}

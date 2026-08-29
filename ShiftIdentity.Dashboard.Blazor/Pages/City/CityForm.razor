@@ -1,37 +1,39 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CityForm)}/{{Key?}}")]
-@inherits ShiftForm<CityForm, ShiftSoftware.ShiftIdentity.Core.DTOs.City.CityDTO>
 @inject HttpClient Http
 @inject ODataQuery odataQuery
 @inject ShiftIdentityLocalizer Loc
 
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.City
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Region
 
-<ShiftEntityForm @bind-Mode="Mode"
-                 @bind-Value="TheItem"
-                 @ref="FormContainer"
-                 Endpoint="@($"{Constants.IdentityRoutePreifix}City")"
+<ShiftEntityForm Endpoint="@($"{Constants.IdentityRoutePreifix}City")"
                  Title="@Loc["City"]"
                  AllowSaveAsNew
                  @bind-Key="@Key"
                  TypeAuthAction="ShiftIdentityActions.Cities"
-                 T="ShiftSoftware.ShiftIdentity.Core.DTOs.City.CityDTO">
+                 T="CityDTO">
 
-    <LocalizedTextField @bind-Value="TheItem.Name" For="() => TheItem.Name" Label="@Loc["Name"]" />
+    <LocalizedTextField @bind-Value="context.Item.Name" For="() => context.Item.Name" Label="@Loc["Name"]" />
 
     <ShiftAutocomplete Label="@Loc["Region"]"
-                       For="@(() => TheItem.Region)"
-                       @bind-Value="TheItem.Region"
+                       For="@(() => context.Item.Region)"
+                       @bind-Value="context.Item.Region"
                        EntitySet="IdentityRegion"
                        TEntitySet="RegionListDTO" />
 
-    <MudTextFieldExtended @bind-Value="TheItem.IntegrationId" For="() => TheItem.IntegrationId" Label="@Loc["Integration ID"]" />
+    <MudTextFieldExtended @bind-Value="context.Item.IntegrationId" For="() => context.Item.IntegrationId" Label="@Loc["Integration ID"]" />
 
-    <MudNumericFieldExtended ReadOnly="@ReadOnly"
-                             Disabled="@Disabled"
+    <MudNumericFieldExtended ReadOnly="@context.ReadOnly"
+                             Disabled="@context.Disabled"
                              OnlyValidateIfDirty="true"
                              Label="@Loc["Display Order"]"
-                             @bind-Value="TheItem.DisplayOrder"
-                             For="@(() => TheItem.DisplayOrder)" />
+                             @bind-Value="context.Item.DisplayOrder"
+                             For="@(() => context.Item.DisplayOrder)" />
 </ShiftEntityForm>
+
+@code {
+    [Parameter]
+    public object? Key { get; set; }
+}

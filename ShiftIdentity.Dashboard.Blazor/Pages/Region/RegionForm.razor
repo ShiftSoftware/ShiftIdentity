@@ -1,55 +1,56 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(RegionForm)}/{{Key?}}")]
-@inherits ShiftForm<RegionForm, ShiftSoftware.ShiftIdentity.Core.DTOs.Region.RegionDTO>
 @inject HttpClient Http
 @inject ShiftIdentityLocalizer Loc
 
-<ShiftEntityForm @bind-Mode="Mode"
-                 @bind-Value="TheItem"
-                 @ref="FormContainer"
-                 Endpoint="@($"{Constants.IdentityRoutePreifix}Region")"
+<ShiftEntityForm Endpoint="@($"{Constants.IdentityRoutePreifix}Region")"
                  Title="@Loc["Region"]"
                  @bind-Key="@Key"
                  AllowSaveAsNew
                  TypeAuthAction="ShiftIdentityActions.Regions"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.Region.RegionDTO">
 
-    <LocalizedTextField @bind-Value="TheItem.Name" Label="@Loc["Name"]" For="() => TheItem.Name" />
+    <LocalizedTextField @bind-Value="context.Item.Name" Label="@Loc["Name"]" For="() => context.Item.Name" />
 
     <ShiftAutocomplete Label="@Loc["Country"]"
-                       For="@(() => TheItem.Country)"
-                       @bind-Value="TheItem.Country"
+                       For="@(() => context.Item.Country)"
+                       @bind-Value="context.Item.Country"
                        EntitySet="IdentityCountry"
                        TEntitySet="CountryListDTO" />
 
-    <MudTextField ReadOnly="@ReadOnly"
-                  Disabled="@Disabled"
+    <MudTextField ReadOnly="@context.ReadOnly"
+                  Disabled="@context.Disabled"
                   OnlyValidateIfDirty="true"
                   Label="@Loc["Short Code"]"
-                  @bind-Value="TheItem.ShortCode"
-                  For="@(() => TheItem.ShortCode)" />
+                  @bind-Value="context.Item.ShortCode"
+                  For="@(() => context.Item.ShortCode)" />
 
-    <MudTextField ReadOnly="@ReadOnly"
-                  Disabled="@Disabled"
+    <MudTextField ReadOnly="@context.ReadOnly"
+                  Disabled="@context.Disabled"
                   OnlyValidateIfDirty="true"
                   Label="@Loc["Integration ID"]"
-                  @bind-Value="TheItem.IntegrationId"
-                  For="@(() => TheItem.IntegrationId)" />
+                  @bind-Value="context.Item.IntegrationId"
+                  For="@(() => context.Item.IntegrationId)" />
 
     <MudItem xs="12" sm="12" lg="12" xl="12">
         <FileUploader ShowThumbnail="true"
                       Label="@Loc["Flag"]"
-                      For="() => TheItem.Flag"
+                      For="() => context.Item.Flag"
                       MaxFileCount="1"
                       AcceptImages="true"
-                      @bind-Values="TheItem.Flag" />
+                      @bind-Values="context.Item.Flag" />
     </MudItem>
 
-    <MudNumericFieldExtended ReadOnly="@ReadOnly"
-                             Disabled="@Disabled"
+    <MudNumericFieldExtended ReadOnly="@context.ReadOnly"
+                             Disabled="@context.Disabled"
                              OnlyValidateIfDirty="true"
                              Label="@Loc["Display Order"]"
-                             @bind-Value="TheItem.DisplayOrder"
-                             For="@(() => TheItem.DisplayOrder)" />
+                             @bind-Value="context.Item.DisplayOrder"
+                             For="@(() => context.Item.DisplayOrder)" />
 </ShiftEntityForm>
+
+@code {
+    [Parameter]
+    public object? Key { get; set; }
+}

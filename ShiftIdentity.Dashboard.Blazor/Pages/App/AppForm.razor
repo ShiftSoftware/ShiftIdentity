@@ -1,63 +1,60 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(AppForm)}/{{Key?}}")]
-@inherits ShiftForm<AppForm, ShiftSoftware.ShiftIdentity.Core.DTOs.App.AppDTO>
 @inject HttpClient Http
 @inject ShiftIdentityLocalizer Loc
 
 
-<ShiftEntityForm @bind-Mode="Mode"
-                 @bind-Value="TheItem"
-                 @ref="FormContainer"
-                 Endpoint="@($"{Constants.IdentityRoutePreifix}App")"
+<ShiftEntityForm Endpoint="@($"{Constants.IdentityRoutePreifix}App")"
                  Title="@Loc["App"]"
                  @bind-Key="@Key"
                  AllowSaveAsNew
                  TypeAuthAction="ShiftIdentityActions.Apps"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.App.AppDTO">
 
-    <MudTextField ReadOnly="@ReadOnly"
-                  Disabled="@Disabled"
+    <MudTextField ReadOnly="@context.ReadOnly"
+                  Disabled="@context.Disabled"
                   OnlyValidateIfDirty="true"
                   Label="@Loc["Display Name"]"
-                  @bind-Value="TheItem.DisplayName"
-                  For="@(() => TheItem.DisplayName)" />
+                  @bind-Value="context.Item.DisplayName"
+                  For="@(() => context.Item.DisplayName)" />
 
-    <MudTextField ReadOnly="@ReadOnly"
-                  Disabled="@Disabled"
+    <MudTextField ReadOnly="@context.ReadOnly"
+                  Disabled="@context.Disabled"
                   OnlyValidateIfDirty="true"
                   Label="@Loc["App Id"]"
-                  @bind-Value="TheItem.AppId"
-                  For="@(() => TheItem.AppId)" />
+                  @bind-Value="context.Item.AppId"
+                  For="@(() => context.Item.AppId)" />
 
-    <MudTextField ReadOnly="@ReadOnly"
-                  Disabled="@Disabled"
+    <MudTextField ReadOnly="@context.ReadOnly"
+                  Disabled="@context.Disabled"
                   OnlyValidateIfDirty="true"
                   Label="@Loc["Description"]"
-                  @bind-Value="TheItem.Description"
-                  For="@(() => TheItem.Description)" />
+                  @bind-Value="context.Item.Description"
+                  For="@(() => context.Item.Description)" />
 
-    <MudTextField ReadOnly="@ReadOnly"
-                  Disabled="@Disabled"
+    <MudTextField ReadOnly="@context.ReadOnly"
+                  Disabled="@context.Disabled"
                   OnlyValidateIfDirty="true"
                   Label="@Loc["Redirect URI"]"
-                  @bind-Value="TheItem.RedirectUri"
-                  For="@(() => TheItem.RedirectUri)" />
+                  @bind-Value="context.Item.RedirectUri"
+                  For="@(() => context.Item.RedirectUri)" />
 
                   <br/>
-    @if (!string.IsNullOrWhiteSpace(TheItem.RedirectUri))
+    @if (!string.IsNullOrWhiteSpace(context.Item.RedirectUri))
     {
-        <MudAlert Severity="Severity.Warning">@Loc["The user will be redirected to"] @($"{TheItem.RedirectUri}/Auth/Token")</MudAlert>
+        <MudAlert Severity="Severity.Warning">@Loc["The user will be redirected to"] @($"{context.Item.RedirectUri}/Auth/Token")</MudAlert>
     }
 
-    @*    <MudTextField ReadOnly="@ReadOnly"
-    Disabled="@Disabled"
+    @*    <MudTextField ReadOnly="@context.ReadOnly"
+    Disabled="@context.Disabled"
     OnlyValidateIfDirty="true"
     Label="Post Logout Redirect Uri"
-    @bind-Value="TheItem.PostLogoutRedirectUri"
-    For="@(() => TheItem.PostLogoutRedirectUri)" />*@
+    @bind-Value="context.Item.PostLogoutRedirectUri"
+    For="@(() => context.Item.PostLogoutRedirectUri)" />*@
 </ShiftEntityForm>
 
 @code {
-
+    [Parameter]
+    public object? Key { get; set; }
 }

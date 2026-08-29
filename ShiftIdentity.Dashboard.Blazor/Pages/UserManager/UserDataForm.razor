@@ -1,16 +1,13 @@
 ﻿@attribute [Authorize]
 @layout Shared.DefaultLayout
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(UserDataForm)}")]
-@inherits ShiftForm<UserDataForm, ShiftIdentity.Core.DTOs.User.UserDataDTO>
 @inject ShiftModal ShiftModal
 @inject HttpClient Http
 @inject MessageService MessageService
 @using ShiftSoftware.ShiftBlazor.Enums
 @inject ShiftIdentityLocalizer Loc
 
-<ShiftEntityForm @bind-Mode="Mode"
-                 @bind-Value="TheItem"
-                 @ref="FormContainer"
+<ShiftEntityForm @bind-Mode="_mode"
                  Endpoint="UserManager/UserData"
                  Title="@Loc["Profile"]"
                  HideDelete="true"
@@ -18,7 +15,7 @@
                  Key="@("")"
                  T=" ShiftIdentity.Core.DTOs.User.UserDataDTO">
     <ToolbarStartTemplate>
-        @if (this.Mode == FormModes.View)
+        @if (_mode == FormModes.View)
         {
             <MudButton OnClick="()=> ShiftModal.Open<ChangePasswordForm>(null, ModalOpenMode.Popup, null)" Size="Size.Small" Color="Color.Warning" StartIcon="@Icons.Material.Filled.Edit" Variant="Variant.Filled">@Loc["Change Password"]</MudButton>
             <MudButton OnClick="()=> ShiftModal.Open<TotpEnrollmentForm>(null, ModalOpenMode.Popup, null)" Size="Size.Small" Color="Color.Warning" StartIcon="@Icons.Material.Filled.Edit" Variant="Variant.Filled">@Loc["Enroll Two Factor"]</MudButton>
@@ -30,12 +27,12 @@
         <MudDivider />
 
         <MudTextField Immediate="true"
-                      ReadOnly="@ReadOnly"
-                      Disabled="@Disabled"
+                      ReadOnly="@context.ReadOnly"
+                      Disabled="@context.Disabled"
                       OnlyValidateIfDirty="true"
                       Label="@Loc["Username"]"
-                      @bind-Value="TheItem.Username"
-                      For="@(() => TheItem.Username)" />
+                      @bind-Value="context.Item.Username"
+                      For="@(() => context.Item.Username)" />
 
         <br />
         <br />
@@ -43,22 +40,22 @@
         <h2>@Loc["Contacts"]</h2>
         <MudDivider />
         <MudTextField Immediate="true"
-                      ReadOnly="@ReadOnly"
-                      Disabled="@Disabled"
+                      ReadOnly="@context.ReadOnly"
+                      Disabled="@context.Disabled"
                       OnlyValidateIfDirty="true"
                       Label="@Loc["Phone"]"
-                      @bind-Value="TheItem.Phone"
-                      For="@(() => TheItem.Phone)" />
+                      @bind-Value="context.Item.Phone"
+                      For="@(() => context.Item.Phone)" />
 
         <MudTextField Immediate="true"
-                      ReadOnly="@ReadOnly"
-                      Disabled="@Disabled"
+                      ReadOnly="@context.ReadOnly"
+                      Disabled="@context.Disabled"
                       OnlyValidateIfDirty="true"
                       Label="@Loc["Email"]"
-                      @bind-Value="TheItem.Email"
-                      For="@(() => TheItem.Email)" />
+                      @bind-Value="context.Item.Email"
+                      For="@(() => context.Item.Email)" />
 
-        @if (!TheItem.EmailVerified && this.Mode == FormModes.View && !string.IsNullOrWhiteSpace(TheItem.Email))
+        @if (!context.Item.EmailVerified && context.Mode == FormModes.View && !string.IsNullOrWhiteSpace(context.Item.Email))
         {
             <br />
             <MudButton Size="Size.Small"
@@ -77,33 +74,35 @@
         <h2>@Loc["Profile"]</h2>
         <MudDivider />
         <MudTextField Immediate="true"
-                      ReadOnly="@ReadOnly"
-                      Disabled="@Disabled"
+                      ReadOnly="@context.ReadOnly"
+                      Disabled="@context.Disabled"
                       OnlyValidateIfDirty="true"
                       Label="@Loc["Full Name"]"
-                      @bind-Value="TheItem.FullName"
-                      For="@(() => TheItem.FullName)" />
+                      @bind-Value="context.Item.FullName"
+                      For="@(() => context.Item.FullName)" />
 
-        <MudDatePicker ReadOnly="@ReadOnly"
-                       Disabled="@Disabled"
-                       @bind-Date="TheItem.BirthDate"
+        <MudDatePicker ReadOnly="@context.ReadOnly"
+                       Disabled="@context.Disabled"
+                       @bind-Date="context.Item.BirthDate"
                        Label="@Loc["Birth Date"]"
-                       For="@(() => TheItem.BirthDate)" />
+                       For="@(() => context.Item.BirthDate)" />
 
         <MudItem xs="6" sm="6" lg="2" xl="2">
             <FileUploader ShowThumbnail="true"
                           Label="@Loc["Signature"]"
-                          For="() => TheItem.Signature"
+                          For="() => context.Item.Signature"
                           MaxFileCount="1"
                           AcceptImages="true"
                           DisableToolbar="true"
-                          @bind-Values="TheItem.Signature" />
+                          @bind-Values="context.Item.Signature" />
         </MudItem>
 
     </ChildContent>
 </ShiftEntityForm>
 
 @code {
+    private FormModes _mode;
+
     private async Task SendEmailVerification()
     {
         var response = await Http.GetAsync("usermanager/SendEmailVerificationLink");

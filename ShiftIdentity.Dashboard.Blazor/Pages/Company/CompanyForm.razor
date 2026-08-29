@@ -1,7 +1,6 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CompanyForm)}/{{Key?}}")]
-@inherits ShiftForm<CompanyForm, ShiftSoftware.ShiftIdentity.Core.DTOs.Company.CompanyDTO>
 @inject HttpClient Http
 @inject ShiftIdentityDashboardBlazorOptions Options
 @inject ShiftIdentityLocalizer Loc
@@ -10,9 +9,7 @@
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Company
 
 
-<ShiftEntityForm @bind-Mode="Mode"
-                 @bind-Value="TheItem"
-                 @ref="FormContainer"
+<ShiftEntityForm @bind-Value="_theItem"
                  AllowSaveAsNew
                  Endpoint="@($"{Constants.IdentityRoutePreifix}Company")"
                  Title="@Loc["Company"]"
@@ -25,40 +22,40 @@
     <MudGrid>
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
-            <LocalizedTextField @bind-Value="TheItem.Name" Label="@Loc["Name"]" For="() => TheItem.Name" />
+            <LocalizedTextField @bind-Value="context.Item.Name" Label="@Loc["Name"]" For="() => context.Item.Name" />
         </MudItem>
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
-            <LocalizedTextField @bind-Value="TheItem.LegalName" Label="@Loc["Legal Name"]" For="() => TheItem.LegalName" />
+            <LocalizedTextField @bind-Value="context.Item.LegalName" Label="@Loc["Legal Name"]" For="() => context.Item.LegalName" />
         </MudItem>
 
         <MudItem xs="12" sm="6" lg="4" xl="3">
-            <MudTextField ReadOnly="@ReadOnly"
-                          Disabled="@Disabled"
+            <MudTextField ReadOnly="@context.ReadOnly"
+                          Disabled="@context.Disabled"
                           OnlyValidateIfDirty="true"
                           Label="@Loc["Short Code"]"
-                          @bind-Value="TheItem.ShortCode"
-                          For="@(() => TheItem.ShortCode)" />
+                          @bind-Value="context.Item.ShortCode"
+                          For="@(() => context.Item.ShortCode)" />
         </MudItem>
 
         <MudItem xs="12" sm="6" lg="4" xl="3">
-            <MudTextField ReadOnly="@ReadOnly"
-                          Disabled="@Disabled"
+            <MudTextField ReadOnly="@context.ReadOnly"
+                          Disabled="@context.Disabled"
                           OnlyValidateIfDirty="true"
                           Label="@Loc["Integration ID"]"
-                          @bind-Value="TheItem.IntegrationId"
-                          For="@(() => TheItem.IntegrationId)" />
+                          @bind-Value="context.Item.IntegrationId"
+                          For="@(() => context.Item.IntegrationId)" />
         </MudItem>
 
         <MudItem xs="12" sm="6" lg="4" xl="3">
-            <MudSelect ReadOnly="@ReadOnly"
-                       Disabled="@Disabled"
+            <MudSelect ReadOnly="@context.ReadOnly"
+                       Disabled="@context.Disabled"
                        OnlyValidateIfDirty="true"
                        T="CompanyTypes"
                        Label="@Loc["Company Type"]"
-                       @bind-Value="TheItem.CompanyType"
+                       @bind-Value="context.Item.CompanyType"
                        ToStringFunc="@(x=> x.Describe())"
-                       For="@(() => TheItem.CompanyType)">
+                       For="@(() => context.Item.CompanyType)">
                 <MudSelectItem Value="@(CompanyTypes.NotSpecified)" />
                 <MudSelectItem Value="@(CompanyTypes.DistributorOrFranchisee)" />
                 <MudSelectItem Value="@(CompanyTypes.RetailerOrDealer)" />
@@ -69,85 +66,85 @@
         </MudItem>
 
         <MudItem xs="12" sm="6" lg="4" xl="3">
-            <MudTextField ReadOnly="@ReadOnly"
-                          Disabled="@Disabled"
+            <MudTextField ReadOnly="@context.ReadOnly"
+                          Disabled="@context.Disabled"
                           OnlyValidateIfDirty="true"
                           Label="@Loc["HQ Phone"]"
-                          @bind-Value="TheItem.HQPhone"
-                          For="@(() => TheItem.HQPhone)" />
+                          @bind-Value="context.Item.HQPhone"
+                          For="@(() => context.Item.HQPhone)" />
         </MudItem>
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
-            <LocalizedTextField @bind-Value="TheItem.HQAddress"
+            <LocalizedTextField @bind-Value="context.Item.HQAddress"
                                 Label="@Loc["HQ Address"]"
-                                For="() => TheItem.HQAddress" />
+                                For="() => context.Item.HQAddress" />
         </MudItem>
 
         <MudItem xs="12" sm="6" lg="4" xl="3">
-            <MudTextField ReadOnly="@ReadOnly"
-                          Disabled="@Disabled"
+            <MudTextField ReadOnly="@context.ReadOnly"
+                          Disabled="@context.Disabled"
                           OnlyValidateIfDirty="true"
                           Label="@Loc["HQ Email"]"
-                          @bind-Value="TheItem.HQEmail"
-                          For="@(() => TheItem.HQEmail)" />
+                          @bind-Value="context.Item.HQEmail"
+                          For="@(() => context.Item.HQEmail)" />
         </MudItem>
 
         <MudItem xs="12" sm="6" lg="4" xl="3">
-            <MudTextField ReadOnly="@ReadOnly"
-                          Disabled="@Disabled"
+            <MudTextField ReadOnly="@context.ReadOnly"
+                          Disabled="@context.Disabled"
                           OnlyValidateIfDirty="true"
                           Label="@Loc["Website"]"
-                          @bind-Value="TheItem.Website"
-                          For="@(() => TheItem.Website)" />
+                          @bind-Value="context.Item.Website"
+                          For="@(() => context.Item.Website)" />
         </MudItem>
 
         <MudItem xs="12" sm="6" lg="4" xl="3">
             <ShiftAutocomplete Label="@Loc["Parent Company"]"
-                               For="@(() => TheItem.ParentCompany)"
-                               @bind-Value="TheItem.ParentCompany"
+                               For="@(() => context.Item.ParentCompany)"
+                               @bind-Value="context.Item.ParentCompany"
                                EntitySet="IdentityCompany"
-                               Filter="(string.IsNullOrWhiteSpace(TheItem.ID)? null: x=> x.Add(f => { f.Field = nameof(CompanyListDTO.ID); f.Value = TheItem.ID; f.Operator=ShiftBlazor.Enums.ODataOperator.NotEqual;}))"
+                               Filter="(string.IsNullOrWhiteSpace(context.Item.ID)? null: x=> x.Add(f => { f.Field = nameof(CompanyListDTO.ID); f.Value = context.Item.ID; f.Operator=ShiftBlazor.Enums.ODataOperator.NotEqual;}))"
                                TEntitySet="CompanyListDTO" />
         </MudItem>
 
         <MudItem xs="12" sm="6" lg="4" xl="3">
-            <MudDatePickerExtended ReadOnly="@ReadOnly"
-                          Disabled="@Disabled"
+            <MudDatePickerExtended ReadOnly="@context.ReadOnly"
+                          Disabled="@context.Disabled"
                           Clearable="true"
                           Label="@Loc["TerminationDate"]"
-                          @bind-Date="TheItem.TerminationDate"
-                          For="@(() => TheItem.TerminationDate)" />
+                          @bind-Date="context.Item.TerminationDate"
+                          For="@(() => context.Item.TerminationDate)" />
         </MudItem>
 
         <MudItem xs="12" sm="6" lg="4" xl="3">
-            <MudNumericFieldExtended ReadOnly="@ReadOnly"
-                                     Disabled="@Disabled"
+            <MudNumericFieldExtended ReadOnly="@context.ReadOnly"
+                                     Disabled="@context.Disabled"
                                      OnlyValidateIfDirty="true"
                                      Label="@Loc["Display Order"]"
-                                     @bind-Value="TheItem.DisplayOrder"
-                                     For="@(() => TheItem.DisplayOrder)" />
+                                     @bind-Value="context.Item.DisplayOrder"
+                                     For="@(() => context.Item.DisplayOrder)" />
         </MudItem>
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
             <FileUploader ShowThumbnail="true"
                           Label="@Loc["Logo"]"
-                          For="() => TheItem.Logo"
+                          For="() => context.Item.Logo"
                           AcceptImages="true"
                           MaxFileCount="1"
-                          @bind-Values="TheItem.Logo" />
+                          @bind-Values="context.Item.Logo" />
         </MudItem>
 
-        @if (this.TheItem.CustomFields is not null && this.TheItem.CustomFields?.Count > 0)
+        @if (context.Item.CustomFields is not null && context.Item.CustomFields?.Count > 0)
         {
-            @foreach (var field in this.TheItem.CustomFields)
+            @foreach (var field in context.Item.CustomFields)
             {
                 <MudItem xs="12" sm="6" lg="3" xl="3">
-                    <MudTextField ReadOnly="@ReadOnly"
-                                  Disabled="@Disabled"
+                    <MudTextField ReadOnly="@context.ReadOnly"
+                                  Disabled="@context.Disabled"
                                   Label="@field.Value.DisplayName"
                                   Placeholder="@((field.Value.IsPassword && field.Value.HasValue)?"******":null)"
                                   InputType="@(field.Value.IsPassword?InputType.Password:InputType.Text)"
-                                  @bind-Value="this.TheItem.CustomFields[field.Key].Value" />
+                                  @bind-Value="context.Item.CustomFields[field.Key].Value" />
                 </MudItem>
             }
         }
@@ -155,6 +152,11 @@
 </ShiftEntityForm>
 
 @code {
+    [Parameter]
+    public object? Key { get; set; }
+
+    private ShiftSoftware.ShiftIdentity.Core.DTOs.Company.CompanyDTO _theItem = new();
+
     protected override Task OnInitializedAsync()
     {
         this.SetCustomFiles();
@@ -170,16 +172,16 @@
     private void SetCustomFiles()
     {
         // Only keep fields that are registred in Options
-        TheItem.CustomFields = TheItem.CustomFields?
+        _theItem.CustomFields = _theItem.CustomFields?
             .Where(kv => Options.CompanyCustomFields.ContainsKey(kv.Key))
             .ToDictionary(kv => kv.Key, kv => kv.Value);
 
         foreach (var field in this.Options.CompanyCustomFields)
         {
-            if (this.TheItem.CustomFields?.ContainsKey(field.Key) ?? false)
-                this.TheItem.CustomFields[field.Key]?.Set(field.Value);
+            if (_theItem.CustomFields?.ContainsKey(field.Key) ?? false)
+                _theItem.CustomFields[field.Key]?.Set(field.Value);
             else
-                this.TheItem.CustomFields?.TryAdd(field.Key, new CustomFieldDTO(field.Value));
+                _theItem.CustomFields?.TryAdd(field.Key, new CustomFieldDTO(field.Value));
         }
     }
 }
