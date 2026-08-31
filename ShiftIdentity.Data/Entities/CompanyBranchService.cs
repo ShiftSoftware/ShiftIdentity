@@ -16,7 +16,6 @@ public class CompanyBranchService : ShiftEntity<CompanyBranchService>, IShiftEnt
     /// <inheritdoc />
     public string? LastReplicationStamp { get; set; }
 
-    public long ID { get; set; }
     public long CompanyBranchID { get; set; }
     public long ServiceID { get; set; }
 
