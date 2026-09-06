@@ -17,6 +17,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShiftIdentity.Data", "Shift
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShiftIdentity.AzureFunctions", "ShiftIdentity.AzureFunctions\ShiftIdentity.AzureFunctions.csproj", "{630E38E3-F369-4FBD-946E-7DB761BF5A62}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShiftIdentity.Tests", "ShiftIdentity.Tests\ShiftIdentity.Tests.csproj", "{10216002-C968-40AD-819F-E467FC496289}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShiftIdentity.Blazor.Tests", "ShiftIdentity.Blazor.Tests\ShiftIdentity.Blazor.Tests.csproj", "{FFFACA96-BED4-4155-A9B0-F0B11A20DCED}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -51,6 +55,14 @@ Global
 		{630E38E3-F369-4FBD-946E-7DB761BF5A62}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{630E38E3-F369-4FBD-946E-7DB761BF5A62}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{630E38E3-F369-4FBD-946E-7DB761BF5A62}.Release|Any CPU.Build.0 = Release|Any CPU
+		{10216002-C968-40AD-819F-E467FC496289}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{10216002-C968-40AD-819F-E467FC496289}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{10216002-C968-40AD-819F-E467FC496289}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{10216002-C968-40AD-819F-E467FC496289}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FFFACA96-BED4-4155-A9B0-F0B11A20DCED}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FFFACA96-BED4-4155-A9B0-F0B11A20DCED}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FFFACA96-BED4-4155-A9B0-F0B11A20DCED}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FFFACA96-BED4-4155-A9B0-F0B11A20DCED}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

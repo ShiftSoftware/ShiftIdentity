@@ -12,7 +12,7 @@ using System.Security.Claims;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 
-public class AuthService
+public partial class AuthService
 {
     private readonly IUserRepository userRepo;
     private readonly ShiftIdentityConfiguration shiftIdentityConfigurations;

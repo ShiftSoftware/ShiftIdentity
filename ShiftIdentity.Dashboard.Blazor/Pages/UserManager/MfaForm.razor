@@ -9,6 +9,8 @@
 @inject IIdentityStore storageService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @using ShiftSoftware.ShiftIdentity.Blazor
+@using AuthenticationFlow = ShiftSoftware.ShiftIdentity.Blazor.Services.AuthenticationFlow
+@using ShiftSoftware.ShiftIdentity.Core.Authentication
 
 <MudPaper Elevation="25" Class="pa-5">
 
@@ -18,6 +20,7 @@
         <MudText>@Loc["Enter the code from your two-factor authentication app or browser extension below"]</MudText>
 
         <MudTextField T="string" Label="@Loc["Code"]" @bind-Value="dto.Code"
+                      Immediate="@(AdmissionFlow is not null)"
                       For="@(() => dto.Code)" InputType="InputType.Password" />
 
         <br />
@@ -29,7 +32,7 @@
                 <MudButton StartIcon="@Icons.Material.Filled.Cancel" OnClick="() => Cancel()">@Loc["Cancel"]</MudButton>
             }
 
-            <MudButton Color="Color.Primary" ButtonType="ButtonType.Submit">
+            <MudButton Disabled="@(AdmissionFlow?.Busy ?? false)" Color="Color.Primary" ButtonType="ButtonType.Submit">
                 <MudIcon Icon="@Icons.Material.Filled.Save" />
                 <MudText Style="padding:0 10px;">@Loc["Verify"]</MudText>
             </MudButton>
@@ -38,6 +41,8 @@
 </MudPaper>
 
 @code {
+    [Parameter] public AuthenticationFlow? AdmissionFlow { get; set; }
+    [Parameter] public EventCallback<AuthOutcome> AdmissionCompleted { get; set; }
     private MfaDTO dto = new ();
 
     [CascadingParameter]
@@ -57,6 +62,13 @@
 
     private async Task VerifyMfa()
     {
+        if (AdmissionFlow is not null)
+        {
+            var outcome = await AdmissionFlow.CompleteMfaAsync(dto.Code);
+            dto.Code = string.Empty;
+            await AdmissionCompleted.InvokeAsync(outcome);
+            return;
+        }
         try
         {
             var result = await AuthService.VerifyMfaAsync(dto);

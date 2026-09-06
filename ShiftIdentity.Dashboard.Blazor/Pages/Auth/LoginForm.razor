@@ -1,5 +1,6 @@
 ﻿@attribute [Route($"{Constants.IdentityRoutePreifix}/login")]
 @layout Shared.EmptyLayout
+@implements IDisposable
 
 @using System.Text.RegularExpressions
 @using System.ComponentModel.DataAnnotations
@@ -7,6 +8,8 @@
 @using ShiftSoftware.ShiftIdentity.Blazor
 @using ShiftSoftware.ShiftIdentity.Core.DTOs
 @using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.UserManager;
+@using AuthenticationFlow = ShiftSoftware.ShiftIdentity.Blazor.Services.AuthenticationFlow
+@using ShiftSoftware.ShiftIdentity.Core.Authentication
 
 @inject ShiftIdentityDashboardBlazorOptions ShiftIdentityDashboardBlazorOptions
 @inject Services.AuthService AuthService
@@ -34,11 +37,26 @@
             <br />
             <br />
 
+            @if (AdmissionFlow?.Pending is { } challenge)
+            {
+                @if (challenge.Step == AuthenticationStep.ExistingMfa)
+                {
+                    <MfaForm AdmissionFlow="AdmissionFlow" AdmissionCompleted="HandleAdmission" />
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info" data-testid="restricted-step">@Loc["Additional account verification is required before signing in."]</MudAlert>
+                }
+                <MudButton OnClick="RestartAdmission">@Loc["Start again"]</MudButton>
+            }
+            else
+            {
             <EditForm Model="@loginDto" OnValidSubmit="Login">
                 <DataAnnotationsValidator />
-                <MudTextField T="string" Label="@Loc["Username"]" @bind-Value="loginDto.Username" For="@(() => loginDto.Username)" />
+                <MudTextField T="string" Label="@Loc["Username"]" @bind-Value="loginDto.Username" For="@(() => loginDto.Username)" Immediate="@(AdmissionFlow is not null)" />
 
                 <MudTextField T="string" Label="@Loc["Password"]" @bind-Value="loginDto.Password"
+                              Immediate="@(AdmissionFlow is not null)"
                               For="@(() => loginDto.Password)"
                               InputType="@passwordInput"
                               Adornment="Adornment.End"
@@ -47,20 +65,28 @@
                               AdornmentAriaLabel="@Loc["Show or hide password"]" />
 
                 <br />
+                @if (AdmissionFlow is null)
+                {
                 <MudButton Size="Size.Small"
                            Color="Color.Warning"
                            Href="@($"{Constants.IdentityRoutePreifix}/{nameof(SendResetPasswordLink)}")"
                            Variant="Variant.Text">
                     @Loc["Forgot Password?"]
                 </MudButton>
+                }
 
                 <br />
                 <br />
 
                 <MudGrid Justify="Justify.Center">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit">@Loc["Login"]</MudButton>
+                    <MudButton Disabled="@(AdmissionFlow?.Busy ?? false)" Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit">@Loc["Login"]</MudButton>
                 </MudGrid>
             </EditForm>
+            }
+            @if (admissionError is not null)
+            {
+                <MudAlert Severity="Severity.Error" data-testid="admission-error">@admissionError</MudAlert>
+            }
 
             <br />
         </MudPaper>
@@ -68,6 +94,29 @@
 </MudGrid>
 
 @code {
+    // Supplied by the isolated component harness; production registration supplies no adapter.
+    [Parameter] public AuthenticationFlow? AdmissionFlow { get; set; }
+    [Parameter] public EventCallback<SessionIssued> SessionCompleted { get; set; }
+    private string? admissionError;
+    public void Dispose() => AdmissionFlow?.Restart();
+
+    private void RestartAdmission()
+    {
+        AdmissionFlow?.Restart();
+        loginDto.Password = string.Empty;
+        admissionError = null;
+    }
+
+    private async Task HandleAdmission(AuthOutcome outcome)
+    {
+        admissionError = outcome is AuthenticationRefused ? Loc["Sign-in could not be completed. Try again."] : null;
+        if (outcome is SessionIssued session)
+        {
+            await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            await SessionCompleted.InvokeAsync(session);
+        }
+    }
+
     LoginDTO loginDto { get; set; } = new LoginDTO();
 
     // Password show/hide toggle (the end-adornment icon button flips both the input type and icon).
@@ -104,6 +153,13 @@
 
     private async Task Login()
     {
+        if (AdmissionFlow is not null)
+        {
+            var outcome = await AdmissionFlow.LoginAsync(loginDto.Username, loginDto.Password);
+            loginDto.Password = string.Empty;
+            await HandleAdmission(outcome);
+            return;
+        }
         var loginResult = await this.AuthService.LoginAsync(loginDto);
 
         if (!loginResult.IsSuccess)
