@@ -20,6 +20,13 @@ internal static class AdmissionEndpoints
             policy.AddAuthenticationSchemes(OperationAuthenticationHandler.SchemeName)
                 .RequireAuthenticatedUser()
                 .RequireClaim(OperationAuthenticationHandler.PurposeClaim, AuthenticationOperationPurpose.Login.ToString()));
+        services.AddAuthorizationBuilder().AddPolicy("IdentityPasswordChange", policy =>
+            policy.AddAuthenticationSchemes(OperationAuthenticationHandler.SchemeName).RequireAuthenticatedUser()
+                .RequireClaim(OperationAuthenticationHandler.PurposeClaim, AuthenticationOperationPurpose.PasswordChange.ToString()));
+        services.AddAuthorizationBuilder().AddPolicy("IdentityOperation", policy =>
+            policy.AddAuthenticationSchemes(OperationAuthenticationHandler.SchemeName).RequireAuthenticatedUser()
+                .RequireClaim(OperationAuthenticationHandler.PurposeClaim,
+                    AuthenticationOperationPurpose.Login.ToString(), AuthenticationOperationPurpose.PasswordChange.ToString()));
     }
 
     internal static void MapIdentityAdmissionEndpoints(this IEndpointRouteBuilder endpoints)
@@ -36,6 +43,20 @@ internal static class AdmissionEndpoints
             .RequireAuthorization("IdentityLoginContinuation");
         group.MapPost("/refresh", async (RenewSessionRequest request, IdentityAdmissionServices services, CancellationToken ct) =>
             Result(await AuthService.RenewSessionAsync(services, request, ct)));
+        group.MapPost("/password-change", async (StartPasswordChangeRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.BeginPasswordChangeAsync(services, context.Request.Headers.Authorization.ToString(), request, ct)));
+        group.MapPost("/password-change/password", async (PasswordChangeProofRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.ProvePasswordAsync(services, context.Request.Headers.Authorization.ToString()[10..], request, ct)))
+            .RequireAuthorization("IdentityPasswordChange");
+        group.MapPost("/password-change/complete", async (CompletePasswordChangeRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.CompletePasswordChangeAsync(services, context.Request.Headers.Authorization.ToString()[10..], request, ct)))
+            .RequireAuthorization("IdentityPasswordChange");
+        group.MapPost("/password-change/mfa", async (CompleteMfaRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.CompleteMfaAsync(services, context.Request.Headers.Authorization.ToString()[10..], request, ct)))
+            .RequireAuthorization("IdentityPasswordChange");
+        group.MapPost("/operations/cancel", async (CancelOperationRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.CancelAsync(services, context.Request.Headers.Authorization.ToString()[10..], request, ct)))
+            .RequireAuthorization("IdentityOperation");
     }
 
     private static IResult Result(AuthOutcome result) => Results.Json<AuthOutcome>(result, statusCode: result switch

@@ -23,6 +23,7 @@ public sealed class IdentityHttpHost : IDisposable
 {
     private readonly TestServer server;
     public HttpClient Client { get; }
+    internal IServiceProvider Services => server.Services;
     public IdentityHttpHost(SqlIdentityFixture fixture, AuthenticationClient? client = null, Action<string>? observe = null,
         params Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor[] interceptors)
     {
@@ -98,6 +99,25 @@ public sealed class IdentityHttpHost : IDisposable
 
     public async Task<AuthOutcome> RefreshAsync(string refresh) =>
         await Read(await Client.PostAsJsonAsync("/api/identity/v2/refresh", new RenewSessionRequest(refresh)));
+
+    public Task<AuthOutcome> StartPasswordChangeAsync(string access, string challenge) =>
+        SendAsync("password-change", "Bearer", access, new StartPasswordChangeRequest(challenge));
+    public Task<AuthOutcome> ProvePasswordAsync(string handle, string password, string verifier) =>
+        SendAsync("password-change/password", "Operation", handle, new PasswordChangeProofRequest(password, verifier));
+    public Task<AuthOutcome> ChangePasswordAsync(string handle, string password, string verifier) =>
+        SendAsync("password-change/complete", "Operation", handle, new CompletePasswordChangeRequest(password, verifier));
+    public Task<AuthOutcome> PasswordMfaAsync(string handle, string code, string verifier) =>
+        SendAsync("password-change/mfa", "Operation", handle, new CompleteMfaRequest(code, verifier));
+    public Task<AuthOutcome> CancelAsync(string handle, string verifier) =>
+        SendAsync("operations/cancel", "Operation", handle, new CancelOperationRequest(verifier));
+
+    private async Task<AuthOutcome> SendAsync<T>(string route, string scheme, string credential, T body)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/identity/v2/" + route);
+        request.Headers.Authorization = new(scheme, credential);
+        request.Content = JsonContent.Create(body);
+        return await Read(await Client.SendAsync(request));
+    }
 
     public static async Task<AuthOutcome> Read(HttpResponseMessage response)
     {

@@ -24,52 +24,41 @@ public sealed class TokenValidationTests
             RandomNumberGenerator.GetBytes(64), RandomNumberGenerator.GetBytes(32));
     }
 
-    [Fact]
-    public void Valid_refresh_retains_bound_subject_client_version_and_proof()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Valid_credentials_retain_bound_subject_client_version_and_proof(bool access)
     {
-        var result = new AdmissionTokenCodec(options, clock).ValidateRefresh(Sign(Payload()), client);
-        Assert.NotNull(result);
-        Assert.Equal(42, result.UserID);
-        Assert.Equal("encoded-user", result.Subject);
-        Assert.Equal(3, result.SecurityVersion);
-        Assert.True(result.MfaSatisfied);
-        Assert.Equal("test-client", result.ClientID);
+        var result = Validate(Sign(Payload(access), access), access);
+        Assert.Equal(new SessionProof(42, 3, 1, 1, true, clock.GetUtcNow().AddSeconds(-10),
+            client.ID, client.Audience, false, "encoded-user"), result);
     }
 
+    public static IEnumerable<object[]> InvalidClaimCases => ForBothKinds(
+        "version-missing", "version-zero", "version-negative", "version-overflow", "version-text",
+        "user-missing", "user-zero", "subject-missing", "subject-blank", "schema", "purpose",
+        "issuer", "audience", "client", "resource", "external", "mfa", "factor", "policy", "route",
+        "expired", "future", "not-before-missing", "auth-time-missing", "auth-time-future",
+        "auth-time-out-of-range", "expiry-missing", "expiry-out-of-range");
+
     [Theory]
-    [InlineData("version-missing")]
-    [InlineData("version-zero")]
-    [InlineData("user-missing")]
-    [InlineData("user-zero")]
-    [InlineData("subject-missing")]
-    [InlineData("schema")]
-    [InlineData("purpose")]
-    [InlineData("issuer")]
-    [InlineData("audience")]
-    [InlineData("client")]
-    [InlineData("resource")]
-    [InlineData("external")]
-    [InlineData("mfa")]
-    [InlineData("factor")]
-    [InlineData("policy")]
-    [InlineData("route")]
-    [InlineData("expired")]
-    [InlineData("future")]
-    [InlineData("auth-time-missing")]
-    [InlineData("auth-time-future")]
-    [InlineData("expiry-missing")]
-    public void Invalid_claims_are_refused_even_when_the_signature_is_valid(string scenario)
+    [MemberData(nameof(InvalidClaimCases))]
+    public void Invalid_claims_are_refused_even_when_the_signature_is_valid(bool access, string scenario)
     {
-        var payload = Payload();
+        var payload = Payload(access);
         switch (scenario)
         {
             case "version-missing": payload.Remove("shift_sv"); break;
             case "version-zero": payload["shift_sv"] = "0"; break;
+            case "version-negative": payload["shift_sv"] = "-1"; break;
+            case "version-overflow": payload["shift_sv"] = "9223372036854775808"; break;
+            case "version-text": payload["shift_sv"] = "invalid"; break;
             case "user-missing": payload.Remove("shift_uid"); break;
             case "user-zero": payload["shift_uid"] = "0"; break;
             case "subject-missing": payload.Remove("sub"); break;
+            case "subject-blank": payload["sub"] = " "; break;
             case "schema": payload["shift_schema"] = "1"; break;
-            case "purpose": payload["shift_purpose"] = "access"; break;
+            case "purpose": payload["shift_purpose"] = access ? "refresh" : "access"; break;
             case "issuer": payload["iss"] = "https://wrong.invalid"; break;
             case "audience": payload["aud"] = "wrong"; break;
             case "client": payload["shift_client"] = "other-client"; break;
@@ -81,33 +70,121 @@ public sealed class TokenValidationTests
             case "route": payload["shift_route"] = "provider"; break;
             case "expired": payload["exp"] = clock.GetUtcNow().ToUnixTimeSeconds(); break;
             case "future": payload["nbf"] = clock.GetUtcNow().AddSeconds(1).ToUnixTimeSeconds(); break;
+            case "not-before-missing": payload.Remove("nbf"); break;
             case "auth-time-missing": payload.Remove("auth_time"); break;
             case "auth-time-future": payload["auth_time"] = clock.GetUtcNow().AddSeconds(1).ToUnixTimeSeconds().ToString(); break;
+            case "auth-time-out-of-range": payload["auth_time"] = long.MinValue.ToString(); break;
             case "expiry-missing": payload.Remove("exp"); break;
+            case "expiry-out-of-range": payload["exp"] = long.MaxValue; break;
+            default: throw new ArgumentOutOfRangeException(nameof(scenario));
         }
-        Assert.Null(new AdmissionTokenCodec(options, clock).ValidateRefresh(Sign(payload), client));
+        Assert.Null(Validate(Sign(payload, access), access));
+    }
+
+    public static IEnumerable<object[]> MissingBindingCases => ForBothKinds(
+        "iss", "aud", "shift_schema", "shift_purpose", "shift_client", "shift_resource",
+        "shift_external", "shift_mfa", "shift_factor", "shift_policy", "shift_route");
+
+    [Theory]
+    [MemberData(nameof(MissingBindingCases))]
+    public void Missing_bindings_are_not_filled_from_server_defaults(bool access, string claim)
+    {
+        var payload = Payload(access);
+        payload.Remove(claim);
+        Assert.Null(Validate(Sign(payload, access), access));
+    }
+
+    public static IEnumerable<object[]> InvalidSignatureCases => ForBothKinds(
+        "duplicate", "array", "unsigned", "wrong-key", "payload-tampered", "signature-tampered");
+
+    [Theory]
+    [MemberData(nameof(InvalidSignatureCases))]
+    public void Ambiguous_or_invalid_signatures_are_refused(bool access, string scenario)
+    {
+        var payload = Payload(access);
+        using var otherRsa = RSA.Create(2048);
+        var token = scenario switch
+        {
+            "duplicate" => SignJson(JsonSerializer.Serialize(payload).Replace("\"shift_sv\":\"3\"", "\"shift_sv\":\"3\",\"shift_sv\":\"4\""), access),
+            "array" => SignJson(JsonSerializer.Serialize(payload).Replace("\"shift_sv\":\"3\"", "\"shift_sv\":[\"3\",\"4\"]"), access),
+            "unsigned" => SignJson(JsonSerializer.Serialize(payload), access, "none"),
+            "wrong-key" => SignJson(JsonSerializer.Serialize(payload), access,
+                key: access ? otherRsa.ExportRSAPrivateKey() : RandomNumberGenerator.GetBytes(64)),
+            "payload-tampered" => TamperPayload(Sign(payload, access)),
+            "signature-tampered" => TamperSignature(Sign(payload, access)),
+            _ => throw new ArgumentOutOfRangeException(nameof(scenario))
+        };
+        Assert.Null(Validate(token, access));
     }
 
     [Theory]
-    [InlineData("duplicate")]
-    [InlineData("array")]
-    [InlineData("unsigned")]
-    [InlineData("wrong-key")]
-    [InlineData("wrong-algorithm")]
-    [InlineData("malformed")]
-    public void Ambiguous_or_invalid_signatures_are_refused(string scenario)
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Correct_signatures_with_disallowed_algorithms_are_refused(bool access)
     {
-        var payload = Payload();
+        var algorithm = access ? "RS512" : "HS256";
+        var token = SignJson(JsonSerializer.Serialize(Payload(access)), access, algorithm);
+        using var rsa = RSA.Create();
+        rsa.ImportRSAPrivateKey(options.AccessPrivateKey, out _);
+        SecurityKey key = access ? new RsaSecurityKey(rsa.ExportParameters(false)) : new SymmetricSecurityKey(options.RefreshKey);
+        AssertSignatureValid(token, key, algorithm);
+        Assert.Null(Validate(token, access));
+    }
+
+    [Theory]
+    [InlineData(false, "HS512")]
+    [InlineData(true, "HS256")]
+    [InlineData(true, "HS512")]
+    public void Access_claims_signed_with_a_symmetric_key_cannot_be_used_as_access(bool useRsaPublicKey, string algorithm)
+    {
+        using var rsa = RSA.Create();
+        rsa.ImportRSAPrivateKey(options.AccessPrivateKey, out _);
+        var key = useRsaPublicKey ? rsa.ExportSubjectPublicKeyInfo() : options.RefreshKey;
+        var token = SignJson(JsonSerializer.Serialize(Payload(true)), false, algorithm, key);
+        AssertSignatureValid(token, new SymmetricSecurityKey(key), algorithm);
+        Assert.Null(new AdmissionTokenCodec(options, clock).ValidateAccess(token, client));
+    }
+
+    public static IEnumerable<object[]> MalformedTokenCases => ForBothKinds(
+        "null", "empty", "missing-segments", "extra-segment", "base64", "json", "array", "missing-signature", "oversized");
+
+    [Theory]
+    [MemberData(nameof(MalformedTokenCases))]
+    public void Malformed_tokens_are_refused_without_throwing(bool access, string scenario)
+    {
+        var valid = Sign(Payload(access), access);
+        Assert.NotNull(Validate(valid, access));
+        var pieces = valid.Split('.');
         var token = scenario switch
         {
-            "duplicate" => SignJson(JsonSerializer.Serialize(payload).Replace("\"shift_sv\":\"3\"", "\"shift_sv\":\"3\",\"shift_sv\":\"4\"")),
-            "array" => SignJson(JsonSerializer.Serialize(payload).Replace("\"shift_sv\":\"3\"", "\"shift_sv\":[\"3\",\"4\"]")),
-            "unsigned" => SignJson(JsonSerializer.Serialize(payload), "none"),
-            "wrong-key" => Sign(payload, RandomNumberGenerator.GetBytes(64)),
-            "wrong-algorithm" => SignJson(JsonSerializer.Serialize(payload), "HS256"),
-            _ => "malformed"
+            "null" => null,
+            "empty" => "",
+            "missing-segments" => "malformed",
+            "extra-segment" => valid + ".extra",
+            "base64" => pieces[0] + ".%." + pieces[2],
+            "json" => SignJson("{", access),
+            "array" => SignJson("[]", access),
+            "missing-signature" => pieces[0] + "." + pieces[1] + ".",
+            "oversized" => Sign(new Dictionary<string, object>(Payload(access)) { ["padding"] = new string('x', 16384) }, access),
+            _ => throw new ArgumentOutOfRangeException(nameof(scenario))
         };
-        Assert.Null(new AdmissionTokenCodec(options, clock).ValidateRefresh(token, client));
+        Assert.Null(Validate(token!, access));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Lifetime_boundaries_are_enforced_without_clock_skew(bool access)
+    {
+        var payload = Payload(access);
+        payload["nbf"] = clock.GetUtcNow().AddSeconds(1).ToUnixTimeSeconds();
+        payload["exp"] = clock.GetUtcNow().AddSeconds(2).ToUnixTimeSeconds();
+        var token = Sign(payload, access);
+        Assert.Null(Validate(token, access));
+        clock.Advance(TimeSpan.FromSeconds(1));
+        Assert.NotNull(Validate(token, access));
+        clock.Advance(TimeSpan.FromSeconds(1));
+        Assert.Null(Validate(token, access));
     }
 
     [Fact]
@@ -116,7 +193,10 @@ public sealed class TokenValidationTests
         var codec = new AdmissionTokenCodec(options, clock);
         var proof = new SessionProof(42, 3, 1, 1, true, clock.GetUtcNow(), client.ID, client.Audience, false, "encoded-user");
         var tokens = codec.Issue(new(proof, "synthetic", "Synthetic", Array.Empty<Claim>(), clock.GetUtcNow()));
+        Assert.Equal(new SignedInContext(proof, clock.GetUtcNow().AddMinutes(15)), codec.ValidateAccess(tokens.Token, client));
+        Assert.Equal(proof, codec.ValidateRefresh(tokens.RefreshToken, client));
         Assert.Null(codec.ValidateRefresh(tokens.Token, client));
+        Assert.Null(codec.ValidateAccess(tokens.RefreshToken, client));
         using var rsa = RSA.Create();
         rsa.ImportRSAPrivateKey(options.AccessPrivateKey, out _);
         var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler { MapInboundClaims = false };
@@ -131,22 +211,81 @@ public sealed class TokenValidationTests
             .Issue(new(proof, "synthetic", "Synthetic", Array.Empty<Claim>(), clock.GetUtcNow())));
     }
 
-    private Dictionary<string, object> Payload() => new()
+    private static IEnumerable<object[]> ForBothKinds(params string[] scenarios) =>
+        scenarios.SelectMany(scenario => new[] { new object[] { false, scenario }, new object[] { true, scenario } });
+
+    private SessionProof? Validate(string token, bool access)
     {
-        ["iss"] = options.Issuer, ["aud"] = options.RefreshAudience, ["sub"] = "encoded-user",
+        var codec = new AdmissionTokenCodec(options, clock);
+        return access ? codec.ValidateAccess(token, client)?.Proof : codec.ValidateRefresh(token, client);
+    }
+
+    private Dictionary<string, object> Payload(bool access) => new()
+    {
+        ["iss"] = options.Issuer, ["aud"] = access ? client.Audience : options.RefreshAudience, ["sub"] = "encoded-user",
         ["shift_uid"] = "42", ["shift_schema"] = "2", ["shift_sv"] = "3", ["shift_policy"] = "1",
         ["shift_factor"] = "1", ["shift_mfa"] = "true", ["shift_route"] = "local",
         ["shift_client"] = client.ID, ["shift_resource"] = client.Audience,
-        ["shift_external"] = "false", ["shift_purpose"] = "refresh",
+        ["shift_external"] = "false", ["shift_purpose"] = access ? "access" : "refresh",
         ["auth_time"] = clock.GetUtcNow().AddSeconds(-10).ToUnixTimeSeconds().ToString(),
         ["nbf"] = clock.GetUtcNow().AddSeconds(-10).ToUnixTimeSeconds(),
         ["exp"] = clock.GetUtcNow().AddMinutes(10).ToUnixTimeSeconds()
     };
 
-    private string Sign(Dictionary<string, object> payload, byte[]? key = null) => SignJson(JsonSerializer.Serialize(payload), key: key);
-    private string SignJson(string json, string algorithm = "HS512", byte[]? key = null)
+    private string Sign(Dictionary<string, object> payload, bool access) => SignJson(JsonSerializer.Serialize(payload), access);
+    private string SignJson(string json, bool access, string? algorithm = null, byte[]? key = null)
     {
+        algorithm ??= access ? "RS256" : "HS512";
         var input = Base64UrlEncoder.Encode(JsonSerializer.Serialize(new { alg = algorithm, typ = "JWT" })) + "." + Base64UrlEncoder.Encode(json);
-        return input + "." + (algorithm == "none" ? "" : Base64UrlEncoder.Encode(HMACSHA512.HashData(key ?? options.RefreshKey, Encoding.ASCII.GetBytes(input))));
+        var bytes = Encoding.ASCII.GetBytes(input);
+        if (algorithm == "none") return input + ".";
+        byte[] signature;
+        if (access)
+        {
+            using var rsa = RSA.Create();
+            rsa.ImportRSAPrivateKey(key ?? options.AccessPrivateKey, out _);
+            signature = rsa.SignData(bytes, algorithm switch
+            {
+                "RS256" => HashAlgorithmName.SHA256,
+                "RS512" => HashAlgorithmName.SHA512,
+                _ => throw new ArgumentOutOfRangeException(nameof(algorithm))
+            }, RSASignaturePadding.Pkcs1);
+        }
+        else
+        {
+            signature = algorithm switch
+            {
+                "HS512" => HMACSHA512.HashData(key ?? options.RefreshKey, bytes),
+                "HS256" => HMACSHA256.HashData(key ?? options.RefreshKey, bytes),
+                _ => throw new ArgumentOutOfRangeException(nameof(algorithm))
+            };
+        }
+        return input + "." + Base64UrlEncoder.Encode(signature);
+    }
+
+    private static void AssertSignatureValid(string token, SecurityKey key, string algorithm)
+    {
+        // Prove rejection is due to the credential profile, rather than a broken test signature.
+        new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler().ValidateToken(token, new TokenValidationParameters
+        {
+            IssuerSigningKey = key, ValidAlgorithms = [algorithm], RequireSignedTokens = true,
+            ValidateIssuer = false, ValidateAudience = false, ValidateLifetime = false
+        }, out _);
+    }
+
+    private static string TamperPayload(string token)
+    {
+        var pieces = token.Split('.');
+        pieces[1] = Base64UrlEncoder.Encode(Base64UrlEncoder.Decode(pieces[1]).Replace("\"shift_sv\":\"3\"", "\"shift_sv\":\"4\""));
+        return string.Join('.', pieces);
+    }
+
+    private static string TamperSignature(string token)
+    {
+        var pieces = token.Split('.');
+        var bytes = Base64UrlEncoder.DecodeBytes(pieces[2]);
+        bytes[0] ^= 1;
+        pieces[2] = Base64UrlEncoder.Encode(bytes);
+        return string.Join('.', pieces);
     }
 }

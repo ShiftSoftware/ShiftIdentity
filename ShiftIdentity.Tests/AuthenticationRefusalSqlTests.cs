@@ -46,7 +46,12 @@ public sealed class AuthenticationRefusalSqlTests(SqlIdentityFixture fixture)
         {
             var challenge = Assert.IsType<ChallengeRequired>(outcome).Challenge;
             Assert.Equal(step, challenge.Step);
-            Assert.Null(challenge.Handle); // This slice cannot complete these remedies.
+            if (step == AuthenticationStep.PasswordChange)
+            {
+                Assert.NotNull(challenge.Handle);
+                Assert.Equal(AuthenticationOperationPurpose.PasswordChange, challenge.Purpose);
+            }
+            else Assert.Null(challenge.Handle); // The other remedies remain restricted.
         }
         else Assert.Equal(failure, Assert.IsType<AuthenticationRefused>(outcome).Code);
     }

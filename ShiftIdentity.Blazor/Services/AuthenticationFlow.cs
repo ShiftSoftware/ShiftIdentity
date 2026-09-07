@@ -9,10 +9,7 @@ using ShiftSoftware.ShiftIdentity.Core.Enums;
 
 namespace ShiftSoftware.ShiftIdentity.Blazor.Services;
 
-/// <summary>
-/// Explicitly constructed by the isolated admission harness; not registered by AddShiftIdentity.
-/// A challenge and its verifier live only for this component flow, never in IIdentityStore.
-/// </summary>
+/// <summary>Opt-in staged flow. Restricted credentials live only in this component's memory.</summary>
 public sealed class AuthenticationFlow(HttpClient http, IIdentityStore store, TimeProvider? clock = null)
 {
     private readonly TimeProvider clock = clock ?? TimeProvider.System;
@@ -20,39 +17,63 @@ public sealed class AuthenticationFlow(HttpClient http, IIdentityStore store, Ti
     private long generation;
     public AuthenticationChallenge? Pending { get; private set; }
     public bool Busy { get; private set; }
+    public bool PasswordWasChanged { get; private set; }
 
-    public void Restart()
-    {
-        generation++;
-        Pending = null;
-        verifier = null;
-    }
+    // Invalidates late responses locally. Visible cancel/restart controls also call CancelAsync.
+    public void Restart() { generation++; Pending = null; verifier = null; }
 
     public Task<AuthOutcome> LoginAsync(string username, string password) => SendAsync(() =>
     {
-        Restart();
-        verifier = Base64Url(RandomNumberGenerator.GetBytes(32));
-        return new HttpRequestMessage(HttpMethod.Post, "api/identity/v2/login")
-        {
-            Content = JsonContent.Create(new PasswordLoginRequest(username, password,
-                Base64Url(SHA256.HashData(Encoding.ASCII.GetBytes(verifier)))))
-        };
+        Start();
+        return Request("login", new PasswordLoginRequest(username, password, Challenge()));
     });
 
-    public Task<AuthOutcome> CompleteMfaAsync(string code)
+    public Task<AuthOutcome> BeginPasswordChangeAsync(string access) => SendAsync(() =>
     {
-        if (Pending is not { Step: AuthenticationStep.ExistingMfa, Handle: not null } challenge ||
+        Start();
+        var request = Request("password-change", new StartPasswordChangeRequest(Challenge()));
+        request.Headers.Authorization = new("Bearer", access);
+        return request;
+    });
+
+    public Task<AuthOutcome> ProvePasswordAsync(string password) => Continue(AuthenticationStep.Password,
+        "password-change/password", proof => new PasswordChangeProofRequest(password, proof));
+
+    public Task<AuthOutcome> ChangePasswordAsync(string password) => Continue(AuthenticationStep.PasswordChange,
+        "password-change/complete", proof => new CompletePasswordChangeRequest(password, proof));
+
+    public Task<AuthOutcome> CompleteMfaAsync(string code) => Continue(AuthenticationStep.ExistingMfa,
+        Pending?.Purpose == AuthenticationOperationPurpose.PasswordChange ? "password-change/mfa" : "login/mfa",
+        proof => new CompleteMfaRequest(code, proof));
+
+    public async Task<AuthOutcome> CancelAsync()
+    {
+        var pending = Pending;
+        var proof = verifier;
+        Restart();
+        return pending?.Handle is { } handle && proof is not null
+            ? await CancelCredentialAsync(handle, proof) : new OperationCancelled();
+    }
+
+    private void Start()
+    {
+        Restart(); PasswordWasChanged = false;
+        verifier = Base64Url(RandomNumberGenerator.GetBytes(32));
+    }
+    private string Challenge() => Base64Url(SHA256.HashData(Encoding.ASCII.GetBytes(verifier!)));
+
+    private Task<AuthOutcome> Continue<T>(AuthenticationStep step, string route, Func<string, T> body)
+    {
+        if (Pending is not { Handle: not null } challenge || challenge.Step != step ||
             verifier is null || challenge.ExpiresAt <= clock.GetUtcNow())
         {
             Restart();
             return Task.FromResult<AuthOutcome>(new AuthenticationRefused(AuthenticationFailure.Expired));
         }
+        var proof = verifier;
         return SendAsync(() =>
         {
-            var request = new HttpRequestMessage(HttpMethod.Post, "api/identity/v2/login/mfa")
-            {
-                Content = JsonContent.Create(new CompleteMfaRequest(code, verifier))
-            };
+            var request = Request(route, body(proof));
             request.Headers.Authorization = new("Operation", challenge.Handle);
             return request;
         });
@@ -67,27 +88,38 @@ public sealed class AuthenticationFlow(HttpClient http, IIdentityStore store, Ti
         {
             using var request = create();
             requestGeneration = generation;
+            var requestVerifier = verifier;
             using var response = await http.SendAsync(request);
             var outcome = await response.Content.ReadFromJsonAsync<AuthOutcome>();
             if (requestGeneration != generation)
+            {
+                // If cancellation raced an intermediate transition, revoke its newly rotated handle too.
+                if (outcome is ChallengeRequired { Challenge.Handle: { } handle } && requestVerifier is not null)
+                    await CancelCredentialAsync(handle, requestVerifier);
                 return new AuthenticationRefused(AuthenticationFailure.StaleOperation);
+            }
+            var changed = outcome as PasswordChanged;
+            if (changed is not null && response.IsSuccessStatusCode)
+            {
+                PasswordWasChanged = true;
+                outcome = changed.Continuation;
+            }
             switch (outcome)
             {
                 case SessionIssued session when response.IsSuccessStatusCode && IsSession(session.Session):
                     Restart();
-                    // No await between the generation check and initiating the one storage write.
                     await store.StoreTokenAsync(session.Session);
-                    return session;
+                    return changed is null ? session : new PasswordChanged(session);
                 case ChallengeRequired restricted when response.IsSuccessStatusCode &&
-                    restricted.Challenge is { } challenge && Enum.IsDefined(challenge.Step) &&
+                    restricted.Challenge is { } challenge && Enum.IsDefined(challenge.Step) && Enum.IsDefined(challenge.Purpose) &&
                     challenge.ExpiresAt > clock.GetUtcNow() &&
                     (challenge.Step != AuthenticationStep.ExistingMfa || !string.IsNullOrWhiteSpace(challenge.Handle)):
                     Pending = challenge;
-                    if (challenge.Step != AuthenticationStep.ExistingMfa) verifier = null;
-                    return restricted;
+                    if (challenge.Handle is null) verifier = null;
+                    return changed is null ? restricted : new PasswordChanged(restricted);
                 case AuthenticationRefused refused:
-                    // A wrong TOTP may be retried within this same operation. All other errors require restart.
-                    if (refused.Code != AuthenticationFailure.InvalidProof) Restart();
+                    // Invalid proof and password-policy errors permit correction within the original deadline.
+                    if (refused.Code is not (AuthenticationFailure.InvalidProof or AuthenticationFailure.InvalidNewPassword)) Restart();
                     return refused;
                 default:
                     Restart();
@@ -102,6 +134,22 @@ public sealed class AuthenticationFlow(HttpClient http, IIdentityStore store, Ti
         finally { Busy = false; }
     }
 
+    private async Task<AuthOutcome> CancelCredentialAsync(string handle, string proof)
+    {
+        try
+        {
+            using var request = Request("operations/cancel", new CancelOperationRequest(proof));
+            request.Headers.Authorization = new("Operation", handle);
+            using var response = await http.SendAsync(request);
+            return await response.Content.ReadFromJsonAsync<AuthOutcome>() ?? new AuthenticationRefused(AuthenticationFailure.Unavailable);
+        }
+        catch (Exception error) when (error is HttpRequestException or JsonException or NotSupportedException or TaskCanceledException)
+        { return new AuthenticationRefused(AuthenticationFailure.Unavailable); }
+    }
+
+    private static HttpRequestMessage Request<T>(string route, T body) =>
+        new(HttpMethod.Post, "api/identity/v2/" + route) { Content = JsonContent.Create(body) };
+
     // Structural separation, not signature validation: the API authenticates the response over HTTPS.
     private bool IsSession(TokenDTO? session)
     {
@@ -111,11 +159,9 @@ public sealed class AuthenticationFlow(HttpClient http, IIdentityStore store, Ti
         {
             var token = new JsonWebToken(session.Token);
             return token.GetClaim("shift_purpose").Value == "access" &&
-                token.GetClaim("shift_schema").Value == "2" &&
-                token.ValidTo > clock.GetUtcNow().UtcDateTime;
+                token.GetClaim("shift_schema").Value == "2" && token.ValidTo > clock.GetUtcNow().UtcDateTime;
         }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException) { return false; }
     }
-
     private static string Base64Url(byte[] value) => Convert.ToBase64String(value).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 }

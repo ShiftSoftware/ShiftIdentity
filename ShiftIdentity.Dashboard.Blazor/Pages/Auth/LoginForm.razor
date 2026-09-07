@@ -39,7 +39,11 @@
 
             @if (AdmissionFlow?.Pending is { } challenge)
             {
-                @if (challenge.Step == AuthenticationStep.ExistingMfa)
+                @if (challenge.Purpose == AuthenticationOperationPurpose.PasswordChange)
+                {
+                    <ChangePasswordForm AdmissionFlow="AdmissionFlow" AdmissionCompleted="HandleAdmission" />
+                }
+                else if (challenge.Step == AuthenticationStep.ExistingMfa)
                 {
                     <MfaForm AdmissionFlow="AdmissionFlow" AdmissionCompleted="HandleAdmission" />
                 }
@@ -100,17 +104,20 @@
     private string? admissionError;
     public void Dispose() => AdmissionFlow?.Restart();
 
-    private void RestartAdmission()
+    private async Task RestartAdmission()
     {
-        AdmissionFlow?.Restart();
+        var result = AdmissionFlow is null ? null : await AdmissionFlow.CancelAsync();
         loginDto.Password = string.Empty;
-        admissionError = null;
+        admissionError = result is AuthenticationRefused
+            ? Loc["Cancellation could not be confirmed. Sign in again to check whether your password changed."] : null;
     }
 
     private async Task HandleAdmission(AuthOutcome outcome)
     {
-        admissionError = outcome is AuthenticationRefused ? Loc["Sign-in could not be completed. Try again."] : null;
-        if (outcome is SessionIssued session)
+        admissionError = outcome is AuthenticationRefused && AdmissionFlow?.Pending?.Purpose != AuthenticationOperationPurpose.PasswordChange
+            ? Loc["Sign-in could not be completed. Try again."] : null;
+        var completed = outcome is PasswordChanged changed ? changed.Continuation : outcome;
+        if (completed is SessionIssued session)
         {
             await AuthenticationStateProvider.GetAuthenticationStateAsync();
             await SessionCompleted.InvokeAsync(session);

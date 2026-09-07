@@ -100,6 +100,78 @@ public sealed class AuthenticationFlowTests
     public static ChallengeRequired Challenge(AuthenticationStep step = AuthenticationStep.ExistingMfa) =>
         new(new(step, step == AuthenticationStep.ExistingMfa ? "opaque-operation" : null, DateTimeOffset.UtcNow.AddMinutes(5)));
 
+    [Fact]
+    public async Task Voluntary_flow_binds_fresh_password_MFA_and_new_password_to_rotated_handles()
+    {
+        var store = new RecordingStore(); var deadline = DateTimeOffset.UtcNow.AddMinutes(5);
+        var index = 0;
+        var transport = new ScriptedHttp(async request =>
+        {
+            index++;
+            if (index == 1)
+            {
+                Assert.Equal("Bearer", request.Headers.Authorization?.Scheme);
+                Assert.Equal("current-access", request.Headers.Authorization?.Parameter);
+                return new ChallengeRequired(new(AuthenticationStep.Password, "first", deadline, AuthenticationOperationPurpose.PasswordChange));
+            }
+            Assert.Equal("Operation", request.Headers.Authorization?.Scheme);
+            if (index == 2)
+            {
+                Assert.Equal("first", request.Headers.Authorization?.Parameter);
+                var proof = await request.Content!.ReadFromJsonAsync<PasswordChangeProofRequest>(); Assert.Equal("current password", proof!.CurrentPassword);
+                return new ChallengeRequired(new(AuthenticationStep.ExistingMfa, "second", deadline, AuthenticationOperationPurpose.PasswordChange));
+            }
+            if (index == 3)
+            {
+                Assert.EndsWith("password-change/mfa", request.RequestUri!.AbsolutePath);
+                Assert.Equal("second", request.Headers.Authorization?.Parameter);
+                return new ChallengeRequired(new(AuthenticationStep.PasswordChange, "third", deadline, AuthenticationOperationPurpose.PasswordChange));
+            }
+            Assert.Equal("third", request.Headers.Authorization?.Parameter);
+            return index == 4 ? new AuthenticationRefused(AuthenticationFailure.InvalidNewPassword, PasswordPolicyFailure.TooShort)
+                : new PasswordChanged(Session());
+        });
+        var flow = new AuthenticationFlow(transport.Client(), store);
+        await flow.BeginPasswordChangeAsync("current-access"); await flow.ProvePasswordAsync("current password");
+        await flow.CompleteMfaAsync("123456"); Assert.Empty(store.Writes);
+        Assert.IsType<AuthenticationRefused>(await flow.ChangePasswordAsync("short")); Assert.NotNull(flow.Pending);
+        Assert.IsType<PasswordChanged>(await flow.ChangePasswordAsync("A long new synthetic password"));
+        Assert.Single(store.Writes); Assert.Null(flow.Pending); Assert.True(flow.PasswordWasChanged);
+        var values = transport.Requests.Skip(1).Select(x => JsonDocument.Parse(x.Body).RootElement.GetProperty("codeVerifier").GetString()).ToArray();
+        Assert.All(values, x => Assert.Equal(values[0], x));
+    }
+
+    [Fact]
+    public async Task Changed_but_restricted_response_never_stores_a_session()
+    {
+        var store = new RecordingStore();
+        var flow = new AuthenticationFlow(new ScriptedHttp(_ => Task.FromResult<AuthOutcome>(new PasswordChanged(Challenge(AuthenticationStep.EmailVerification)))).Client(), store);
+        Assert.IsType<PasswordChanged>(await flow.LoginAsync("synthetic", "password"));
+        Assert.True(flow.PasswordWasChanged); Assert.Empty(store.Writes); Assert.NotNull(flow.Pending);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Cancel_during_submission_never_stores_late_credentials_and_revokes_rotated_challenge(bool intermediate)
+    {
+        var pending = new TaskCompletionSource<AuthOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var store = new RecordingStore(); var calls = 0;
+        var transport = new ScriptedHttp(request =>
+        {
+            if (request.RequestUri!.AbsolutePath.EndsWith("/cancel")) return Task.FromResult<AuthOutcome>(new OperationCancelled());
+            return ++calls == 1 ? Task.FromResult<AuthOutcome>(new ChallengeRequired(new(AuthenticationStep.PasswordChange, "first", DateTimeOffset.UtcNow.AddMinutes(5), AuthenticationOperationPurpose.PasswordChange))) : pending.Task;
+        });
+        var flow = new AuthenticationFlow(transport.Client(), store);
+        await flow.LoginAsync("synthetic", "password");
+        var changing = flow.ChangePasswordAsync("A long new synthetic password");
+        Assert.IsType<OperationCancelled>(await flow.CancelAsync());
+        pending.SetResult(intermediate ? new ChallengeRequired(new(AuthenticationStep.ExistingMfa, "rotated", DateTimeOffset.UtcNow.AddMinutes(5), AuthenticationOperationPurpose.PasswordChange)) : new PasswordChanged(Session()));
+        Assert.Equal(AuthenticationFailure.StaleOperation, Assert.IsType<AuthenticationRefused>(await changing).Code);
+        Assert.Empty(store.Writes); Assert.Null(flow.Pending);
+        if (intermediate) Assert.Equal("rotated", transport.Requests.Last().Credential);
+    }
+
     // Synthetic unsigned wire fixture for client structural tests. Server signature checks have separate coverage.
     public static SessionIssued Session()
     {

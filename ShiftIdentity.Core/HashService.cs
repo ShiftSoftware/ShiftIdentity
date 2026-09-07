@@ -9,6 +9,12 @@ namespace ShiftSoftware.ShiftIdentity.Core;
 
 public class HashService
 {
+    // Opt-in staged writers use the adaptive format. Existing production writers are adapted
+    // together at authority cutover; these entry points do not change their registration.
+    public static HashModel GenerateVersionedHash(string password) => Authentication.VersionedPasswordHash.Create(password);
+    public static bool VerifyVersionedPassword(string password, byte[] salt, byte[] passwordHash) =>
+        Authentication.VersionedPasswordHash.Verify(password, salt, passwordHash);
+
     public static HashModel GenerateHash(string password)
     {
         HashModel result = new HashModel();

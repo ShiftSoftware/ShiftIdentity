@@ -9,8 +9,14 @@ internal static class OperationCredential
     public static (Guid ID, string Handle, byte[] Digest) Create(byte[] key)
     {
         var id = Guid.NewGuid();
+        var credential = Rotate(id, key);
+        return (id, credential.Handle, credential.Digest);
+    }
+
+    internal static (string Handle, byte[] Digest) Rotate(Guid id, byte[] key)
+    {
         var secret = RandomNumberGenerator.GetBytes(32);
-        return (id, $"{id:N}.{WebEncoders.Base64UrlEncode(secret)}", Digest(key, id, secret));
+        return ($"{id:N}.{WebEncoders.Base64UrlEncode(secret)}", Digest(key, id, secret));
     }
 
     public static bool TryRead(string? handle, byte[] key, out Guid id, out byte[] digest)

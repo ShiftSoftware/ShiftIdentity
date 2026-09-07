@@ -2,9 +2,10 @@ using ShiftSoftware.ShiftIdentity.Core.Authentication;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Authentication;
 
-public enum AuthenticationOperationState { AwaitingMfa = 1, Completed = 2, Locked = 3 }
+public enum AuthenticationOperationState { AwaitingMfa = 1, Completed = 2, Locked = 3, AwaitingPassword = 4, AwaitingNewPassword = 5, Cancelled = 6 }
+public enum PasswordChangeOrigin { Voluntary = 1, RequiredLogin = 2 }
 
-/// <summary>A single-use login continuation; it is never an ordinary session credential.</summary>
+/// <summary>A single-use, purpose-bound continuation; it is never an ordinary session credential.</summary>
 public sealed class AuthenticationOperation
 {
     public Guid ID { get; set; }
@@ -22,6 +23,12 @@ public sealed class AuthenticationOperation
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset ExpiresAt { get; set; }
     public DateTimeOffset? CompletedAt { get; set; }
+    public PasswordChangeOrigin? PasswordChangeOrigin { get; set; }
+    public DateTimeOffset? PasswordProvenAt { get; set; }
+    public DateTimeOffset? MfaProvenAt { get; set; }
+    // Only prepared adaptive hashes are retained while awaiting MFA, never plaintext passwords.
+    public byte[]? PendingPasswordHash { get; set; }
+    public byte[]? PendingPasswordSalt { get; set; }
     public int FailedAttempts { get; set; }
     public byte[] RowVersion { get; set; } = [];
 }

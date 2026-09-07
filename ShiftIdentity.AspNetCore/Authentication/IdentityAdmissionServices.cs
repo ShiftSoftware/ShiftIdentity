@@ -12,7 +12,10 @@ internal sealed record IdentityAdmissionServices(
     ShiftSoftware.ShiftEntity.Core.IHashIdService HashIds,
     IDataProtector FactorProtector,
     AdmissionTokenCodec Tokens,
-    Action<string>? Observe = null);
+    Action<string>? Observe = null)
+{
+    internal Core.Authentication.NewPasswordPolicy PasswordPolicy { get; init; } = new();
+}
 
 internal sealed record IdentityAdmissionOptions(
     string Issuer, string RefreshAudience, byte[] AccessPrivateKey, byte[] RefreshKey,
@@ -22,6 +25,8 @@ internal sealed record IdentityAdmissionOptions(
 internal sealed record SessionProof(
     long UserID, long SecurityVersion, long PolicyRevision, long FactorGeneration,
     bool MfaSatisfied, DateTimeOffset AuthenticatedAt, string ClientID, string Audience, bool External, string Subject);
+
+internal sealed record SignedInContext(SessionProof Proof, DateTimeOffset ExpiresAt);
 
 /// <summary>Only the admission coordinator creates this after evaluating current state.</summary>
 internal sealed record IssuanceDecision(

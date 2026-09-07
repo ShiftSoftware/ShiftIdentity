@@ -23,7 +23,8 @@ public static class IdentitySecurityModel
         {
             e.ToTable("AuthenticationOperations", "ShiftIdentity", t =>
             {
-                t.HasCheckConstraint("CK_AuthenticationOperation_State", "[State] IN (1,2,3) AND [Purpose] IN (1,2,3)");
+                t.HasCheckConstraint("CK_AuthenticationOperation_State", "[State] IN (1,2,3,4,5,6) AND [Purpose] IN (1,2,3,4)");
+                t.HasCheckConstraint("CK_AuthenticationOperation_Password", "([PasswordChangeOrigin] IS NULL OR [PasswordChangeOrigin] IN (1,2)) AND (([PendingPasswordHash] IS NULL AND [PendingPasswordSalt] IS NULL) OR ([Purpose] = 4 AND [State] = 1 AND [PendingPasswordHash] IS NOT NULL AND [PendingPasswordSalt] IS NOT NULL))");
                 t.HasCheckConstraint("CK_AuthenticationOperation_Version", "[SecurityVersion] >= 1 AND [FactorGeneration] >= 1 AND [PolicyRevision] >= 1 AND [FailedAttempts] BETWEEN 0 AND 5 AND [ExpiresAt] > [CreatedAt]");
             });
             e.HasKey(x => x.ID);
@@ -32,6 +33,8 @@ public static class IdentitySecurityModel
             e.Property(x => x.Audience).HasMaxLength(255);
             e.Property(x => x.HandleDigest).HasMaxLength(32);
             e.Property(x => x.CodeChallenge).HasMaxLength(43);
+            e.Property(x => x.PendingPasswordHash).HasMaxLength(256);
+            e.Property(x => x.PendingPasswordSalt).HasMaxLength(128);
             e.Property(x => x.RowVersion).IsRowVersion();
             e.HasIndex(x => new { x.ExpiresAt, x.State });
             e.HasIndex(x => new { x.UserID, x.Purpose, x.State });

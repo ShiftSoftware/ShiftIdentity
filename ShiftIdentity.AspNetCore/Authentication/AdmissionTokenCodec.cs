@@ -63,11 +63,21 @@ internal sealed class AdmissionTokenCodec(IdentityAdmissionOptions options, Time
         };
     }
 
-    public SessionProof? ValidateRefresh(string token, AuthenticationClient client)
+    public SessionProof? ValidateRefresh(string token, AuthenticationClient client) => ValidateCredential(token, client, false)?.Proof;
+
+    public SignedInContext? ValidateAccess(string token, AuthenticationClient client) => ValidateCredential(token, client, true);
+
+    private SignedInContext? ValidateCredential(string token, AuthenticationClient client, bool access)
     {
         try
         {
-            if (token.Length > 16384) return null;
+            if (string.IsNullOrEmpty(token) || token.Length > 16384) return null;
+            using var rsa = RSA.Create();
+            if (access) rsa.ImportRSAPrivateKey(options.AccessPrivateKey, out _);
+            SecurityKey key = access ? new RsaSecurityKey(rsa)
+            {
+                CryptoProviderFactory = new CryptoProviderFactory { CacheSignatureProviders = false }
+            } : new SymmetricSecurityKey(options.RefreshKey);
             var handler = new JwtSecurityTokenHandler { MapInboundClaims = false, MaximumTokenSizeInBytes = 16384 };
             // JWT libraries may collapse duplicate JSON properties. Refuse them before relying on claims.
             var pieces = token.Split('.');
@@ -78,27 +88,28 @@ internal sealed class AdmissionTokenCodec(IdentityAdmissionOptions options, Time
             if (names.Distinct(StringComparer.Ordinal).Count() != names.Length) return null;
             var principal = handler.ValidateToken(token, new TokenValidationParameters
             {
-                ValidIssuer = options.Issuer, ValidAudience = options.RefreshAudience,
-                IssuerSigningKey = new SymmetricSecurityKey(options.RefreshKey),
+                ValidIssuer = options.Issuer, ValidAudience = access ? client.Audience : options.RefreshAudience,
+                IssuerSigningKey = key,
                 ValidateIssuer = true, ValidateAudience = true, ValidateIssuerSigningKey = true,
                 ValidateLifetime = true, RequireExpirationTime = true, RequireSignedTokens = true,
-                ValidAlgorithms = [SecurityAlgorithms.HmacSha512], ClockSkew = TimeSpan.Zero,
+                ValidAlgorithms = [access ? SecurityAlgorithms.RsaSha256 : SecurityAlgorithms.HmacSha512], ClockSkew = TimeSpan.Zero,
                 LifetimeValidator = (nbf, exp, _, _) =>
                     nbf is not null && exp is not null && nbf <= clock.GetUtcNow().UtcDateTime && exp > clock.GetUtcNow().UtcDateTime
             }, out _);
             string? Single(string type) => principal.FindAll(type).Select(c => c.Value).ToArray() is [var value] ? value : null;
-            if (Single(Schema) != "2" || Single(Purpose) != "refresh" || Single(Route) != "local" ||
+            if (Single(Schema) != "2" || Single(Purpose) != (access ? "access" : "refresh") || Single(Route) != "local" ||
                 Single(Client) != client.ID || Single(Resource) != client.Audience ||
                 Single(External) != (client.External ? "true" : "false")) return null;
             if (string.IsNullOrWhiteSpace(Single("sub")) || !long.TryParse(Single(UserID), out var userID) || userID <= 0 ||
                 !long.TryParse(Single(Version), out var version) || version < 1 ||
                 !long.TryParse(Single(Policy), out var policy) || policy < 1 ||
                 !long.TryParse(Single(Factor), out var factor) || factor < 1 ||
-                !long.TryParse(Single("auth_time"), out var authenticated) ||
+                !long.TryParse(Single("auth_time"), out var authenticated) || !long.TryParse(Single("exp"), out var expiry) ||
                 Single(Mfa) is not ("true" or "false")) return null;
             var authTime = DateTimeOffset.FromUnixTimeSeconds(authenticated);
             if (authTime > clock.GetUtcNow()) return null;
-            return new(userID, version, policy, factor, Single(Mfa) == "true", authTime, client.ID, client.Audience, client.External, Single("sub")!);
+            return new(new(userID, version, policy, factor, Single(Mfa) == "true", authTime, client.ID, client.Audience, client.External, Single("sub")!),
+                DateTimeOffset.FromUnixTimeSeconds(expiry));
         }
         catch (Exception e) when (e is SecurityTokenException or ArgumentException or FormatException or JsonException)
         {
