@@ -31,6 +31,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<!-- The cache inside the identity reference source is internal: it is plumbing, not surface. The test
+		     project drives it through the source's own methods and stands in for Cosmos at the read seam. -->
+		<InternalsVisibleTo Include="ShiftIdentity.Data.Tests" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<None Include="Images\icon.png" Pack="true" PackagePath="\" />
 		<Folder Include="Images\" />
 	</ItemGroup>

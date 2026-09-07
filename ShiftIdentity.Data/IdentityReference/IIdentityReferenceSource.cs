@@ -56,8 +56,10 @@ namespace ShiftSoftware.ShiftIdentity.Data.IdentityReference;
 /// <c>Resolve…</c>, which cannot get this wrong.</para>
 ///
 /// <para><b>Snapshots</b> (<c>Load…SnapshotAsync</c>) return a pinned immutable roster the caller owns and
-/// disposes, for bulk runs that cannot reach the store per row. See
-/// <see cref="IIdentityReferenceSnapshot{TModel}"/>.</para>
+/// disposes, for bulk runs that cannot reach the store per row. They are <b>read through to the store</b>
+/// rather than served from anything remembered, so a run pins rows as of the moment it started rather than
+/// as of whenever some earlier caller happened to warm them. Once taken, a snapshot never changes and
+/// never expires. See <see cref="IIdentityReferenceSnapshot{TModel}"/>.</para>
 ///
 /// <para><b>Resolving one id must stay a one-row read.</b> Some callers resolve a single id as a hard
 /// precondition — they read one row to decide whether an operation may proceed at all, behind a short
@@ -79,9 +81,39 @@ namespace ShiftSoftware.ShiftIdentity.Data.IdentityReference;
 /// document id as text. They are the same value — the replication mapper writes the document id as
 /// <c>ID.ToString()</c> — so every resolve takes either, and no caller has to convert at the call
 /// site.</para>
+///
+/// <para><b>Reads may be answered from memory, and <c>RefreshAsync</c> is how a caller says not to be.</b>
+/// An implementation is free to remember what it has already read; how long for is the host's
+/// configuration, not this contract's business. A caller that knows something has just changed calls
+/// <c>RefreshAsync</c> and then reads normally.</para>
+///
+/// <para>Two things about that shape are deliberate. It is <b>a method, not a header or an ambient
+/// flag</b>: the largest consumer of this contract is a bulk agent with no HTTP request anywhere in it, so
+/// routing "don't serve me a remembered value" through a request would put it out of reach of the caller
+/// who needs it most, and would make the behaviour invisible at the call site. And it <b>refreshes rather
+/// than reads around</b>: reading around leaves the stale value in place for everyone else, so the one
+/// caller who knew something had changed fixes nothing for anybody but themselves.</para>
 /// </summary>
 public interface IIdentityReferenceSource
 {
+    // ---- Refresh ---------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Re-reads a whole family from the store and replaces whatever was remembered of it, single rows
+    /// included. Call it when something in that family has just changed and the next read has to see it.
+    /// </summary>
+    Task RefreshAsync(IdentityReferenceFamily family, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Re-reads one row and replaces whatever was remembered of it, in the family's roster as well as on
+    /// its own. Cheaper than refreshing the family, and the right call when one company or one user has
+    /// been edited.
+    /// </summary>
+    Task RefreshAsync(IdentityReferenceFamily family, string id, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc cref="RefreshAsync(IdentityReferenceFamily, string, CancellationToken)"/>
+    Task RefreshAsync(IdentityReferenceFamily family, long id, CancellationToken cancellationToken = default);
+
     // ---- Countries -------------------------------------------------------------------------------
 
     /// <summary>Resolves one country. Always answers, whatever its lifecycle state.</summary>
