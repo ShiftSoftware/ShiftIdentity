@@ -141,7 +141,9 @@ public sealed class PasswordChangeSqlTests(SqlIdentityFixture fixture)
         var outcome = await host.ChangePasswordAsync(challenge.Handle!, NewPassword, verifier);
         var continuation = changed ? Assert.IsType<PasswordChanged>(outcome).Continuation : outcome;
         var pending = Assert.IsType<ChallengeRequired>(continuation).Challenge;
-        Assert.Equal(step, pending.Step); Assert.Null(pending.Handle); Assert.Equal(challenge.ExpiresAt, pending.ExpiresAt);
+        Assert.Equal(step, pending.Step); Assert.Equal(challenge.ExpiresAt, pending.ExpiresAt);
+        if (condition == "mandatory") { Assert.NotNull(pending.Handle); Assert.NotNull(pending.NewAuthenticator); }
+        else Assert.Null(pending.Handle);
         await AssertState(changed ? 2 : 1, changed ? NewPassword : fixture.Password, !changed);
         await using var verify = fixture.CreateContext();
         Assert.Equal(condition == "recovery", (await verify.Set<UserSecurityState>().SingleAsync()).LocalMfaRecoveryRequired);

@@ -18,6 +18,8 @@ public sealed class AuthenticationFlow(HttpClient http, IIdentityStore store, Ti
     public AuthenticationChallenge? Pending { get; private set; }
     public bool Busy { get; private set; }
     public bool PasswordWasChanged { get; private set; }
+    public bool MfaWasChanged { get; private set; }
+    public bool ReturnToLoginRequired { get; private set; }
 
     // Invalidates late responses locally. Visible cancel/restart controls also call CancelAsync.
     public void Restart() { generation++; Pending = null; verifier = null; }
@@ -37,14 +39,40 @@ public sealed class AuthenticationFlow(HttpClient http, IIdentityStore store, Ti
     });
 
     public Task<AuthOutcome> ProvePasswordAsync(string password) => Continue(AuthenticationStep.Password,
-        "password-change/password", proof => new PasswordChangeProofRequest(password, proof));
+        Pending?.Purpose == AuthenticationOperationPurpose.MfaEnrollment ? "mfa/password" : "password-change/password",
+        proof => new PasswordChangeProofRequest(password, proof));
 
     public Task<AuthOutcome> ChangePasswordAsync(string password) => Continue(AuthenticationStep.PasswordChange,
         "password-change/complete", proof => new CompletePasswordChangeRequest(password, proof));
 
     public Task<AuthOutcome> CompleteMfaAsync(string code) => Continue(AuthenticationStep.ExistingMfa,
-        Pending?.Purpose == AuthenticationOperationPurpose.PasswordChange ? "password-change/mfa" : "login/mfa",
+        Pending?.Purpose switch { AuthenticationOperationPurpose.PasswordChange => "password-change/mfa",
+            AuthenticationOperationPurpose.MfaReplacement => "mfa/existing", _ => "login/mfa" },
         proof => new CompleteMfaRequest(code, proof));
+
+    public Task<AuthOutcome> BeginMfaAsync(string access, bool replace = false) => SendAsync(() =>
+    {
+        Start();
+        var request = Request("mfa/start", new StartMfaRequest(Challenge(), replace));
+        request.Headers.Authorization = new("Bearer", access);
+        return request;
+    });
+
+    public Task<AuthOutcome> ConfirmNewFactorAsync(string code) => Continue(AuthenticationStep.NewMfa,
+        "mfa/confirm", proof => new CompleteMfaRequest(code, proof));
+
+    public Task<AuthOutcome> RecoverMfaAsync(string username, string password, string recoveryCode) => SendAsync(() =>
+    {
+        Start();
+        return Request("mfa/recover", new RecoverMfaRequest(username, password, recoveryCode, Challenge()));
+    });
+
+    public Task<AuthOutcome> IssueMfaRecoveryAsync(string access, long userID, string verificationReference) => SendAsync(() =>
+    {
+        var request = Request("mfa/recovery-code", new IssueMfaRecoveryRequest(userID, verificationReference));
+        request.Headers.Authorization = new("Bearer", access);
+        return request;
+    });
 
     public async Task<AuthOutcome> CancelAsync()
     {
@@ -57,7 +85,7 @@ public sealed class AuthenticationFlow(HttpClient http, IIdentityStore store, Ti
 
     private void Start()
     {
-        Restart(); PasswordWasChanged = false;
+        Restart(); PasswordWasChanged = false; MfaWasChanged = false; ReturnToLoginRequired = false;
         verifier = Base64Url(RandomNumberGenerator.GetBytes(32));
     }
     private string Challenge() => Base64Url(SHA256.HashData(Encoding.ASCII.GetBytes(verifier!)));
@@ -104,19 +132,34 @@ public sealed class AuthenticationFlow(HttpClient http, IIdentityStore store, Ti
                 PasswordWasChanged = true;
                 outcome = changed.Continuation;
             }
+            var mfaChanged = outcome as MfaChanged;
+            if (mfaChanged is not null && response.IsSuccessStatusCode)
+            {
+                MfaWasChanged = true;
+                PasswordWasChanged |= mfaChanged.PasswordAlsoChanged;
+                outcome = mfaChanged.Continuation;
+            }
+            AuthOutcome Completed(AuthOutcome value) => mfaChanged is not null ? new MfaChanged(value, mfaChanged.PasswordAlsoChanged)
+                : changed is not null ? new PasswordChanged(value) : value;
             switch (outcome)
             {
                 case SessionIssued session when response.IsSuccessStatusCode && IsSession(session.Session):
                     Restart();
                     await store.StoreTokenAsync(session.Session);
-                    return changed is null ? session : new PasswordChanged(session);
+                    return Completed(session);
                 case ChallengeRequired restricted when response.IsSuccessStatusCode &&
                     restricted.Challenge is { } challenge && Enum.IsDefined(challenge.Step) && Enum.IsDefined(challenge.Purpose) &&
                     challenge.ExpiresAt > clock.GetUtcNow() &&
                     (challenge.Step != AuthenticationStep.ExistingMfa || !string.IsNullOrWhiteSpace(challenge.Handle)):
                     Pending = challenge;
                     if (challenge.Handle is null) verifier = null;
-                    return changed is null ? restricted : new PasswordChanged(restricted);
+                    return Completed(restricted);
+                case ReturnToLogin when response.IsSuccessStatusCode && mfaChanged is not null:
+                    Restart(); ReturnToLoginRequired = true;
+                    await store.RemoveTokenAsync();
+                    return Completed(new ReturnToLogin());
+                case MfaRecoveryCodeIssued issued when response.IsSuccessStatusCode:
+                    return issued;
                 case AuthenticationRefused refused:
                     // Invalid proof and password-policy errors permit correction within the original deadline.
                     if (refused.Code is not (AuthenticationFailure.InvalidProof or AuthenticationFailure.InvalidNewPassword)) Restart();

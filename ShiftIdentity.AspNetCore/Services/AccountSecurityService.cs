@@ -9,25 +9,20 @@ using static ShiftSoftware.ShiftIdentity.AspNetCore.Authentication.AdmissionRule
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 
 /// <summary>Staged account mutations, using the same locked admission and proof rules as login.</summary>
-internal static class AccountSecurityService
+internal static partial class AccountSecurityService
 {
     internal static Task<AuthOutcome> BeginPasswordChangeAsync(IdentityAdmissionServices services, string? authorization,
         StartPasswordChangeRequest request, CancellationToken ct) => AtBoundary(async () =>
     {
         if (!Valid(request) || !OperationCredential.IsChallenge(request.CodeChallenge)) return Refuse(AuthenticationFailure.InvalidRequest);
-        if (authorization is null || !authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-            return Refuse(AuthenticationFailure.InvalidGrant);
-        var signedIn = services.Tokens.ValidateAccess(authorization[7..], services.Client);
+        var signedIn = ReadSignedIn(services, authorization);
         if (signedIn is null) return Refuse(AuthenticationFailure.InvalidGrant);
         var proof = signedIn.Proof;
         return await services.Store.AdmitAsync<AuthOutcome>(proof.UserID, null, services.Client, unit =>
         {
-            var refusal = CommonRefusal(services, unit, proof.SecurityVersion, proof.PolicyRevision);
+            var refusal = SignedInRefusal(services, unit, signedIn);
             if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
             var now = services.Clock.GetUtcNow();
-            if (now >= signedIn.ExpiresAt) return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.Expired));
-            if (unit.Security.FactorGeneration != proof.FactorGeneration || proof.Subject != services.HashIds.Encode<UserDTO>(unit.User.ID))
-                return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.StaleOperation));
             var deadline = now.AddMinutes(5) < signedIn.ExpiresAt ? now.AddMinutes(5) : signedIn.ExpiresAt;
             // Existing access/MFA claims establish context only. Fresh password proof follows this operation's creation.
             return Task.FromResult<AuthOutcome>(AdmissionOperations.Create(services, unit,
@@ -66,7 +61,7 @@ internal static class AccountSecurityService
             unit.Operation.PasswordProvenAt = provenAt;
             if (upgrade is not null) { unit.User.PasswordHash = upgrade.PasswordHash; unit.User.Salt = upgrade.Salt; }
             var next = LocalStep(unit, false, ignorePasswordChange: true);
-            if (next is AuthenticationStep.MfaRecovery or AuthenticationStep.NewMfa)
+            if (next is AuthenticationStep.MfaRecovery)
                 return Task.FromResult<AuthOutcome>(StopRestricted(unit, next.Value, now));
             unit.Audit("PasswordChangePasswordProven", now, reference.ID);
             return Task.FromResult<AuthOutcome>(AdmissionOperations.Advance(services, unit.Operation,
@@ -100,12 +95,13 @@ internal static class AccountSecurityService
             var op = unit.Operation;
             var now = services.Clock.GetUtcNow();
             var next = LocalStep(unit, op.MfaProvenAt is not null, ignorePasswordChange: true);
-            if (next is AuthenticationStep.MfaRecovery or AuthenticationStep.NewMfa)
+            if (next is AuthenticationStep.MfaRecovery)
                 return Task.FromResult<AuthOutcome>(StopRestricted(unit, next.Value, now));
-            if (next == AuthenticationStep.ExistingMfa)
+            if (next is AuthenticationStep.ExistingMfa or AuthenticationStep.NewMfa)
             {
                 op.PendingPasswordHash = candidate.PasswordHash;
                 op.PendingPasswordSalt = candidate.Salt;
+                if (next == AuthenticationStep.NewMfa) return Task.FromResult<AuthOutcome>(PrepareNewFactor(services, unit));
                 return Task.FromResult<AuthOutcome>(AdmissionOperations.Advance(services, op, AuthenticationOperationState.AwaitingMfa));
             }
             return Task.FromResult(ApplyPasswordChange(services, unit, candidate.PasswordHash, candidate.Salt, now));
@@ -138,13 +134,15 @@ internal static class AccountSecurityService
         CancelOperationRequest request, CancellationToken ct) => AtBoundary(async () =>
     {
         if (!Valid(request)) return Refuse(AuthenticationFailure.InvalidRequest);
-        var reference = await AdmissionOperations.ReadAsync(services, handle, AuthenticationOperationPurpose.PasswordChange, ct)
-            ?? await AdmissionOperations.ReadAsync(services, handle, AuthenticationOperationPurpose.Login, ct);
+        var reference = await AdmissionOperations.ReadAnyAsync(services, handle, ct,
+            AuthenticationOperationPurpose.PasswordChange, AuthenticationOperationPurpose.Login,
+            AuthenticationOperationPurpose.MfaEnrollment, AuthenticationOperationPurpose.MfaReplacement, AuthenticationOperationPurpose.MfaRecovery);
         if (reference is null) return Refuse(AuthenticationFailure.InvalidGrant);
         return await services.Store.AdmitAsync<AuthOutcome>(reference.UserID, reference.ID, services.Client, unit =>
         {
             var refusal = AdmissionOperations.Check(services, unit, reference, request.CodeVerifier, reference.Purpose,
-                AuthenticationOperationState.AwaitingPassword, AuthenticationOperationState.AwaitingNewPassword, AuthenticationOperationState.AwaitingMfa);
+                AuthenticationOperationState.AwaitingPassword, AuthenticationOperationState.AwaitingNewPassword, AuthenticationOperationState.AwaitingMfa,
+                AuthenticationOperationState.AwaitingNewFactor);
             if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
             AdmissionOperations.Finish(unit.Operation!, services.Clock.GetUtcNow(), cancelled: true);
             unit.Audit("OperationCancelled", services.Clock.GetUtcNow(), reference.ID);
@@ -187,10 +185,10 @@ internal static class AccountSecurityService
     private sealed record SnapshotResult(IdentityProofSnapshot? Snapshot, AuthenticationRefused? Failure);
 
     private static Task<SnapshotResult> ReadSnapshot(IdentityAdmissionServices services, AdmissionOperations.Reference reference,
-        string verifier, AuthenticationOperationState state, CancellationToken ct) =>
+        string verifier, AuthenticationOperationState state, CancellationToken ct, AuthenticationOperationPurpose purpose = AuthenticationOperationPurpose.PasswordChange) =>
         services.Store.AdmitAsync(reference.UserID, reference.ID, services.Client, unit =>
         {
-            var failure = AdmissionOperations.Check(services, unit, reference, verifier, AuthenticationOperationPurpose.PasswordChange, state);
+            var failure = AdmissionOperations.Check(services, unit, reference, verifier, purpose, state);
             return Task.FromResult(new SnapshotResult(failure is null ? new(unit.User, unit.Security, unit.Policy) : null, failure));
         }, ct);
 }

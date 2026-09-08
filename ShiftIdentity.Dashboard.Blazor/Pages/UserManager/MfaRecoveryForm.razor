@@ -1,0 +1,39 @@
+@using System.ComponentModel.DataAnnotations
+@using ShiftSoftware.ShiftIdentity.Core.Authentication
+@using AuthenticationFlow = ShiftSoftware.ShiftIdentity.Blazor.Services.AuthenticationFlow
+@inject ShiftIdentityLocalizer Loc
+
+<MudPaper Class="pa-5" data-testid="mfa-recovery-form">
+    <MudText Typo="Typo.h6">@Loc["Recover your authenticator"]</MudText>
+    <MudText>@Loc["Ask an authorized administrator to verify your identity and provide a recovery code. Enter it with your current password to set up a new authenticator."]</MudText>
+    <EditForm Model="entry" OnValidSubmit="Recover">
+        <DataAnnotationsValidator />
+        <MudTextField T="string" Label="@Loc["Username"]" @bind-Value="entry.Username" For="@(() => entry.Username)" Immediate="true" autocomplete="username" />
+        <MudTextField T="string" Label="@Loc["Current Password"]" @bind-Value="entry.Password" For="@(() => entry.Password)" Immediate="true" InputType="InputType.Password" autocomplete="current-password" />
+        <MudTextField T="string" Label="@Loc["Recovery code"]" @bind-Value="entry.Code" For="@(() => entry.Code)" Immediate="true" autocomplete="off" />
+        <MudButton ButtonType="ButtonType.Submit" Disabled="AdmissionFlow.Busy" Color="Color.Primary">@Loc["Continue recovery"]</MudButton>
+    </EditForm>
+    @if (error is not null) { <MudAlert Severity="Severity.Error" data-testid="recovery-error">@error</MudAlert> }
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public AuthenticationFlow AdmissionFlow { get; set; } = null!;
+    [Parameter] public string Username { get; set; } = "";
+    [Parameter] public EventCallback<AuthOutcome> AdmissionCompleted { get; set; }
+    private Entry entry = new();
+    private string? error;
+    private sealed class Entry
+    {
+        [Required, MaxLength(255)] public string Username { get; set; } = "";
+        [Required, MaxLength(1024)] public string Password { get; set; } = "";
+        [Required, MaxLength(64)] public string Code { get; set; } = "";
+    }
+    protected override void OnInitialized() => entry.Username = Username;
+    private async Task Recover()
+    {
+        var result = await AdmissionFlow.RecoverMfaAsync(entry.Username, entry.Password, entry.Code);
+        entry = new() { Username = entry.Username };
+        error = result is AuthenticationRefused ? Loc["Recovery could not be verified. Check your password and recovery code, or ask the administrator for a new code."] : null;
+        await AdmissionCompleted.InvokeAsync(result);
+    }
+}

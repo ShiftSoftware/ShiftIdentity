@@ -1,0 +1,50 @@
+@using System.ComponentModel.DataAnnotations
+@using ShiftSoftware.ShiftIdentity.Core.Authentication
+@using AuthenticationFlow = ShiftSoftware.ShiftIdentity.Blazor.Services.AuthenticationFlow
+@inject ShiftIdentityLocalizer Loc
+
+<MudPaper Class="pa-5" data-testid="mfa-recovery-admin-form">
+    <MudText Typo="Typo.h6">@Loc["Issue an authenticator recovery code"]</MudText>
+    <MudText>@Loc["Verify this person's identity through your approved independent procedure. Record its reference before issuing a code. Issuing disables the lost authenticator and requires recovery before local sign-in."]</MudText>
+    <EditForm Model="entry" OnValidSubmit="Issue">
+        <DataAnnotationsValidator />
+        <MudTextField T="string" Label="@Loc["Identity verification reference"]" @bind-Value="entry.Reference" For="@(() => entry.Reference)" Immediate="true" />
+        <MudButton ButtonType="ButtonType.Submit" Color="Color.Warning" Disabled="AdmissionFlow.Busy">@Loc["Issue recovery code"]</MudButton>
+    </EditForm>
+    @if (issued is not null)
+    {
+        <MudAlert Severity="Severity.Success">@Loc["Give this code to the verified person through your established private channel. It can be used once and expires at:"] @issued.ExpiresAt.ToLocalTime().ToString("t")</MudAlert>
+        <MudText Style="font-family:monospace;word-break:break-all" data-testid="recovery-code">@issued.Code</MudText>
+        <MudButton OnClick="() => issued = null">@Loc["Hide code"]</MudButton>
+    }
+    @if (error is not null) { <MudAlert Severity="Severity.Error">@error</MudAlert> }
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public AuthenticationFlow AdmissionFlow { get; set; } = null!;
+    [Parameter, EditorRequired] public string AccessToken { get; set; } = "";
+    [Parameter] public long UserID { get; set; }
+    [Parameter] public EventCallback<AuthOutcome> AdmissionCompleted { get; set; }
+    private sealed class Entry { [Required, StringLength(200, MinimumLength = 3)] public string Reference { get; set; } = ""; }
+    private Entry entry = new();
+    private MfaRecoveryCodeIssued? issued;
+    private string? error;
+    private long shownUserID;
+    private string shownAccess = "";
+    protected override void OnParametersSet()
+    {
+        if (shownUserID == UserID && shownAccess == AccessToken) return;
+        shownUserID = UserID; shownAccess = AccessToken;
+        issued = null; error = null; entry = new();
+    }
+    private async Task Issue()
+    {
+        issued = null;
+        var subject = UserID; var actor = AccessToken;
+        var result = await AdmissionFlow.IssueMfaRecoveryAsync(actor, subject, entry.Reference);
+        if (subject != UserID || actor != AccessToken) return;
+        issued = result as MfaRecoveryCodeIssued;
+        error = result is AuthenticationRefused ? Loc["Recovery issuance could not be confirmed. Check your permission and sign in again. A lost response may require issuing a new code."] : null;
+        await AdmissionCompleted.InvokeAsync(result);
+    }
+}

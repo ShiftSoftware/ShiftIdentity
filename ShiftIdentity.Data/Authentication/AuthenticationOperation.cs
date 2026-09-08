@@ -2,7 +2,7 @@ using ShiftSoftware.ShiftIdentity.Core.Authentication;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Authentication;
 
-public enum AuthenticationOperationState { AwaitingMfa = 1, Completed = 2, Locked = 3, AwaitingPassword = 4, AwaitingNewPassword = 5, Cancelled = 6 }
+public enum AuthenticationOperationState { AwaitingMfa = 1, Completed = 2, Locked = 3, AwaitingPassword = 4, AwaitingNewPassword = 5, Cancelled = 6, AwaitingNewFactor = 7, AwaitingRecoveryProof = 8, Superseded = 9 }
 public enum PasswordChangeOrigin { Voluntary = 1, RequiredLogin = 2 }
 
 /// <summary>A single-use, purpose-bound continuation; it is never an ordinary session credential.</summary>
@@ -26,6 +26,10 @@ public sealed class AuthenticationOperation
     public PasswordChangeOrigin? PasswordChangeOrigin { get; set; }
     public DateTimeOffset? PasswordProvenAt { get; set; }
     public DateTimeOffset? MfaProvenAt { get; set; }
+    public Guid? ParentID { get; set; }
+    public byte[]? ProtectedPendingTotpSecret { get; set; }
+    public byte[]? RecoveryCodeDigest { get; set; }
+    public long? OutstandingRecoveryUserID { get; set; }
     // Only prepared adaptive hashes are retained while awaiting MFA, never plaintext passwords.
     public byte[]? PendingPasswordHash { get; set; }
     public byte[]? PendingPasswordSalt { get; set; }
@@ -54,5 +58,7 @@ public sealed class AuthenticationAuditEvent
     public Guid? OperationID { get; set; }
     public long SecurityVersion { get; set; }
     public string Outcome { get; set; } = "";
+    public long? ActorUserID { get; set; }
+    public string? VerificationReference { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 }

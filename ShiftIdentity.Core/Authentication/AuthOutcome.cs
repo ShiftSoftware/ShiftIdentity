@@ -12,6 +12,9 @@ namespace ShiftSoftware.ShiftIdentity.Core.Authentication;
 [JsonDerivedType(typeof(AuthenticationRefused), "refused")]
 [JsonDerivedType(typeof(PasswordChanged), "passwordChanged")]
 [JsonDerivedType(typeof(OperationCancelled), "cancelled")]
+[JsonDerivedType(typeof(MfaChanged), "mfaChanged")]
+[JsonDerivedType(typeof(ReturnToLogin), "returnToLogin")]
+[JsonDerivedType(typeof(MfaRecoveryCodeIssued), "mfaRecoveryCodeIssued")]
 public abstract record AuthOutcome;
 
 public sealed record SessionIssued(TokenDTO Session) : AuthOutcome;
@@ -19,6 +22,9 @@ public sealed record ChallengeRequired(AuthenticationChallenge Challenge) : Auth
 public sealed record AuthenticationRefused(AuthenticationFailure Code, PasswordPolicyFailure? PasswordFailure = null) : AuthOutcome;
 public sealed record PasswordChanged(AuthOutcome Continuation) : AuthOutcome;
 public sealed record OperationCancelled : AuthOutcome;
+public sealed record MfaChanged(AuthOutcome Continuation, bool PasswordAlsoChanged = false) : AuthOutcome;
+public sealed record ReturnToLogin : AuthOutcome;
+public sealed record MfaRecoveryCodeIssued(string Code, DateTimeOffset ExpiresAt) : AuthOutcome;
 
 public enum AuthenticationStep { ExistingMfa, PasswordChange, MfaRecovery, NewMfa, EmailVerification, Password }
 public enum AuthenticationFailure
@@ -26,11 +32,27 @@ public enum AuthenticationFailure
     InvalidRequest, InvalidProof, InvalidGrant, StaleOperation, Expired, AttemptsExhausted,
     AccountUnavailable, ClientDenied, Unavailable, InvalidNewPassword
 }
-public enum AuthenticationOperationPurpose { Login = 1, ContactChange = 2, MfaEnrollment = 3, PasswordChange = 4 }
+public enum AuthenticationOperationPurpose { Login = 1, ContactChange = 2, MfaEnrollment = 3, PasswordChange = 4, MfaReplacement = 5, MfaRecovery = 6 }
 
 public sealed record AuthenticationChallenge(
     AuthenticationStep Step, string? Handle, DateTimeOffset ExpiresAt,
-    AuthenticationOperationPurpose Purpose = AuthenticationOperationPurpose.Login);
+    AuthenticationOperationPurpose Purpose = AuthenticationOperationPurpose.Login,
+    NewAuthenticatorSetup? NewAuthenticator = null);
+
+// Sent only after the required proof, over the protected response, and held in component memory.
+public sealed record NewAuthenticatorSetup(string Secret, string Uri, string Svg);
+
+public sealed record StartMfaRequest(
+    [property: Required, StringLength(43, MinimumLength = 43)] string CodeChallenge,
+    bool Replace = false);
+public sealed record RecoverMfaRequest(
+    [property: Required, MaxLength(255)] string Username,
+    [property: Required, MaxLength(1024)] string CurrentPassword,
+    [property: Required, MaxLength(64)] string RecoveryCode,
+    [property: Required, StringLength(43, MinimumLength = 43)] string CodeChallenge);
+public sealed record IssueMfaRecoveryRequest(
+    [property: Range(1, long.MaxValue)] long UserID,
+    [property: Required, StringLength(200, MinimumLength = 3)] string VerificationReference);
 
 public sealed record PasswordLoginRequest(
     [property: Required, MaxLength(255)] string Username,

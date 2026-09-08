@@ -8,6 +8,8 @@ public sealed class UserSecurityState
     public long FactorGeneration { get; set; } = 1;
     public bool LocalMfaRecoveryRequired { get; set; }
     public byte[]? ProtectedTotpSecret { get; set; }
+    public int TotpProtectionVersion { get; set; }
+    public Guid? MfaRecoveryOperationID { get; set; }
     public long? LastAcceptedTotpStep { get; set; }
     public int FailedProofs { get; set; }
     public DateTimeOffset? FailureWindowStart { get; set; }

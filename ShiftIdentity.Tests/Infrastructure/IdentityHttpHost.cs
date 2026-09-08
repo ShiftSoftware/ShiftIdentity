@@ -110,6 +110,18 @@ public sealed class IdentityHttpHost : IDisposable
         SendAsync("password-change/mfa", "Operation", handle, new CompleteMfaRequest(code, verifier));
     public Task<AuthOutcome> CancelAsync(string handle, string verifier) =>
         SendAsync("operations/cancel", "Operation", handle, new CancelOperationRequest(verifier));
+    public Task<AuthOutcome> StartMfaAsync(string access, string challenge, bool replace = false) =>
+        SendAsync("mfa/start", "Bearer", access, new StartMfaRequest(challenge, replace));
+    public Task<AuthOutcome> MfaPasswordAsync(string handle, string password, string verifier) =>
+        SendAsync("mfa/password", "Operation", handle, new PasswordChangeProofRequest(password, verifier));
+    public Task<AuthOutcome> ExistingFactorAsync(string handle, string code, string verifier) =>
+        SendAsync("mfa/existing", "Operation", handle, new CompleteMfaRequest(code, verifier));
+    public Task<AuthOutcome> ConfirmFactorAsync(string handle, string code, string verifier) =>
+        SendAsync("mfa/confirm", "Operation", handle, new CompleteMfaRequest(code, verifier));
+    public Task<AuthOutcome> IssueRecoveryAsync(string access, long userID, string reference) =>
+        SendAsync("mfa/recovery-code", "Bearer", access, new IssueMfaRecoveryRequest(userID, reference));
+    public async Task<AuthOutcome> RecoverMfaAsync(string username, string password, string code, string challenge) =>
+        await Read(await Client.PostAsJsonAsync("/api/identity/v2/mfa/recover", new RecoverMfaRequest(username, password, code, challenge)));
 
     private async Task<AuthOutcome> SendAsync<T>(string route, string scheme, string credential, T body)
     {

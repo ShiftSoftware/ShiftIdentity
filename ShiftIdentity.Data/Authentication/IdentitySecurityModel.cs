@@ -14,17 +14,20 @@ public static class IdentitySecurityModel
         builder.Entity<UserSecurityState>(e =>
         {
             e.ToTable("UserSecurityStates", "ShiftIdentity", t =>
-                t.HasCheckConstraint("CK_UserSecurityState_Version", "[SecurityVersion] >= 1 AND [FactorGeneration] >= 1 AND [FailedProofs] >= 0"));
+                t.HasCheckConstraint("CK_UserSecurityState_Version", "[SecurityVersion] >= 1 AND [FactorGeneration] >= 1 AND [FailedProofs] >= 0 AND [TotpProtectionVersion] IN (0,1)"));
             e.HasKey(x => x.UserID);
             e.HasOne<User>().WithOne().HasForeignKey<UserSecurityState>(x => x.UserID).OnDelete(DeleteBehavior.Restrict);
             e.Property(x => x.RowVersion).IsRowVersion();
+            e.Property(x => x.TotpProtectionVersion).HasDefaultValue(0);
         });
         builder.Entity<AuthenticationOperation>(e =>
         {
             e.ToTable("AuthenticationOperations", "ShiftIdentity", t =>
             {
-                t.HasCheckConstraint("CK_AuthenticationOperation_State", "[State] IN (1,2,3,4,5,6) AND [Purpose] IN (1,2,3,4)");
-                t.HasCheckConstraint("CK_AuthenticationOperation_Password", "([PasswordChangeOrigin] IS NULL OR [PasswordChangeOrigin] IN (1,2)) AND (([PendingPasswordHash] IS NULL AND [PendingPasswordSalt] IS NULL) OR ([Purpose] = 4 AND [State] = 1 AND [PendingPasswordHash] IS NOT NULL AND [PendingPasswordSalt] IS NOT NULL))");
+                t.HasCheckConstraint("CK_AuthenticationOperation_State", "[State] IN (1,2,3,4,5,6,7,8,9) AND [Purpose] IN (1,2,3,4,5,6)");
+                t.HasCheckConstraint("CK_AuthenticationOperation_Password", "([PasswordChangeOrigin] IS NULL OR [PasswordChangeOrigin] IN (1,2)) AND (([PendingPasswordHash] IS NULL AND [PendingPasswordSalt] IS NULL) OR ([Purpose] = 4 AND [State] IN (1,7) AND [PendingPasswordHash] IS NOT NULL AND [PendingPasswordSalt] IS NOT NULL))");
+                t.HasCheckConstraint("CK_AuthenticationOperation_Factor", "[ProtectedPendingTotpSecret] IS NULL OR ([Purpose] IN (3,4,5,6) AND [State] = 7)");
+                t.HasCheckConstraint("CK_AuthenticationOperation_Recovery", "([RecoveryCodeDigest] IS NULL OR ([Purpose] = 6 AND [State] = 8 AND [ParentID] IS NULL)) AND ([OutstandingRecoveryUserID] IS NULL OR ([Purpose] = 6 AND [ParentID] IS NULL AND [OutstandingRecoveryUserID] = [UserID]))");
                 t.HasCheckConstraint("CK_AuthenticationOperation_Version", "[SecurityVersion] >= 1 AND [FactorGeneration] >= 1 AND [PolicyRevision] >= 1 AND [FailedAttempts] BETWEEN 0 AND 5 AND [ExpiresAt] > [CreatedAt]");
             });
             e.HasKey(x => x.ID);
@@ -35,9 +38,13 @@ public static class IdentitySecurityModel
             e.Property(x => x.CodeChallenge).HasMaxLength(43);
             e.Property(x => x.PendingPasswordHash).HasMaxLength(256);
             e.Property(x => x.PendingPasswordSalt).HasMaxLength(128);
+            e.Property(x => x.ProtectedPendingTotpSecret).HasMaxLength(1024);
+            e.Property(x => x.RecoveryCodeDigest).HasMaxLength(32);
             e.Property(x => x.RowVersion).IsRowVersion();
             e.HasIndex(x => new { x.ExpiresAt, x.State });
             e.HasIndex(x => new { x.UserID, x.Purpose, x.State });
+            e.HasIndex(x => x.ParentID);
+            e.HasIndex(x => x.OutstandingRecoveryUserID).IsUnique().HasFilter("[OutstandingRecoveryUserID] IS NOT NULL");
         });
         builder.Entity<AuthenticationPolicyState>(e =>
         {
@@ -55,6 +62,7 @@ public static class IdentitySecurityModel
             e.ToTable("AuthenticationAuditEvents", "ShiftIdentity");
             e.HasKey(x => x.ID);
             e.Property(x => x.Outcome).HasMaxLength(80);
+            e.Property(x => x.VerificationReference).HasMaxLength(200);
             e.HasIndex(x => x.CreatedAt);
         });
     }

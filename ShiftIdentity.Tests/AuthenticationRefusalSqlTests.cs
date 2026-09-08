@@ -51,7 +51,13 @@ public sealed class AuthenticationRefusalSqlTests(SqlIdentityFixture fixture)
                 Assert.NotNull(challenge.Handle);
                 Assert.Equal(AuthenticationOperationPurpose.PasswordChange, challenge.Purpose);
             }
-            else Assert.Null(challenge.Handle); // The other remedies remain restricted.
+            else if (step == AuthenticationStep.NewMfa)
+            {
+                Assert.NotNull(challenge.Handle);
+                Assert.NotNull(challenge.NewAuthenticator);
+                Assert.Equal(AuthenticationOperationPurpose.MfaEnrollment, challenge.Purpose);
+            }
+            else Assert.Null(challenge.Handle);
         }
         else Assert.Equal(failure, Assert.IsType<AuthenticationRefused>(outcome).Code);
     }
@@ -100,7 +106,9 @@ public sealed class AuthenticationRefusalSqlTests(SqlIdentityFixture fixture)
         Assert.IsType<AuthenticationRefused>(await attemptHost.CompleteAsync(handle, Code(clock), verifier));
         await using var check = fixture.CreateContext();
         Assert.Null((await check.Set<UserSecurityState>().SingleAsync()).LastAcceptedTotpStep);
-        Assert.Equal(AuthenticationOperationState.AwaitingMfa, (await check.Set<AuthenticationOperation>().SingleAsync()).State);
+        var operation = await check.Set<AuthenticationOperation>().SingleAsync();
+        Assert.Equal(scenario == "expired" ? AuthenticationOperationState.Cancelled : AuthenticationOperationState.AwaitingMfa, operation.State);
+        if (scenario == "expired") Assert.Empty(operation.HandleDigest);
         fixture.Clock = TimeProvider.System;
     }
 

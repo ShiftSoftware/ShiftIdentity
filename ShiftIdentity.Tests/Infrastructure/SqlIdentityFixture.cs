@@ -111,6 +111,27 @@ public class SqlIdentityFixture : IAsyncLifetime
         return ContextFactory?.Invoke(options) ?? new IdentityTestDbContext(options);
     }
 
+    public async Task<long> CreateSyntheticUserAsync(string username, string? accessTree = null, bool mfa = false)
+    {
+        await using var db = CreateContext();
+        var template = await db.Users.AsNoTracking().SingleAsync(x => x.ID == UserID);
+        var hash = HashService.GenerateVersionedHash(Password);
+        var user = new User
+        {
+            Username = username, FullName = "Synthetic User", IsActive = true, PasswordHash = hash.PasswordHash, Salt = hash.Salt,
+            CompanyID = template.CompanyID, CompanyBranchID = template.CompanyBranchID, CountryID = template.CountryID,
+            RegionID = template.RegionID, AccessTree = accessTree
+        };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+        db.Set<UserSecurityState>().Add(new()
+        {
+            UserID = user.ID, ProtectedTotpSecret = mfa ? Protection.CreateProtector("Identity.Totp.v2").Protect(FactorSecret) : null
+        });
+        await db.SaveChangesAsync();
+        return user.ID;
+    }
+
     public async Task ResetAsync(bool mfa = false)
     {
         await using var db = CreateContext();
@@ -123,12 +144,38 @@ public class SqlIdentityFixture : IAsyncLifetime
         user.LockDownUntil = null; user.Email = null; user.EmailVerified = false;
         var state = await db.Set<UserSecurityState>().SingleAsync(x => x.UserID == UserID);
         state.SecurityVersion = 1; state.FactorGeneration = 1; state.LocalMfaRecoveryRequired = false;
+        state.TotpProtectionVersion = 0; state.MfaRecoveryOperationID = null;
         state.FailedProofs = 0; state.FailureWindowStart = null; state.LastAcceptedTotpStep = null;
         state.ProtectedTotpSecret = mfa ? Protection.CreateProtector("Identity.Totp.v2").Protect(FactorSecret) : null;
         var policy = await db.Set<AuthenticationPolicyState>().SingleAsync();
         policy.Revision = 1; policy.MfaEnabled = true; policy.MfaMandatory = false; policy.RequireVerifiedEmail = false;
         policy.TotpDigits = 6; policy.TotpPeriodSeconds = 30; policy.TotpWindowPast = 1; policy.TotpWindowFuture = 1;
         await db.SaveChangesAsync();
+    }
+
+    // Controls for the isolated consumer preview. These never read application configuration.
+    public async Task ChangeMfaPolicyAsync(bool mandatory)
+    {
+        await using var db = CreateContext();
+        var policy = await db.Set<AuthenticationPolicyState>().SingleAsync();
+        policy.MfaMandatory = mandatory;
+        policy.Revision = checked(policy.Revision + 1);
+        await db.SaveChangesAsync();
+        Options = Options with { PolicyRevision = policy.Revision };
+    }
+
+    public async Task<(long UserID, string? Code)> GetSyntheticFactorAsync(string username)
+    {
+        await using var db = CreateContext();
+        var id = await db.Users.Where(x => x.Username == username).Select(x => x.ID).SingleAsync();
+        var state = await db.Set<UserSecurityState>().AsNoTracking().SingleAsync(x => x.UserID == id);
+        if (state.ProtectedTotpSecret is null) return (id, null);
+        var protector = Protection.CreateProtector("Identity.Totp.v2");
+        if (state.TotpProtectionVersion == 1)
+            protector = protector.CreateProtector(FormattableString.Invariant($"Active.v1:{state.UserID}:{state.FactorGeneration}"));
+        var secret = protector.Unprotect(state.ProtectedTotpSecret);
+        try { return (id, new OtpNet.Totp(secret).ComputeTotp(Clock.GetUtcNow().UtcDateTime)); }
+        finally { CryptographicOperations.ZeroMemory(secret); }
     }
 
     public async ValueTask DisposeAsync()

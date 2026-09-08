@@ -21,6 +21,20 @@ namespace ShiftSoftware.ShiftIdentity.AspNetCore.Authentication;
 
 internal static class AdmissionRules
 {
+    internal static SignedInContext? ReadSignedIn(IdentityAdmissionServices services, string? authorization) =>
+        authorization is not null && authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+            ? services.Tokens.ValidateAccess(authorization[7..], services.Client) : null;
+
+    internal static AuthenticationRefused? SignedInRefusal(IdentityAdmissionServices services, IdentitySecurityTransaction unit, SignedInContext signedIn)
+    {
+        var proof = signedIn.Proof;
+        var refusal = CommonRefusal(services, unit, proof.SecurityVersion, proof.PolicyRevision);
+        if (refusal is not null) return refusal;
+        if (services.Clock.GetUtcNow() >= signedIn.ExpiresAt) return Refuse(AuthenticationFailure.Expired);
+        return unit.Security.FactorGeneration != proof.FactorGeneration || proof.Subject != services.HashIds.Encode<UserDTO>(unit.User.ID)
+            ? Refuse(AuthenticationFailure.StaleOperation) : null;
+    }
+
     internal static AuthenticationRefused? CommonRefusal(IdentityAdmissionServices services,
         IdentitySecurityTransaction unit, long version, long policy)
     {

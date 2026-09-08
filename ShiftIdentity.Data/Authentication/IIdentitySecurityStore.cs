@@ -11,17 +11,19 @@ public sealed record IdentityProofSnapshot(User User, UserSecurityState Security
 public sealed class IdentitySecurityTransaction(
     User user, UserSecurityState security, AuthenticationPolicyState policy,
     AuthenticationOperation? operation, Action<AuthenticationOperation> addOperation,
-    Action<AuthenticationAuditEvent> addAudit)
+    Action<AuthenticationAuditEvent> addAudit, IReadOnlyList<AuthenticationOperation>? recoveryFamily = null)
 {
     public User User { get; } = user;
     public UserSecurityState Security { get; } = security;
     public AuthenticationPolicyState Policy { get; } = policy;
     public AuthenticationOperation? Operation { get; } = operation;
+    public IReadOnlyList<AuthenticationOperation> RecoveryFamily { get; } = recoveryFamily ?? [];
     public void AddOperation(AuthenticationOperation value) => addOperation(value);
-    public void Audit(string outcome, DateTimeOffset now, Guid? operationID = null) => addAudit(new()
+    public void Audit(string outcome, DateTimeOffset now, Guid? operationID = null, long? actorUserID = null, string? verificationReference = null) => addAudit(new()
     {
         UserID = User.ID, SecurityVersion = Security.SecurityVersion,
-        OperationID = operationID, Outcome = outcome, CreatedAt = now
+        OperationID = operationID, Outcome = outcome, CreatedAt = now,
+        ActorUserID = actorUserID, VerificationReference = verificationReference
     });
 }
 
@@ -32,6 +34,8 @@ public interface IIdentitySecurityStore
     Task<AuthenticationOperation?> ReadOperationAsync(Guid id, CancellationToken cancellationToken);
     Task<T> AdmitAsync<T>(long userID, Guid? operationID, AuthenticationClient client,
         Func<IdentitySecurityTransaction, Task<T>> transition, CancellationToken cancellationToken);
+    Task<T> AdmitAdminAsync<T>(long actorID, long userID, AuthenticationClient client,
+        Func<IdentitySecurityTransaction, IdentitySecurityTransaction, Task<T>> transition, CancellationToken cancellationToken);
 }
 
 public sealed class IdentitySecurityUnavailableException(string message, Exception? inner = null) : Exception(message, inner);

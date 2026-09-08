@@ -14,6 +14,7 @@ internal static class AdmissionEndpoints
 {
     internal static void AddIdentityAdmissionAuthentication(this IServiceCollection services)
     {
+        services.AddHostedService<AdmissionMaintenance>();
         services.AddAuthentication().AddScheme<AuthenticationSchemeOptions, OperationAuthenticationHandler>(
             OperationAuthenticationHandler.SchemeName, _ => { });
         services.AddAuthorizationBuilder().AddPolicy("IdentityLoginContinuation", policy =>
@@ -26,7 +27,18 @@ internal static class AdmissionEndpoints
         services.AddAuthorizationBuilder().AddPolicy("IdentityOperation", policy =>
             policy.AddAuthenticationSchemes(OperationAuthenticationHandler.SchemeName).RequireAuthenticatedUser()
                 .RequireClaim(OperationAuthenticationHandler.PurposeClaim,
-                    AuthenticationOperationPurpose.Login.ToString(), AuthenticationOperationPurpose.PasswordChange.ToString()));
+                    AuthenticationOperationPurpose.Login.ToString(), AuthenticationOperationPurpose.PasswordChange.ToString(),
+                    AuthenticationOperationPurpose.MfaEnrollment.ToString(), AuthenticationOperationPurpose.MfaReplacement.ToString(), AuthenticationOperationPurpose.MfaRecovery.ToString()));
+        services.AddAuthorizationBuilder().AddPolicy("IdentityMfaEnrollment", policy =>
+            policy.AddAuthenticationSchemes(OperationAuthenticationHandler.SchemeName).RequireAuthenticatedUser()
+                .RequireClaim(OperationAuthenticationHandler.PurposeClaim, AuthenticationOperationPurpose.MfaEnrollment.ToString()));
+        services.AddAuthorizationBuilder().AddPolicy("IdentityMfaReplacement", policy =>
+            policy.AddAuthenticationSchemes(OperationAuthenticationHandler.SchemeName).RequireAuthenticatedUser()
+                .RequireClaim(OperationAuthenticationHandler.PurposeClaim, AuthenticationOperationPurpose.MfaReplacement.ToString()));
+        services.AddAuthorizationBuilder().AddPolicy("IdentityNewFactor", policy =>
+            policy.AddAuthenticationSchemes(OperationAuthenticationHandler.SchemeName).RequireAuthenticatedUser()
+                .RequireClaim(OperationAuthenticationHandler.PurposeClaim, AuthenticationOperationPurpose.MfaEnrollment.ToString(),
+                    AuthenticationOperationPurpose.PasswordChange.ToString(), AuthenticationOperationPurpose.MfaReplacement.ToString(), AuthenticationOperationPurpose.MfaRecovery.ToString()));
     }
 
     internal static void MapIdentityAdmissionEndpoints(this IEndpointRouteBuilder endpoints)
@@ -57,6 +69,21 @@ internal static class AdmissionEndpoints
         group.MapPost("/operations/cancel", async (CancelOperationRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
             Result(await AccountSecurityService.CancelAsync(services, context.Request.Headers.Authorization.ToString()[10..], request, ct)))
             .RequireAuthorization("IdentityOperation");
+        group.MapPost("/mfa/start", async (StartMfaRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.BeginMfaAsync(services, context.Request.Headers.Authorization.ToString(), request, ct)));
+        group.MapPost("/mfa/password", async (PasswordChangeProofRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.ProveMfaPasswordAsync(services, context.Request.Headers.Authorization.ToString()[10..], request, ct)))
+            .RequireAuthorization("IdentityMfaEnrollment");
+        group.MapPost("/mfa/existing", async (CompleteMfaRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.ProveExistingFactorAsync(services, context.Request.Headers.Authorization.ToString()[10..], request, ct)))
+            .RequireAuthorization("IdentityMfaReplacement");
+        group.MapPost("/mfa/confirm", async (CompleteMfaRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.ConfirmNewFactorAsync(services, context.Request.Headers.Authorization.ToString()[10..], request, ct)))
+            .RequireAuthorization("IdentityNewFactor");
+        group.MapPost("/mfa/recover", async (RecoverMfaRequest request, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.RecoverMfaAsync(services, request, ct)));
+        group.MapPost("/mfa/recovery-code", async (IssueMfaRecoveryRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.IssueMfaRecoveryAsync(services, context.Request.Headers.Authorization.ToString(), request, ct)));
     }
 
     private static IResult Result(AuthOutcome result) => Results.Json<AuthOutcome>(result, statusCode: result switch

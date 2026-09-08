@@ -11,7 +11,53 @@
 @using MudBlazor
 @using ShiftSoftware.ShiftIdentity.Core
 @using ShiftSoftware.ShiftIdentity.Blazor
+@using ShiftSoftware.ShiftIdentity.Core.Authentication
+@using AuthenticationFlow = ShiftSoftware.ShiftIdentity.Blazor.Services.AuthenticationFlow
+@using System.ComponentModel.DataAnnotations
 
+@if (AdmissionFlow is not null)
+{
+    <MudPaper Class="pa-5" data-testid="mfa-enrollment-form">
+        @if (AdmissionFlow.Pending is { Step: AuthenticationStep.Password })
+        {
+            <MudText Typo="Typo.h6">@Loc["Confirm your current password"]</MudText>
+            <EditForm Model="passwordEntry" OnValidSubmit="ProveAdmissionPassword">
+                <DataAnnotationsValidator />
+                <MudTextField T="string" Label="@Loc["Current Password"]" @bind-Value="passwordEntry.Password"
+                    For="@(() => passwordEntry.Password)" Immediate="true" InputType="InputType.Password" autocomplete="current-password" />
+                <MudButton ButtonType="ButtonType.Submit" Disabled="AdmissionFlow.Busy">@Loc["Continue"]</MudButton>
+            </EditForm>
+        }
+        else if (AdmissionFlow.Pending is { Step: AuthenticationStep.ExistingMfa })
+        {
+            <MudText>@Loc["Confirm your existing authenticator before setting up its replacement."]</MudText>
+            <MfaForm AdmissionFlow="AdmissionFlow" AdmissionCompleted="HandleAdmission" />
+        }
+        else if (AdmissionFlow.Pending is { Step: AuthenticationStep.NewMfa, NewAuthenticator: { } setup })
+        {
+            <MudText Typo="Typo.h6">@Loc["Set up your new authenticator"]</MudText>
+            <MudText>@Loc["Scan the QR code, or enter the key manually. Then confirm a code from the new authenticator."]</MudText>
+            <div style="max-width:240px;margin:16px auto" aria-label="@Loc["Authenticator setup QR code"]">@((MarkupString)PrepareSvg(setup.Svg))</div>
+            <MudText Style="font-family:monospace;word-break:break-all" data-testid="enrollment-secret">@setup.Secret</MudText>
+            <EditForm Model="codeEntry" OnValidSubmit="ConfirmAdmissionFactor">
+                <DataAnnotationsValidator />
+                <MudTextField T="string" Label="@Loc["New authenticator code"]" @bind-Value="codeEntry.Code"
+                    For="@(() => codeEntry.Code)" Immediate="true" autocomplete="one-time-code" InputMode="InputMode.numeric" />
+                <MudButton ButtonType="ButtonType.Submit" Disabled="AdmissionFlow.Busy" Color="Color.Primary">@Loc["Confirm authenticator"]</MudButton>
+            </EditForm>
+        }
+        @if (admissionError is not null)
+        {
+            <MudAlert Severity="Severity.Error" data-testid="mfa-error">@admissionError</MudAlert>
+        }
+        @if (AdmissionFlow.Pending?.Handle is not null)
+        {
+            <MudButton OnClick="CancelAdmission">@Loc["Cancel setup"]</MudButton>
+        }
+    </MudPaper>
+}
+else
+{
 <MudPaper Elevation="25" Class="pa-5">
     @if (Enforce)
     {
@@ -88,8 +134,36 @@
         </EditForm>
     }
 </MudPaper>
+}
 
     @code {
+    [Parameter] public AuthenticationFlow? AdmissionFlow { get; set; }
+    [Parameter] public EventCallback<AuthOutcome> AdmissionCompleted { get; set; }
+    private sealed class PasswordEntry { [Required] public string Password { get; set; } = ""; }
+    private sealed class CodeEntry { [Required, RegularExpression(@"^[0-9]{6,8}$")] public string Code { get; set; } = ""; }
+    private PasswordEntry passwordEntry = new();
+    private CodeEntry codeEntry = new();
+    private string? admissionError;
+    private async Task ProveAdmissionPassword()
+    {
+        var result = await AdmissionFlow!.ProvePasswordAsync(passwordEntry.Password);
+        passwordEntry = new();
+        await HandleAdmission(result);
+    }
+    private async Task ConfirmAdmissionFactor()
+    {
+        var result = await AdmissionFlow!.ConfirmNewFactorAsync(codeEntry.Code);
+        codeEntry = new();
+        await HandleAdmission(result);
+    }
+    private async Task CancelAdmission() => await HandleAdmission(await AdmissionFlow!.CancelAsync());
+    private async Task HandleAdmission(AuthOutcome result)
+    {
+        admissionError = result is AuthenticationRefused { Code: AuthenticationFailure.InvalidProof }
+            ? Loc["That password or code was not accepted. Try again."]
+            : result is AuthenticationRefused ? Loc["Setup could not be confirmed. Sign in again to check which authenticator is active."] : null;
+        await AdmissionCompleted.InvokeAsync(result);
+    }
     private enum State { Loading, Ready, LoadFailed }
 
     private readonly EnrollTotpDTO dto = new();
@@ -110,7 +184,7 @@
     [SupplyParameterFromQuery]
     public string? ReturnUrl { get; set; }
 
-    protected override Task OnInitializedAsync() => LoadAsync();
+    protected override Task OnInitializedAsync() => AdmissionFlow is null ? LoadAsync() : Task.CompletedTask;
 
     private async Task LoadAsync()
     {

@@ -37,9 +37,18 @@
             <br />
             <br />
 
-            @if (AdmissionFlow?.Pending is { } challenge)
+            @if (recoveryMode && AdmissionFlow is not null)
             {
-                @if (challenge.Purpose == AuthenticationOperationPurpose.PasswordChange)
+                <MfaRecoveryForm AdmissionFlow="AdmissionFlow" Username="@loginDto.Username" AdmissionCompleted="HandleAdmission" />
+                <MudButton OnClick="RestartAdmission">@Loc["Back to login"]</MudButton>
+            }
+            else if (AdmissionFlow?.Pending is { } challenge)
+            {
+                @if (challenge.Step == AuthenticationStep.NewMfa)
+                {
+                    <TotpEnrollmentForm AdmissionFlow="AdmissionFlow" AdmissionCompleted="HandleAdmission" />
+                }
+                else if (challenge.Purpose == AuthenticationOperationPurpose.PasswordChange)
                 {
                     <ChangePasswordForm AdmissionFlow="AdmissionFlow" AdmissionCompleted="HandleAdmission" />
                 }
@@ -52,6 +61,10 @@
                     <MudAlert Severity="Severity.Info" data-testid="restricted-step">@Loc["Additional account verification is required before signing in."]</MudAlert>
                 }
                 <MudButton OnClick="RestartAdmission">@Loc["Start again"]</MudButton>
+                @if (challenge.Step is AuthenticationStep.PasswordChange or AuthenticationStep.MfaRecovery)
+                {
+                    <MudButton OnClick="() => recoveryMode = true">@Loc["Use an admin recovery code"]</MudButton>
+                }
             }
             else
             {
@@ -86,6 +99,14 @@
                     <MudButton Disabled="@(AdmissionFlow?.Busy ?? false)" Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit">@Loc["Login"]</MudButton>
                 </MudGrid>
             </EditForm>
+            @if (AdmissionFlow is not null)
+            {
+                <MudButton OnClick="() => recoveryMode = true">@Loc["Use an admin recovery code"]</MudButton>
+            }
+            }
+            @if (AdmissionFlow?.ReturnToLoginRequired == true)
+            {
+                <MudAlert Severity="Severity.Success" data-testid="recovery-completed">@Loc["Authenticator recovery completed. Sign in with your password and a new code from your authenticator."]</MudAlert>
             }
             @if (admissionError is not null)
             {
@@ -102,21 +123,25 @@
     [Parameter] public AuthenticationFlow? AdmissionFlow { get; set; }
     [Parameter] public EventCallback<SessionIssued> SessionCompleted { get; set; }
     private string? admissionError;
+    private bool recoveryMode;
     public void Dispose() => AdmissionFlow?.Restart();
 
     private async Task RestartAdmission()
     {
         var result = AdmissionFlow is null ? null : await AdmissionFlow.CancelAsync();
+        recoveryMode = false;
         loginDto.Password = string.Empty;
         admissionError = result is AuthenticationRefused
-            ? Loc["Cancellation could not be confirmed. Sign in again to check whether your password changed."] : null;
+            ? Loc["Cancellation could not be confirmed. Sign in again to check whether the security change completed."] : null;
     }
 
     private async Task HandleAdmission(AuthOutcome outcome)
     {
         admissionError = outcome is AuthenticationRefused && AdmissionFlow?.Pending?.Purpose != AuthenticationOperationPurpose.PasswordChange
             ? Loc["Sign-in could not be completed. Try again."] : null;
-        var completed = outcome is PasswordChanged changed ? changed.Continuation : outcome;
+        if (outcome is ChallengeRequired { Challenge.Step: AuthenticationStep.MfaRecovery }) recoveryMode = true;
+        if (outcome is ChallengeRequired { Challenge.Step: AuthenticationStep.NewMfa } or MfaChanged) recoveryMode = false;
+        var completed = outcome switch { PasswordChanged changed => changed.Continuation, MfaChanged changed => changed.Continuation, _ => outcome };
         if (completed is SessionIssued session)
         {
             await AuthenticationStateProvider.GetAuthenticationStateAsync();
