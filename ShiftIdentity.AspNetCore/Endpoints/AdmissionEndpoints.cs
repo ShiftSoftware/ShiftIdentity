@@ -46,6 +46,21 @@ internal static class AdmissionEndpoints
         var group = endpoints.MapGroup("/api/identity/v2").AddEndpointFilter(async (context, next) =>
         {
             context.HttpContext.Response.Headers.CacheControl = "no-store";
+            if (context.HttpContext.Request.Path.Value is "/api/identity/v2/security-link/open" or "/api/identity/v2/password-reset/complete" or "/api/identity/v2/email-verification/complete")
+            {
+                var admission = context.HttpContext.RequestServices.GetRequiredService<IdentityAdmissionServices>();
+                var ip = context.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                var key = Convert.ToHexString(System.Security.Cryptography.HMACSHA256.HashData(admission.Options.OperationKey,
+                    System.Text.Encoding.UTF8.GetBytes("link:" + ip)));
+                try
+                {
+                    if (!await admission.Store.ConsumeIngressAsync(key, admission.Clock.GetUtcNow(), admission.DeliveryLimits.LinkRequestsPerIpPer15Minutes,
+                        TimeSpan.FromMinutes(15), context.HttpContext.RequestAborted))
+                        return Result(new AuthenticationRefused(AuthenticationFailure.AttemptsExhausted));
+                }
+                catch (ShiftSoftware.ShiftIdentity.Data.Authentication.IdentitySecurityUnavailableException)
+                { return Result(new AuthenticationRefused(AuthenticationFailure.Unavailable)); }
+            }
             return await next(context);
         });
         group.MapPost("/login", async (PasswordLoginRequest request, IdentityAdmissionServices services, CancellationToken ct) =>
@@ -84,6 +99,23 @@ internal static class AdmissionEndpoints
             Result(await AccountSecurityService.RecoverMfaAsync(services, request, ct)));
         group.MapPost("/mfa/recovery-code", async (IssueMfaRecoveryRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
             Result(await AccountSecurityService.IssueMfaRecoveryAsync(services, context.Request.Headers.Authorization.ToString(), request, ct)));
+        group.MapPost("/password-reset/request", async (RequestSecurityEmail request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.RequestSecurityEmailAsync(services, request, false, context.Connection.RemoteIpAddress?.ToString() ?? "unknown", ct)));
+        group.MapPost("/email-verification/request", async (RequestSecurityEmail request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.RequestSecurityEmailAsync(services, request, true, context.Connection.RemoteIpAddress?.ToString() ?? "unknown", ct)));
+        group.MapPost("/email-verification/request-current", async (HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.RequestCurrentEmailVerificationAsync(services, context.Request.Headers.Authorization.ToString(), ct)));
+        group.MapPost("/password-reset/admin", async (AdminPasswordResetRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.AdminSecurityLinkAsync(services, context.Request.Headers.Authorization.ToString(), request.UserID,
+                request.Manual ? AuthenticationOperationPurpose.PasswordResetManual : AuthenticationOperationPurpose.PasswordResetEmail, ct)));
+        group.MapPost("/email-verification/admin", async (AdminEmailVerificationRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.AdminSecurityLinkAsync(services, context.Request.Headers.Authorization.ToString(), request.UserID, AuthenticationOperationPurpose.EmailVerify, ct)));
+        group.MapPost("/security-link/open", async (OpenSecurityLinkRequest request, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.OpenSecurityLinkAsync(services, request, ct)));
+        group.MapPost("/password-reset/complete", async (CompletePasswordResetRequest request, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.CompletePasswordResetAsync(services, request, ct)));
+        group.MapPost("/email-verification/complete", async (CompleteEmailVerificationRequest request, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.CompleteEmailVerificationAsync(services, request, ct)));
     }
 
     private static IResult Result(AuthOutcome result) => Results.Json<AuthOutcome>(result, statusCode: result switch
@@ -91,6 +123,7 @@ internal static class AdmissionEndpoints
         AuthenticationRefused { Code: AuthenticationFailure.Unavailable } => 503,
         AuthenticationRefused { Code: AuthenticationFailure.StaleOperation } => 409,
         AuthenticationRefused => 400,
+        SecurityDeliveryRequested => 202,
         _ => 200
     });
 }

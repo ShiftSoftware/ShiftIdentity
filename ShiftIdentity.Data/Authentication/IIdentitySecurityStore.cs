@@ -7,17 +7,22 @@ public sealed record AuthenticationClient(string ID, string Audience, bool Exter
 
 public sealed record IdentityProofSnapshot(User User, UserSecurityState Security, AuthenticationPolicyState Policy);
 
+/// <summary>Lookup evidence must be checked again in the transaction that issues a security link.</summary>
+public sealed record SecurityEmailLookup(long UserID, string Key);
+
 /// <summary>A locked unit exposes only the security transition's participating rows.</summary>
 public sealed class IdentitySecurityTransaction(
     User user, UserSecurityState security, AuthenticationPolicyState policy,
     AuthenticationOperation? operation, Action<AuthenticationOperation> addOperation,
-    Action<AuthenticationAuditEvent> addAudit, IReadOnlyList<AuthenticationOperation>? recoveryFamily = null)
+    Action<AuthenticationAuditEvent> addAudit, IReadOnlyList<AuthenticationOperation>? recoveryFamily = null,
+    IReadOnlyList<AuthenticationOperation>? links = null)
 {
     public User User { get; } = user;
     public UserSecurityState Security { get; } = security;
     public AuthenticationPolicyState Policy { get; } = policy;
     public AuthenticationOperation? Operation { get; } = operation;
     public IReadOnlyList<AuthenticationOperation> RecoveryFamily { get; } = recoveryFamily ?? [];
+    public IReadOnlyList<AuthenticationOperation> Links { get; } = links ?? [];
     public void AddOperation(AuthenticationOperation value) => addOperation(value);
     public void Audit(string outcome, DateTimeOffset now, Guid? operationID = null, long? actorUserID = null, string? verificationReference = null) => addAudit(new()
     {
@@ -32,6 +37,9 @@ public interface IIdentitySecurityStore
 {
     Task<IdentityProofSnapshot?> ReadProofAsync(string username, AuthenticationClient client, CancellationToken cancellationToken);
     Task<AuthenticationOperation?> ReadOperationAsync(Guid id, CancellationToken cancellationToken);
+    Task<SecurityEmailLookup?> ResolveSecurityEmailAsync(string identifier, CancellationToken cancellationToken);
+    Task<bool> RecheckSecurityEmailAsync(SecurityEmailLookup lookup, CancellationToken cancellationToken);
+    Task<bool> ConsumeIngressAsync(string key, DateTimeOffset now, int limit, TimeSpan window, CancellationToken cancellationToken);
     Task<T> AdmitAsync<T>(long userID, Guid? operationID, AuthenticationClient client,
         Func<IdentitySecurityTransaction, Task<T>> transition, CancellationToken cancellationToken);
     Task<T> AdmitAdminAsync<T>(long actorID, long userID, AuthenticationClient client,

@@ -15,6 +15,10 @@ namespace ShiftSoftware.ShiftIdentity.Core.Authentication;
 [JsonDerivedType(typeof(MfaChanged), "mfaChanged")]
 [JsonDerivedType(typeof(ReturnToLogin), "returnToLogin")]
 [JsonDerivedType(typeof(MfaRecoveryCodeIssued), "mfaRecoveryCodeIssued")]
+[JsonDerivedType(typeof(SecurityDeliveryRequested), "deliveryRequested")]
+[JsonDerivedType(typeof(SecurityLinkOpened), "securityLinkOpened")]
+[JsonDerivedType(typeof(ManualPasswordResetIssued), "manualPasswordResetIssued")]
+[JsonDerivedType(typeof(EmailVerificationCompleted), "emailVerificationCompleted")]
 public abstract record AuthOutcome;
 
 public sealed record SessionIssued(TokenDTO Session) : AuthOutcome;
@@ -25,6 +29,10 @@ public sealed record OperationCancelled : AuthOutcome;
 public sealed record MfaChanged(AuthOutcome Continuation, bool PasswordAlsoChanged = false) : AuthOutcome;
 public sealed record ReturnToLogin : AuthOutcome;
 public sealed record MfaRecoveryCodeIssued(string Code, DateTimeOffset ExpiresAt) : AuthOutcome;
+public sealed record SecurityDeliveryRequested : AuthOutcome;
+public sealed record SecurityLinkOpened(string PageHandle, string MaskedTarget, AuthenticationOperationPurpose Purpose, DateTimeOffset ExpiresAt) : AuthOutcome;
+public sealed record ManualPasswordResetIssued(string Grant, string MaskedTarget, DateTimeOffset ExpiresAt) : AuthOutcome;
+public sealed record EmailVerificationCompleted : AuthOutcome;
 
 public enum AuthenticationStep { ExistingMfa, PasswordChange, MfaRecovery, NewMfa, EmailVerification, Password }
 public enum AuthenticationFailure
@@ -32,7 +40,7 @@ public enum AuthenticationFailure
     InvalidRequest, InvalidProof, InvalidGrant, StaleOperation, Expired, AttemptsExhausted,
     AccountUnavailable, ClientDenied, Unavailable, InvalidNewPassword
 }
-public enum AuthenticationOperationPurpose { Login = 1, ContactChange = 2, MfaEnrollment = 3, PasswordChange = 4, MfaReplacement = 5, MfaRecovery = 6 }
+public enum AuthenticationOperationPurpose { Login = 1, ContactChange = 2, MfaEnrollment = 3, PasswordChange = 4, MfaReplacement = 5, MfaRecovery = 6, PasswordResetEmail = 7, PasswordResetManual = 8, EmailVerify = 9 }
 
 public sealed record AuthenticationChallenge(
     AuthenticationStep Step, string? Handle, DateTimeOffset ExpiresAt,

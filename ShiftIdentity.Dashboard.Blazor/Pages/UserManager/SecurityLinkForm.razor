@@ -1,0 +1,180 @@
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.JSInterop
+@using ShiftSoftware.ShiftIdentity.Blazor.Services
+@using ShiftSoftware.ShiftIdentity.Core.Authentication
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@implements IDisposable
+
+<MudPaper Class="pa-5" data-testid="security-link-form">
+    <MudText Typo="Typo.h5">@(Verification ? "Verify your email" : "Choose a new password")</MudText>
+    @if (loading) { <MudText>Checking your link…</MudText> }
+    @if (opened is not null)
+    {
+        <MudText data-testid="security-link-target">For @opened.MaskedTarget</MudText>
+        @if (Verification)
+        {
+            <MudText>Opening this page does not verify your email. Confirm that this email address belongs to you.</MudText>
+            <MudButton Color="Color.Primary" Disabled="Context.Flow.Busy" OnClick="Verify">Verify my email</MudButton>
+        }
+        else
+        {
+            <MudText>@NewPasswordPolicy.Guidance</MudText>
+            <EditForm Model="entry" OnValidSubmit="Reset">
+                <DataAnnotationsValidator />
+                <PasswordField Label="New Password" @bind-Value="entry.Password" For="@(() => entry.Password)" Immediate="true" autocomplete="new-password" />
+                <PasswordField Label="Confirm Password" @bind-Value="entry.Confirm" For="@(() => entry.Confirm)" Immediate="true" autocomplete="new-password" />
+                <MudButton Color="Color.Primary" ButtonType="ButtonType.Submit" Disabled="Context.Flow.Busy">Reset password</MudButton>
+            </EditForm>
+            <MudText>Your authenticator and recovery requirements still apply after resetting your password.</MudText>
+        }
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+    }
+    @if (verified)
+    {
+        <MudAlert Severity="Severity.Success" data-testid="email-verified">Your email is verified. You can now return to login.</MudAlert>
+        <MudButton Href="@SecurityLinkNavigation.LoginAfterVerification">Return to login</MudButton>
+    }
+    @if (error is not null)
+    {
+        <MudAlert Severity="Severity.Error" data-testid="security-link-error">@error</MudAlert>
+        @if (opened is null)
+        {
+            <MudButton Href="@(Verification ? "Identity/SendEmailVerificationLink" : "Identity/SendResetPasswordLink")">Request a new link</MudButton>
+            <MudButton Href="@SecurityLinkNavigation.LoginAfterCancel">Back to login</MudButton>
+        }
+    }
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public AdmissionUiContext Context { get; set; } = null!;
+    [Parameter] public bool Verification { get; set; }
+    private SecurityLinkOpened? opened;
+    private Entry entry = new();
+    private bool loading = true, verified, disposed, processing;
+    private string? error, pendingUri;
+    private string mountedPath = "";
+    private long pageGeneration;
+    private Task<AuthOutcome>? activeCompletion;
+    private sealed class Entry
+    {
+        [Required, MaxLength(512)] public string Password { get; set; } = "";
+        [Required, Compare(nameof(Password), ErrorMessage = "Passwords must match.")]
+        public string Confirm { get; set; } = "";
+    }
+    protected override void OnInitialized()
+    {
+        mountedPath = new Uri(Navigation.Uri).AbsolutePath;
+        pendingUri = Navigation.Uri;
+        Navigation.LocationChanged += LocationChanged;
+    }
+    private void LocationChanged(object? sender, LocationChangedEventArgs args)
+    {
+        if (disposed) return;
+        ClearPage();
+        if (new Uri(args.Location).AbsolutePath.Equals(mountedPath, StringComparison.OrdinalIgnoreCase))
+        {
+            pendingUri = args.Location;
+            loading = true;
+        }
+        _ = InvokeAsync(StateHasChanged);
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (processing || disposed || pendingUri is null) return;
+        processing = true;
+        try
+        {
+            while (!disposed && pendingUri is { } uri)
+            {
+                pendingUri = null;
+                var current = pageGeneration;
+                var valid = SecurityLinkNavigation.TryRead(uri, Verification, out var grant, out var purpose);
+                try
+                {
+                    // A navigation can replace a link during submission. Wait for its response, discard it,
+                    // and then open only the latest queued link without overlapping the shared coordinator.
+                    if (activeCompletion is { } completing) await completing;
+                    if (disposed || current != pageGeneration) continue;
+                    var module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/ShiftSoftware.ShiftIdentity.Dashboard.Blazor/security-link.js");
+                    bool cleared;
+                    try { cleared = await module.InvokeAsync<bool>("clearFragment", uri); }
+                    finally { await module.DisposeAsync(); }
+                    if (disposed || current != pageGeneration) continue;
+                    // Exchanging a grant only establishes inert page context. The explicit submit makes the change.
+                    var result = valid && cleared ? await Context.Flow.OpenSecurityLinkAsync(grant, purpose)
+                        : new AuthenticationRefused(AuthenticationFailure.InvalidGrant);
+                    if (disposed || current != pageGeneration) continue;
+                    opened = result as SecurityLinkOpened;
+                    if (opened is null) error = "This link is invalid, expired or has been replaced. Request a new link.";
+                }
+                catch (JSException)
+                {
+                    if (!disposed && current == pageGeneration) error = "The link could not be opened. Please reopen it and try again.";
+                }
+                finally
+                {
+                    grant = "";
+                    if (!disposed && current == pageGeneration) loading = false;
+                }
+                if (!disposed) StateHasChanged();
+            }
+        }
+        finally { processing = false; }
+    }
+    private async Task Reset()
+    {
+        if (opened is null || entry.Password != entry.Confirm) return;
+        var current = pageGeneration;
+        activeCompletion = Context.Flow.CompletePasswordResetAsync(opened.PageHandle, entry.Password);
+        var result = await activeCompletion;
+        activeCompletion = null;
+        if (disposed || current != pageGeneration) return;
+        entry = new();
+        if (result is ReturnToLogin)
+        {
+            opened = null;
+            Navigation.NavigateTo(SecurityLinkNavigation.LoginAfterReset, replace: true);
+        }
+        else HandleFailure(result);
+    }
+    private async Task Verify()
+    {
+        if (opened is null) return;
+        var current = pageGeneration;
+        activeCompletion = Context.Flow.CompleteEmailVerificationAsync(opened.PageHandle);
+        var result = await activeCompletion;
+        activeCompletion = null;
+        if (disposed || current != pageGeneration) return;
+        if (result is EmailVerificationCompleted) { verified = true; opened = null; error = null; }
+        else HandleFailure(result);
+    }
+    private void HandleFailure(AuthOutcome result)
+    {
+        if (result is AuthenticationRefused { Code: AuthenticationFailure.InvalidNewPassword })
+            error = "Choose a password that meets the password requirements and try again.";
+        else
+        {
+            opened = null;
+            error = Verification
+                ? "Verification could not be confirmed. The link may have expired or been replaced. Request a new link."
+                : "The change could not be confirmed. The link may have expired or been replaced. Request a new link; if you just reset your password, try signing in with the new password first.";
+        }
+    }
+    private void Cancel()
+    {
+        ClearPage();
+        Navigation.NavigateTo(SecurityLinkNavigation.LoginAfterCancel, replace: true);
+    }
+    private void ClearPage()
+    {
+        pageGeneration++; pendingUri = null; opened = null; entry = new(); verified = false; error = null;
+        loading = false; Context.Flow.Restart();
+    }
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= LocationChanged;
+        disposed = true; ClearPage();
+    }
+}

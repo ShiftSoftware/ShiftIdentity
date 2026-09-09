@@ -15,7 +15,14 @@ internal sealed record IdentityAdmissionServices(
     Action<string>? Observe = null)
 {
     internal Core.Authentication.NewPasswordPolicy PasswordPolicy { get; init; } = new();
+    internal SecurityDeliveryLimits DeliveryLimits { get; init; } = new();
+    internal ISecurityEmailSink? EmailSink { get; init; }
+    internal IDataProtector LinkProtector => FactorProtector.CreateProtector("SecurityLinks.v1");
 }
+
+internal sealed record SecurityDeliveryLimits(int CooldownSeconds = 60, int PerUserPerHour = 5, int PublicPerIpPer15Minutes = 20,
+    int LinkRequestsPerIpPer15Minutes = 60, int HandoffTimeoutMilliseconds = 3000,
+    int ResultPersistenceTimeoutMilliseconds = 2000, int PublicPaddingMilliseconds = 300);
 
 internal sealed record IdentityAdmissionOptions(
     string Issuer, string RefreshAudience, byte[] AccessPrivateKey, byte[] RefreshKey,

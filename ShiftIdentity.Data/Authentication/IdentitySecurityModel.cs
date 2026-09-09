@@ -19,12 +19,23 @@ public static class IdentitySecurityModel
             e.HasOne<User>().WithOne().HasForeignKey<UserSecurityState>(x => x.UserID).OnDelete(DeleteBehavior.Restrict);
             e.Property(x => x.RowVersion).IsRowVersion();
             e.Property(x => x.TotpProtectionVersion).HasDefaultValue(0);
+            e.Property(x => x.ContactRevision).HasDefaultValue(1L);
+            e.Property(x => x.RecoveryEmailProvenance).HasDefaultValue(RecoveryEmailProvenance.Unknown);
+            e.Property(x => x.DeliveryCount).HasDefaultValue(0);
+            e.Property(x => x.UsernameLookupKey).HasMaxLength(255).UseCollation("Latin1_General_100_BIN2");
+            e.Property(x => x.EmailLookupKey).HasMaxLength(255).UseCollation("Latin1_General_100_BIN2");
+            e.HasIndex(x => x.UsernameLookupKey).HasDatabaseName("IX_UserSecurityStates_UsernameLookupKey").IsUnique().HasFilter("[UsernameLookupKey] IS NOT NULL");
+            e.HasIndex(x => x.EmailLookupKey).HasDatabaseName("IX_UserSecurityStates_EmailLookupKey").IsUnique().HasFilter("[EmailLookupKey] IS NOT NULL");
+            e.ToTable(t => t.HasCheckConstraint("CK_UserSecurityState_Lookup", "([UsernameLookupKey] IS NULL AND [EmailLookupKey] IS NULL) OR ([UsernameLookupKey] IS NOT NULL AND DATALENGTH([UsernameLookupKey]) > 0 AND ([EmailLookupKey] IS NULL OR DATALENGTH([EmailLookupKey]) > 0))"));
+            e.Property(x => x.RecoveryEmail).HasMaxLength(255);
+            e.ToTable(t => t.HasCheckConstraint("CK_UserSecurityState_ContactDelivery", "[ContactRevision] >= 1 AND [DeliveryCount] >= 0 AND [RecoveryEmailProvenance] BETWEEN 0 AND 4"));
         });
         builder.Entity<AuthenticationOperation>(e =>
         {
             e.ToTable("AuthenticationOperations", "ShiftIdentity", t =>
             {
-                t.HasCheckConstraint("CK_AuthenticationOperation_State", "[State] IN (1,2,3,4,5,6,7,8,9) AND [Purpose] IN (1,2,3,4,5,6)");
+                t.HasCheckConstraint("CK_AuthenticationOperation_State", "[State] IN (1,2,3,4,5,6,7,8,9,10) AND [Purpose] IN (1,2,3,4,5,6,7,8,9)");
+                t.HasCheckConstraint("CK_AuthenticationOperation_Link", "([State] <> 10 OR [Purpose] IN (7,8,9)) AND ([OutstandingLinkSlot] IS NULL OR ([Purpose] IN (7,8,9) AND [State] = 10))");
                 t.HasCheckConstraint("CK_AuthenticationOperation_Password", "([PasswordChangeOrigin] IS NULL OR [PasswordChangeOrigin] IN (1,2)) AND (([PendingPasswordHash] IS NULL AND [PendingPasswordSalt] IS NULL) OR ([Purpose] = 4 AND [State] IN (1,7) AND [PendingPasswordHash] IS NOT NULL AND [PendingPasswordSalt] IS NOT NULL))");
                 t.HasCheckConstraint("CK_AuthenticationOperation_Factor", "[ProtectedPendingTotpSecret] IS NULL OR ([Purpose] IN (3,4,5,6) AND [State] = 7)");
                 t.HasCheckConstraint("CK_AuthenticationOperation_Recovery", "([RecoveryCodeDigest] IS NULL OR ([Purpose] = 6 AND [State] = 8 AND [ParentID] IS NULL)) AND ([OutstandingRecoveryUserID] IS NULL OR ([Purpose] = 6 AND [ParentID] IS NULL AND [OutstandingRecoveryUserID] = [UserID]))");
@@ -41,6 +52,9 @@ public static class IdentitySecurityModel
             e.Property(x => x.ProtectedPendingTotpSecret).HasMaxLength(1024);
             e.Property(x => x.RecoveryCodeDigest).HasMaxLength(32);
             e.Property(x => x.RowVersion).IsRowVersion();
+            e.Property(x => x.Destination).HasMaxLength(255);
+            e.Property(x => x.OutstandingLinkSlot).HasMaxLength(80);
+            e.HasIndex(x => x.OutstandingLinkSlot).IsUnique().HasFilter("[OutstandingLinkSlot] IS NOT NULL");
             e.HasIndex(x => new { x.ExpiresAt, x.State });
             e.HasIndex(x => new { x.UserID, x.Purpose, x.State });
             e.HasIndex(x => x.ParentID);
@@ -64,6 +78,14 @@ public static class IdentitySecurityModel
             e.Property(x => x.Outcome).HasMaxLength(80);
             e.Property(x => x.VerificationReference).HasMaxLength(200);
             e.HasIndex(x => x.CreatedAt);
+        });
+        builder.Entity<AuthThrottleBucket>(e =>
+        {
+            e.ToTable("AuthThrottleBuckets", "ShiftIdentity", t => t.HasCheckConstraint("CK_AuthThrottleBucket", "[Count] >= 0"));
+            e.HasKey(x => x.Key);
+            e.Property(x => x.Key).HasMaxLength(64);
+            e.Property(x => x.RowVersion).IsRowVersion();
+            e.HasIndex(x => x.WindowStart);
         });
     }
 }

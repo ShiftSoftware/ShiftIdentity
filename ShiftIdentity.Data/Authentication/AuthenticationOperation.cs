@@ -2,7 +2,7 @@ using ShiftSoftware.ShiftIdentity.Core.Authentication;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Authentication;
 
-public enum AuthenticationOperationState { AwaitingMfa = 1, Completed = 2, Locked = 3, AwaitingPassword = 4, AwaitingNewPassword = 5, Cancelled = 6, AwaitingNewFactor = 7, AwaitingRecoveryProof = 8, Superseded = 9 }
+public enum AuthenticationOperationState { AwaitingMfa = 1, Completed = 2, Locked = 3, AwaitingPassword = 4, AwaitingNewPassword = 5, Cancelled = 6, AwaitingNewFactor = 7, AwaitingRecoveryProof = 8, Superseded = 9, AwaitingExplicitSubmit = 10 }
 public enum PasswordChangeOrigin { Voluntary = 1, RequiredLogin = 2 }
 
 /// <summary>A single-use, purpose-bound continuation; it is never an ordinary session credential.</summary>
@@ -13,6 +13,9 @@ public sealed class AuthenticationOperation
     public AuthenticationOperationPurpose Purpose { get; set; }
     public AuthenticationOperationState State { get; set; }
     public long SecurityVersion { get; set; }
+    public long ContactRevision { get; set; }
+    public string? Destination { get; set; }
+    public string? OutstandingLinkSlot { get; set; }
     public long FactorGeneration { get; set; }
     public long PolicyRevision { get; set; }
     public string ClientID { get; set; } = "";

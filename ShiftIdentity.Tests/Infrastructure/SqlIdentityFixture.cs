@@ -29,6 +29,9 @@ public class SqlIdentityFixture : IAsyncLifetime
     public byte[] FactorSecret { get; } = RandomNumberGenerator.GetBytes(20);
     public IDataProtectionProvider Protection { get; } = new EphemeralDataProtectionProvider();
     public TimeProvider Clock { get; set; } = TimeProvider.System;
+    public ISecurityEmailSink? EmailSink { get; set; } = new LocalSecurityInbox();
+    internal SecurityDeliveryLimits DeliveryLimits { get; set; } = new(HandoffTimeoutMilliseconds: 100, ResultPersistenceTimeoutMilliseconds: 100, PublicPaddingMilliseconds: 50);
+    public void UseRuntimeDeliveryLimits() => DeliveryLimits = new();
     public Func<DbContextOptions, ShiftIdentityDbContext>? ContextFactory { get; set; }
     internal IdentityAdmissionOptions Options { get; private set; } = null!;
     public string Password { get; } = "Synthetic Password 7!";
@@ -96,6 +99,7 @@ public class SqlIdentityFixture : IAsyncLifetime
         await current.Database.ExecuteSqlRawAsync(
             "INSERT INTO [ShiftIdentity].[UserSecurityStates] ([UserID],[SecurityVersion],[FactorGeneration],[LocalMfaRecoveryRequired],[FailedProofs]) SELECT [ID],1,1,0,0 FROM [ShiftIdentity].[Users]");
         current.Set<AuthenticationPolicyState>().Add(new());
+        RecoveryContact.InitializeLookup(user, await current.Set<UserSecurityState>().SingleAsync(x => x.UserID == UserID));
         await current.SaveChangesAsync();
     }
 
@@ -111,23 +115,25 @@ public class SqlIdentityFixture : IAsyncLifetime
         return ContextFactory?.Invoke(options) ?? new IdentityTestDbContext(options);
     }
 
-    public async Task<long> CreateSyntheticUserAsync(string username, string? accessTree = null, bool mfa = false)
+    public async Task<long> CreateSyntheticUserAsync(string username, string? accessTree = null, bool mfa = false, string? email = null)
     {
         await using var db = CreateContext();
         var template = await db.Users.AsNoTracking().SingleAsync(x => x.ID == UserID);
         var hash = HashService.GenerateVersionedHash(Password);
         var user = new User
         {
-            Username = username, FullName = "Synthetic User", IsActive = true, PasswordHash = hash.PasswordHash, Salt = hash.Salt,
+            Username = username, Email = email, FullName = "Synthetic User", IsActive = true, PasswordHash = hash.PasswordHash, Salt = hash.Salt,
             CompanyID = template.CompanyID, CompanyBranchID = template.CompanyBranchID, CountryID = template.CountryID,
             RegionID = template.RegionID, AccessTree = accessTree
         };
         db.Users.Add(user);
         await db.SaveChangesAsync();
-        db.Set<UserSecurityState>().Add(new()
+        var security = new UserSecurityState
         {
             UserID = user.ID, ProtectedTotpSecret = mfa ? Protection.CreateProtector("Identity.Totp.v2").Protect(FactorSecret) : null
-        });
+        };
+        RecoveryContact.InitializeLookup(user, security);
+        db.Set<UserSecurityState>().Add(security);
         await db.SaveChangesAsync();
         return user.ID;
     }
@@ -135,6 +141,9 @@ public class SqlIdentityFixture : IAsyncLifetime
     public async Task ResetAsync(bool mfa = false)
     {
         await using var db = CreateContext();
+        EmailSink = new LocalSecurityInbox(Clock);
+        DeliveryLimits = new(HandoffTimeoutMilliseconds: 100, ResultPersistenceTimeoutMilliseconds: 100, PublicPaddingMilliseconds: 50);
+        await db.Set<AuthThrottleBucket>().ExecuteDeleteAsync();
         await db.Set<AuthenticationOperation>().ExecuteDeleteAsync();
         await db.Set<AuthenticationAuditEvent>().ExecuteDeleteAsync();
         var user = await db.Users.SingleAsync(x => x.ID == UserID);
@@ -144,6 +153,9 @@ public class SqlIdentityFixture : IAsyncLifetime
         user.LockDownUntil = null; user.Email = null; user.EmailVerified = false;
         var state = await db.Set<UserSecurityState>().SingleAsync(x => x.UserID == UserID);
         state.SecurityVersion = 1; state.FactorGeneration = 1; state.LocalMfaRecoveryRequired = false;
+        state.ContactRevision = 1; RecoveryContact.Invalidate(state);
+        state.UsernameLookupKey = null; state.EmailLookupKey = null; RecoveryContact.InitializeLookup(user, state);
+        state.LastDeliveryAt = null; state.DeliveryWindowStart = null; state.DeliveryCount = 0;
         state.TotpProtectionVersion = 0; state.MfaRecoveryOperationID = null;
         state.FailedProofs = 0; state.FailureWindowStart = null; state.LastAcceptedTotpStep = null;
         state.ProtectedTotpSecret = mfa ? Protection.CreateProtector("Identity.Totp.v2").Protect(FactorSecret) : null;
@@ -151,6 +163,7 @@ public class SqlIdentityFixture : IAsyncLifetime
         policy.Revision = 1; policy.MfaEnabled = true; policy.MfaMandatory = false; policy.RequireVerifiedEmail = false;
         policy.TotpDigits = 6; policy.TotpPeriodSeconds = 30; policy.TotpWindowPast = 1; policy.TotpWindowFuture = 1;
         await db.SaveChangesAsync();
+        Options = Options with { PolicyRevision = 1 };
     }
 
     // Controls for the isolated consumer preview. These never read application configuration.
@@ -159,6 +172,16 @@ public class SqlIdentityFixture : IAsyncLifetime
         await using var db = CreateContext();
         var policy = await db.Set<AuthenticationPolicyState>().SingleAsync();
         policy.MfaMandatory = mandatory;
+        policy.Revision = checked(policy.Revision + 1);
+        await db.SaveChangesAsync();
+        Options = Options with { PolicyRevision = policy.Revision };
+    }
+
+    public async Task ChangeVerifiedEmailPolicyAsync(bool required)
+    {
+        await using var db = CreateContext();
+        var policy = await db.Set<AuthenticationPolicyState>().SingleAsync();
+        policy.RequireVerifiedEmail = required;
         policy.Revision = checked(policy.Revision + 1);
         await db.SaveChangesAsync();
         Options = Options with { PolicyRevision = policy.Revision };

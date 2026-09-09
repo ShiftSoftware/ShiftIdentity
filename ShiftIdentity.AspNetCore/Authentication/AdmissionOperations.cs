@@ -149,6 +149,8 @@ internal static class AdmissionOperations
         op.ProtectedPendingTotpSecret = null;
         op.RecoveryCodeDigest = null;
         op.OutstandingRecoveryUserID = null;
+        op.OutstandingLinkSlot = null;
+        op.Destination = null;
     }
 
     private static ChallengeRequired Challenge(AuthenticationOperation op, string handle, NewAuthenticatorSetup? setup = null) => new(new(

@@ -167,31 +167,9 @@ public class UserRepository :
         if (user.IsProtected)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["Built-In Data can't be modified."]), (int)HttpStatusCode.Forbidden);
 
-        //Check if the username is duplicate
-        if (await db.Users.AnyAsync(x => !x.IsDeleted && x.Username.ToLower() == dto.Username.ToLower() && x.ID != userId))
-            throw new ShiftEntityException(new Message(Loc["Duplicate"], Loc["The username {0} exist", dto.Username]));
-
-        //Check if the email is duplicate
-        if (await db.Users.AnyAsync(x => !x.IsDeleted && x.Email.ToLower() == (dto.Email ?? "").ToLower() && x.ID != userId))
-            throw new ShiftEntityException(new Message(Loc["Duplicate"], Loc["The email {0} exist", dto.Email]));
-
-        //Assign phone
-        string? formattedPhone = null;
-        if (dto.Phone != null)
-        {
-            if (!Core.ValidatorsAndFormatters.PhoneNumber.PhoneIsValid(dto.Phone))
-                throw new ShiftEntityException(new Message(Loc["Validation Error"], Loc["Invalid Phone Number"]));
-
-            formattedPhone = Core.ValidatorsAndFormatters.PhoneNumber.GetFormattedPhone(dto.Phone);
-
-            //Check if the phone is duplicate
-            if (await db.Users.AnyAsync(x => !x.IsDeleted && x.Phone.ToLower() == formattedPhone.ToLower() && x.ID != userId))
-                throw new ShiftEntityException(new Message(Loc["Duplicate"], Loc["The phone {0} exist", dto.Phone]));
-        }
-
-        //Assign values
-        dto.ApplyProfileEdits(user);
-        user.Phone = formattedPhone;
+        // The mapper checks legacy identity/contact fields before applying any ordinary edit.
+        // This route cannot assign a new recovery contact or change verification state.
+        dto.ApplyProfileEdits(user, Loc);
 
         return user;
     }

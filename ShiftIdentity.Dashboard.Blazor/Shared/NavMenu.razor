@@ -21,7 +21,7 @@
     {
         <MudNavLink Href="/" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
         <MudNavLink Href="Identity/UserDataForm" Icon="@Icons.Material.Filled.Person">Profile</MudNavLink>
-        @if (TypeAuthService.CanAccess(ShiftIdentityActions.ManageMfaRecovery))
+        @if (TypeAuthService.CanAccess(ShiftIdentityActions.ManageMfaRecovery) || TypeAuthService.CanWrite(ShiftIdentityActions.Users))
         {
             <MudNavLink Href="Identity/UserList" Icon="@Icons.Material.Filled.People">Users</MudNavLink>
         }

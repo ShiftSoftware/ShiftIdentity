@@ -1,0 +1,8 @@
+@attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(VerifyEmail)}")]
+@layout Shared.EmptyLayout
+@using ShiftSoftware.ShiftIdentity.Blazor.Services
+
+@if (AdmissionContext is not null) { <SecurityLinkForm Context="AdmissionContext" Verification="true" /> }
+else { <MudAlert Severity="Severity.Info">Email verification is unavailable here.</MudAlert> }
+
+@code { [CascadingParameter] public AdmissionUiContext? AdmissionContext { get; set; } }

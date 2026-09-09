@@ -1,0 +1,38 @@
+@using System.ComponentModel.DataAnnotations
+@using ShiftSoftware.ShiftIdentity.Blazor.Services
+@using ShiftSoftware.ShiftIdentity.Core.Authentication
+
+<MudPaper Class="pa-5" data-testid="security-email-request">
+    <MudText Typo="Typo.h5">@(Verification ? "Verify your email" : "Reset your password")</MudText>
+    <MudText>Enter your username or saved email address.</MudText>
+    <EditForm Model="entry" OnValidSubmit="Send">
+        <DataAnnotationsValidator />
+        <MudTextField T="string" Label="Username or email" @bind-Value="entry.Identifier" For="@(() => entry.Identifier)" Immediate="true" Disabled="Context.Flow.Busy" autocomplete="username" />
+        <MudButton Color="Color.Primary" ButtonType="ButtonType.Submit" Disabled="Context.Flow.Busy">@(Context.Flow.Busy ? "Sending request…" : Verification ? "Send verification link" : "Send reset link")</MudButton>
+    </EditForm>
+    @if (requested)
+    {
+        <MudAlert Severity="Severity.Info" data-testid="delivery-requested">If an eligible account matches, check its saved email inbox. If no link arrives, wait before trying again.</MudAlert>
+    }
+    @if (error is not null) { <MudAlert Severity="Severity.Error" data-testid="delivery-error">@error</MudAlert> }
+    <MudButton Href="@SecurityLinkNavigation.LoginAfterCancel">Back to login</MudButton>
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public AdmissionUiContext Context { get; set; } = null!;
+    [Parameter] public bool Verification { get; set; }
+    private readonly Entry entry = new();
+    private bool requested;
+    private string? error;
+    private sealed class Entry { [Required, MaxLength(255)] public string Identifier { get; set; } = ""; }
+    private async Task Send()
+    {
+        requested = false; error = null;
+        var result = Verification ? await Context.Flow.RequestEmailVerificationAsync(entry.Identifier)
+            : await Context.Flow.RequestPasswordResetAsync(entry.Identifier);
+        requested = result is SecurityDeliveryRequested;
+        if (!requested) error = result is AuthenticationRefused { Code: AuthenticationFailure.Unavailable }
+            ? "Email requests are unavailable right now. Please wait and try again."
+            : "The request could not be completed. Please try again.";
+    }
+}

@@ -20,4 +20,6 @@ public sealed class AdmissionUiContext(AuthenticationFlow flow, IIdentityStore s
 }
 
 public sealed record AdmissionAccount(long UserID, string Username, string FullName,
-    bool HasAuthenticator, bool RecoveryRequired, bool CanManageRecovery);
+    bool HasAuthenticator, bool RecoveryRequired, bool CanManageRecovery,
+    string? Email = null, bool EmailVerified = false, bool RecoveryEmailEligible = false,
+    bool CanManagePasswordReset = false, bool CanManageEmailVerification = false);

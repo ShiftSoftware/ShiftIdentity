@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Authentication;
@@ -74,11 +75,13 @@ public sealed class IdentityHttpHost : IDisposable
         services.AddRouting();
         services.AddScoped(_ => fixture.CreateContext(interceptors));
         services.AddScoped<IIdentitySecurityStore, SqlIdentitySecurityStore>();
+        if (fixture.EmailSink is { } sink) services.TryAddSingleton<ISecurityEmailSink>(sink);
         services.AddScoped(sp => new IdentityAdmissionServices(
             sp.GetRequiredService<IIdentitySecurityStore>(), client, fixture.Options, fixture.Clock,
             new HashIdService(Options.Create(new ShiftEntityOptions())),
             fixture.Protection.CreateProtector("Identity.Totp.v2"),
-            new AdmissionTokenCodec(fixture.Options, fixture.Clock), observe));
+            new AdmissionTokenCodec(fixture.Options, fixture.Clock), observe)
+        { EmailSink = sp.GetService<ISecurityEmailSink>(), DeliveryLimits = fixture.DeliveryLimits });
         services.AddIdentityAdmissionAuthentication();
     }
 

@@ -10,7 +10,7 @@ using ShiftSoftware.ShiftIdentity.Core.Enums;
 namespace ShiftSoftware.ShiftIdentity.Blazor.Services;
 
 /// <summary>Opt-in staged flow. Restricted credentials live only in this component's memory.</summary>
-public sealed class AuthenticationFlow(HttpClient http, IIdentityStore store, TimeProvider? clock = null)
+public sealed partial class AuthenticationFlow(HttpClient http, IIdentityStore store, TimeProvider? clock = null)
 {
     private readonly TimeProvider clock = clock ?? TimeProvider.System;
     private string? verifier;

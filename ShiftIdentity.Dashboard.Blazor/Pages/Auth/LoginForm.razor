@@ -48,6 +48,11 @@
                 {
                     <TotpEnrollmentForm AdmissionFlow="AdmissionFlow" AdmissionCompleted="HandleAdmission" />
                 }
+                else if (challenge.Step == AuthenticationStep.EmailVerification)
+                {
+                    <MudAlert Severity="Severity.Info" data-testid="restricted-step">Verify your saved email address before signing in.</MudAlert>
+                    <MudButton Href="Identity/SendEmailVerificationLink">Send email verification link</MudButton>
+                }
                 else if (challenge.Purpose == AuthenticationOperationPurpose.PasswordChange)
                 {
                     <ChangePasswordForm AdmissionFlow="AdmissionFlow" AdmissionCompleted="HandleAdmission" />
@@ -77,14 +82,15 @@
                               For="@(() => loginDto.Password)" autocomplete="current-password" />
 
                 <br />
-                @if (AdmissionFlow is null)
-                {
                 <MudButton Size="Size.Small"
                            Color="Color.Warning"
                            Href="@($"{Constants.IdentityRoutePreifix}/{nameof(SendResetPasswordLink)}")"
                            Variant="Variant.Text">
                     @Loc["Forgot Password?"]
                 </MudButton>
+                @if (AdmissionFlow is not null)
+                {
+                    <MudButton Href="Identity/SendEmailVerificationLink">Verify email</MudButton>
                 }
 
                 <br />
@@ -102,6 +108,10 @@
             @if (AdmissionFlow?.ReturnToLoginRequired == true)
             {
                 <MudAlert Severity="Severity.Success" data-testid="recovery-completed">@Loc["Authenticator recovery completed. Sign in with your password and a new code from your authenticator."]</MudAlert>
+            }
+            @if (AdmissionContext is not null && SecurityLink == "reset")
+            {
+                <MudAlert Severity="Severity.Success">Password reset. Sign in with your new password.</MudAlert>
             }
             @if (admissionError is not null)
             {
@@ -156,6 +166,9 @@
     [SupplyParameterFromQuery]
     public string? ReturnUrl { get; set; }
 
+    [Parameter, SupplyParameterFromQuery(Name = "securityLink")]
+    public string? SecurityLink { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
         AdmissionFlow ??= AdmissionContext?.Flow;
@@ -164,7 +177,8 @@
             var authState = await authenticationStateTask;
 
             //Return to home if user already loged-in
-            if (authState?.User?.Identity?.IsAuthenticated ?? false)
+            if ((authState?.User?.Identity?.IsAuthenticated ?? false) &&
+                !(AdmissionContext is not null && SecurityLink is "reset" or "verification" or "cancelled"))
                 NavManager.NavigateTo("/");
         }
 

@@ -1,14 +1,14 @@
 @using ShiftSoftware.ShiftIdentity.Blazor.Services
 <MudPaper Class="pa-5">
     <MudText Typo="Typo.h5">Users</MudText>
-    <MudText>Select a user to manage authenticator recovery.</MudText>
+    <MudText>Select a user to manage password reset, email verification or authenticator recovery.</MudText>
     @foreach (var user in users)
     {
         <MudButton Href="@($"Identity/UserForm/{user.UserID}")">@user.Username — @user.FullName</MudButton><br />
     }
     @if (!loading && users.Length == 0)
     {
-        <MudAlert Severity="Severity.Info">You need the authenticator recovery permission to view these users.</MudAlert>
+        <MudAlert Severity="Severity.Info">You need user-management or authenticator recovery permission to view these users.</MudAlert>
     }
 </MudPaper>
 @code {

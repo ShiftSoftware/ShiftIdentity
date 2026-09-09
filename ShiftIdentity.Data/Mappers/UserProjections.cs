@@ -1,6 +1,9 @@
 using ShiftSoftware.ShiftEntity.Core;
+using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
+using ShiftSoftware.ShiftIdentity.Core.Localization;
+using ShiftSoftware.ShiftIdentity.Core.ValidatorsAndFormatters;
 using ShiftSoftware.ShiftIdentity.Data.Entities;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Mappers;
@@ -65,29 +68,46 @@ public static class UserProjections
     }
 
     /// <summary>
-    /// Applies the editable part of a self-service profile PUT onto the tracked user.
+    /// Applies ordinary profile edits after refusing changes that need separate authority.
     /// </summary>
     /// <remarks>
-    /// Only the fields a user may change about themselves are written. The convention map this
-    /// replaced wrote every name that lined up, which on this path meant a caller-supplied
-    /// <c>IsDeleted</c>, the audit fields, the primary key, and — the one with teeth —
-    /// <c>EmailVerified</c> / <c>PhoneVerified</c>, letting the account assert its own
-    /// verification state and skip the SAS-token flow that is supposed to establish it.
-    /// Those members are owned by the repository, the audit pipeline, and the verification
-    /// endpoints respectively; none of them is profile data, so none of them is written here.
-    /// <para>
-    /// <c>Phone</c> is assigned by the caller after this returns, from the formatted/validated
-    /// value — it is written here too so the mapping stays complete on its own terms.
-    /// </para>
+    /// Unchanged legacy username and contact fields are accepted but never assigned. Username
+    /// changes require an administrator; contact changes require their separate authentication
+    /// flow. Verification, credentials, identity, and audit fields are never profile writes.
     /// </remarks>
-    public static void ApplyProfileEdits(this UserDataDTO dto, User user)
+    public static void ApplyProfileEdits(this UserDataDTO dto, User user) => ApplyProfileEdits(dto, user, null);
+
+    public static void ApplyProfileEdits(this UserDataDTO dto, User user, ShiftIdentityLocalizer? localizer)
     {
-        user.Username = dto.Username;
-        user.Email = dto.Email;
-        user.Phone = dto.Phone;
+        string Text(string value) => localizer is null ? value : localizer[value];
+
+        if (!string.Equals(dto.Username?.Trim(), user.Username?.Trim(), StringComparison.OrdinalIgnoreCase))
+            throw new ShiftEntityException(new Message(Text("Validation Error"),
+                Text("Only an administrator can change your username.")) { For = nameof(UserDataDTO.Username) });
+
+        if (!SameEmail(dto.Email, user.Email) || !SamePhone(dto.Phone, user.Phone))
+            throw new ShiftEntityException(new Message(Text("Additional authentication required"),
+                Text("Use the contact change flow to change your email or phone.")) { For = "ContactReauthenticationRequired" });
+
         user.FullName = dto.FullName;
         user.BirthDate = dto.BirthDate;
         user.Signature = dto.Signature.ToJsonString();
+    }
+
+    private static string? ContactValue(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static bool SameEmail(string? requested, string? saved) =>
+        string.Equals(ContactValue(requested), ContactValue(saved), StringComparison.OrdinalIgnoreCase);
+
+    private static bool SamePhone(string? requested, string? saved)
+    {
+        requested = ContactValue(requested);
+        saved = ContactValue(saved);
+        // An unchanged historical value needs no rewriting or new ownership decision.
+        if (string.Equals(requested, saved, StringComparison.Ordinal)) return true;
+        return requested is not null && saved is not null &&
+            PhoneNumber.PhoneIsValid(requested) && PhoneNumber.PhoneIsValid(saved) &&
+            string.Equals(PhoneNumber.GetFormattedPhone(requested), PhoneNumber.GetFormattedPhone(saved), StringComparison.Ordinal);
     }
 
     private static void FillListFields(UserListDTO dto, User user)

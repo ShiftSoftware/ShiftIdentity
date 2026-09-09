@@ -8,7 +8,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Authentication;
 /// Uses the authoritative identity context. Each instance is scoped to one authentication request;
 /// no configured connection, replica, fallback database or process-local lock is used here.
 /// </summary>
-public sealed class SqlIdentitySecurityStore(ShiftIdentityDbContext db) : IIdentitySecurityStore
+public sealed partial class SqlIdentitySecurityStore(ShiftIdentityDbContext db) : IIdentitySecurityStore
 {
     public async Task<IdentityProofSnapshot?> ReadProofAsync(string username, AuthenticationClient client, CancellationToken ct)
     {
@@ -76,9 +76,10 @@ public sealed class SqlIdentitySecurityStore(ShiftIdentityDbContext db) : IIdent
                 var recoveryFamily = security.MfaRecoveryOperationID is { } root
                     ? await db.Set<AuthenticationOperation>().Where(x => x.UserID == userID && (x.ID == root || x.ParentID == root)).ToListAsync(ct)
                     : [];
+                var links = await db.Set<AuthenticationOperation>().Where(x => x.UserID == userID && x.OutstandingLinkSlot != null).ToListAsync(ct);
                 var unit = new IdentitySecurityTransaction(user, security, policy, operation,
                     value => db.Set<AuthenticationOperation>().Add(value),
-                    value => db.Set<AuthenticationAuditEvent>().Add(value), recoveryFamily);
+                    value => db.Set<AuthenticationAuditEvent>().Add(value), recoveryFamily, links);
                 units.Add(userID, unit);
             }
             var result = await transition(units);
@@ -100,7 +101,7 @@ public sealed class SqlIdentitySecurityStore(ShiftIdentityDbContext db) : IIdent
         var candidates = await db.Set<AuthenticationOperation>().AsNoTracking().Where(x =>
             (x.State == AuthenticationOperationState.AwaitingMfa || x.State == AuthenticationOperationState.AwaitingPassword ||
              x.State == AuthenticationOperationState.AwaitingNewPassword || x.State == AuthenticationOperationState.AwaitingNewFactor ||
-             x.State == AuthenticationOperationState.AwaitingRecoveryProof) &&
+             x.State == AuthenticationOperationState.AwaitingRecoveryProof || x.State == AuthenticationOperationState.AwaitingExplicitSubmit) &&
             (x.ExpiresAt <= now || x.PasswordProvenAt <= proofCutoff || x.MfaProvenAt <= proofCutoff))
             .OrderBy(x => x.ExpiresAt).Take(100).ToListAsync(ct);
         var count = 0;
@@ -116,6 +117,7 @@ public sealed class SqlIdentitySecurityStore(ShiftIdentityDbContext db) : IIdent
                     op.State = AuthenticationOperationState.Cancelled; op.CompletedAt = now;
                     op.HandleDigest = []; op.CodeChallenge = ""; op.PendingPasswordHash = null; op.PendingPasswordSalt = null;
                     op.ProtectedPendingTotpSecret = null; op.RecoveryCodeDigest = null; op.OutstandingRecoveryUserID = null;
+                    op.OutstandingLinkSlot = null; op.Destination = null;
                     unit.Audit("OperationExpired", now, op.ID);
                     return Task.FromResult(1);
                 }, ct, requireClient: false);
@@ -127,6 +129,11 @@ public sealed class SqlIdentitySecurityStore(ShiftIdentityDbContext db) : IIdent
             !db.Set<UserSecurityState>().Any(s => s.MfaRecoveryOperationID == x.ID))
             .OrderBy(x => x.CompletedAt).Select(x => x.ID).Take(100).ToListAsync(ct);
         if (tombstones.Count > 0) await db.Set<AuthenticationOperation>().Where(x => tombstones.Contains(x.ID)).ExecuteDeleteAsync(ct);
+        var oldBuckets = await db.Set<AuthThrottleBucket>().Where(x => x.WindowStart < retentionCutoff)
+            .OrderBy(x => x.WindowStart).Select(x => x.Key).Take(100).ToListAsync(ct);
+        if (oldBuckets.Count > 0)
+            // A request can restart a bucket after selection. Never delete its refreshed window.
+            await db.Set<AuthThrottleBucket>().Where(x => oldBuckets.Contains(x.Key) && x.WindowStart < retentionCutoff).ExecuteDeleteAsync(ct);
         return count;
     }
 }
