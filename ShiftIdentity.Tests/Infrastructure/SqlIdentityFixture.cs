@@ -164,17 +164,18 @@ public class SqlIdentityFixture : IAsyncLifetime
         Options = Options with { PolicyRevision = policy.Revision };
     }
 
-    public async Task<(long UserID, string? Code)> GetSyntheticFactorAsync(string username)
+    public async Task<(long UserID, string? Code)> GetSyntheticFactorAsync(string username,
+        DateTimeOffset? generatedAt = null, CancellationToken cancellationToken = default)
     {
         await using var db = CreateContext();
-        var id = await db.Users.Where(x => x.Username == username).Select(x => x.ID).SingleAsync();
-        var state = await db.Set<UserSecurityState>().AsNoTracking().SingleAsync(x => x.UserID == id);
+        var id = await db.Users.Where(x => x.Username == username).Select(x => x.ID).SingleAsync(cancellationToken);
+        var state = await db.Set<UserSecurityState>().AsNoTracking().SingleAsync(x => x.UserID == id, cancellationToken);
         if (state.ProtectedTotpSecret is null) return (id, null);
         var protector = Protection.CreateProtector("Identity.Totp.v2");
         if (state.TotpProtectionVersion == 1)
             protector = protector.CreateProtector(FormattableString.Invariant($"Active.v1:{state.UserID}:{state.FactorGeneration}"));
         var secret = protector.Unprotect(state.ProtectedTotpSecret);
-        try { return (id, new OtpNet.Totp(secret).ComputeTotp(Clock.GetUtcNow().UtcDateTime)); }
+        try { return (id, new OtpNet.Totp(secret).ComputeTotp((generatedAt ?? Clock.GetUtcNow()).UtcDateTime)); }
         finally { CryptographicOperations.ZeroMemory(secret); }
     }
 

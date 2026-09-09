@@ -9,7 +9,7 @@
     <EditForm Model="entry" OnValidSubmit="Recover">
         <DataAnnotationsValidator />
         <MudTextField T="string" Label="@Loc["Username"]" @bind-Value="entry.Username" For="@(() => entry.Username)" Immediate="true" autocomplete="username" />
-        <MudTextField T="string" Label="@Loc["Current Password"]" @bind-Value="entry.Password" For="@(() => entry.Password)" Immediate="true" InputType="InputType.Password" autocomplete="current-password" />
+        <PasswordField Label="@Loc["Current Password"]" @bind-Value="entry.Password" For="@(() => entry.Password)" Immediate="true" autocomplete="current-password" />
         <MudTextField T="string" Label="@Loc["Recovery code"]" @bind-Value="entry.Code" For="@(() => entry.Code)" Immediate="true" autocomplete="off" />
         <MudButton ButtonType="ButtonType.Submit" Disabled="AdmissionFlow.Busy" Color="Color.Primary">@Loc["Continue recovery"]</MudButton>
     </EditForm>

@@ -15,6 +15,12 @@
 @using ShiftSoftware.ShiftIdentity.Core
 @using MudBlazor
 
+@if (AdmissionContext is not null)
+{
+    <ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.UserManager.AdmissionAccountPanel Context="AdmissionContext" UserKey="@(Key?.ToString())" Administrator="true" />
+}
+else
+{
 <ShiftEntityForm @bind-Value="_theItem"
                  Endpoint="@($"{Constants.IdentityRoutePreifix}User")"
                  Title="@Loc["User"]"
@@ -63,18 +69,15 @@
                       @bind-Value="context.Item.IntegrationId"
                       For="@(() => context.Item.IntegrationId)" />
 
-        <MudTextField InputType="@passwordInputType"
+        <PasswordField
                       ReadOnly="@context.ReadOnly"
                       Disabled="@context.Disabled"
                       OnlyValidateIfDirty="true"
                       Label="@Loc["Password"]"
                       @bind-Value="context.Item.Password"
                       For="@(() => context.Item.Password)"
-                      HelperText="Choose a strong password"
-                      Adornment="Adornment.End"
-                      AdornmentIcon="@GetPasswordAdornmentIcon(context.Item)"
-                      OnAdornmentClick="@(() => OnPasswordAdornmentClick(context.Item, context.ReadOnly || context.Disabled))"
-                      AdornmentAriaLabel="@GetPasswordAdornmentAriaLabel(context.Item)" />
+                      HelperText="Choose a strong password" autocomplete="new-password" />
+        <MudButton ButtonType="ButtonType.Button" Disabled="@(context.ReadOnly || context.Disabled)" OnClick="() => context.Item.Password = PasswordGenerator.GeneratePassword(8)">@Loc["Generate password"]</MudButton>
 
         @if (!string.IsNullOrEmpty(Key?.ToString()))
         {
@@ -146,16 +149,16 @@
         }
     </ChildContent>
 </ShiftEntityForm>
+}
 
 @code {
+    [CascadingParameter] public ShiftSoftware.ShiftIdentity.Blazor.Services.AdmissionUiContext? AdmissionContext { get; set; }
     [Parameter]
     public object? Key { get; set; }
 
     private UserDTO _theItem = new();
 
     private bool ready = false;
-    private bool showPassword = false;
-    private InputType passwordInputType => showPassword ? InputType.Text : InputType.Password;
 
     Shared.ActionTree.ActionTree? actionTree;
 
@@ -165,39 +168,6 @@
     {
         if (_theItem.ID == default)
             _theItem.AccessTree = "{}";
-    }
-
-    private string GetPasswordAdornmentIcon(UserDTO item)
-    {
-        if (string.IsNullOrEmpty(item.Password))
-            return Icons.Material.Filled.VpnKey;
-        else
-            return showPassword ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff;
-    }
-
-    private string GetPasswordAdornmentAriaLabel(UserDTO item)
-    {
-        if (string.IsNullOrEmpty(item.Password))
-            return "Generate Password";
-        else
-            return showPassword ? "Hide Password" : "Show Password";
-    }
-
-    private void OnPasswordAdornmentClick(UserDTO item, bool locked)
-    {
-        if (locked)
-            return;
-
-        if (string.IsNullOrEmpty(item.Password))
-        {
-            item.Password = PasswordGenerator.GeneratePassword(8);
-            showPassword = true; // Hide after generating
-        }
-        else
-        {
-            showPassword = !showPassword;
-        }
-        StateHasChanged();
     }
 
     public ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO? LastSelectedAccessTree

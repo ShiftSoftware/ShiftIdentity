@@ -4,11 +4,12 @@
 @inject ShiftIdentityLocalizer Loc
 
 <MudPaper Class="pa-5" data-testid="mfa-recovery-admin-form">
-    <MudText Typo="Typo.h6">@Loc["Issue an authenticator recovery code"]</MudText>
-    <MudText>@Loc["Verify this person's identity through your approved independent procedure. Record its reference before issuing a code. Issuing disables the lost authenticator and requires recovery before local sign-in."]</MudText>
+    <MudText Typo="Typo.h6">@Loc["Help a user recover their authenticator"]</MudText>
+    <MudText>@Loc["First confirm the person's identity using your team's procedure. Record the support ticket or a short note below. Shift saves this note for audit but cannot verify whether it is true."]</MudText>
+    <MudText>@Loc["Issuing a recovery code disables the old authenticator. Local sign-in waits until the user completes recovery. The generated recovery code is separate from this note; give it to the verified person privately."]</MudText>
     <EditForm Model="entry" OnValidSubmit="Issue">
         <DataAnnotationsValidator />
-        <MudTextField T="string" Label="@Loc["Identity verification reference"]" @bind-Value="entry.Reference" For="@(() => entry.Reference)" Immediate="true" />
+        <MudTextField T="string" Label="@Loc["Support ticket or identity-check note"]" @bind-Value="entry.Reference" For="@(() => entry.Reference)" Immediate="true" />
         <MudButton ButtonType="ButtonType.Submit" Color="Color.Warning" Disabled="AdmissionFlow.Busy">@Loc["Issue recovery code"]</MudButton>
     </EditForm>
     @if (issued is not null)

@@ -23,8 +23,8 @@
             <MudText Typo="Typo.h6">@Loc["Confirm your current password"]</MudText>
             <EditForm Model="passwordEntry" OnValidSubmit="ProveAdmissionPassword">
                 <DataAnnotationsValidator />
-                <MudTextField T="string" Label="@Loc["Current Password"]" @bind-Value="passwordEntry.Password"
-                    For="@(() => passwordEntry.Password)" Immediate="true" InputType="InputType.Password" autocomplete="current-password" />
+                <PasswordField Label="@Loc["Current Password"]" @bind-Value="passwordEntry.Password"
+                    For="@(() => passwordEntry.Password)" Immediate="true" autocomplete="current-password" />
                 <MudButton ButtonType="ButtonType.Submit" Disabled="AdmissionFlow.Busy">@Loc["Continue"]</MudButton>
             </EditForm>
         }
@@ -136,7 +136,9 @@ else
 </MudPaper>
 }
 
-    @code {
+@code {
+    [CascadingParameter] public ShiftSoftware.ShiftIdentity.Blazor.Services.AdmissionUiContext? AdmissionContext { get; set; }
+    private bool routedAdmission;
     [Parameter] public AuthenticationFlow? AdmissionFlow { get; set; }
     [Parameter] public EventCallback<AuthOutcome> AdmissionCompleted { get; set; }
     private sealed class PasswordEntry { [Required] public string Password { get; set; } = ""; }
@@ -163,6 +165,8 @@ else
             ? Loc["That password or code was not accepted. Try again."]
             : result is AuthenticationRefused ? Loc["Setup could not be confirmed. Sign in again to check which authenticator is active."] : null;
         await AdmissionCompleted.InvokeAsync(result);
+        if (routedAdmission && result is MfaChanged { Continuation: SessionIssued } or OperationCancelled)
+            NavManager.NavigateTo("Identity/UserDataForm");
     }
     private enum State { Loading, Ready, LoadFailed }
 
@@ -184,7 +188,19 @@ else
     [SupplyParameterFromQuery]
     public string? ReturnUrl { get; set; }
 
-    protected override Task OnInitializedAsync() => AdmissionFlow is null ? LoadAsync() : Task.CompletedTask;
+    protected override async Task OnInitializedAsync()
+    {
+        routedAdmission = AdmissionFlow is null && AdmissionContext is not null;
+        if (routedAdmission)
+        {
+            AdmissionFlow = AdmissionContext!.Flow;
+            var account = await AdmissionContext.AccountAsync();
+            var access = (await storageService.GetTokenAsync())?.Token;
+            if (account is null || access is null) { NavManager.NavigateTo("Identity/login"); return; }
+            await HandleAdmission(await AdmissionFlow.BeginMfaAsync(access, account.HasAuthenticator));
+        }
+        else if (AdmissionFlow is null) await LoadAsync();
+    }
 
     private async Task LoadAsync()
     {

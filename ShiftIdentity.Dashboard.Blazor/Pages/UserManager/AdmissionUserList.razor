@@ -1,0 +1,24 @@
+@using ShiftSoftware.ShiftIdentity.Blazor.Services
+<MudPaper Class="pa-5">
+    <MudText Typo="Typo.h5">Users</MudText>
+    <MudText>Select a user to manage authenticator recovery.</MudText>
+    @foreach (var user in users)
+    {
+        <MudButton Href="@($"Identity/UserForm/{user.UserID}")">@user.Username — @user.FullName</MudButton><br />
+    }
+    @if (!loading && users.Length == 0)
+    {
+        <MudAlert Severity="Severity.Info">You need the authenticator recovery permission to view these users.</MudAlert>
+    }
+</MudPaper>
+@code {
+    [Parameter, EditorRequired] public AdmissionUiContext Context { get; set; } = null!;
+    private AdmissionAccount[] users = [];
+    private bool loading = true;
+    protected override async Task OnInitializedAsync()
+    {
+        try { users = await Context.UsersAsync(); }
+        catch (HttpRequestException) { }
+        finally { loading = false; }
+    }
+}

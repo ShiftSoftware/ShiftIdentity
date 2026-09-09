@@ -7,6 +7,12 @@
 @using ShiftSoftware.ShiftBlazor.Enums
 @inject ShiftIdentityLocalizer Loc
 
+@if (AdmissionContext is not null)
+{
+    <AdmissionAccountPanel Context="AdmissionContext" />
+}
+else
+{
 <ShiftEntityForm @bind-Mode="_mode"
                  Endpoint="UserManager/UserData"
                  Title="@Loc["Profile"]"
@@ -99,8 +105,10 @@
 
     </ChildContent>
 </ShiftEntityForm>
+}
 
 @code {
+    [CascadingParameter] public ShiftSoftware.ShiftIdentity.Blazor.Services.AdmissionUiContext? AdmissionContext { get; set; }
     private FormModes _mode;
 
     private async Task SendEmailVerification()

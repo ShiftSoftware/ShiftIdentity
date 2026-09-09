@@ -21,7 +21,7 @@
 
         <MudTextField T="string" Label="@Loc["Code"]" @bind-Value="dto.Code"
                       Immediate="@(AdmissionFlow is not null)"
-                      For="@(() => dto.Code)" InputType="InputType.Password" />
+                      For="@(() => dto.Code)" InputType="InputType.Text" InputMode="InputMode.numeric" autocomplete="one-time-code" />
 
         <br />
         <br />

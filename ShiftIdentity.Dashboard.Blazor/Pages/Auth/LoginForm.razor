@@ -1,4 +1,4 @@
-﻿@attribute [Route($"{Constants.IdentityRoutePreifix}/login")]
+@attribute [Route($"{Constants.IdentityRoutePreifix}/login")]
 @layout Shared.EmptyLayout
 @implements IDisposable
 
@@ -72,14 +72,9 @@
                 <DataAnnotationsValidator />
                 <MudTextField T="string" Label="@Loc["Username"]" @bind-Value="loginDto.Username" For="@(() => loginDto.Username)" Immediate="@(AdmissionFlow is not null)" />
 
-                <MudTextField T="string" Label="@Loc["Password"]" @bind-Value="loginDto.Password"
+                <PasswordField Label="@Loc["Password"]" @bind-Value="loginDto.Password"
                               Immediate="@(AdmissionFlow is not null)"
-                              For="@(() => loginDto.Password)"
-                              InputType="@passwordInput"
-                              Adornment="Adornment.End"
-                              AdornmentIcon="@passwordIcon"
-                              OnAdornmentClick="TogglePasswordVisibility"
-                              AdornmentAriaLabel="@Loc["Show or hide password"]" />
+                              For="@(() => loginDto.Password)" autocomplete="current-password" />
 
                 <br />
                 @if (AdmissionFlow is null)
@@ -119,7 +114,7 @@
 </MudGrid>
 
 @code {
-    // Supplied by the isolated component harness; production registration supplies no adapter.
+    [CascadingParameter] public ShiftSoftware.ShiftIdentity.Blazor.Services.AdmissionUiContext? AdmissionContext { get; set; }
     [Parameter] public AuthenticationFlow? AdmissionFlow { get; set; }
     [Parameter] public EventCallback<SessionIssued> SessionCompleted { get; set; }
     private string? admissionError;
@@ -146,22 +141,13 @@
         {
             await AuthenticationStateProvider.GetAuthenticationStateAsync();
             await SessionCompleted.InvokeAsync(session);
+            if (AdmissionContext is not null)
+                // Reload after storing the completed session so the router starts with its new authentication state.
+                NavManager.NavigateTo(ShiftSoftware.ShiftIdentity.Blazor.Services.AdmissionNavigation.LocalReturnPath(ReturnUrl), forceLoad: true);
         }
     }
 
     LoginDTO loginDto { get; set; } = new LoginDTO();
-
-    // Password show/hide toggle (the end-adornment icon button flips both the input type and icon).
-    bool showPassword;
-    InputType passwordInput = InputType.Password;
-    string passwordIcon = Icons.Material.Filled.VisibilityOff;
-
-    private void TogglePasswordVisibility()
-    {
-        showPassword = !showPassword;
-        passwordInput = showPassword ? InputType.Text : InputType.Password;
-        passwordIcon = showPassword ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff;
-    }
 
     [CascadingParameter]
     private Task<AuthenticationState>? authenticationStateTask { get; set; }
@@ -172,6 +158,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        AdmissionFlow ??= AdmissionContext?.Flow;
         if (authenticationStateTask != null)
         {
             var authState = await authenticationStateTask;

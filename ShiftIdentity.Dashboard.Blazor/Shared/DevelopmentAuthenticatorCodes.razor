@@ -1,0 +1,98 @@
+@using ShiftSoftware.ShiftIdentity.Blazor.Services
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div @ref="element" data-testid="authenticator-codes">
+    <style>[data-codes-suspended] .code-values { visibility: hidden; }</style>
+    @if (feed.Current is { } snapshot)
+    {
+        @if (snapshot.Password is not null) { <MudText>Initial password: @snapshot.Password</MudText> }
+        <MudText data-testid="code-countdown">New codes in @feed.SecondsRemaining seconds.</MudText>
+        <MudSimpleTable Class="code-values">
+            <thead><tr><th>Account</th><th>Current authenticator code</th></tr></thead>
+            <tbody>@foreach (var account in snapshot.Accounts)
+            {
+                <tr><td>@account.Username</td><td data-testid="authenticator-code" data-account="@account.Username">@(account.Code ?? "Not enrolled")</td></tr>
+            }</tbody>
+        </MudSimpleTable>
+    }
+    else { <MudText role="status">@(feed.Error ?? "Updating codes…")</MudText> }
+    <MudButton OnClick="RefreshAsync" Disabled="feed.Busy">Refresh codes</MudButton>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Func<CancellationToken, Task<AuthenticatorCodeSnapshot>> LoadCodes { get; set; } = null!;
+    [Parameter] public Func<string?>? ContextKey { get; set; }
+    private readonly AuthenticatorCodeFeed feed = new();
+    private readonly CancellationTokenSource stopped = new();
+    private ElementReference element;
+    private IJSObjectReference? module;
+    private IJSObjectReference? watcher;
+    private DotNetObjectReference<DevelopmentAuthenticatorCodes>? reference;
+    private Task? loop;
+    private string? key;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/ShiftSoftware.ShiftIdentity.Dashboard.Blazor/development-codes.js");
+            reference = DotNetObjectReference.Create(this);
+            watcher = await module.InvokeAsync<IJSObjectReference>("watch", element, reference);
+            await TickAsync();
+            loop = RunAsync();
+        }
+        if (watcher is not null && !stopped.IsCancellationRequested)
+            await watcher.InvokeVoidAsync("arm", feed.Remaining.TotalMilliseconds);
+    }
+
+    public async Task RefreshAsync()
+    {
+        feed.Invalidate();
+        await TickAsync();
+    }
+
+    [JSInvokable] public async Task VisibilityChanged(bool visible)
+    {
+        if (stopped.IsCancellationRequested) return;
+        feed.SetVisible(visible);
+        await TickAsync();
+    }
+
+    private async Task TickAsync()
+    {
+        var nextKey = ContextKey?.Invoke();
+        if (key != nextKey) { key = nextKey; feed.Invalidate(); }
+        StateHasChanged();
+        await feed.RefreshIfDueAsync(LoadCodes);
+        if (stopped.IsCancellationRequested) return;
+        // A child authentication form may change the pending factor during an outstanding read.
+        if (key != ContextKey?.Invoke()) feed.Invalidate();
+        StateHasChanged();
+    }
+
+    private async Task RunAsync()
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(250));
+            while (await timer.WaitForNextTickAsync(stopped.Token)) await InvokeAsync(TickAsync);
+        }
+        catch (OperationCanceledException) when (stopped.IsCancellationRequested) { }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        stopped.Cancel();
+        feed.Dispose();
+        if (loop is not null) await loop;
+        try
+        {
+            if (watcher is not null) { await watcher.InvokeVoidAsync("dispose"); await watcher.DisposeAsync(); }
+            if (module is not null) await module.DisposeAsync();
+        }
+        catch (JSDisconnectedException) { }
+        reference?.Dispose();
+        stopped.Dispose();
+    }
+}

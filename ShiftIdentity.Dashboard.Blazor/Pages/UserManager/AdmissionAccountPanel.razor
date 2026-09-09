@@ -1,0 +1,62 @@
+@using ShiftSoftware.ShiftIdentity.Blazor.Services
+@using ShiftSoftware.ShiftIdentity.Core.Authentication
+
+<MudPaper Class="pa-5">
+    <MudText Typo="Typo.h5">@(Administrator ? "User security" : "Profile")</MudText>
+    @if (account is not null)
+    {
+        <MudText Typo="Typo.h6">@account.FullName</MudText>
+        <MudText>@account.Username</MudText>
+        <MudText>Authenticator: @(account.RecoveryRequired ? "Recovery required" : account.HasAuthenticator ? "Enabled" : "Not set up")</MudText>
+        @if (!Administrator)
+        {
+            <MudButton Color="Color.Primary" Href="Identity/ChangePasswordForm">Change Password</MudButton>
+            <MudButton Color="Color.Primary" Href="Identity/TotpEnrollmentForm">@(account.HasAuthenticator ? "Replace authenticator" : "Set up authenticator")</MudButton>
+        }
+        else if (actor?.CanManageRecovery == true && actor.UserID != account.UserID && access is not null)
+        {
+            <MfaRecoveryAdminForm AdmissionFlow="Context.Flow" AccessToken="@access" UserID="account.UserID" AdmissionCompleted="RecoveryIssued" />
+        }
+        <MudAlert Severity="Severity.Info" Class="mt-4">Profile, contact and permission editing are unavailable in this isolated authentication mode.</MudAlert>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Info">@(loading ? "Loading account…" : "This account is unavailable or you do not have permission to view it.")</MudAlert>
+    }
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public AdmissionUiContext Context { get; set; } = null!;
+    [Parameter] public string? UserKey { get; set; }
+    [Parameter] public bool Administrator { get; set; }
+    private AdmissionAccount? account, actor;
+    private string? access;
+    private bool loading;
+    private long loadGeneration;
+    private AdmissionUiContext? loadedContext;
+    private string? loadedKey;
+    private bool loadedAdministrator;
+    private void RecoveryIssued(AuthOutcome result)
+    {
+        if (result is MfaRecoveryCodeIssued && account is not null)
+            account = account with { HasAuthenticator = false, RecoveryRequired = true };
+    }
+    protected override async Task OnParametersSetAsync()
+    {
+        // Background renewal must not reset an operator's verification entry or displayed recovery code.
+        if (ReferenceEquals(loadedContext, Context) && loadedKey == UserKey && loadedAdministrator == Administrator) return;
+        loadedContext = Context; loadedKey = UserKey; loadedAdministrator = Administrator;
+        var request = ++loadGeneration;
+        account = null; actor = null; access = null; loading = true;
+        try
+        {
+            if (Administrator && (!long.TryParse(UserKey, out var id) || id <= 0)) return;
+            var current = await Context.AccountAsync();
+            var target = Administrator ? await Context.AccountAsync(long.Parse(UserKey!)) : current;
+            var token = (await Context.Store.GetTokenAsync())?.Token;
+            if (request == loadGeneration) { actor = current; account = target; access = token; }
+        }
+        catch (HttpRequestException) { }
+        finally { if (request == loadGeneration) loading = false; }
+    }
+}

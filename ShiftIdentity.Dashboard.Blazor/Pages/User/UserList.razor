@@ -11,6 +11,12 @@
 @inject MessageService MessageService
 @inject ShiftIdentityLocalizer Loc
 
+@if (AdmissionContext is not null)
+{
+    <ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.UserManager.AdmissionUserList Context="AdmissionContext" />
+}
+else
+{
 <ShiftList EntitySet="@($"{Constants.IdentityRoutePreifix}User")"
            Title="@Loc["User List"]"
            T="UserListDTO"
@@ -188,8 +194,10 @@
         </PropertyColumnExtended>
     </ChildContent>
 </ShiftList>
+}
 
 @code {
+    [CascadingParameter] public ShiftSoftware.ShiftIdentity.Blazor.Services.AdmissionUiContext? AdmissionContext { get; set; }
 
     public ForeignFilter<UserListDTO, string?>? CompanyFilter { get; set; }
     public ShiftList<UserListDTO>? ShiftList { get; set; }

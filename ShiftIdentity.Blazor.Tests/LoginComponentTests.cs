@@ -27,8 +27,11 @@ public sealed class LoginComponentTests
         await Login(cut);
         Assert.Empty(store.Writes);
         Assert.Single(cut.FindComponents<MfaForm>());
+        Assert.Equal("text", cut.Find("input").GetAttribute("type"));
+        Assert.Equal("numeric", cut.Find("input").GetAttribute("inputmode"));
+        Assert.Equal("one-time-code", cut.Find("input").GetAttribute("autocomplete"));
         Assert.Equal("http://localhost/", context.Services.GetRequiredService<NavigationManager>().Uri);
-        cut.Find("input").Input("123456");
+        cut.Find("input").Input("012345");
         await Submit(cut);
         Assert.Single(store.Writes);
         Assert.Equal(1, completed);
@@ -54,10 +57,13 @@ public sealed class LoginComponentTests
         using var context = Context(out var store, out var flow, refuseMfa: true);
         var cut = context.Render<LoginForm>(p => p.Add(x => x.AdmissionFlow, flow));
         await Login(cut);
-        cut.Find("input").Input("123456");
+        cut.Find("input").Input("012345");
         await Submit(cut);
         Assert.Empty(store.Writes);
         Assert.Single(cut.FindComponents<MfaForm>());
+        Assert.Equal("text", cut.Find("input").GetAttribute("type"));
+        Assert.Equal("numeric", cut.Find("input").GetAttribute("inputmode"));
+        Assert.Equal("one-time-code", cut.Find("input").GetAttribute("autocomplete"));
         Assert.Single(cut.FindAll("[data-testid=admission-error]"));
     }
 
@@ -70,7 +76,7 @@ public sealed class LoginComponentTests
             if (request.RequestUri!.AbsolutePath.EndsWith("/mfa"))
             {
                 var proof = await System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync<CompleteMfaRequest>(request.Content!);
-                Assert.Equal("123456", proof!.Code);
+                Assert.Equal("012345", proof!.Code);
                 return refuseMfa ? new AuthenticationRefused(AuthenticationFailure.InvalidProof) : AuthenticationFlowTests.Session();
             }
             var login = await System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync<PasswordLoginRequest>(request.Content!);

@@ -85,6 +85,12 @@ public sealed class IdentityHttpHost : IDisposable
     public static void MapAdmissionEndpoints(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoints) =>
         endpoints.MapIdentityAdmissionEndpoints();
 
+    public static void AddResourceAuthentication(IServiceCollection services)
+    {
+        services.AddAuthentication().AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, AdmissionResourceHandler>("AdmissionResource", _ => { });
+        services.AddAuthorizationBuilder().AddPolicy("AdmissionResource", p => p.AddAuthenticationSchemes("AdmissionResource").RequireAuthenticatedUser());
+    }
+
     public async Task<AuthOutcome> LoginAsync(SqlIdentityFixture fixture, string challenge, string? password = null) =>
         await Read(await Client.PostAsJsonAsync("/api/identity/v2/login",
             new PasswordLoginRequest(fixture.Username, password ?? fixture.Password, challenge)));

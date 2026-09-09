@@ -139,12 +139,21 @@
                     @foreach (var field in context.Item.CustomFields)
                     {
                         <MudItem xs="12" sm="6" lg="3" xl="3">
-                            <MudTextField ReadOnly="@context.ReadOnly"
+                            @if (field.Value.IsPassword)
+                            {
+                                <PasswordField @key="field.Key" ReadOnly="@context.ReadOnly"
                                           Disabled="@context.Disabled"
                                           Label="@field.Value.DisplayName"
-                                          Placeholder="@((field.Value.IsPassword && field.Value.HasValue) ? "******" : null)"
-                                          InputType="@(field.Value.IsPassword? InputType.Password: InputType.Text)"
+                                          Placeholder="@(field.Value.HasValue ? "******" : null)"
                                           @bind-Value="context.Item.CustomFields[field.Key].Value" />
+                            }
+                            else
+                            {
+                                <MudTextField @key="field.Key" ReadOnly="@context.ReadOnly"
+                                          Disabled="@context.Disabled"
+                                          Label="@field.Value.DisplayName"
+                                          @bind-Value="context.Item.CustomFields[field.Key].Value" />
+                            }
                         </MudItem>
                     }
                 }
