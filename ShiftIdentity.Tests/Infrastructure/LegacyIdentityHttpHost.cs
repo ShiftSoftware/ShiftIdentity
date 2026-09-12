@@ -43,6 +43,7 @@ public sealed class LegacyIdentityHttpHost<TContext> : IDisposable where TContex
         var issuer = authority ? fixture.Options.Issuer : "https://legacy.invalid";
         var settings = new ShiftIdentityConfiguration
         {
+            FactorProtection = fixture.FactorProtection,
             Token = new() { Issuer = issuer, Audience = "legacy-test", ExpireSeconds = 900,
                 RSAPrivateKeyBase64 = Convert.ToBase64String(fixture.Options.AccessPrivateKey) },
             RefreshToken = new() { Issuer = "https://legacy.invalid", Audience = "legacy-refresh", ExpireSeconds = 1800,
@@ -66,7 +67,7 @@ public sealed class LegacyIdentityHttpHost<TContext> : IDisposable where TContex
             services.AddSingleton<ISendEmailVerification>(Verifications);
             services.AddScoped(sp => (TContext)fixture.CreateContext(sp, interceptors));
             if (authority)
-                IdentityHttpHost.AddAdmissionServices(services, fixture, observe: observe, registerContext: false);
+                IdentityHttpHost.AddAdmissionServices(services, fixture, observe: observe, registerContext: false, runStartupMigration: false);
             var mvc = services.AddControllers();
             mvc.AddShiftEntityWeb(x => x.AddShiftIdentityDataAssembly());
             mvc.AddShiftIdentity(settings.Token.Issuer, publicKey)

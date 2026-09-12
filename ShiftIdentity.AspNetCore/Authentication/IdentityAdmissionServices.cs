@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.DataProtection;
 using ShiftSoftware.ShiftIdentity.Data.Authentication;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Authentication;
@@ -10,14 +9,14 @@ internal sealed record IdentityAdmissionServices(
     IdentityAdmissionOptions Options,
     TimeProvider Clock,
     ShiftSoftware.ShiftEntity.Core.IHashIdService HashIds,
-    IDataProtector FactorProtector,
+    IdentityMaterialProtector FactorProtector,
     AdmissionTokenCodec Tokens,
     Action<string>? Observe = null)
 {
     internal Core.Authentication.NewPasswordPolicy PasswordPolicy { get; init; } = new();
     internal SecurityDeliveryLimits DeliveryLimits { get; init; } = new();
     internal ISecurityEmailSink? EmailSink { get; init; }
-    internal IDataProtector LinkProtector => FactorProtector.CreateProtector("SecurityLinks.v1");
+    internal IdentityMaterialProtector LinkProtector => FactorProtector.CreateProtector("SecurityLinks.v1");
 }
 
 internal sealed record SecurityDeliveryLimits(int CooldownSeconds = 60, int PerUserPerHour = 5, int PublicPerIpPer15Minutes = 20,

@@ -3,7 +3,6 @@ using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Security.Claims;
 using System.Security.Cryptography;
-using Microsoft.AspNetCore.DataProtection;
 using OtpNet;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Authentication;
 using ShiftSoftware.ShiftIdentity.Core;

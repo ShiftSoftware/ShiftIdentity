@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using OtpNet;
@@ -37,7 +36,7 @@ public sealed partial class SecurityLinkSqlTests(SqlIdentityFixture fixture) : I
         {
             await using var db = fixture.CreateContext();
             var state = await db.Set<UserSecurityState>().SingleAsync(x => x.UserID == fixture.UserID);
-            state.ProtectedTotpSecret = fixture.Protection.CreateProtector("Identity.Totp.v2").Protect(fixture.FactorSecret);
+            fixture.SetSyntheticFactor(state, fixture.FactorSecret);
             await db.SaveChangesAsync();
         }
         using var host = new IdentityHttpHost(fixture);

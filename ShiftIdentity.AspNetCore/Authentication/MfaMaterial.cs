@@ -1,5 +1,4 @@
 using System.Security.Cryptography;
-using Microsoft.AspNetCore.DataProtection;
 using Net.Codecrete.QrCodeGenerator;
 using OtpNet;
 using ShiftSoftware.ShiftIdentity.Core.Authentication;
@@ -27,24 +26,29 @@ internal static class MfaMaterial
         PendingProtector(services, op).Unprotect(op.ProtectedPendingTotpSecret ?? throw new CryptographicException("Missing pending factor."));
 
     internal static byte[] ReadActive(IdentityAdmissionServices services, UserSecurityState security) =>
-        (security.TotpProtectionVersion switch
-        {
-            0 => services.FactorProtector, // Existing staged fixture format; production migration is separate.
-            1 => ActiveProtector(services, security),
-            _ => throw new CryptographicException("Unknown factor protection format.")
-        }).Unprotect(security.ProtectedTotpSecret ?? throw new CryptographicException("Missing active factor."));
+        ReadActive(services.FactorProtector, security);
+
+    internal static byte[] ReadActive(IdentityMaterialProtector protector, UserSecurityState security) =>
+        security.TotpProtectionVersion == 1
+            ? ActiveProtector(protector, security).Unprotect(security.ProtectedTotpSecret ?? throw new CryptographicException("Missing active factor."))
+            : throw new CryptographicException("Unknown factor protection format.");
+
+    internal static void ProtectActive(IdentityMaterialProtector protector, UserSecurityState security, byte[] secret)
+    {
+        security.ProtectedTotpSecret = ActiveProtector(protector, security).Protect(secret);
+        security.TotpProtectionVersion = 1;
+    }
 
     internal static void Activate(IdentityAdmissionServices services, UserSecurityState security, byte[] secret, long step)
     {
         security.FactorGeneration = checked(security.FactorGeneration + 1);
-        security.ProtectedTotpSecret = ActiveProtector(services, security).Protect(secret);
-        security.TotpProtectionVersion = 1;
+        ProtectActive(services.FactorProtector, security, secret);
         security.LastAcceptedTotpStep = step;
     }
 
-    private static IDataProtector ActiveProtector(IdentityAdmissionServices services, UserSecurityState security) =>
-        services.FactorProtector.CreateProtector(FormattableString.Invariant($"Active.v1:{security.UserID}:{security.FactorGeneration}"));
+    private static IdentityMaterialProtector ActiveProtector(IdentityMaterialProtector protector, UserSecurityState security) =>
+        protector.CreateProtector(FormattableString.Invariant($"Active.v1:{security.UserID}:{security.FactorGeneration}"));
 
-    private static IDataProtector PendingProtector(IdentityAdmissionServices services, AuthenticationOperation op) =>
+    private static IdentityMaterialProtector PendingProtector(IdentityAdmissionServices services, AuthenticationOperation op) =>
         services.FactorProtector.CreateProtector(FormattableString.Invariant($"Pending.v1:{op.ID:N}:{op.UserID}:{op.SecurityVersion}:{op.FactorGeneration}:{op.PolicyRevision}:{(int)op.Purpose}"));
 }

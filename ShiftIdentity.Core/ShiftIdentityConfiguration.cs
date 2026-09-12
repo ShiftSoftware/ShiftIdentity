@@ -14,6 +14,8 @@ public class ShiftIdentityConfiguration
 
     public MfaSettingsModel MfaSettings { get; set; } = new();
 
+    public FactorProtectionSettings FactorProtection { get; set; } = new();
+
     public TemporaryTokenSettingsModel TemporaryTokenSettings { get; set; } = default!;
 
     public HashIdSettings HashIdSettings { get; set; } = default!;

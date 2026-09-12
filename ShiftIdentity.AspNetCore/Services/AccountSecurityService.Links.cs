@@ -3,7 +3,6 @@ using System.Net.Mail;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Microsoft.AspNetCore.DataProtection;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Authentication;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.Authentication;

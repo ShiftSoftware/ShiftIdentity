@@ -1,5 +1,4 @@
 using System.Security.Cryptography;
-using Microsoft.AspNetCore.DataProtection;
 using OtpNet;
 using ShiftSoftware.ShiftIdentity.Core.Authentication;
 using ShiftSoftware.ShiftIdentity.Data.Authentication;

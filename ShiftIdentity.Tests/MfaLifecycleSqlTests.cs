@@ -1,6 +1,5 @@
 using System.Net.Http.Json;
 using System.Security.Cryptography;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using OtpNet;
 using ShiftIdentity.Tests.Infrastructure;
@@ -114,7 +113,7 @@ public sealed partial class MfaLifecycleSqlTests(SqlIdentityFixture fixture) : I
         var setup = Challenge(await host.ExistingFactorAsync(start.Handle!, ActiveCode(), pkce.Verifier), AuthenticationStep.NewMfa);
         Assert.Equal(start.ExpiresAt, setup.ExpiresAt);
         var active = await State();
-        Assert.Equal(fixture.FactorSecret, fixture.Protection.CreateProtector("Identity.Totp.v2").Unprotect(active.ProtectedTotpSecret!));
+        Assert.Equal(fixture.FactorSecret, fixture.ReadSyntheticFactor(active));
         Assert.Equal(1, active.SecurityVersion);
         Assert.IsType<AuthenticationRefused>(await host.ConfirmFactorAsync(setup.Handle!, "00000000", pkce.Verifier));
         if (cancel)
@@ -222,7 +221,7 @@ public sealed partial class MfaLifecycleSqlTests(SqlIdentityFixture fixture) : I
         var security = await State();
         Assert.Equal(version, security.SecurityVersion); Assert.Equal(generation, security.FactorGeneration);
         Assert.Equal(1, security.TotpProtectionVersion); Assert.NotNull(security.LastAcceptedTotpStep);
-        var secret = fixture.Protection.CreateProtector("Identity.Totp.v2").CreateProtector($"Active.v1:{fixture.UserID}:{generation}").Unprotect(security.ProtectedTotpSecret!);
+        var secret = fixture.ReadSyntheticFactor(security);
         Assert.Equal(Base32Encoding.ToBytes(setup.NewAuthenticator!.Secret), secret); CryptographicOperations.ZeroMemory(secret);
         await AssertNoPendingMaterial();
     }

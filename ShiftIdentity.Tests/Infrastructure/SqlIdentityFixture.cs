@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -27,7 +26,13 @@ public class SqlIdentityFixture : IAsyncLifetime
     private string connectionString = "";
     private string serverConnectionString = "";
     public byte[] FactorSecret { get; } = RandomNumberGenerator.GetBytes(20);
-    public IDataProtectionProvider Protection { get; } = new EphemeralDataProtectionProvider();
+    public bool SeedLegacyFactorBeforeExpansion { get; init; }
+    public ShiftSoftware.ShiftIdentity.Core.Models.FactorProtectionSettings FactorProtection { get; } = new()
+    {
+        ActiveKeyId = "fixture-key",
+        Keys = new() { ["fixture-key"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)) }
+    };
+    internal IdentityMaterialProtector Protection => new(FactorProtection);
     public TimeProvider Clock { get; set; } = TimeProvider.System;
     public ISecurityEmailSink? EmailSink { get; set; } = new LocalSecurityInbox();
     internal SecurityDeliveryLimits DeliveryLimits { get; set; } = new(HandoffTimeoutMilliseconds: 100, ResultPersistenceTimeoutMilliseconds: 100, PublicPaddingMilliseconds: 50);
@@ -82,7 +87,8 @@ public class SqlIdentityFixture : IAsyncLifetime
         await legacy.SaveChangesAsync();
         var user = new User { Username = Username, FullName = "Synthetic User", IsActive = true,
             PasswordHash = hash.PasswordHash, Salt = hash.Salt, RegionID = region.ID, CountryID = country.ID,
-            CompanyID = company.ID, CompanyBranchID = branch.ID };
+            CompanyID = company.ID, CompanyBranchID = branch.ID,
+            TotpSecret = SeedLegacyFactorBeforeExpansion ? FactorSecret : null };
         legacy.Users.Add(user);
         legacy.Apps.AddRange(new App { AppId = "test-client", DisplayName = "Test", RedirectUri = "https://client.invalid/callback" },
             new App { AppId = "other-client", DisplayName = "Other", RedirectUri = "https://other.invalid/callback" });
@@ -128,10 +134,8 @@ public class SqlIdentityFixture : IAsyncLifetime
         };
         db.Users.Add(user);
         await db.SaveChangesAsync();
-        var security = new UserSecurityState
-        {
-            UserID = user.ID, ProtectedTotpSecret = mfa ? Protection.CreateProtector("Identity.Totp.v2").Protect(FactorSecret) : null
-        };
+        var security = new UserSecurityState { UserID = user.ID };
+        SetSyntheticFactor(security, mfa ? FactorSecret : null);
         RecoveryContact.InitializeLookup(user, security);
         db.Set<UserSecurityState>().Add(security);
         await db.SaveChangesAsync();
@@ -151,6 +155,7 @@ public class SqlIdentityFixture : IAsyncLifetime
         user.PasswordHash = hash.PasswordHash; user.Salt = hash.Salt;
         user.IsActive = true; user.IsDeleted = false; user.RequireChangePassword = false;
         user.LockDownUntil = null; user.Email = null; user.EmailVerified = false;
+        user.TotpSecret = null;
         var state = await db.Set<UserSecurityState>().SingleAsync(x => x.UserID == UserID);
         state.SecurityVersion = 1; state.FactorGeneration = 1; state.LocalMfaRecoveryRequired = false;
         state.ContactRevision = 1; RecoveryContact.Invalidate(state);
@@ -158,7 +163,7 @@ public class SqlIdentityFixture : IAsyncLifetime
         state.LastDeliveryAt = null; state.DeliveryWindowStart = null; state.DeliveryCount = 0;
         state.TotpProtectionVersion = 0; state.MfaRecoveryOperationID = null;
         state.FailedProofs = 0; state.FailureWindowStart = null; state.LastAcceptedTotpStep = null;
-        state.ProtectedTotpSecret = mfa ? Protection.CreateProtector("Identity.Totp.v2").Protect(FactorSecret) : null;
+        SetSyntheticFactor(state, mfa ? FactorSecret : null);
         var policy = await db.Set<AuthenticationPolicyState>().SingleAsync();
         policy.Revision = 1; policy.MfaEnabled = true; policy.MfaMandatory = false; policy.RequireVerifiedEmail = false;
         policy.TotpDigits = 6; policy.TotpPeriodSeconds = 30; policy.TotpWindowPast = 1; policy.TotpWindowFuture = 1;
@@ -194,13 +199,18 @@ public class SqlIdentityFixture : IAsyncLifetime
         var id = await db.Users.Where(x => x.Username == username).Select(x => x.ID).SingleAsync(cancellationToken);
         var state = await db.Set<UserSecurityState>().AsNoTracking().SingleAsync(x => x.UserID == id, cancellationToken);
         if (state.ProtectedTotpSecret is null) return (id, null);
-        var protector = Protection.CreateProtector("Identity.Totp.v2");
-        if (state.TotpProtectionVersion == 1)
-            protector = protector.CreateProtector(FormattableString.Invariant($"Active.v1:{state.UserID}:{state.FactorGeneration}"));
-        var secret = protector.Unprotect(state.ProtectedTotpSecret);
+        var secret = ReadSyntheticFactor(state);
         try { return (id, new OtpNet.Totp(secret).ComputeTotp((generatedAt ?? Clock.GetUtcNow()).UtcDateTime)); }
         finally { CryptographicOperations.ZeroMemory(secret); }
     }
+
+    public void SetSyntheticFactor(UserSecurityState state, byte[]? secret)
+    {
+        if (secret is null) { state.ProtectedTotpSecret = null; state.TotpProtectionVersion = 0; }
+        else MfaMaterial.ProtectActive(Protection, state, secret);
+    }
+
+    public byte[] ReadSyntheticFactor(UserSecurityState state) => MfaMaterial.ReadActive(Protection, state);
 
     public async ValueTask DisposeAsync()
     {

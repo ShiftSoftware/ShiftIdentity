@@ -14,6 +14,9 @@ internal static class AdmissionEndpoints
 {
     internal static void AddIdentityAdmissionAuthentication(this IServiceCollection services)
     {
+        services.AddSingleton(sp => new IdentityMaterialProtector(
+            sp.GetRequiredService<Core.ShiftIdentityConfiguration>().FactorProtection));
+        services.AddHostedService<LegacyTotpMigration>();
         services.AddHostedService<AdmissionMaintenance>();
         // The legacy administrator writers find the staged authority through this registration; without it they
         // keep their direct writes. The operator is read from the current request.

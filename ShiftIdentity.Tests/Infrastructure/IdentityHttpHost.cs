@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.AspNetCore.WebUtilities;
@@ -34,7 +33,7 @@ public sealed class IdentityHttpHost : IDisposable
         var publicKey = new RsaSecurityKey(rsa.ExportParameters(false));
         server = new TestServer(new WebHostBuilder().UseEnvironment("Testing").ConfigureServices(services =>
         {
-            AddAdmissionServices(services, fixture, client, observe, interceptors: interceptors);
+            AddAdmissionServices(services, fixture, client, observe, runStartupMigration: false, interceptors: interceptors);
             services.AddAuthentication().AddJwtBearer("FixtureResource", options =>
                 options.TokenValidationParameters = new()
                 {
@@ -70,21 +69,28 @@ public sealed class IdentityHttpHost : IDisposable
     // registers its own ShiftIdentityDbContext (the legacy dashboard host) passes registerContext: false, so the
     // staged store and the legacy repository share the one scoped context.
     public static void AddAdmissionServices(IServiceCollection services, SqlIdentityFixture fixture,
-        AuthenticationClient? client = null, Action<string>? observe = null, bool registerContext = true,
+        AuthenticationClient? client = null, Action<string>? observe = null, bool registerContext = true, bool runStartupMigration = true,
         params Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor[] interceptors)
     {
         client ??= new("test-client", "test-api");
         services.AddRouting();
+        if (registerContext) services.TryAddSingleton(new ShiftSoftware.ShiftIdentity.Core.ShiftIdentityConfiguration
+        { FactorProtection = fixture.FactorProtection });
         if (registerContext) services.AddScoped(_ => fixture.CreateContext(interceptors));
         services.AddScoped<IIdentitySecurityStore, SqlIdentitySecurityStore>();
         if (fixture.EmailSink is { } sink) services.TryAddSingleton<ISecurityEmailSink>(sink);
         services.AddScoped(sp => new IdentityAdmissionServices(
             sp.GetRequiredService<IIdentitySecurityStore>(), client, fixture.Options, fixture.Clock,
             new HashIdService(Options.Create(new ShiftEntityOptions())),
-            fixture.Protection.CreateProtector("Identity.Totp.v2"),
+            sp.GetRequiredService<IdentityMaterialProtector>(),
             new AdmissionTokenCodec(fixture.Options, fixture.Clock), observe)
         { EmailSink = sp.GetService<ISecurityEmailSink>(), DeliveryLimits = fixture.DeliveryLimits });
         services.AddIdentityAdmissionAuthentication();
+        // Request fixtures inject faults and hold locks across requests. Startup has its own host lifecycle tests;
+        // it must not consume those request faults or block construction of a second request fixture.
+        if (!runStartupMigration)
+            services.Remove(services.Single(x => x.ServiceType == typeof(Microsoft.Extensions.Hosting.IHostedService) &&
+                x.ImplementationType == typeof(LegacyTotpMigration)));
     }
 
     public static void MapAdmissionEndpoints(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoints) =>
