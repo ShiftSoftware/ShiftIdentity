@@ -120,7 +120,7 @@ public sealed class MfaComponentTests
         var store = new RecordingStore(); var pending = new TaskCompletionSource<AuthOutcome>(); var calls = 0;
         var transport = new ScriptedHttp(request => request.RequestUri!.AbsolutePath.EndsWith("/cancel") ? Task.FromResult<AuthOutcome>(new OperationCancelled())
             : ++calls == 1 ? Task.FromResult<AuthOutcome>(Setup(AuthenticationOperationPurpose.MfaEnrollment)) : pending.Task);
-        var flow = new AuthenticationFlow(transport.Client(), store);
+        var flow = new AuthenticationFlow(transport.Client(), store.Session);
         await flow.BeginMfaAsync("access");
         var completing = flow.ConfirmNewFactorAsync("123456");
         await flow.CancelAsync();
@@ -152,8 +152,8 @@ public sealed class MfaComponentTests
         new("JBSWY3DPEHPK3PXP", "otpauth://totp/synthetic", "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\"><path d=\"M0 0h10v10z\"/></svg>")));
     private static BunitContext Context(RecordingStore store, ScriptedHttp transport, out AuthenticationFlow flow)
     {
-        var context = new BunitContext(); var http = transport.Client(); flow = new(http, store);
-        context.Services.AddSingleton(http); context.Services.AddSingleton<IIdentityStore>(store);
+        var context = new BunitContext(); var http = transport.Client(); flow = new(http, store.Session);
+        context.Services.AddSingleton(http); context.Services.AddSingleton(store); context.Services.AddSingleton(store.Session);
         context.Services.AddShiftBlazor(options => options.ShiftConfiguration = config => config.BaseAddress = "https://identity.invalid");
         context.Services.AddShiftIdentityDashboardBlazor(_ => { });
         context.Services.AddTransient(sp => new ShiftIdentityLocalizer(sp, typeof(ShiftSoftwareLocalization.Identity.Resource)));

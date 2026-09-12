@@ -37,7 +37,7 @@ public sealed class SecurityLinkComponentTests
         Assert.Empty(cut.FindAll("[data-testid=email-verified]")); Assert.Empty(cut.FindAll("[data-testid=security-link-target]"));
         Assert.Equal(3, transport.Requests.Count);
         Assert.Equal(2, context.JSInterop.Invocations.Count(x => x.Identifier == "clearFragment"));
-        Assert.Empty(((RecordingStore)ui.Store).Writes);
+        Assert.Empty(context.Services.GetRequiredService<RecordingStore>().Writes);
     }
 
     [Fact]
@@ -100,7 +100,7 @@ public sealed class SecurityLinkComponentTests
             Assert.Equal(3, transport.Requests.Count);
         }
         Assert.Empty(cut.FindAll("[data-testid=email-verified]"));
-        Assert.Same(previous, Assert.Single(((RecordingStore)ui.Store).Writes));
+        Assert.Same(previous, Assert.Single(context.Services.GetRequiredService<RecordingStore>().Writes));
     }
 
     private static SecurityLinkOpened Page(AuthenticationOperationPurpose purpose, string target) =>
@@ -121,7 +121,7 @@ public sealed class SecurityLinkComponentTests
         Assert.DoesNotContain("synthetic-refresh", cut.Markup);
         Assert.Null(call.Scheme);
         Assert.Single(context.JSInterop.Invocations, x => x.Identifier == "clearFragment");
-        Assert.Single(((RecordingStore)ui.Store).Writes);
+        Assert.Single(context.Services.GetRequiredService<RecordingStore>().Writes);
     }
 
     [Fact]
@@ -135,7 +135,7 @@ public sealed class SecurityLinkComponentTests
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll("[data-testid=email-verified]")));
         Assert.Equal(2, transport.Requests.Count);
         Assert.Contains("\"pageHandle\":\"page-handle\"", transport.Requests[1].Body);
-        Assert.Empty(((RecordingStore)ui.Store).Writes);
+        Assert.Empty(context.Services.GetRequiredService<RecordingStore>().Writes);
     }
 
     [Fact]
@@ -151,7 +151,7 @@ public sealed class SecurityLinkComponentTests
         cut.FindAll("input")[1].Input("Synthetic new password!"); cut.Find("form").Submit();
         cut.WaitForAssertion(() => Assert.EndsWith(SecurityLinkNavigation.LoginAfterReset, context.Services.GetRequiredService<NavigationManager>().Uri));
         Assert.Equal(2, transport.Requests.Count); Assert.Contains("Synthetic new password!", transport.Requests[1].Body);
-        Assert.Same(previous, Assert.Single(((RecordingStore)ui.Store).Writes));
+        Assert.Same(previous, Assert.Single(context.Services.GetRequiredService<RecordingStore>().Writes));
     }
 
     [Fact]
@@ -175,7 +175,7 @@ public sealed class SecurityLinkComponentTests
         cut.FindAll("button").Single(b => b.TextContent.Trim() == "Verify my email").Click();
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll("[data-testid=security-link-error]")));
         Assert.Empty(cut.FindAll("[data-testid=security-link-target]")); Assert.Equal(2, transport.Requests.Count);
-        Assert.Empty(((RecordingStore)ui.Store).Writes);
+        Assert.Empty(context.Services.GetRequiredService<RecordingStore>().Writes);
     }
 
     [Theory]
@@ -188,7 +188,7 @@ public sealed class SecurityLinkComponentTests
         cut.Find("input").Input("unknown@example.invalid"); cut.Find("form").Submit();
         cut.WaitForAssertion(() => Assert.Contains("If an eligible account matches", cut.Markup));
         Assert.Contains("unknown@example.invalid", Assert.Single(transport.Requests).Body);
-        Assert.Empty(((RecordingStore)ui.Store).Writes);
+        Assert.Empty(context.Services.GetRequiredService<RecordingStore>().Writes);
     }
 
     [Fact]
@@ -214,7 +214,7 @@ public sealed class SecurityLinkComponentTests
         cut.Find("form").Submit();
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll("a[href='Identity/SendEmailVerificationLink']")));
         Assert.Contains("Verify your saved email address before signing in.", cut.Markup);
-        Assert.Empty(((RecordingStore)ui.Store).Writes);
+        Assert.Empty(context.Services.GetRequiredService<RecordingStore>().Writes);
     }
 
     private static BunitContext Setup(AuthenticationOperationPurpose purpose, out AdmissionUiContext ui, out ScriptedHttp transport,
@@ -229,8 +229,8 @@ public sealed class SecurityLinkComponentTests
             : request.RequestUri.AbsolutePath.EndsWith("/request") ? new SecurityDeliveryRequested()
             : refuse ? new AuthenticationRefused(AuthenticationFailure.StaleOperation)
             : purpose == AuthenticationOperationPurpose.EmailVerify ? new EmailVerificationCompleted() : new ReturnToLogin())));
-        var http = transport.Client(); ui = new(new AuthenticationFlow(http, store), store, http);
-        context.Services.AddSingleton(http); context.Services.AddSingleton<IIdentityStore>(store);
+        var http = transport.Client(); ui = new(new AuthenticationFlow(http, store.Session), store.Session, http);
+        context.Services.AddSingleton(http); context.Services.AddSingleton(store); context.Services.AddSingleton(store.Session);
         context.Services.AddShiftBlazor(o => o.ShiftConfiguration = c => c.BaseAddress = "https://identity.invalid/");
         context.Services.AddShiftIdentityDashboardBlazor(_ => { });
         context.Services.AddTransient(sp => new ShiftIdentityLocalizer(sp, typeof(ShiftSoftwareLocalization.Identity.Resource)));

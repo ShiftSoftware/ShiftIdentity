@@ -1,5 +1,7 @@
 using Blazored.LocalStorage;
 using ShiftSoftware.ShiftIdentity.Blazor.Services;
+using ShiftSoftware.ShiftIdentity.Blazor;
+using ShiftSoftware.ShiftIdentity.Blazor.Extensions;
 using ShiftSoftware.ShiftIdentity.Core.Authentication;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.Enums;
@@ -22,7 +24,8 @@ public sealed class AdmissionSessionTests
         var response = new TaskCompletionSource<AuthOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
         var transport = new ScriptedHttp(_ => response.Task);
         var storage = new MemoryStorage();
-        var store = new AdmissionSessionStore(transport.Client(), storage, "test");
+        using var host = new IdentitySessionTestHost(true, transport, storage);
+        var store = host.Session;
         await store.StoreTokenAsync(Session("original"));
         var renewing = store.RenewAsync();
         if (action == "logout") await store.RemoveTokenAsync();
@@ -39,7 +42,8 @@ public sealed class AdmissionSessionTests
     [InlineData(AuthPurpose.ChangePassword)]
     public async Task Session_store_rejects_temporary_credentials(AuthPurpose purpose)
     {
-        var store = new AdmissionSessionStore(new HttpClient(), new MemoryStorage(), "test");
+        using var host = new IdentitySessionTestHost(true, new ScriptedHttp(_ => throw new InvalidOperationException()));
+        var store = host.Session;
         var token = Session("temporary"); token.Flow = purpose;
         await Assert.ThrowsAsync<ArgumentException>(() => store.StoreTokenAsync(token));
         Assert.Null(store.GetToken());
@@ -57,13 +61,14 @@ public sealed class AdmissionSessionTests
             Assert.Null(request.Headers.Authorization);
             return Task.FromResult<AuthOutcome>(new AuthenticationRefused(failure));
         });
-        var store = new AdmissionSessionStore(transport.Client(), new MemoryStorage(), "test");
+        using var host = new IdentitySessionTestHost(true, transport);
+        var store = host.Session;
         var notifications = 0;
-        store.AuthenticationStateChanged += _ => notifications++;
+        host.Auth.AuthenticationStateChanged += _ => notifications++;
         await store.StoreTokenAsync(Session("original"));
         Assert.False(await store.RenewAsync());
-        Assert.Equal(retained, (await store.GetAuthenticationStateAsync()).User.Identity!.IsAuthenticated);
         Assert.Equal(retained ? 1 : 2, notifications);
+        Assert.Equal(retained, (await host.Auth.GetAuthenticationStateAsync()).User.Identity!.IsAuthenticated);
     }
 
     [Fact]
@@ -71,7 +76,8 @@ public sealed class AdmissionSessionTests
     {
         var response = new TaskCompletionSource<AuthOutcome>();
         var transport = new ScriptedHttp(_ => response.Task);
-        var store = new AdmissionSessionStore(transport.Client(), new MemoryStorage(), "test");
+        using var host = new IdentitySessionTestHost(true, transport);
+        var store = host.Session;
         await store.StoreTokenAsync(Session("original"));
         var first = store.RenewAsync(); var second = store.RenewAsync();
         Assert.Single(transport.Requests);
@@ -99,8 +105,12 @@ public sealed class AdmissionSessionTests
     }
 }
 
-internal sealed class MemoryStorage : ISyncLocalStorageService
+internal sealed class MemoryStorage : ISyncLocalStorageService, IIdentityTokenStorage
 {
+    public TokenDTO? Read() => GetItem<TokenDTO>("test");
+    public Task<TokenDTO?> ReadAsync() => Task.FromResult(Read());
+    public Task WriteAsync(TokenDTO token) { SetItem("test", token); return Task.CompletedTask; }
+    public Task RemoveAsync() { RemoveItem("test"); return Task.CompletedTask; }
     private readonly Dictionary<string, string> values = [];
     public event EventHandler<ChangingEventArgs>? Changing;
     public event EventHandler<ChangedEventArgs>? Changed;

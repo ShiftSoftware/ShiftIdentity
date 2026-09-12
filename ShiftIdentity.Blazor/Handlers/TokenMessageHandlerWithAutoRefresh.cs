@@ -7,7 +7,7 @@ namespace ShiftSoftware.ShiftIdentity.Blazor.Handlers;
 
 public class TokenMessageHandlerWithAutoRefresh : DelegatingHandler
 {
-    private readonly IIdentityStore tokenStore;
+    private readonly IdentitySession tokenStore;
     private readonly MessageService msg;
 
     // On a dead-session 401 (the refresh token was rejected upstream, so an empty bearer went out) we remove
@@ -21,7 +21,7 @@ public class TokenMessageHandlerWithAutoRefresh : DelegatingHandler
     private const string SessionExpiredMessage = "Your session has expired. Please login again (in another tab). ";
     private const string SessionExpiredLinkText = "Login another tab";
 
-    public TokenMessageHandlerWithAutoRefresh(IIdentityStore tokenProvider, MessageService msg)
+    public TokenMessageHandlerWithAutoRefresh(IdentitySession tokenProvider, MessageService msg)
     {
         //add this to solve "The inner handler has not been assigned"
         InnerHandler = new HttpClientHandler();

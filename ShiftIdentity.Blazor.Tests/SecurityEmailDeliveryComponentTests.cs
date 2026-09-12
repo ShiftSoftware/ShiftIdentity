@@ -35,7 +35,7 @@ public sealed class SecurityEmailDeliveryComponentTests
         var sending = cut.FindAll("button").Single(b => b.TextContent == label).ClickAsync(new MouseEventArgs());
         cut.WaitForAssertion(() => Assert.True(cut.FindAll("button").Single(b => b.TextContent == label).HasAttribute("disabled")));
         Assert.True(ui.Flow.Busy); Assert.Empty(cut.FindAll("[data-testid=account-delivery-result]"));
-        Assert.Same(previous, Assert.Single(((RecordingStore)ui.Store).Writes));
+        Assert.Same(previous, Assert.Single(context.Services.GetRequiredService<RecordingStore>().Writes));
 
         await cut.InvokeAsync(() => pending.SetResult(new AuthenticationRefused(AuthenticationFailure.Unavailable)));
         await sending;
@@ -48,7 +48,7 @@ public sealed class SecurityEmailDeliveryComponentTests
         cut.WaitForAssertion(() => Assert.Equal(2, handler.Posts.Count));
         if (action == "manual-reset") Assert.Single(cut.FindAll("[data-testid=manual-reset-link]"));
         else Assert.Contains("If no link arrives, wait before trying again.", cut.Find("[data-testid=account-delivery-result]").TextContent);
-        Assert.Same(previous, Assert.Single(((RecordingStore)ui.Store).Writes));
+        Assert.Same(previous, Assert.Single(context.Services.GetRequiredService<RecordingStore>().Writes));
         var expectedRoute = action switch
         {
             "profile-verification" => "/api/identity/v2/email-verification/request-current",
@@ -79,7 +79,7 @@ public sealed class SecurityEmailDeliveryComponentTests
         cut.WaitForAssertion(() => Assert.Contains("If an eligible account matches, check its saved email inbox. If no link arrives, wait before trying again.",
             cut.Find("[data-testid=delivery-requested]").TextContent));
         Assert.Empty(cut.FindAll("[data-testid=delivery-error]")); Assert.Equal(2, handler.Posts.Count);
-        Assert.Same(previous, Assert.Single(((RecordingStore)ui.Store).Writes));
+        Assert.Same(previous, Assert.Single(context.Services.GetRequiredService<RecordingStore>().Writes));
     }
 
     [Fact]
@@ -90,14 +90,15 @@ public sealed class SecurityEmailDeliveryComponentTests
         var cut = context.Render<AdmissionAccountPanel>(p => p.Add(x => x.Context, ui).Add(x => x.Administrator, true).Add(x => x.UserKey, "42"));
         cut.FindAll("button").Single(b => b.TextContent == "Send password reset email").Click();
         cut.WaitForAssertion(() => Assert.Contains("check your permission", cut.Find("[data-testid=account-delivery-result]").TextContent));
-        Assert.Single(handler.Posts); Assert.Single(((RecordingStore)ui.Store).Writes);
+        Assert.Single(handler.Posts); Assert.Single(context.Services.GetRequiredService<RecordingStore>().Writes);
     }
 
     private static BunitContext Context(out AdmissionUiContext ui, out DeliveryResponses handler, Func<int, Task<AuthOutcome>> respond)
     {
         var context = new BunitContext(); var store = new RecordingStore();
         handler = new(respond); var http = new HttpClient(handler) { BaseAddress = new Uri("https://identity.invalid/") };
-        ui = new(new AuthenticationFlow(http, store), store, http);
+        ui = new(new AuthenticationFlow(http, store.Session), store.Session, http);
+        context.Services.AddSingleton(store);
         context.Services.AddShiftBlazor(o => o.ShiftConfiguration = c => c.BaseAddress = "https://identity.invalid/");
         context.Services.AddTransient(sp => new ShiftIdentityLocalizer(sp, typeof(ShiftSoftwareLocalization.Identity.Resource)));
         context.JSInterop.Mode = JSRuntimeMode.Loose;

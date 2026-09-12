@@ -47,9 +47,13 @@ public static class IServiceCollectionExtensions
         services.AddTransient<TokenMessageHandlerWithAutoRefresh>();
 
         if (options.RefreshTokenStorage == RefreshTokenStorage.Cookie)
-            services.TryAddScoped<IIdentityStore, IdentityCookieStore>();
+            services.TryAddScoped<IIdentityTokenStorage, IdentityCookieStore>();
         else
-            services.TryAddScoped<IIdentityStore, IdentityLocalStorageService>();
+            services.TryAddScoped<IIdentityTokenStorage, IdentityLocalStorageService>();
+
+        services.TryAddScoped<IdentityRenewalTransport, LegacyIdentityRenewalTransport>();
+        services.TryAddScoped(sp => new IdentitySession(sp.GetRequiredService<IIdentityTokenStorage>(),
+            sp.GetRequiredService<IdentityRenewalTransport>()));
 
         services.AddScoped<MessageService>();
         services.AddScoped<CodeVerifierStorageService>();

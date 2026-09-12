@@ -1,12 +1,6 @@
-﻿using ShiftSoftware.ShiftIdentity.Core.DTOs;
-using System.Threading.Tasks;
+﻿namespace ShiftSoftware.ShiftIdentity.Blazor;
 
-namespace ShiftSoftware.ShiftIdentity.Blazor;
-
+[Obsolete("Delete your identity store class and its registration. Select RefreshTokenStorage.Cookie and CookieDomain in the AddShiftIdentity options, and inject IdentitySession wherever IIdentityStore was injected.", error: true)]
 public interface IIdentityStore
 {
-    public Task<TokenDTO?> GetTokenAsync();
-    public string? GetToken();
-    public Task StoreTokenAsync(TokenDTO token);
-    public Task RemoveTokenAsync();
 }

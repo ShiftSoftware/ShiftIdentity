@@ -22,9 +22,9 @@ public sealed class SecurityLinkFlowTests
     public async Task No_security_link_action_accepts_a_session_response_or_changes_the_current_session(string action)
     {
         var store = new RecordingStore(); var previous = AuthenticationFlowTests.Session().Session;
-        await store.StoreTokenAsync(previous);
+        await store.Session.StoreTokenAsync(previous);
         var transport = new ScriptedHttp(_ => Task.FromResult<AuthOutcome>(AuthenticationFlowTests.Session()));
-        var flow = new AuthenticationFlow(transport.Client(), store);
+        var flow = new AuthenticationFlow(transport.Client(), store.Session);
         Assert.IsType<AuthenticationRefused>(await Invoke(flow, action));
         Assert.Same(previous, Assert.Single(store.Writes));
         Assert.Null(flow.Pending);
@@ -36,9 +36,9 @@ public sealed class SecurityLinkFlowTests
     public async Task Completion_uses_only_page_handle_and_never_touches_an_unrelated_session(bool verification)
     {
         var store = new RecordingStore(); var previous = AuthenticationFlowTests.Session().Session;
-        await store.StoreTokenAsync(previous);
+        await store.Session.StoreTokenAsync(previous);
         var transport = new ScriptedHttp(_ => Task.FromResult<AuthOutcome>(verification ? new EmailVerificationCompleted() : new ReturnToLogin()));
-        var flow = new AuthenticationFlow(transport.Client(), store);
+        var flow = new AuthenticationFlow(transport.Client(), store.Session);
         var result = await Invoke(flow, verification ? "complete-verify" : "complete-reset");
         Assert.Equal(verification ? typeof(EmailVerificationCompleted) : typeof(ReturnToLogin), result.GetType());
         var request = Assert.Single(transport.Requests);
@@ -57,7 +57,7 @@ public sealed class SecurityLinkFlowTests
     {
         var transport = new ScriptedHttp(_ => Task.FromResult<AuthOutcome>(new SecurityLinkOpened("page", "s***@example.invalid",
             responsePurpose, DateTimeOffset.UtcNow.AddMinutes(future ? 5 : -1))));
-        var flow = new AuthenticationFlow(transport.Client(), new RecordingStore());
+        var flow = new AuthenticationFlow(transport.Client(), new RecordingStore().Session);
         Assert.IsType<AuthenticationRefused>(await flow.OpenSecurityLinkAsync("grant", AuthenticationOperationPurpose.PasswordResetEmail));
     }
 
@@ -68,9 +68,9 @@ public sealed class SecurityLinkFlowTests
     {
         var pending = new TaskCompletionSource<AuthOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
         var store = new RecordingStore(); var previous = AuthenticationFlowTests.Session().Session;
-        await store.StoreTokenAsync(previous);
+        await store.Session.StoreTokenAsync(previous);
         var transport = new ScriptedHttp(_ => pending.Task);
-        var flow = new AuthenticationFlow(transport.Client(), store);
+        var flow = new AuthenticationFlow(transport.Client(), store.Session);
         var completing = Invoke(flow, verification ? "complete-verify" : "complete-reset");
         Assert.True(flow.Busy);
         Assert.IsType<AuthenticationRefused>(await flow.RequestPasswordResetAsync("synthetic"));
@@ -82,9 +82,9 @@ public sealed class SecurityLinkFlowTests
     [Fact]
     public async Task Network_failure_refuses_without_removing_a_session()
     {
-        var store = new RecordingStore(); await store.StoreTokenAsync(AuthenticationFlowTests.Session().Session);
+        var store = new RecordingStore(); await store.Session.StoreTokenAsync(AuthenticationFlowTests.Session().Session);
         var transport = new ScriptedHttp(_ => throw new HttpRequestException("Synthetic unavailable"));
-        var flow = new AuthenticationFlow(transport.Client(), store);
+        var flow = new AuthenticationFlow(transport.Client(), store.Session);
         Assert.Equal(AuthenticationFailure.Unavailable, Assert.IsType<AuthenticationRefused>(await flow.CompletePasswordResetAsync("page", "password")).Code);
         Assert.Single(store.Writes); Assert.False(flow.Busy);
     }

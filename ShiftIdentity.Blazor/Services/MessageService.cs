@@ -11,11 +11,11 @@ namespace ShiftSoftware.ShiftIdentity.Blazor.Services;
 public class MessageService
 {
     private readonly IJSRuntime _jsRuntime;
-    private readonly IIdentityStore _identityStore;
+    private readonly IdentitySession _identityStore;
 
     private const string MessageElementId = "1b59934b-235f-403b-b29e-786bed455da1";
 
-    public MessageService(IJSRuntime jsRuntime, IIdentityStore identityStore)
+    public MessageService(IJSRuntime jsRuntime, IdentitySession identityStore)
     {
         this._jsRuntime = jsRuntime;
         _identityStore = identityStore;

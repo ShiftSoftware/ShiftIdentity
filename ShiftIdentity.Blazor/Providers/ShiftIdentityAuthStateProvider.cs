@@ -4,14 +4,18 @@ using System.Security.Claims;
 
 namespace ShiftSoftware.ShiftIdentity.Blazor.Providers;
 
-public class ShiftIdentityAuthStateProvider : AuthenticationStateProvider
+public class ShiftIdentityAuthStateProvider : AuthenticationStateProvider, IDisposable
 {
-    private readonly IIdentityStore tokenStore;
+    private readonly IdentitySession tokenStore;
 
-    public ShiftIdentityAuthStateProvider(IIdentityStore tokenStore)
+    public ShiftIdentityAuthStateProvider(IdentitySession tokenStore)
     {
         this.tokenStore = tokenStore;
+        tokenStore.Changed += OnSessionChanged;
     }
+
+    private void OnSessionChanged() => NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
+    public void Dispose() => tokenStore.Changed -= OnSessionChanged;
     public override Task<AuthenticationState> GetAuthenticationStateAsync()
     {
         var token = tokenStore.GetToken();
@@ -29,7 +33,8 @@ public class ShiftIdentityAuthStateProvider : AuthenticationStateProvider
         var user = new ClaimsPrincipal(identity);
         var state = new AuthenticationState(user);
 
-        NotifyAuthenticationStateChanged(Task.FromResult(state));
+        if (tokenStore.NotifyOnAuthStateRead)
+            NotifyAuthenticationStateChanged(Task.FromResult(state));
 
         return Task.FromResult(state);
     }

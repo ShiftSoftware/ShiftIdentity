@@ -28,10 +28,10 @@ public sealed class AdmissionRoutingTests
     public async Task Verified_legacy_contact_still_offers_explicit_ownership_verification_when_not_recovery_eligible(bool administrator, bool eligible)
     {
         using var context = new BunitContext();
-        var store = new RecordingStore(); await store.StoreTokenAsync(AuthenticationFlowTests.Session().Session);
+        var store = new RecordingStore(); await store.Session.StoreTokenAsync(AuthenticationFlowTests.Session().Session);
         var handler = new AccountLinkResponses { EmailVerified = true, RecoveryEligible = eligible };
         var http = new HttpClient(handler) { BaseAddress = new Uri("https://identity.invalid/") };
-        var ui = new AdmissionUiContext(new AuthenticationFlow(http, store), store, http);
+        var ui = new AdmissionUiContext(new AuthenticationFlow(http, store.Session), store.Session, http);
         context.Services.AddShiftBlazor(o => o.ShiftConfiguration = c => c.BaseAddress = "https://identity.invalid/");
         context.Services.AddTransient(sp => new ShiftIdentityLocalizer(sp, typeof(ShiftSoftwareLocalization.Identity.Resource)));
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -44,10 +44,10 @@ public sealed class AdmissionRoutingTests
     public async Task Admin_manual_link_cooldown_shows_wait_message_without_claiming_email_or_permission_failure()
     {
         using var context = new BunitContext();
-        var store = new RecordingStore(); await store.StoreTokenAsync(AuthenticationFlowTests.Session().Session);
+        var store = new RecordingStore(); await store.Session.StoreTokenAsync(AuthenticationFlowTests.Session().Session);
         var handler = new AccountLinkResponses { SuppressManual = true };
         var http = new HttpClient(handler) { BaseAddress = new Uri("https://identity.invalid/") };
-        var ui = new AdmissionUiContext(new AuthenticationFlow(http, store), store, http);
+        var ui = new AdmissionUiContext(new AuthenticationFlow(http, store.Session), store.Session, http);
         context.Services.AddShiftBlazor(o => o.ShiftConfiguration = c => c.BaseAddress = "https://identity.invalid/");
         context.Services.AddTransient(sp => new ShiftIdentityLocalizer(sp, typeof(ShiftSoftwareLocalization.Identity.Resource)));
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -62,9 +62,9 @@ public sealed class AdmissionRoutingTests
     public async Task Admin_manual_password_link_uses_selected_account_and_clears_when_target_changes()
     {
         using var context = new BunitContext();
-        var store = new RecordingStore(); await store.StoreTokenAsync(AuthenticationFlowTests.Session().Session);
+        var store = new RecordingStore(); await store.Session.StoreTokenAsync(AuthenticationFlowTests.Session().Session);
         var handler = new AccountLinkResponses(); var http = new HttpClient(handler) { BaseAddress = new Uri("https://identity.invalid/") };
-        var ui = new AdmissionUiContext(new AuthenticationFlow(http, store), store, http);
+        var ui = new AdmissionUiContext(new AuthenticationFlow(http, store.Session), store.Session, http);
         context.Services.AddShiftBlazor(o => o.ShiftConfiguration = c => c.BaseAddress = "https://identity.invalid/");
         context.Services.AddTransient(sp => new ShiftIdentityLocalizer(sp, typeof(ShiftSoftwareLocalization.Identity.Resource)));
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -107,9 +107,9 @@ public sealed class AdmissionRoutingTests
     public async Task Background_authentication_rerender_keeps_recovery_entry_but_target_change_clears_it()
     {
         using var context = new BunitContext();
-        var store = new RecordingStore(); await store.StoreTokenAsync(AuthenticationFlowTests.Session().Session);
+        var store = new RecordingStore(); await store.Session.StoreTokenAsync(AuthenticationFlowTests.Session().Session);
         var handler = new AccountResponses(); var http = new HttpClient(handler) { BaseAddress = new Uri("https://identity.invalid/") };
-        var ui = new AdmissionUiContext(new AuthenticationFlow(http, store), store, http);
+        var ui = new AdmissionUiContext(new AuthenticationFlow(http, store.Session), store.Session, http);
         context.Services.AddShiftBlazor(o => o.ShiftConfiguration = c => c.BaseAddress = "https://identity.invalid/");
         context.Services.AddTransient(sp => new ShiftIdentityLocalizer(sp, typeof(ShiftSoftwareLocalization.Identity.Resource)));
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -148,7 +148,7 @@ public sealed class AdmissionRoutingTests
     {
         using var context = new BunitContext();
         var store = new RecordingStore(); var http = new HttpClient();
-        var ui = new AdmissionUiContext(new AuthenticationFlow(http, store), store, http);
+        var ui = new AdmissionUiContext(new AuthenticationFlow(http, store.Session), store.Session, http);
         context.Services.AddShiftBlazor(o => o.ShiftConfiguration = c => c.BaseAddress = "https://identity.invalid/");
         context.Services.AddShiftIdentityDashboardBlazor(_ => { });
         context.Services.AddTransient(sp => new ShiftIdentityLocalizer(sp, typeof(ShiftSoftwareLocalization.Identity.Resource)));
@@ -171,9 +171,9 @@ public sealed class AdmissionRoutingTests
         var store = new RecordingStore();
         var calls = new List<string>();
         var transport = new ScriptedHttp(request => { calls.Add(request.RequestUri!.AbsolutePath); return Task.FromResult<AuthOutcome>(challenge ? AuthenticationFlowTests.Challenge() : AuthenticationFlowTests.Session()); });
-        var http = transport.Client(); var flow = new AuthenticationFlow(http, store);
-        var ui = new AdmissionUiContext(flow, store, http);
-        context.Services.AddSingleton(http); context.Services.AddSingleton<IIdentityStore>(store);
+        var http = transport.Client(); var flow = new AuthenticationFlow(http, store.Session);
+        var ui = new AdmissionUiContext(flow, store.Session, http);
+        context.Services.AddSingleton(http); context.Services.AddSingleton(store); context.Services.AddSingleton(store.Session);
         context.Services.AddShiftBlazor(o => o.ShiftConfiguration = c => c.BaseAddress = "https://identity.invalid/");
         context.Services.AddShiftIdentityDashboardBlazor(_ => { });
         context.Services.AddTransient(sp => new ShiftIdentityLocalizer(sp, typeof(ShiftSoftwareLocalization.Identity.Resource)));

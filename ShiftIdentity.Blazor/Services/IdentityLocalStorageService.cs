@@ -2,26 +2,28 @@
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 namespace ShiftSoftware.ShiftIdentity.Blazor.Services;
 
-internal class IdentityLocalStorageService : IdentityStoreBase
+internal sealed class IdentityLocalStorageService(ILocalStorageService localStorage,
+    ISyncLocalStorageService syncLocalStorage, string storageKey = "token") : IIdentityTokenStorage
 {
-    public IdentityLocalStorageService(ILocalStorageService localStorage, ISyncLocalStorageService syncLocalStorage,
-        TokenRefreshService tokenRefreshService)
-        : base(localStorage, syncLocalStorage, tokenRefreshService)
+    public TokenDTO? Read()
     {
+        try { return syncLocalStorage.GetItem<TokenDTO>(storageKey); }
+        catch (System.Text.Json.JsonException) { syncLocalStorage.RemoveItem(storageKey); return null; }
     }
 
-    protected override async Task<TokenDTO?> ReadAsync()
+    public async Task<TokenDTO?> ReadAsync()
     {
-        return await localStorage.GetItemAsync<TokenDTO>(TokenStorageKey);
+        try { return await localStorage.GetItemAsync<TokenDTO>(storageKey); }
+        catch (System.Text.Json.JsonException) { await localStorage.RemoveItemAsync(storageKey); return null; }
     }
 
-    public override async Task StoreTokenAsync(TokenDTO tokenDto)
+    public async Task WriteAsync(TokenDTO tokenDto)
     {
-        await localStorage.SetItemAsync(TokenStorageKey, tokenDto);
+        await localStorage.SetItemAsync(storageKey, tokenDto);
     }
 
-    public override async Task RemoveTokenAsync()
+    public async Task RemoveAsync()
     {
-        await localStorage.RemoveItemAsync(TokenStorageKey);
+        await localStorage.RemoveItemAsync(storageKey);
     }
 }

@@ -9,14 +9,14 @@ public class ShiftIdentityService
     private readonly ShiftIdentityBlazorOptions options;
     private readonly NavigationManager navManager;
     private readonly CodeVerifierService codeVerifierService;
-    private readonly IIdentityStore tokenStore;
+    private readonly IdentitySession tokenStore;
     private readonly IShiftIdentityProvider shiftIdentityProvider;
     private readonly CodeVerifierStorageService codeVerifierStorage;
 
     public ShiftIdentityService(ShiftIdentityBlazorOptions options, 
         NavigationManager navManager,
         CodeVerifierService codeVerifierService,
-        IIdentityStore tokenStore,
+        IdentitySession tokenStore,
         IShiftIdentityProvider shiftIdentityProvider,
         CodeVerifierStorageService codeVerifierStorage)
     {

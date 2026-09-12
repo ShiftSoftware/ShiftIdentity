@@ -31,7 +31,7 @@ public static class WebAssemblyHostExtensions
         //Get injected services
         var shiftIdentityProvider = services.GetRequiredService<IShiftIdentityProvider>();
         var http = services.GetRequiredService<HttpClient>();
-        var tokenStore = services.GetRequiredService<IIdentityStore>();
+        var tokenStore = services.GetRequiredService<IdentitySession>();
         var options = services.GetRequiredService<ShiftIdentityBlazorOptions>();
         var authStateProvider = services.GetService<AuthenticationStateProvider>();
         var messageService = services.GetRequiredService<MessageService>();

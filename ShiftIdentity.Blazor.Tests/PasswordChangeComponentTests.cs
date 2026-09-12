@@ -77,8 +77,8 @@ public sealed class PasswordChangeComponentTests
         new(new(step, "opaque", DateTimeOffset.UtcNow.AddMinutes(5), AuthenticationOperationPurpose.PasswordChange));
     private static BunitContext Context(RecordingStore store, ScriptedHttp transport, out AuthenticationFlow flow)
     {
-        var context = new BunitContext(); var http = transport.Client(); flow = new(http, store);
-        context.Services.AddSingleton(http); context.Services.AddSingleton<IIdentityStore>(store);
+        var context = new BunitContext(); var http = transport.Client(); flow = new(http, store.Session);
+        context.Services.AddSingleton(http); context.Services.AddSingleton(store); context.Services.AddSingleton(store.Session);
         context.Services.AddShiftBlazor(options => options.ShiftConfiguration = config => config.BaseAddress = "https://identity.invalid");
         context.Services.AddShiftIdentityDashboardBlazor(_ => { });
         context.Services.AddTransient(sp => new ShiftIdentityLocalizer(sp, typeof(ShiftSoftwareLocalization.Identity.Resource)));

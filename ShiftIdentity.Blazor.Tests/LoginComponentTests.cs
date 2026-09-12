@@ -86,9 +86,9 @@ public sealed class LoginComponentTests
         });
         store = new();
         var http = transport.Client();
-        flow = new(http, store);
+        flow = new(http, store.Session);
         context.Services.AddSingleton(http);
-        context.Services.AddSingleton<IIdentityStore>(store);
+        context.Services.AddSingleton(store); context.Services.AddSingleton(store.Session);
         context.Services.AddShiftBlazor(options => options.ShiftConfiguration = config => config.BaseAddress = "https://identity.invalid");
         context.Services.AddShiftIdentityDashboardBlazor(_ => { });
         context.Services.AddTransient(sp => new ShiftIdentityLocalizer(sp, typeof(ShiftSoftwareLocalization.Identity.Resource)));

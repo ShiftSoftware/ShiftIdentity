@@ -1,3 +1,5 @@
+using Microsoft.Extensions.DependencyInjection;
+using ShiftSoftware.ShiftIdentity.Blazor.Extensions;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
@@ -23,7 +25,7 @@ public sealed class AuthenticationFlowTests
     {
         var store = new RecordingStore();
         var transport = new ScriptedHttp(_ => Task.FromResult<AuthOutcome>(Challenge(step)));
-        var flow = new AuthenticationFlow(transport.Client(), store);
+        var flow = new AuthenticationFlow(transport.Client(), store.Session);
         Assert.IsType<ChallengeRequired>(await flow.LoginAsync("synthetic", "password"));
         Assert.Empty(store.Writes);
         Assert.NotNull(flow.Pending);
@@ -39,7 +41,7 @@ public sealed class AuthenticationFlowTests
         var store = new RecordingStore();
         var transport = new ScriptedHttp(request => Task.FromResult<AuthOutcome>(
             request.RequestUri!.AbsolutePath.EndsWith("/mfa") ? Session() : Challenge()));
-        var flow = new AuthenticationFlow(transport.Client(), store);
+        var flow = new AuthenticationFlow(transport.Client(), store.Session);
         await flow.LoginAsync("synthetic", "password");
         Assert.Empty(store.Writes);
         Assert.IsType<SessionIssued>(await flow.CompleteMfaAsync("123456"));
@@ -61,7 +63,7 @@ public sealed class AuthenticationFlowTests
         var pending = new TaskCompletionSource<AuthOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
         var store = new RecordingStore();
         var transport = new ScriptedHttp(_ => pending.Task);
-        var flow = new AuthenticationFlow(transport.Client(), store);
+        var flow = new AuthenticationFlow(transport.Client(), store.Session);
         var first = flow.LoginAsync("synthetic", "password");
         Assert.IsType<AuthenticationRefused>(await flow.LoginAsync("synthetic", "password"));
         flow.Restart();
@@ -91,7 +93,7 @@ public sealed class AuthenticationFlowTests
             if (scenario == "missing-refresh") session.Session.RefreshToken = "";
             return Task.FromResult<AuthOutcome>(session);
         });
-        var flow = new AuthenticationFlow(transport.Client(), store);
+        var flow = new AuthenticationFlow(transport.Client(), store.Session);
         Assert.IsType<AuthenticationRefused>(await flow.LoginAsync("synthetic", "password"));
         Assert.Empty(store.Writes);
         Assert.Null(flow.Pending);
@@ -131,7 +133,7 @@ public sealed class AuthenticationFlowTests
             return index == 4 ? new AuthenticationRefused(AuthenticationFailure.InvalidNewPassword, PasswordPolicyFailure.TooShort)
                 : new PasswordChanged(Session());
         });
-        var flow = new AuthenticationFlow(transport.Client(), store);
+        var flow = new AuthenticationFlow(transport.Client(), store.Session);
         await flow.BeginPasswordChangeAsync("current-access"); await flow.ProvePasswordAsync("current password");
         await flow.CompleteMfaAsync("123456"); Assert.Empty(store.Writes);
         Assert.IsType<AuthenticationRefused>(await flow.ChangePasswordAsync("short")); Assert.NotNull(flow.Pending);
@@ -145,7 +147,7 @@ public sealed class AuthenticationFlowTests
     public async Task Changed_but_restricted_response_never_stores_a_session()
     {
         var store = new RecordingStore();
-        var flow = new AuthenticationFlow(new ScriptedHttp(_ => Task.FromResult<AuthOutcome>(new PasswordChanged(Challenge(AuthenticationStep.EmailVerification)))).Client(), store);
+        var flow = new AuthenticationFlow(new ScriptedHttp(_ => Task.FromResult<AuthOutcome>(new PasswordChanged(Challenge(AuthenticationStep.EmailVerification)))).Client(), store.Session);
         Assert.IsType<PasswordChanged>(await flow.LoginAsync("synthetic", "password"));
         Assert.True(flow.PasswordWasChanged); Assert.Empty(store.Writes); Assert.NotNull(flow.Pending);
     }
@@ -162,7 +164,7 @@ public sealed class AuthenticationFlowTests
             if (request.RequestUri!.AbsolutePath.EndsWith("/cancel")) return Task.FromResult<AuthOutcome>(new OperationCancelled());
             return ++calls == 1 ? Task.FromResult<AuthOutcome>(new ChallengeRequired(new(AuthenticationStep.PasswordChange, "first", DateTimeOffset.UtcNow.AddMinutes(5), AuthenticationOperationPurpose.PasswordChange))) : pending.Task;
         });
-        var flow = new AuthenticationFlow(transport.Client(), store);
+        var flow = new AuthenticationFlow(transport.Client(), store.Session);
         await flow.LoginAsync("synthetic", "password");
         var changing = flow.ChangePasswordAsync("A long new synthetic password");
         Assert.IsType<OperationCancelled>(await flow.CancelAsync());
@@ -186,13 +188,21 @@ public sealed class AuthenticationFlowTests
     }
 }
 
-public sealed class RecordingStore : IIdentityStore
+public sealed class RecordingStore : IIdentityTokenStorage
 {
+    public IdentitySession Session { get; }
+    public RecordingStore()
+    {
+        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+        services.AddSingleton<IIdentityTokenStorage>(this);
+        services.AddIdentityAdmissionSession(_ => new ScriptedHttp(_ => throw new InvalidOperationException("Unexpected renewal in a flow test.")).Client());
+        Session = services.BuildServiceProvider().GetRequiredService<IdentitySession>();
+    }
     public List<TokenDTO> Writes { get; } = [];
-    public Task<TokenDTO?> GetTokenAsync() => Task.FromResult(Writes.LastOrDefault());
-    public string? GetToken() => Writes.LastOrDefault()?.Token;
-    public Task StoreTokenAsync(TokenDTO token) { Writes.Add(token); return Task.CompletedTask; }
-    public Task RemoveTokenAsync() { Writes.Clear(); return Task.CompletedTask; }
+    public TokenDTO? Read() => Writes.LastOrDefault();
+    public Task<TokenDTO?> ReadAsync() => Task.FromResult(Read());
+    public Task WriteAsync(TokenDTO token) { Writes.Add(token); return Task.CompletedTask; }
+    public Task RemoveAsync() { Writes.Clear(); return Task.CompletedTask; }
 }
 
 public sealed class ScriptedHttp(Func<HttpRequestMessage, Task<AuthOutcome>> respond) : HttpMessageHandler

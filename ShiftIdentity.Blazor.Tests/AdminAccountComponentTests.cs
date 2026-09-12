@@ -58,7 +58,7 @@ public sealed class AdminAccountComponentTests
         Assert.Equal(2, transport.Posts.Count);
         cut.WaitForAssertion(() => Assert.True(transport.Reads > reads));
         cut.WaitForAssertion(() => Assert.True(string.IsNullOrEmpty(cut.Find("[data-testid=account-password] input").GetAttribute("value"))));
-        Assert.Same(previous, Assert.Single(((RecordingStore)ui.Store).Writes));
+        Assert.Same(previous, Assert.Single(context.Services.GetRequiredService<RecordingStore>().Writes));
         Assert.False(ui.Flow.Busy);
     }
 
@@ -147,7 +147,8 @@ public sealed class AdminAccountComponentTests
     {
         var context = new BunitContext(); var store = new RecordingStore();
         transport = new(); var http = new HttpClient(transport) { BaseAddress = new Uri("https://identity.invalid/") };
-        ui = new(new AuthenticationFlow(http, store), store, http);
+        ui = new(new AuthenticationFlow(http, store.Session), store.Session, http);
+        context.Services.AddSingleton(store);
         context.Services.AddShiftBlazor(o => o.ShiftConfiguration = c => c.BaseAddress = "https://identity.invalid/");
         context.Services.AddTransient(sp => new ShiftIdentityLocalizer(sp, typeof(ShiftSoftwareLocalization.Identity.Resource)));
         context.JSInterop.Mode = JSRuntimeMode.Loose;

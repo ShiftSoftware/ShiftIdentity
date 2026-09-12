@@ -3,4 +3,8 @@ using System.Net.Http;
 namespace ShiftSoftware.ShiftIdentity.Blazor.Services;
 
 // Marker type for DI to avoid circular dependency
-public class ShiftIdentityHttpClient : HttpClient { }
+public class ShiftIdentityHttpClient : HttpClient
+{
+    public ShiftIdentityHttpClient() { }
+    public ShiftIdentityHttpClient(HttpMessageHandler handler) : base(handler) { }
+}

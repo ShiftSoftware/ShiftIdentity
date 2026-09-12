@@ -14,7 +14,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services
     public class AuthService
     {
         private HttpService httpService;
-        private readonly IIdentityStore storageService;
+        private readonly IdentitySession storageService;
         private readonly AuthenticationStateProvider? authStateProvider;
         private readonly HttpClient http;
         private readonly NavigationManager navManager;
@@ -22,7 +22,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services
 
         public AuthService(
             HttpService httpService,
-            IIdentityStore storageService,
+            IdentitySession storageService,
             
             AuthenticationStateProvider? authStateProvider,
             NavigationManager navManager,

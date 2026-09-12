@@ -3,10 +3,10 @@ using System.Net.Http.Json;
 namespace ShiftSoftware.ShiftIdentity.Blazor.Services;
 
 /// <summary>Explicit host opt-in for routed account screens. Hosts must supply only the staged authority.</summary>
-public sealed class AdmissionUiContext(AuthenticationFlow flow, IIdentityStore store, HttpClient http)
+public sealed class AdmissionUiContext(AuthenticationFlow flow, IdentitySession store, HttpClient http)
 {
     public AuthenticationFlow Flow { get; } = flow;
-    public IIdentityStore Store { get; } = store;
+    public IdentitySession Store { get; } = store;
     public Task<AdmissionAccount?> AccountAsync(long? userID = null) => ReadAsync<AdmissionAccount>(
         "account" + (userID is null ? "" : "/" + userID));
     public async Task<AdmissionAccount[]> UsersAsync() => await ReadAsync<AdmissionAccount[]>("users") ?? [];
