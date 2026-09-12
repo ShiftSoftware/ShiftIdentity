@@ -268,7 +268,7 @@ public sealed class UserFormAuthoritySqlTests(SqlIdentityFixture fixture) : ICla
     }
 
     [Fact]
-    public async Task Update_permissions_increments_the_version_only_when_the_effective_permissions_change()
+    public async Task Update_permissions_increments_the_version_when_stored_grants_or_assigned_trees_change()
     {
         using var host = await HostAsync();
         long treeID;
@@ -289,14 +289,14 @@ public sealed class UserFormAuthoritySqlTests(SqlIdentityFixture fixture) : ICla
         Assert.Empty(await AuditsAsync(id, "AccountCreated"));
         Assert.IsType<SessionIssued>(await RefreshAsync(host, session.Session.RefreshToken));
 
-        // A user-specific grant changes the effective permissions.
+        // A user-specific grant changes the stored permissions.
         dto = await GetAsync(host, id); dto.AccessTree = ReadOnlyTree;
         await PutAsync(host, dto);
         (user, state) = await StateAsync(id);
         Assert.Equal(2, state.SecurityVersion); Assert.Contains("Users", user.AccessTree);
         Assert.Equal(AuthenticationFailure.StaleOperation, Assert.IsType<AuthenticationRefused>(await RefreshAsync(host, session.Session.RefreshToken)).Code);
 
-        // An assigned tree, then its removal, each change the effective permissions once.
+        // An assigned tree and its removal each increment the version, even if grants overlap.
         session = Assert.IsType<SessionIssued>(await LoginAsync(host, username, Password));
         dto = await GetAsync(host, id); dto.AccessTrees = [new ShiftEntitySelectDTO { Value = treeID.ToString() }];
         await PutAsync(host, dto);
@@ -311,6 +311,29 @@ public sealed class UserFormAuthoritySqlTests(SqlIdentityFixture fixture) : ICla
         Assert.Equal(3, (await AuditsAsync(id, "AccountCreated")).Count(x => x.Outcome == "AdminPermissionsChanged"));
         await using var verify = fixture.CreateContext();
         Assert.Empty(await verify.UserAccessTrees.Where(x => x.UserID == id).ToListAsync());
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("{\"ShiftIdentityActions\":{\"Users\":[\"r\",\"r\"]}}")]
+    [InlineData("{\"ShiftIdentityActions\":{\"Users\":[2,1,1],\"DataLevelAccess\":{\"Branches\":{\"42\":[1,1]}}}}")]
+    public async Task Equivalent_stored_grants_keep_the_security_version_and_session(string? storedTree)
+    {
+        using var host = await HostAsync();
+        var id = await CreateAsync(host, NewUser(requireChange: false, sendVerification: false));
+        await using (var setup = fixture.CreateContext())
+            await setup.Users.Where(x => x.ID == id).ExecuteUpdateAsync(x => x.SetProperty(u => u.AccessTree, storedTree));
+
+        var dto = await GetAsync(host, id);
+        var session = Assert.IsType<SessionIssued>(await LoginAsync(host, dto.Username, Password));
+        dto.FullName = "Synthetic Form User (edited)";
+        await PutAsync(host, dto);
+
+        var (user, state) = await StateAsync(id);
+        Assert.Equal("Synthetic Form User (edited)", user.FullName);
+        Assert.Equal(1, state.SecurityVersion);
+        Assert.Empty(await AuditsAsync(id, "AccountCreated"));
+        Assert.IsType<SessionIssued>(await RefreshAsync(host, session.Session.RefreshToken));
     }
 
     [Fact]

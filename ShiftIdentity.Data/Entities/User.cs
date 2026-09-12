@@ -303,11 +303,10 @@ public class User : ShiftEntity<User>,
         var removedAccessTrees = entity.AccessTrees.Where(x => !accessTreeIds.Contains(x.AccessTreeID)).ToList();
         var addedAccessTrees = accessTreeIds.Where(x => !entity.AccessTrees.Any(y => y.AccessTreeID == x)).ToList();
 
-        // Any difference in the effective permissions counts as a change. Reductions must end the user's sessions;
-        // additions are treated the same way because the shared comparer cannot see per-row data-level access, so a
-        // precise split could miss a reduction.
+        // A change to stored grants or assigned trees ends the user's sessions. TypeAuth normalizes the stored
+        // grants without classifying additions and reductions; Identity applies the same policy to both.
         var permissionsChanged = actionType == ActionTypes.Update &&
-            (removedAccessTrees.Count > 0 || addedAccessTrees.Count > 0 || !AccessTreeComparison.Equivalent(entity.AccessTree, generatedAccessTree));
+            (removedAccessTrees.Count > 0 || addedAccessTrees.Count > 0 || !AccessTreeComparer.Equivalent(entity.AccessTree, generatedAccessTree));
 
         if (authority is null || actionType == ActionTypes.Insert)
         {
