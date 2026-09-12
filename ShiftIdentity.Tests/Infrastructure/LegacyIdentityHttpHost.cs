@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftIdentity.Core;
+using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 using ShiftSoftware.ShiftIdentity.Core.Models;
 using ShiftSoftware.ShiftIdentity.Data;
 using ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Extentsions;
@@ -14,11 +15,17 @@ using ShiftSoftware.TypeAuth.AspNetCore.Extensions;
 
 namespace ShiftIdentity.Tests.Infrastructure;
 
-/// <summary>Real production registration/routes with only synthetic settings and an owned fixture database.</summary>
+/// <summary>
+/// Real production registration/routes with only synthetic settings and an owned fixture database: the dashboard DI,
+/// the attribute-driven identity CRUD routes (api/IdentityUser and the other identity entities) and every dashboard
+/// endpoint, mapped the way an internal-hosting API maps them. The only mail provider is <see cref="Verifications"/>.
+/// </summary>
 public sealed class LegacyIdentityHttpHost<TContext> : IDisposable where TContext : ShiftIdentityDbContext
 {
     private readonly TestServer server;
     public HttpClient Client { get; }
+    /// <summary>The host's single ISendEmailVerification provider; records every link handed to it.</summary>
+    public RecordingEmailVerification Verifications { get; } = new();
     public LegacyIdentityHttpHost(SqlIdentityFixture fixture)
     {
         using var rsa = RSA.Create();
@@ -32,7 +39,10 @@ public sealed class LegacyIdentityHttpHost<TContext> : IDisposable where TContex
                 Key = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)) },
             TemporaryTokenSettings = new() { Issuer = "https://legacy.invalid", Audience = "legacy-temporary", ExpireSeconds = 300,
                 Key = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)) },
-            Security = new() { LoginAttemptsForLockDown = 10, LockDownInMinutes = 5 },
+            // RequirePasswordChange is the configured default the form checkboxes replace; true makes an explicit
+            // "false" choice observable.
+            Security = new() { LoginAttemptsForLockDown = 10, LockDownInMinutes = 5, RequirePasswordChange = true },
+            SASToken = new() { Key = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)), ExpiresInSeconds = 3600 },
             HashIdSettings = new() { AcceptUnencodedIds = true, UserIdsSalt = "synthetic-test", UserIdsMinHashLength = 5 },
             MfaSettings = new() { Enabled = false }, ActionTrees = []
         };
@@ -41,11 +51,12 @@ public sealed class LegacyIdentityHttpHost<TContext> : IDisposable where TContex
             services.AddRouting();
             services.AddLocalization();
             services.AddHttpContextAccessor();
-            services.AddTypeAuth(_ => { });
+            services.AddTypeAuth(o => o.AddActionTree<ShiftIdentityActions>());
             services.AddSingleton<IHashIdService>(new HashIdService(Options.Create(new ShiftEntityOptions())));
+            services.AddSingleton<ISendEmailVerification>(Verifications);
             services.AddScoped(sp => (TContext)fixture.CreateContext(sp));
             var mvc = services.AddControllers();
-            mvc.AddShiftEntityWeb(_ => { });
+            mvc.AddShiftEntityWeb(x => x.AddShiftIdentityDataAssembly());
             mvc.AddShiftIdentity(settings.Token.Issuer, publicKey)
                 .AddShiftIdentityDashboard<TContext>(settings);
         }).Configure(app =>
@@ -53,9 +64,26 @@ public sealed class LegacyIdentityHttpHost<TContext> : IDisposable where TContex
             app.UseRouting();
             app.UseAuthentication();
             app.UseAuthorization();
-            app.UseEndpoints(endpoints => endpoints.MapShiftIdentityAuthEndpoints());
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapShiftEntityEndpoints<TContext>();
+                endpoints.MapShiftIdentityDashboard();
+            });
         }));
         Client = server.CreateClient();
     }
     public void Dispose() { Client.Dispose(); server.Dispose(); }
+}
+
+/// <summary>Stands in for the mail host: records every verification link and can fail like a broken provider.</summary>
+public sealed class RecordingEmailVerification : ISendEmailVerification
+{
+    public List<(string Url, UserDataDTO User)> Sent { get; } = [];
+    public bool Throw { get; set; }
+    public Task SendEmailVerificationAsync(string url, UserDataDTO user)
+    {
+        Sent.Add((url, user));
+        if (Throw) throw new InvalidOperationException("Synthetic mail host failure.");
+        return Task.CompletedTask;
+    }
 }

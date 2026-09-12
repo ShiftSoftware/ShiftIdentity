@@ -1,5 +1,6 @@
 @using ShiftSoftware.ShiftIdentity.Blazor.Services
 @using ShiftSoftware.ShiftIdentity.Core.Authentication
+@using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Shared
 
 <MudPaper Class="pa-5">
     <MudText Typo="Typo.h5">@(Administrator ? "User security" : "Profile")</MudText>
@@ -9,6 +10,10 @@
         <MudText>@account.Username</MudText>
         <MudText>Authenticator: @(account.RecoveryRequired ? "Recovery required" : account.HasAuthenticator ? "Enabled" : "Not set up")</MudText>
         <MudText>Email: @(account.Email ?? "Not set") @(account.Email is null ? "" : account.EmailVerified ? "(verified)" : "(unverified)")</MudText>
+        @if (Administrator)
+        {
+            <MudText data-testid="account-status">Status: @(account.IsActive ? "Active" : "Inactive")</MudText>
+        }
         @if (!Administrator)
         {
             <MudButton Color="Color.Primary" Href="Identity/ChangePasswordForm">Change Password</MudButton>
@@ -34,6 +39,34 @@
             {
                 <MudButton OnClick="VerifyAdminEmail" Disabled="Context.Flow.Busy">Send email verification link</MudButton>
             }
+            @if (actor?.CanManageAccount == true && actor.UserID != account.UserID)
+            {
+                <MudText Typo="Typo.h6" Class="mt-4">Account</MudText>
+                <MudText>Every change below signs the user out everywhere. It never signs them in.</MudText>
+                <MudButton OnClick="ToggleActive" Disabled="Context.Flow.Busy" data-testid="account-status-toggle">@(account.IsActive ? "Deactivate account" : "Activate account")</MudButton>
+                @if (account.IsActive)
+                {
+                    <div data-testid="account-username">
+                        <MudTextField T="string" Label="Username" @bind-Value="usernameEntry" Immediate="true" autocomplete="off" />
+                    </div>
+                    <MudButton OnClick="ChangeUsername" Disabled="Context.Flow.Busy || string.IsNullOrWhiteSpace(usernameEntry)">Change username</MudButton>
+                    <div data-testid="account-email">
+                        <MudTextField T="string" Label="Email" @bind-Value="emailEntry" Immediate="true" autocomplete="off" HelperText="Leave empty to remove the saved email. A changed address starts unverified." />
+                    </div>
+                    <div data-testid="account-email-verify">
+                        <MudCheckBox T="bool" @bind-Value="sendVerification" Label="Send a verification link to the new address" />
+                    </div>
+                    <MudButton OnClick="ChangeEmail" Disabled="Context.Flow.Busy">Change email</MudButton>
+                    <div data-testid="account-password">
+                        <PasswordField Label="New password" @bind-Value="passwordEntry" Immediate="true" autocomplete="new-password" HelperText="@NewPasswordPolicy.Guidance" />
+                    </div>
+                    <div data-testid="account-password-require-change">
+                        <MudCheckBox T="bool" @bind-Value="requireChange" Label="Ask the user to change this password at next sign-in" />
+                    </div>
+                    <MudButton OnClick="SetPassword" Disabled="Context.Flow.Busy || string.IsNullOrEmpty(passwordEntry)">Set password</MudButton>
+                }
+                @if (changeMessage is not null) { <MudAlert Severity="Severity.Info" data-testid="account-change-result">@changeMessage</MudAlert> }
+            }
         }
         @if (manual is not null)
         {
@@ -43,7 +76,7 @@
             <MudText>Expires @manual.ExpiresAt.ToString("u")</MudText>
         }
         @if (message is not null) { <MudAlert Severity="Severity.Info" data-testid="account-delivery-result">@message</MudAlert> }
-        <MudAlert Severity="Severity.Info" Class="mt-4">Profile, contact and permission editing are unavailable in this isolated authentication mode.</MudAlert>
+        <MudAlert Severity="Severity.Info" Class="mt-4">Profile, phone and permission editing are unavailable in this isolated authentication mode.</MudAlert>
     }
     else
     {
@@ -65,6 +98,8 @@
     [Inject] private NavigationManager Navigation { get; set; } = null!;
     private ManualPasswordResetIssued? manual;
     private string? message;
+    private string? usernameEntry, emailEntry, passwordEntry, changeMessage;
+    private bool sendVerification = true, requireChange = true;
     private string? ManualLink => manual is null ? null : Navigation.ToAbsoluteUri(SecurityLinkNavigation.ResetLink(manual.Grant)).ToString();
     private async Task<string?> CurrentAccess() => (await Context.Store.GetTokenAsync())?.Token;
     private void DeliveryResult(AuthOutcome result, bool manualDelivery = false) => message = result switch
@@ -117,6 +152,53 @@
         if (result is MfaRecoveryCodeIssued && account is not null)
             account = account with { HasAuthenticator = false, RecoveryRequired = true };
     }
+
+    // Administrator account mutations. The response never contains a session; the browser session is never touched.
+    private Task ChangeUsername() => Mutate((token, target) => Context.Flow.ChangeAccountUsernameAsync(token, target.UserID, usernameEntry ?? ""), "Username changed.");
+    private Task ChangeEmail() => Mutate((token, target) => Context.Flow.ChangeAccountEmailAsync(token, target.UserID, emailEntry, sendVerification), "Email changed.");
+    private Task SetPassword() => Mutate((token, target) => Context.Flow.SetAccountPasswordAsync(token, target.UserID, passwordEntry ?? "", requireChange), "Password set.");
+    private Task ToggleActive() => Mutate((token, target) => Context.Flow.SetAccountActiveAsync(token, target.UserID, !target.IsActive),
+        account?.IsActive == true ? "Account deactivated." : "Account activated.");
+    private async Task Mutate(Func<string, AdmissionAccount, Task<AuthOutcome>> action, string success)
+    {
+        changeMessage = null;
+        var request = loadGeneration; var target = account;
+        if (target is null || await CurrentAccess() is not { } token)
+        {
+            if (request == loadGeneration) changeMessage = "Sign in again before changing this account.";
+            return;
+        }
+        var result = await action(token, target);
+        if (request != loadGeneration) return;
+        changeMessage = ChangeResult(result, success);
+        if (result is not AdminAccountChanged { Applied: true }) return;
+        passwordEntry = null;
+        try
+        {
+            // Show the committed state: the new status, username or email as the host now reports it.
+            var fresh = await Context.AccountAsync(target.UserID);
+            if (request == loadGeneration && fresh is not null) Show(fresh);
+        }
+        catch (HttpRequestException) { }
+    }
+    private void Show(AdmissionAccount target)
+    {
+        account = target; usernameEntry = target.Username; emailEntry = target.Email;
+    }
+    private static string ChangeResult(AuthOutcome result, string success) => result switch
+    {
+        AdminAccountChanged { Applied: true, Delivery: SecurityDeliveryRequested } => success + " If the new address is eligible, a verification link was sent to it.",
+        AdminAccountChanged { Applied: true, Delivery: AuthenticationRefused } => success + " We could not confirm that the verification email was sent. Send it again after a short wait.",
+        AdminAccountChanged { Applied: true } => success,
+        AdminAccountChanged => "No change was needed.",
+        AuthenticationRefused { Code: AuthenticationFailure.DuplicateIdentifier } => "Another account already uses this username or email.",
+        AuthenticationRefused { Code: AuthenticationFailure.InvalidNewPassword } => "The password does not meet the policy. " + NewPasswordPolicy.Guidance,
+        AuthenticationRefused { Code: AuthenticationFailure.InvalidRequest } => "Check the entered value and try again.",
+        AuthenticationRefused { Code: AuthenticationFailure.StaleOperation } => "This account changed meanwhile. Review the current details and try again.",
+        AuthenticationRefused { Code: AuthenticationFailure.AccountUnavailable } => "This account is not available for that change.",
+        AuthenticationRefused { Code: AuthenticationFailure.Unavailable } => "The change could not be saved. Please wait and try again.",
+        _ => "The request could not be completed. Sign in again and check your permission before retrying."
+    };
     protected override async Task OnParametersSetAsync()
     {
         // Background renewal must not reset an operator's verification entry or displayed recovery code.
@@ -124,13 +206,18 @@
         loadedContext = Context; loadedKey = UserKey; loadedAdministrator = Administrator;
         var request = ++loadGeneration;
         account = null; actor = null; access = null; loading = true; manual = null; message = null;
+        usernameEntry = null; emailEntry = null; passwordEntry = null; changeMessage = null;
         try
         {
             if (Administrator && (!long.TryParse(UserKey, out var id) || id <= 0)) return;
             var current = await Context.AccountAsync();
             var target = Administrator ? await Context.AccountAsync(long.Parse(UserKey!)) : current;
             var token = (await Context.Store.GetTokenAsync())?.Token;
-            if (request == loadGeneration) { actor = current; account = target; access = token; }
+            if (request == loadGeneration)
+            {
+                actor = current; access = token;
+                if (target is not null) Show(target);
+            }
         }
         catch (HttpRequestException) { }
         finally { if (request == loadGeneration) loading = false; }

@@ -138,7 +138,6 @@ public class User : ShiftEntity<User>,
     {
         var db = context.Services.GetRequiredService<ShiftIdentityDbContext>();
         var typeAuthService = context.Services.GetRequiredService<ITypeAuthService>();
-        var configuration = context.Services.GetRequiredService<ShiftIdentityConfiguration>();
         var Loc = context.Services.GetRequiredService<ShiftIdentityLocalizer>();
 
         long id = 0;
@@ -199,6 +198,10 @@ public class User : ShiftEntity<User>,
         entity.Email = dto.Email;
         entity.Phone = formattedPhone;
 
+        // A verification link goes to a NEW address only: the address of a created user, or a changed address on an
+        // update — and only when the administrator left the form's "send a verification link" choice on.
+        var sendVerification = actionType == ActionTypes.Insert && dto.SendVerification && entity.Email is not null;
+
         // Reset verification flags when email or phone changes (replaces ResetUserTrigger)
         if (actionType == ActionTypes.Update)
         {
@@ -206,6 +209,7 @@ public class User : ShiftEntity<User>,
             {
                 entity.EmailVerified = false;
                 entity.VerificationSASToken = null;
+                sendVerification = dto.SendVerification && entity.Email is not null;
             }
 
             if (!string.Equals(entity.Phone, oldPhone, StringComparison.OrdinalIgnoreCase))
@@ -259,8 +263,9 @@ public class User : ShiftEntity<User>,
             entity.PasswordHash = hash.PasswordHash;
             entity.Salt = hash.Salt;
 
-            // Same source AssignRandomPasswords uses
-            entity.RequireChangePassword = configuration.Security.RequirePasswordChange;
+            // The administrator's per-save choice from the form (checked by default). The flag is left untouched
+            // when no password is supplied.
+            entity.RequireChangePassword = dto.RequireChangeAtNextLogin;
         }
 
         var accessTreeIds = dto.AccessTrees.Select(x => x.Value.ToLong());
@@ -311,7 +316,19 @@ public class User : ShiftEntity<User>,
 
         // Base(): MapToEntity (Username/IsActive/FullName/BirthDate + IntegrationId ForEntity), audit, protected-row
         // guard, company-scoped data-level write check (authorizes against the derived CompanyBranch scope above).
-        return await context.Base();
+        var saved = await context.Base();
+
+        // This hook runs before SaveChanges, so it must not send. The link needs the committed row (a created user
+        // has no ID yet), so the repository sends it after its save has committed, outside the transaction. A host
+        // without the dashboard sender registered sends nothing, exactly like VerifyEmails without providers.
+        if (sendVerification
+            && context.Repository is Repositories.UserRepository repository
+            && context.Services.GetService<Services.IUserEmailVerificationSender>() is { } sender)
+        {
+            repository.RunAfterSave(() => sender.SendAsync(saved));
+        }
+
+        return saved;
     }
 
 }

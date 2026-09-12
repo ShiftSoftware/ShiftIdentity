@@ -40,10 +40,11 @@ else
                           Confirm
                           OnResult="AssignRandomPasswordsResponse"
                           T="UserListDTO"
-                          Endpoint="@($"{Constants.IdentityRoutePreifix}User/AssignRandomPasswords?shareWithUser={SharePasswordWithUser}&passwordLength={passwordLength}")">
+                          Endpoint="@($"{Constants.IdentityRoutePreifix}User/AssignRandomPasswords?shareWithUser={SharePasswordWithUser}&passwordLength={passwordLength}&requireChangeAtNextLogin={RequireChangeAtNextLogin}")">
 
                 <DialogBodyTemplate>
                     <MudCheckBox @bind-Value="SharePasswordWithUser" Label="@Loc["Send login info to the user"]" />
+                    <MudCheckBox @bind-Value="RequireChangeAtNextLogin" Label="@Loc["Ask the user to change this password at next sign-in"]" />
                     <MudTextField @bind-Value="passwordLength"
                                   Label="@Loc["Password Length"]"
                                   Immediate="true" />
@@ -203,6 +204,8 @@ else
     public ShiftList<UserListDTO>? ShiftList { get; set; }
 
     private bool SharePasswordWithUser { get; set; }
+    // Checked by default: the previous behaviour forced a change after a random password; the admin may turn it off.
+    private bool RequireChangeAtNextLogin { get; set; } = true;
     private int passwordLength = 6;
 
     private async Task OpenImportModal(long? id)

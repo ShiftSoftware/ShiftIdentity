@@ -1,0 +1,33 @@
+@* Titled card that groups related fields of a form: a gray header with an optional icon and header
+   actions, then the content. Same shape as the Toyota Tickets FormSectionCard so both can move into
+   ShiftBlazor later. Unmatched attributes (for example data-testid) land on the card element. *@
+
+<MudCard Elevation="2" Class="@Class" @attributes="Attributes">
+    <MudCardHeader Class="pt-2 pb-2" Style="background-color: var(--mud-palette-background-gray);">
+        <CardHeaderContent>
+            <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                @if (!string.IsNullOrEmpty(Icon))
+                {
+                    <MudIcon Icon="@Icon" Size="Size.Small" Color="Color.Primary" />
+                }
+                <MudText Typo="Typo.subtitle2" Style="font-weight: 600;">@Title</MudText>
+            </MudStack>
+        </CardHeaderContent>
+        @* MudCardHeader accepts only its named fragments as direct children; this stays empty without actions. *@
+        <CardHeaderActions>
+            @HeaderActions
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudCardContent Class="pa-4">
+        @ChildContent
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string? Icon { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? HeaderActions { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? Attributes { get; set; }
+}

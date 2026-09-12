@@ -39,6 +39,8 @@ public interface IIdentitySecurityStore
     Task<AuthenticationOperation?> ReadOperationAsync(Guid id, CancellationToken cancellationToken);
     Task<SecurityEmailLookup?> ResolveSecurityEmailAsync(string identifier, CancellationToken cancellationToken);
     Task<bool> RecheckSecurityEmailAsync(SecurityEmailLookup lookup, CancellationToken cancellationToken);
+    /// <summary>Range-locked duplicate check for a proposed username or email; call only inside admission.</summary>
+    Task<bool> IdentifierInUseAsync(string value, long exceptUserID, CancellationToken cancellationToken);
     Task<bool> ConsumeIngressAsync(string key, DateTimeOffset now, int limit, TimeSpan window, CancellationToken cancellationToken);
     Task<T> AdmitAsync<T>(long userID, Guid? operationID, AuthenticationClient client,
         Func<IdentitySecurityTransaction, Task<T>> transition, CancellationToken cancellationToken);

@@ -90,6 +90,11 @@ public static class IMvcBuilderExtensions
 
         builder.Services.AddScoped<UserRepository>();
 
+        // The User form's "send a verification link" choice: the User upsert hook asks UserRepository to send after
+        // its save commits, and this dashboard implementation builds/sends the legacy SAS link (needs the request).
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddScoped<IUserEmailVerificationSender, ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Services.UserEmailVerificationSender>();
+
         builder.Services.AddScoped<IClaimService, ClaimService>();
 
         // Brand / Service / Department / Country / Region / City / App / AccessTree / Team / CompanyCalendar CRUD is

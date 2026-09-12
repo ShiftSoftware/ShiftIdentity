@@ -56,12 +56,16 @@ internal static class UserEndpoints
                    ShiftIdentityConfiguration options,
                    [FromQuery(Name = "shareWithUser")] bool? shareWithUser,
                    [FromQuery(Name = "passwordLength")] int? passwordLength,
+                   [FromQuery(Name = "requireChangeAtNextLogin")] bool? requireChangeAtNextLogin,
                    IEnumerable<ISendUserInfo>? sendUserInfos) =>
             {
                 // AssignRandomPasswords already returns UserInfoDTO (it is the only thing that knows the generated
                 // plaintext password). This used to round-trip that through AutoMapper as a UserInfoDTO ->
                 // UserInfoDTO identity map, which copied every member onto fresh instances to no purpose.
-                var userInfos = userRepo.AssignRandomPasswords(await GetSelectedUsersAsync(httpContext, ids), passwordLength ?? 20, options.Security.RequirePasswordChange);
+                // The forced change at next sign-in is the caller's per-request choice (the reset dialog's checkbox);
+                // a caller that sends no choice keeps the configured default.
+                var userInfos = userRepo.AssignRandomPasswords(await GetSelectedUsersAsync(httpContext, ids), passwordLength ?? 20,
+                    requireChangeAtNextLogin ?? options.Security.RequirePasswordChange);
 
                 await userRepo.SaveChangesAsync();
 

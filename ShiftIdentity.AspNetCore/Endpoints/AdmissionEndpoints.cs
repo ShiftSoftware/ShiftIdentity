@@ -110,6 +110,14 @@ internal static class AdmissionEndpoints
                 request.Manual ? AuthenticationOperationPurpose.PasswordResetManual : AuthenticationOperationPurpose.PasswordResetEmail, ct)));
         group.MapPost("/email-verification/admin", async (AdminEmailVerificationRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
             Result(await AccountSecurityService.AdminSecurityLinkAsync(services, context.Request.Headers.Authorization.ToString(), request.UserID, AuthenticationOperationPurpose.EmailVerify, ct)));
+        group.MapPost("/admin/password", async (AdminSetPasswordRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.SetPasswordAsync(services, context.Request.Headers.Authorization.ToString(), request, ct)));
+        group.MapPost("/admin/username", async (AdminUsernameChangeRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.ChangeUsernameAsync(services, context.Request.Headers.Authorization.ToString(), request, ct)));
+        group.MapPost("/admin/email", async (AdminEmailChangeRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.ChangeEmailAsync(services, context.Request.Headers.Authorization.ToString(), request, ct)));
+        group.MapPost("/admin/status", async (AdminAccountStatusRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.SetActiveAsync(services, context.Request.Headers.Authorization.ToString(), request, ct)));
         group.MapPost("/security-link/open", async (OpenSecurityLinkRequest request, IdentityAdmissionServices services, CancellationToken ct) =>
             Result(await AccountSecurityService.OpenSecurityLinkAsync(services, request, ct)));
         group.MapPost("/password-reset/complete", async (CompletePasswordResetRequest request, IdentityAdmissionServices services, CancellationToken ct) =>

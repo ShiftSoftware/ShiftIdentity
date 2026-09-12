@@ -132,6 +132,15 @@ public sealed class IdentityHttpHost : IDisposable
     public async Task<AuthOutcome> RecoverMfaAsync(string username, string password, string code, string challenge) =>
         await Read(await Client.PostAsJsonAsync("/api/identity/v2/mfa/recover", new RecoverMfaRequest(username, password, code, challenge)));
 
+    public Task<AuthOutcome> AdminSetPasswordAsync(string access, long userID, string password, bool requireChange = true) =>
+        SendAsync("admin/password", "Bearer", access, new AdminSetPasswordRequest(userID, password, requireChange));
+    public Task<AuthOutcome> AdminChangeUsernameAsync(string access, long userID, string username) =>
+        SendAsync("admin/username", "Bearer", access, new AdminUsernameChangeRequest(userID, username));
+    public Task<AuthOutcome> AdminChangeEmailAsync(string access, long userID, string? email, bool sendVerification = true) =>
+        SendAsync("admin/email", "Bearer", access, new AdminEmailChangeRequest(userID, email, sendVerification));
+    public Task<AuthOutcome> AdminSetActiveAsync(string access, long userID, bool active) =>
+        SendAsync("admin/status", "Bearer", access, new AdminAccountStatusRequest(userID, active));
+
     private async Task<AuthOutcome> SendAsync<T>(string route, string scheme, string credential, T body)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/identity/v2/" + route);

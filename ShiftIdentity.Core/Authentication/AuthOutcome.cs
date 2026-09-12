@@ -19,6 +19,7 @@ namespace ShiftSoftware.ShiftIdentity.Core.Authentication;
 [JsonDerivedType(typeof(SecurityLinkOpened), "securityLinkOpened")]
 [JsonDerivedType(typeof(ManualPasswordResetIssued), "manualPasswordResetIssued")]
 [JsonDerivedType(typeof(EmailVerificationCompleted), "emailVerificationCompleted")]
+[JsonDerivedType(typeof(AdminAccountChanged), "adminAccountChanged")]
 public abstract record AuthOutcome;
 
 public sealed record SessionIssued(TokenDTO Session) : AuthOutcome;
@@ -33,12 +34,15 @@ public sealed record SecurityDeliveryRequested : AuthOutcome;
 public sealed record SecurityLinkOpened(string PageHandle, string MaskedTarget, AuthenticationOperationPurpose Purpose, DateTimeOffset ExpiresAt) : AuthOutcome;
 public sealed record ManualPasswordResetIssued(string Grant, string MaskedTarget, DateTimeOffset ExpiresAt) : AuthOutcome;
 public sealed record EmailVerificationCompleted : AuthOutcome;
+/// <summary>An administrator mutation committed, or was already in effect. It never carries a session.</summary>
+public sealed record AdminAccountChanged(AdminAccountChange Change, bool Applied, long SecurityVersion, AuthOutcome? Delivery = null) : AuthOutcome;
+public enum AdminAccountChange { Password = 1, Username = 2, Email = 3, Active = 4 }
 
 public enum AuthenticationStep { ExistingMfa, PasswordChange, MfaRecovery, NewMfa, EmailVerification, Password }
 public enum AuthenticationFailure
 {
     InvalidRequest, InvalidProof, InvalidGrant, StaleOperation, Expired, AttemptsExhausted,
-    AccountUnavailable, ClientDenied, Unavailable, InvalidNewPassword
+    AccountUnavailable, ClientDenied, Unavailable, InvalidNewPassword, DuplicateIdentifier
 }
 public enum AuthenticationOperationPurpose { Login = 1, ContactChange = 2, MfaEnrollment = 3, PasswordChange = 4, MfaReplacement = 5, MfaRecovery = 6, PasswordResetEmail = 7, PasswordResetManual = 8, EmailVerify = 9 }
 

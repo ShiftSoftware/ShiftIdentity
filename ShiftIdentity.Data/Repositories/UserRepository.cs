@@ -26,11 +26,18 @@ public class UserRepository :
 {
     private readonly ITypeAuthService typeAuthService;
     private readonly ShiftIdentityLocalizer Loc;
+    private readonly ShiftIdentityConfiguration configuration;
+
+    // Work the upsert hook defers until the save has committed (the verification email for a new address). It runs
+    // after base.SaveChangesAsync() returns, i.e. outside the repository transaction, and is discarded if the save
+    // throws. Each item is responsible for its own failure handling; nothing here can fail an already committed save.
+    private readonly List<Func<Task>> afterSaveWork = [];
 
     public UserRepository(ShiftIdentityDbContext db,
         ITypeAuthService typeAuthService,
         ShiftIdentityDefaultDataLevelAccessOptions shiftIdentityDefaultDataLevelAccessOptions,
-        ShiftIdentityLocalizer Loc) : base(db, r =>
+        ShiftIdentityLocalizer Loc,
+        ShiftIdentityConfiguration configuration) : base(db, r =>
     {
         r.IncludeRelatedEntitiesWithFindAsync(
             x => x.Include(y => y.AccessTrees).ThenInclude(y => y.AccessTree),
@@ -47,6 +54,8 @@ public class UserRepository :
             .ForView(d => d.TotpEnabled, e => e.TotpSecret != null)
             .ForView(d => d.AccessTrees, e => e.AccessTrees.Select(y => new ShiftEntitySelectDTO { Value = y.AccessTreeID.ToString()!, Text = y.AccessTree.Name }).ToList())
             .IgnoreView(d => d.Password) // write-only; no entity source
+            .IgnoreView(d => d.RequireChangeAtNextLogin) // per-save form choice; no entity source, keeps its default (on)
+            .IgnoreView(d => d.SendVerification) // per-save form choice; no entity source, keeps its default (on)
 
             // ── ENTITY (write) ── Base() maps Username/IsActive/FullName/BirthDate; the hook owns Email/Phone/AccessTree/
             // password/CompanyBranch-derivation/UserAccessTrees, so those are Ignore'd (or ForEntity'd) here.
@@ -68,8 +77,16 @@ public class UserRepository :
     {
         this.typeAuthService = typeAuthService;
         this.Loc = Loc;
+        this.configuration = configuration;
         this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
     }
+
+    /// <summary>
+    /// Registers work that runs once the next <see cref="SaveChangesAsync"/> has committed — outside the repository
+    /// transaction. Used by the User upsert hook, which runs before the save and therefore cannot send anything
+    /// itself. The work is dropped when the save fails and must handle its own errors.
+    /// </summary>
+    public void RunAfterSave(Func<Task> work) => afterSaveWork.Add(work);
 
     /// <summary>
     /// Builds the user's effective/combined access tree by unioning their user-specific
@@ -174,9 +191,31 @@ public class UserRepository :
         return user;
     }
 
-    public override Task<int> SaveChangesAsync()
+    public override async Task<int> SaveChangesAsync()
     {
-        return base.SaveChangesAsync();
+        int result;
+
+        try
+        {
+            result = await base.SaveChangesAsync();
+        }
+        catch
+        {
+            // Nothing was committed, so nothing may be sent for it.
+            afterSaveWork.Clear();
+            throw;
+        }
+
+        if (afterSaveWork.Count == 0)
+            return result;
+
+        var work = afterSaveWork.ToArray();
+        afterSaveWork.Clear();
+
+        foreach (var item in work)
+            await item();
+
+        return result;
     }
 
     public IEnumerable<UserInfoDTO> AssignRandomPasswords(List<User> users, int passwordLength, bool enforceChange)
@@ -254,6 +293,10 @@ public class UserRepository :
                 CompanyBranchID = new ShiftEntitySelectDTO { Value = userImport.CompanyBranchID },
                 Password = password,
                 IsActive = true,
+                // Import keeps its previous behaviour: the configured default decides the forced change, and the
+                // imported address is marked verified below, so no verification link is sent.
+                RequireChangeAtNextLogin = configuration.Security.RequirePasswordChange,
+                SendVerification = false,
             };
 
             // Routes through the base UpsertAsync → the User entity's IUpsertsShiftRepository hook → Base(). Base()

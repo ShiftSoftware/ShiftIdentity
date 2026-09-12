@@ -20,16 +20,10 @@ internal static partial class AccountSecurityService
         services.Observe?.Invoke("MfaRecoveryAdminProof");
         return await services.Store.AdmitAdminAsync<AuthOutcome>(signedIn.Proof.UserID, request.UserID, services.Client, (actor, unit) =>
         {
-            var refusal = SignedInRefusal(services, actor, signedIn);
+            var refusal = ActorRefusal(services, actor, signedIn, permissions => permissions.CanAccess(ShiftIdentityActions.ManageMfaRecovery));
             refusal ??= CommonRefusal(services, unit, unit.Security.SecurityVersion, unit.Policy.Revision);
             if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
             var now = services.Clock.GetUtcNow();
-            if (now >= signedIn.Proof.AuthenticatedAt.AddMinutes(5) || LocalStep(actor, signedIn.Proof.MfaSatisfied) is not null)
-                return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.InvalidProof));
-            var trees = actor.User.AccessTrees.Select(x => x.AccessTree.Tree).ToList();
-            if (!string.IsNullOrWhiteSpace(actor.User.AccessTree)) trees.Add(actor.User.AccessTree);
-            if (!new TypeAuthContext(trees, typeof(ShiftIdentityActions)).CanAccess(ShiftIdentityActions.ManageMfaRecovery))
-                return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.ClientDenied));
             foreach (var previous in unit.RecoveryFamily.Where(x => x.State is AuthenticationOperationState.AwaitingRecoveryProof or AuthenticationOperationState.AwaitingNewFactor))
             {
                 AdmissionOperations.Finish(previous, now, cancelled: true);

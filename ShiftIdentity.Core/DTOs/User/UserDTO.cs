@@ -23,6 +23,13 @@ public class UserDTO : ShiftEntityViewAndUpsertDTO
 
     public string? Password { get; set; } = default!;
 
+    /// <summary>
+    /// Applies only when <see cref="Password"/> is supplied: ask the user to change that password at their next
+    /// sign-in. Checked by default, which keeps the previous forced-change behaviour; an administrator can turn it
+    /// off per save. Named after the staged v2 <c>AdminSetPasswordRequest</c> flag so the later adapter maps 1:1.
+    /// </summary>
+    public bool RequireChangeAtNextLogin { get; set; } = true;
+
     public bool IsActive { get; set; }
 
     public string? AccessTree { get; set; }
@@ -33,6 +40,13 @@ public class UserDTO : ShiftEntityViewAndUpsertDTO
 
     #region Contacts
     public string? Email { get; set; }
+
+    /// <summary>
+    /// Send a verification link to a NEW address: the address of a created user, or a changed address on an
+    /// update. An unchanged address never triggers a send. Checked by default. Named after the staged v2
+    /// <c>AdminEmailChangeRequest</c> flag so the later adapter maps 1:1.
+    /// </summary>
+    public bool SendVerification { get; set; } = true;
 
     public string? Phone { get; set; }
     #endregion

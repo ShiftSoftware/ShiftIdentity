@@ -26,128 +26,218 @@ else
                  Title="@Loc["User"]"
                  AllowSaveAsNew
                  @bind-Key="@Key"
+                 Mode="_mode"
+                 ModeChanged="ModeChanged"
                  TypeAuthAction="ShiftIdentityActions.Users"
                  OnTaskFinished="@(()=> ready=true)"
                  OnSubmit="()=> { _theItem.AccessTree =  actionTree!.GenerateAccessTree(); }"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.User.UserDTO">
 
-    <ToolbarEndTemplate>
-        @if (!string.IsNullOrEmpty(Key?.ToString()))
-        {
-            <MudTooltip Text="@Loc["View Effective Permissions"]">
-                <MudButtonExtended Variant="Variant.Text"
-                                   Color="Color.Info"
-                                   Style="min-width:40px;"
-                                   aria-label="@Loc["View Effective Permissions"]"
-                                   OnClick="OpenEffectivePermissions">
-                    <MudIcon Icon="@Icons.Material.Filled.Policy" />
-                </MudButtonExtended>
-            </MudTooltip>
-        }
-    </ToolbarEndTemplate>
+    @* Related fields sit together: who the user is, how they sign in, how to reach them, what they may do. *@
+    <MudStack Spacing="4">
 
-    <ChildContent>
+        <FormSectionCard Title="@Loc["Profile"]" Icon="@Icons.Material.Filled.Person" data-testid="user-section-profile">
+            <MudGrid Spacing="4">
+                <MudItem xs="12" md="6">
+                    <MudTextField ReadOnly="@context.ReadOnly"
+                                  Disabled="@context.Disabled"
+                                  OnlyValidateIfDirty="true"
+                                  Label="@Loc["Full Name"]"
+                                  @bind-Value="context.Item.FullName"
+                                  For="@(() => context.Item.FullName)" />
+                </MudItem>
 
-        <MudTextField ReadOnly="@context.ReadOnly"
-                      Disabled="@context.Disabled"
-                      OnlyValidateIfDirty="true"
-                      Label="@Loc["Full Name"]"
-                      @bind-Value="context.Item.FullName"
-                      For="@(() => context.Item.FullName)" />
+                <MudItem xs="12" md="6">
+                    <ShiftAutocomplete Label="@Loc["Company Branch"]"
+                                       For="@(() => context.Item.CompanyBranchID)"
+                                       @bind-Value="context.Item.CompanyBranchID"
+                                       TEntitySet="CompanyBranchListDTO"
+                                       EntitySet="IdentityCompanyBranch" />
+                </MudItem>
 
-        <MudTextField ReadOnly="@context.ReadOnly"
-                      Disabled="@context.Disabled"
-                      OnlyValidateIfDirty="true"
-                      Label="@Loc["Username"]"
-                      @bind-Value="context.Item.Username"
-                      For="@(() => context.Item.Username)" />
+                <MudItem xs="12" md="6">
+                    <MudDatePicker ReadOnly="@context.ReadOnly"
+                                   Disabled="@context.Disabled"
+                                   Clearable
+                                   @bind-Date="context.Item.BirthDate"
+                                   For="@(() => context.Item.BirthDate)"
+                                   Label="@Loc["Birth Date"]" />
+                </MudItem>
 
-        <MudTextField ReadOnly="@context.ReadOnly"
-                      Disabled="@context.Disabled"
-                      OnlyValidateIfDirty="true"
-                      Label="@Loc["Integration Id"]"
-                      @bind-Value="context.Item.IntegrationId"
-                      For="@(() => context.Item.IntegrationId)" />
+                <MudItem xs="12" md="6">
+                    <MudTextField ReadOnly="@context.ReadOnly"
+                                  Disabled="@context.Disabled"
+                                  OnlyValidateIfDirty="true"
+                                  Label="@Loc["Integration Id"]"
+                                  @bind-Value="context.Item.IntegrationId"
+                                  For="@(() => context.Item.IntegrationId)" />
+                </MudItem>
+            </MudGrid>
+        </FormSectionCard>
 
-        <PasswordField
-                      ReadOnly="@context.ReadOnly"
-                      Disabled="@context.Disabled"
-                      OnlyValidateIfDirty="true"
-                      Label="@Loc["Password"]"
-                      @bind-Value="context.Item.Password"
-                      For="@(() => context.Item.Password)"
-                      HelperText="Choose a strong password" autocomplete="new-password" />
-        <MudButton ButtonType="ButtonType.Button" Disabled="@(context.ReadOnly || context.Disabled)" OnClick="() => context.Item.Password = PasswordGenerator.GeneratePassword(8)">@Loc["Generate password"]</MudButton>
+        <FormSectionCard Title="@Loc["Security"]" Icon="@Icons.Material.Filled.Lock" data-testid="user-section-security">
+            @* Credentials on the first row, account state on the second. *@
+            <MudGrid Spacing="4">
+                <MudItem xs="12" md="6">
+                    <MudTextField ReadOnly="@context.ReadOnly"
+                                  Disabled="@context.Disabled"
+                                  OnlyValidateIfDirty="true"
+                                  Label="@Loc["Username"]"
+                                  @bind-Value="context.Item.Username"
+                                  For="@(() => context.Item.Username)" />
+                </MudItem>
 
-        @if (!string.IsNullOrEmpty(Key?.ToString()))
-        {
-            <MudField Label="@Loc["Authenticator App (TOTP)"]" Variant="Variant.Text" Class="mt-2">
-                @if (context.Item.TotpEnabled)
+                <MudItem xs="12" md="6">
+                    @* The password, its generator and its next-login choice are one cluster. The field keeps a
+                       readable width, so on a phone the generator wraps under it instead of squeezing it. *@
+                    <MudStack Row Wrap="Wrap.Wrap" AlignItems="AlignItems.Baseline" Spacing="2">
+                        <div style="flex: 1 1 16rem;" data-testid="user-password">
+                            <PasswordField ReadOnly="@context.ReadOnly"
+                                           Disabled="@context.Disabled"
+                                           OnlyValidateIfDirty="true"
+                                           Label="@Loc["Password"]"
+                                           @bind-Value="context.Item.Password"
+                                           For="@(() => context.Item.Password)"
+                                           HelperText="@Loc["Choose a strong password"]"
+                                           autocomplete="new-password" />
+                        </div>
+                        <MudButton ButtonType="ButtonType.Button"
+                                   Variant="Variant.Text"
+                                   Size="Size.Small"
+                                   Class="flex-shrink-0"
+                                   StartIcon="@Icons.Material.Filled.Autorenew"
+                                   Disabled="@(context.ReadOnly || context.Disabled)"
+                                   OnClick="() => context.Item.Password = PasswordGenerator.GeneratePassword(8)">@Loc["Generate password"]</MudButton>
+                    </MudStack>
+                </MudItem>
+
+                <MudItem xs="12" md="6" Class="d-flex align-center">
+                    <MudCheckBox ReadOnly="@context.ReadOnly"
+                                 Disabled="@context.Disabled"
+                                 For="@(() => context.Item.IsActive)"
+                                 Label="@Loc["Active"]"
+                                 @bind-Value="@context.Item.IsActive" />
+                </MudItem>
+
+                @if (!string.IsNullOrEmpty(Key?.ToString()))
                 {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.Lock">@Loc["Enabled"]</MudChip>
+                    <MudItem xs="12" md="6">
+                        <MudField Label="@Loc["Authenticator App (TOTP)"]" Variant="Variant.Text">
+                            @if (context.Item.TotpEnabled)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.Lock">@Loc["Enabled"]</MudChip>
+                            }
+                            else
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.LockOpen">@Loc["Not set up"]</MudChip>
+                            }
+                        </MudField>
+                    </MudItem>
                 }
-                else
+
+                @* A full-width notice while a password is being set: saving without one never touches the forced change. *@
+                @if (PasswordChoiceApplies(context.Item, context.Mode))
                 {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.LockOpen">@Loc["Not set up"]</MudChip>
+                    <MudItem xs="12">
+                        <MudAlert Severity="Severity.Warning" Dense="true" Icon="@Icons.Material.Filled.Password" data-testid="user-password-require-change">
+                            <MudStack Row Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="4">
+                                <MudText Typo="Typo.body2">@Loc["A new password will be saved for this user."]</MudText>
+                                <MudCheckBox T="bool"
+                                             Dense
+                                             Disabled="@context.Disabled"
+                                             Label="@Loc["Ask the user to change this password at next sign-in"]"
+                                             @bind-Value="context.Item.RequireChangeAtNextLogin" />
+                            </MudStack>
+                        </MudAlert>
+                    </MudItem>
                 }
-            </MudField>
-        }
+            </MudGrid>
+        </FormSectionCard>
 
-        <MudTextField ReadOnly="@context.ReadOnly"
-                      Disabled="@context.Disabled"
-                      OnlyValidateIfDirty="true"
-                      Label="@Loc["Phone"]"
-                      @bind-Value="context.Item.Phone"
-                      For="@(() => context.Item.Phone)" />
+        <FormSectionCard Title="@Loc["Contacts"]" Icon="@Icons.Material.Filled.ContactMail" data-testid="user-section-contacts">
+            <MudGrid Spacing="4">
+                <MudItem xs="12" md="6">
+                    <div data-testid="user-email">
+                        <MudTextField ReadOnly="@context.ReadOnly"
+                                      Disabled="@context.Disabled"
+                                      OnlyValidateIfDirty="true"
+                                      Label="@Loc["Email"]"
+                                      @bind-Value="context.Item.Email"
+                                      For="@(() => context.Item.Email)" />
+                    </div>
+                </MudItem>
 
-        <MudTextField ReadOnly="@context.ReadOnly"
-                      Disabled="@context.Disabled"
-                      OnlyValidateIfDirty="true"
-                      Label="@Loc["Email"]"
-                      @bind-Value="context.Item.Email"
-                      For="@(() => context.Item.Email)" />
+                <MudItem xs="12" md="6">
+                    <MudTextField ReadOnly="@context.ReadOnly"
+                                  Disabled="@context.Disabled"
+                                  OnlyValidateIfDirty="true"
+                                  Label="@Loc["Phone"]"
+                                  @bind-Value="context.Item.Phone"
+                                  For="@(() => context.Item.Phone)" />
+                </MudItem>
 
-        <MudDatePicker ReadOnly="@context.ReadOnly"
-                       Disabled="@context.Disabled"
-                       Clearable
-                       @bind-Date="context.Item.BirthDate"
-                       For="@(() => context.Item.BirthDate)"
-                       Label="@Loc["Birth Date"]" />
+                @* A full-width notice for a new or changed address: saving an unchanged address never sends anything. *@
+                @if (EmailChoiceApplies(context.Item, context.Mode))
+                {
+                    <MudItem xs="12">
+                        <MudAlert Severity="Severity.Warning" Dense="true" Icon="@Icons.Material.Filled.MarkEmailUnread" data-testid="user-email-send-verification">
+                            <MudStack Row Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="4">
+                                <MudText Typo="Typo.body2">@Loc["This address will be saved unverified."]</MudText>
+                                <MudCheckBox T="bool"
+                                             Dense
+                                             Disabled="@context.Disabled"
+                                             Label="@Loc["Send a verification link to this address"]"
+                                             @bind-Value="context.Item.SendVerification" />
+                            </MudStack>
+                        </MudAlert>
+                    </MudItem>
+                }
+            </MudGrid>
+        </FormSectionCard>
 
-        <MudItem>
-            <MudCheckBox ReadOnly="@context.ReadOnly"
-                         Disabled="@context.Disabled"
-                         For="@(() => context.Item.IsActive)"
-                         Label="@Loc["Active"]"
-                         @bind-Value="@context.Item.IsActive"></MudCheckBox>
-        </MudItem>
+        <FormSectionCard Title="@Loc["Permissions"]" Icon="@Icons.Material.Filled.AdminPanelSettings" data-testid="user-section-permissions">
+            <HeaderActions>
+                @if (!string.IsNullOrEmpty(Key?.ToString()))
+                {
+                    <MudButton Variant="Variant.Text"
+                               Color="Color.Info"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Policy"
+                               OnClick="OpenEffectivePermissions"
+                               data-testid="user-effective-permissions">@Loc["View Effective Permissions"]</MudButton>
+                }
+            </HeaderActions>
+            <ChildContent>
+                <MudGrid Spacing="4">
+                    <MudItem xs="12" md="6">
+                        <ShiftAutocomplete Label="@Loc["Access Trees"]"
+                                           @bind-Value="LastSelectedAccessTree"
+                                           EntitySet="IdentityAccessTree"
+                                           TEntitySet="AccessTreeDTO" />
+                    </MudItem>
 
-        <ShiftAutocomplete Label="@Loc["Company Branch"]"
-                           For="@(() => context.Item.CompanyBranchID)"
-                           @bind-Value="context.Item.CompanyBranchID"
-                           TEntitySet="CompanyBranchListDTO"
-                           EntitySet="IdentityCompanyBranch" />
+                    @if (context.Item.AccessTrees.Any())
+                    {
+                        <MudItem xs="12">
+                            <MudStack Row Wrap="Wrap.Wrap" Spacing="1">
+                                @foreach (var item in context.Item.AccessTrees)
+                                {
+                                    <MudChip T="string" Color="Color.Primary" OnClose="() => RemoveAccessTreetItem(item, context.Mode)">@item.Text</MudChip>
+                                }
+                            </MudStack>
+                        </MudItem>
+                    }
 
-        <ShiftAutocomplete Label="@Loc["Access Trees"]"
-                           @bind-Value="LastSelectedAccessTree"
-                           EntitySet="IdentityAccessTree"
-                           TEntitySet="AccessTreeDTO" />
-
-        <br />
-
-        @foreach (var item in context.Item.AccessTrees)
-        {
-            <MudChip T="string" Color="Color.Primary" OnClose="() => RemoveAccessTreetItem(item, context.Mode)">@item.Text</MudChip>
-        }
-
-        <br />
-        <br />
-
-        @if (ready || context.Mode == FormModes.View || context.Mode == FormModes.Create)
-        {
-            <ActionTree @ref="actionTree" @bind-Tree="context.Item.AccessTree" ReadOnly="@context.ReadOnly" Disabled="@context.Disabled" />
-        }
-    </ChildContent>
+                    <MudItem xs="12">
+                        @if (ready || context.Mode == FormModes.View || context.Mode == FormModes.Create)
+                        {
+                            <ActionTree @ref="actionTree" @bind-Tree="context.Item.AccessTree" ReadOnly="@context.ReadOnly" Disabled="@context.Disabled" />
+                        }
+                    </MudItem>
+                </MudGrid>
+            </ChildContent>
+        </FormSectionCard>
+    </MudStack>
 </ShiftEntityForm>
 }
 
@@ -160,6 +250,11 @@ else
 
     private bool ready = false;
 
+    private FormModes _mode;
+
+    // The address the form entered edit mode with: the saved one after a fetch, a save or a cancelled edit.
+    private string? savedEmail;
+
     Shared.ActionTree.ActionTree? actionTree;
 
     List<AccessTreeDTO> accessTress = new List<AccessTreeDTO>();
@@ -169,6 +264,25 @@ else
         if (_theItem.ID == default)
             _theItem.AccessTree = "{}";
     }
+
+    private void ModeChanged(FormModes mode)
+    {
+        _mode = mode;
+
+        if (mode == FormModes.Edit)
+            savedEmail = _theItem.Email;
+    }
+
+    // Mirrors the upsert hook: the forced change is written only when a password is supplied.
+    private static bool PasswordChoiceApplies(UserDTO item, FormModes mode) =>
+        mode >= FormModes.Edit && !string.IsNullOrEmpty(item.Password);
+
+    // Mirrors the upsert hook: a link goes only to a created user's address or an address that differs from the saved
+    // one, compared case-insensitively without trimming.
+    private bool EmailChoiceApplies(UserDTO item, FormModes mode) =>
+        mode >= FormModes.Edit
+        && !string.IsNullOrWhiteSpace(item.Email)
+        && !string.Equals(item.Email, savedEmail, StringComparison.OrdinalIgnoreCase);
 
     public ShiftSoftware.ShiftEntity.Model.Dtos.ShiftEntitySelectDTO? LastSelectedAccessTree
     {
@@ -209,4 +323,3 @@ else
         await DialogService.ShowAsync<EffectivePermissionsDialog>(Loc["Effective Permissions"], parameters, options);
     }
 }
-

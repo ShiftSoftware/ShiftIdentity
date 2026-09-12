@@ -71,15 +71,8 @@ internal static partial class AccountSecurityService
         SecurityEmail? message = null;
         var outcome = await services.Store.AdmitAdminAsync<AuthOutcome>(signedIn.Proof.UserID, userID, services.Client, (actor, unit) =>
         {
-            var refusal = SignedInRefusal(services, actor, signedIn);
+            var refusal = ActorRefusal(services, actor, signedIn, permissions => permissions.CanWrite(ShiftIdentityActions.Users));
             if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
-            var now = services.Clock.GetUtcNow();
-            if (now < signedIn.Proof.AuthenticatedAt || now >= signedIn.Proof.AuthenticatedAt.AddMinutes(5) || LocalStep(actor, signedIn.Proof.MfaSatisfied) is not null)
-                return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.InvalidProof));
-            var trees = actor.User.AccessTrees.Select(x => x.AccessTree.Tree).ToList();
-            if (!string.IsNullOrWhiteSpace(actor.User.AccessTree)) trees.Add(actor.User.AccessTree);
-            if (!new TypeAuthContext(trees, typeof(ShiftIdentityActions)).CanWrite(ShiftIdentityActions.Users))
-                return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.ClientDenied));
             return Task.FromResult(CreateSecurityLink(services, unit, purpose, out message, actor.User.ID));
         }, ct);
         return await HandoffAsync(services, outcome, userID, message, ct);
