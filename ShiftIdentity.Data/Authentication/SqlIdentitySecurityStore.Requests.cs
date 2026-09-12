@@ -36,9 +36,9 @@ public sealed partial class SqlIdentitySecurityStore
         try
         {
             // Range locks on both unique indexes prevent a cross-field match being introduced before commit.
-            var usernames = await db.Set<UserSecurityState>().FromSqlInterpolated($"SELECT * FROM [ShiftIdentity].[UserSecurityStates] WITH (HOLDLOCK, INDEX(IX_UserSecurityStates_UsernameLookupKey)) WHERE [UsernameLookupKey] = {lookup.Key}")
+            var usernames = await Hinted<UserSecurityState>("HOLDLOCK", nameof(UserSecurityState.UsernameLookupKey), lookup.Key, indexOn: nameof(UserSecurityState.UsernameLookupKey))
                 .AsNoTracking().ToArrayAsync(ct);
-            var emails = await db.Set<UserSecurityState>().FromSqlInterpolated($"SELECT * FROM [ShiftIdentity].[UserSecurityStates] WITH (HOLDLOCK, INDEX(IX_UserSecurityStates_EmailLookupKey)) WHERE [EmailLookupKey] = {lookup.Key}")
+            var emails = await Hinted<UserSecurityState>("HOLDLOCK", nameof(UserSecurityState.EmailLookupKey), lookup.Key, indexOn: nameof(UserSecurityState.EmailLookupKey))
                 .AsNoTracking().ToArrayAsync(ct);
             var matches = usernames.Concat(emails).DistinctBy(x => x.UserID).ToArray();
             if (matches.Length != 1 || matches[0].UserID != lookup.UserID)

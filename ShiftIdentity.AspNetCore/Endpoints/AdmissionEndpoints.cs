@@ -15,6 +15,10 @@ internal static class AdmissionEndpoints
     internal static void AddIdentityAdmissionAuthentication(this IServiceCollection services)
     {
         services.AddHostedService<AdmissionMaintenance>();
+        // The legacy administrator writers find the staged authority through this registration; without it they
+        // keep their direct writes. The operator is read from the current request.
+        services.AddHttpContextAccessor();
+        services.AddScoped<Data.Services.IUserAccountAuthority, AdmissionUserAccountAuthority>();
         services.AddAuthentication().AddScheme<AuthenticationSchemeOptions, OperationAuthenticationHandler>(
             OperationAuthenticationHandler.SchemeName, _ => { });
         services.AddAuthorizationBuilder().AddPolicy("IdentityLoginContinuation", policy =>

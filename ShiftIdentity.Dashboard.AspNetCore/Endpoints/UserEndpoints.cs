@@ -63,11 +63,20 @@ internal static class UserEndpoints
                 // plaintext password). This used to round-trip that through AutoMapper as a UserInfoDTO ->
                 // UserInfoDTO identity map, which copied every member onto fresh instances to no purpose.
                 // The forced change at next sign-in is the caller's per-request choice (the reset dialog's checkbox);
-                // a caller that sends no choice keeps the configured default.
-                var userInfos = userRepo.AssignRandomPasswords(await GetSelectedUsersAsync(httpContext, ids), passwordLength ?? 20,
-                    requireChangeAtNextLogin ?? options.Security.RequirePasswordChange);
+                // a caller that sends no choice keeps the configured default. With the staged authority the save
+                // admits every credential in one transaction; a refusal returns the envelope message.
+                IEnumerable<UserInfoDTO> userInfos;
+                try
+                {
+                    userInfos = userRepo.AssignRandomPasswords(await GetSelectedUsersAsync(httpContext, ids), passwordLength ?? 20,
+                        requireChangeAtNextLogin ?? options.Security.RequirePasswordChange);
 
-                await userRepo.SaveChangesAsync();
+                    await userRepo.SaveChangesAsync();
+                }
+                catch (ShiftEntityException ex)
+                {
+                    return Results.Json(new ShiftEntityResponse<IEnumerable<UserInfoDTO>> { Message = ex.Message, Additional = ex.AdditionalData }, statusCode: ex.HttpStatusCode);
+                }
 
                 if (shareWithUser ?? false)
                 {
@@ -153,9 +162,17 @@ internal static class UserEndpoints
             {
                 var users = userRepo.VerifyPhonesAsync(await GetSelectedUsersAsync(httpContext, ids));
 
-                var userInfos = users.ToListDTOs();
+                // With the staged authority the flag is written by the admitted save, so the rows are mapped after it.
+                try
+                {
+                    await userRepo.SaveChangesAsync();
+                }
+                catch (ShiftEntityException ex)
+                {
+                    return Results.Json(new ShiftEntityResponse<IEnumerable<UserListDTO>> { Message = ex.Message, Additional = ex.AdditionalData }, statusCode: ex.HttpStatusCode);
+                }
 
-                await userRepo.SaveChangesAsync();
+                var userInfos = users.ToListDTOs();
 
                 return Results.Ok(new ShiftEntityResponse<IEnumerable<UserListDTO>> { Entity = userInfos });
             })

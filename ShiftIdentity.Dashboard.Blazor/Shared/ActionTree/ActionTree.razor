@@ -1,4 +1,4 @@
-﻿@inject ShiftIdentityLocalizer Loc
+@inject ShiftIdentityLocalizer Loc
 
 <style>
     .mud-treeview-item-content {
@@ -18,6 +18,45 @@
             font-size: 14px !important;
             background: #fafafa !important;
         }
+
+    /* One row per action: icon and name first, the access controls right-aligned. The row wraps, so on a phone
+       the controls move to their own line under the name instead of overflowing the card. */
+    .action-tree-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px 8px;
+        width: 100%;
+        padding: 12px 10px;
+        border-top: 1px solid #e1e1e1;
+        transition: 0.3s;
+    }
+
+        .action-tree-row.action-tree-row-inherited {
+            opacity: 0.6;
+            background-color: var(--mud-palette-action-default-hover);
+        }
+
+    .action-tree-label {
+        margin: 0;
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .action-tree-access {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 5px;
+        margin-left: auto;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+        .action-tree-access .type-auth-tree-text {
+            min-width: 8rem;
+        }
 </style>
 
 <MudPaper Elevation="2">
@@ -26,7 +65,7 @@
         <MudText Class="px-4" Style="margin:0;">@Loc["Actions"]</MudText>
     </MudToolBar>
 
-   
+
     @if (this.TreeItems.Count == 0)
     {
         <MudAlert Severity="Severity.Warning">@Loc["No Items found."]</MudAlert>
@@ -43,25 +82,15 @@
                         <Content>
                             <MudTreeViewItemToggleButton ExpandedChanged="@((x) => { item.AdditionalData!.Expanded = x;})" Visible="@(item.ActionTreeItems.Count > 0)" Expanded="@((bool) item.AdditionalData!.Expanded)" />
                             @{
-                                string StyleString = "";
-
-                                if (item.AdditionalData?.Parent?.WildCardAccess?.Count > 0)
-                                {
-                                    StyleString = "transition:0.3s; padding-left:10px; padding-right:10px; display:flex; width:100%; align-items:center; border-top:1px solid #e1e1e1; padding-top:12px; padding-bottom:12px; opacity:0.6; background-color: var(--mud-palette-action-default-hover);";
-                                }
-                                else
-                                {
-                                    StyleString = "transition:0.3s; padding-left:10px; padding-right:10px; display:flex; width:100%; align-items:center; border-top:1px solid #e1e1e1; padding-top:12px; padding-bottom:12px;";
-                                }
+                                var inherited = item.AdditionalData?.Parent?.WildCardAccess?.Count > 0;
                             }
-                            <div style="@StyleString">
+                            <div class="@(inherited ? "action-tree-row action-tree-row-inherited" : "action-tree-row")" data-testid="action-tree-row">
 
                                 <ActionTreeItemIcon ActionTreeItem="item" />
 
-                                <MudText>@(item.DisplayName ?? item.ID)</MudText>
+                                <MudText Class="action-tree-label">@(item.DisplayName ?? item.ID)</MudText>
 
-                                <MudSpacer />
-
+                                <div class="action-tree-access" data-testid="action-tree-access">
                                 @if (item.ActionTreeItems.Count > 0)
                                 {
                                     @if (PickerMode)
@@ -72,42 +101,32 @@
                                         {
                                             @foreach (var access in GetPickerAccessLevels(item.Action!.Type))
                                             {
-                                                <div style="margin-right:5px;">
-                                                    <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="@GetAccessColor(access)"
-                                                               StartIcon="@Icons.Material.Filled.Search"
-                                                               OnClick="@(() => PickAsync(item, access, anyDynamicRow: true))">
-                                                        @Loc[GetAccessLabel(access)] (@Loc["any row"])
-                                                    </MudButton>
-                                                </div>
+                                                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="@GetAccessColor(access)"
+                                                           StartIcon="@Icons.Material.Filled.Search"
+                                                           OnClick="@(() => PickAsync(item, access, anyDynamicRow: true))">
+                                                    @Loc[GetAccessLabel(access)] (@Loc["any row"])
+                                                </MudButton>
                                             }
                                         }
                                     }
                                     else
                                     {
-                                        <div style="margin-right:5px;">
-                                            <WildCardAccessButton LoggedInUserTreeItems="LoggedInUserTreeItems_Flattened" Access="Access.Maximum"
-                                                                  ActionTreeItem="item" ActionTreeItemChanged="StateHasChanged" Disabled="@(ReadOnly || Disabled)">
-                                                @Loc["Max"]
-                                            </WildCardAccessButton>
-                                        </div>
-                                        <div style="margin-right:5px;">
-                                            <WildCardAccessButton LoggedInUserTreeItems="LoggedInUserTreeItems_Flattened" Access="Access.Delete"
-                                                                  ActionTreeItem="item" ActionTreeItemChanged="StateHasChanged" Disabled="@(ReadOnly || Disabled)">
-                                                @Loc["Delete"]
-                                            </WildCardAccessButton>
-                                        </div>
-                                        <div style="margin-right:5px;">
-                                            <WildCardAccessButton LoggedInUserTreeItems="LoggedInUserTreeItems_Flattened" Access="Access.Write"
-                                                                  ActionTreeItem="item" ActionTreeItemChanged="StateHasChanged" Disabled="@(ReadOnly || Disabled)">
-                                                @Loc["Write"]
-                                            </WildCardAccessButton>
-                                        </div>
-                                        <div>
-                                            <WildCardAccessButton LoggedInUserTreeItems="LoggedInUserTreeItems_Flattened" Access="Access.Read"
-                                                                  ActionTreeItem="item" ActionTreeItemChanged="StateHasChanged" Disabled="@(ReadOnly || Disabled)">
-                                                @Loc["Read"]
-                                            </WildCardAccessButton>
-                                        </div>
+                                        <WildCardAccessButton LoggedInUserTreeItems="LoggedInUserTreeItems_Flattened" Access="Access.Maximum"
+                                                              ActionTreeItem="item" ActionTreeItemChanged="StateHasChanged" Disabled="@(ReadOnly || Disabled)">
+                                            @Loc["Max"]
+                                        </WildCardAccessButton>
+                                        <WildCardAccessButton LoggedInUserTreeItems="LoggedInUserTreeItems_Flattened" Access="Access.Delete"
+                                                              ActionTreeItem="item" ActionTreeItemChanged="StateHasChanged" Disabled="@(ReadOnly || Disabled)">
+                                            @Loc["Delete"]
+                                        </WildCardAccessButton>
+                                        <WildCardAccessButton LoggedInUserTreeItems="LoggedInUserTreeItems_Flattened" Access="Access.Write"
+                                                              ActionTreeItem="item" ActionTreeItemChanged="StateHasChanged" Disabled="@(ReadOnly || Disabled)">
+                                            @Loc["Write"]
+                                        </WildCardAccessButton>
+                                        <WildCardAccessButton LoggedInUserTreeItems="LoggedInUserTreeItems_Flattened" Access="Access.Read"
+                                                              ActionTreeItem="item" ActionTreeItemChanged="StateHasChanged" Disabled="@(ReadOnly || Disabled)">
+                                            @Loc["Read"]
+                                        </WildCardAccessButton>
                                     }
                                 }
                                 else
@@ -122,13 +141,11 @@
                                         {
                                             @foreach (var access in GetPickerAccessLevels(item.Action.Type))
                                             {
-                                                <div style="margin: 0 5px;">
-                                                    <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="@GetAccessColor(access)"
-                                                               StartIcon="@Icons.Material.Filled.Search"
-                                                               OnClick="@(() => PickAsync(item, access, anyDynamicRow: false))">
-                                                        @Loc[GetAccessLabel(access)]
-                                                    </MudButton>
-                                                </div>
+                                                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="@GetAccessColor(access)"
+                                                           StartIcon="@Icons.Material.Filled.Search"
+                                                           OnClick="@(() => PickAsync(item, access, anyDynamicRow: false))">
+                                                    @Loc[GetAccessLabel(access)]
+                                                </MudButton>
                                             }
                                         }
                                     }
@@ -142,10 +159,8 @@
 
                                         @if (item.Action?.Type == ActionType.ReadWriteDelete || item.Action?.Type == ActionType.ReadWrite)
                                         {
-                                            <div style="margin: 0 5px;">
-                                                <AccessButton ActionTreeItem="item" Access="Access.Write" TypeAuth_LoggedInUser="tAuth_LoggedInUser"
-                                                              TypeAuth_View="tAuth_View" Disabled="@(ReadOnly || Disabled)">@Loc["Write"]</AccessButton>
-                                            </div>
+                                            <AccessButton ActionTreeItem="item" Access="Access.Write" TypeAuth_LoggedInUser="tAuth_LoggedInUser"
+                                                          TypeAuth_View="tAuth_View" Disabled="@(ReadOnly || Disabled)">@Loc["Write"]</AccessButton>
                                         }
 
                                         @if (item.Action?.Type == ActionType.ReadWriteDelete || item.Action?.Type == ActionType.ReadWrite || item.Action?.Type == ActionType.Read)
@@ -167,6 +182,7 @@
                                         }
                                     }
                                 }
+                                </div>
                             </div>
                         </Content>
                     </MudTreeViewItem>

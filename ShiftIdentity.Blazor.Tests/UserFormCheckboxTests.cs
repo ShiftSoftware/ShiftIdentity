@@ -13,7 +13,7 @@ namespace ShiftIdentity.Blazor.Tests;
 /// changed address), checked by default, and posted with the legacy UserDTO exactly as chosen through the real
 /// ShiftEntityForm save path against a scripted HTTP transport.
 /// </summary>
-[Trait("Category", "Ui")]
+[Trait("Category", "Ui"), Collection("User form")]
 public sealed class UserFormCheckboxTests
 {
     private const string PasswordInput = "[data-testid=user-password] input";

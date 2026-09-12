@@ -109,9 +109,9 @@ public class SqlIdentityFixture : IAsyncLifetime
     public ShiftIdentityDbContext CreateContext(params Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor[] interceptors) =>
         ContextFactory?.Invoke(BuildOptions(interceptors)) ?? new IdentityTestDbContext(BuildOptions(interceptors));
 
-    public ShiftIdentityDbContext CreateContext(IServiceProvider services)
+    public ShiftIdentityDbContext CreateContext(IServiceProvider services, params Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor[] interceptors)
     {
-        var options = new DbContextOptionsBuilder(BuildOptions()).UseApplicationServiceProvider(services).Options;
+        var options = new DbContextOptionsBuilder(BuildOptions(interceptors)).UseApplicationServiceProvider(services).Options;
         return ContextFactory?.Invoke(options) ?? new IdentityTestDbContext(options);
     }
 

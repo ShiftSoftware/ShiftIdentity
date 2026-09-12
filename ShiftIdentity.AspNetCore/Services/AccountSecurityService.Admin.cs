@@ -1,6 +1,7 @@
 using ShiftSoftware.ShiftIdentity.AspNetCore.Authentication;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.Authentication;
+using ShiftSoftware.ShiftIdentity.Core.Models;
 using ShiftSoftware.ShiftIdentity.Data.Authentication;
 using ShiftSoftware.TypeAuth.Core;
 using static ShiftSoftware.ShiftIdentity.AspNetCore.Authentication.AdmissionRules;
@@ -8,9 +9,19 @@ using static ShiftSoftware.ShiftIdentity.AspNetCore.Authentication.AdmissionRule
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 
 /// <summary>
+/// The operator behind an administrator mutation. A staged v2 session carries its proof (version, time, factor);
+/// a host-authenticated legacy session carries only the user ID, so its checks are limited to current state and
+/// current permission.
+/// </summary>
+internal sealed record AdminActor(long UserID, SignedInContext? Session);
+
+/// <summary>
 /// Administrator account mutations. Each runs under the ordered actor/target admission lock, requires Users.Write
 /// with operator proof younger than five minutes, increments the target's SecurityVersion once and never issues a
-/// session. Operators cannot target themselves, built-in accounts or deleted accounts.
+/// session. Operators cannot target themselves, built-in accounts or deleted accounts. An inactive target accepts
+/// every change: an inactive account holds no session, and correcting it must not require activating it first.
+/// The mutation bodies are shared with the legacy administrator writers, so each security-relevant change has one
+/// implementation.
 /// </summary>
 internal static partial class AccountSecurityService
 {
@@ -21,10 +32,11 @@ internal static partial class AccountSecurityService
         var signedIn = ReadSignedIn(services, authorization);
         if (signedIn is null) return Refuse(AuthenticationFailure.InvalidGrant);
         if (signedIn.Proof.UserID == request.UserID) return Refuse(AuthenticationFailure.ClientDenied);
+        var who = new AdminActor(signedIn.Proof.UserID, signedIn);
         // First admission checks the operator and captures the target credential; the expensive hash runs outside the lock.
-        var read = await services.Store.AdmitAdminAsync(signedIn.Proof.UserID, request.UserID, services.Client, (actor, unit) =>
+        var read = await services.Store.AdmitAdminAsync(who.UserID, request.UserID, services.Client, (actor, unit) =>
         {
-            var refusal = AdminTargetRefusal(services, actor, unit, signedIn);
+            var refusal = AdminTargetRefusal(services, actor, unit, who);
             return Task.FromResult(new SnapshotResult(refusal is null ? new(unit.User, unit.Security, unit.Policy) : null, refusal));
         }, ct);
         if (read.Failure is not null) return read.Failure;
@@ -35,18 +47,16 @@ internal static partial class AccountSecurityService
             return new AuthenticationRefused(AuthenticationFailure.InvalidNewPassword, PasswordPolicyFailure.SameAsCurrent);
         var candidate = HashService.GenerateVersionedHash(request.NewPassword);
         services.Observe?.Invoke("AdminPasswordPrepared");
-        return await services.Store.AdmitAdminAsync<AuthOutcome>(signedIn.Proof.UserID, request.UserID, services.Client, (actor, unit) =>
+        return await services.Store.AdmitAdminAsync<AuthOutcome>(who.UserID, request.UserID, services.Client, (actor, unit) =>
         {
-            var refusal = AdminTargetRefusal(services, actor, unit, signedIn);
+            var refusal = AdminTargetRefusal(services, actor, unit, who);
             if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
             // A credential that changed since the snapshot (self-service change, reset, another operator) is never overwritten.
             if (!SameCredential(snapshot, unit)) return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.StaleOperation));
             var now = services.Clock.GetUtcNow();
-            unit.User.PasswordHash = candidate.PasswordHash;
-            unit.User.Salt = candidate.Salt;
-            unit.User.RequireChangePassword = request.RequireChangeAtNextLogin;
-            unit.Security.SecurityVersion = checked(unit.Security.SecurityVersion + 1);
-            unit.Audit(request.RequireChangeAtNextLogin ? "AdminPasswordSetRequiringChange" : "AdminPasswordSet", now, actorUserID: actor.User.ID);
+            ApplyPassword(unit, candidate, request.RequireChangeAtNextLogin);
+            Bump(unit);
+            unit.Audit(PasswordAudit(request.RequireChangeAtNextLogin), now, actorUserID: actor.User.ID);
             services.Observe?.Invoke("AdminAccountMutation");
             return Task.FromResult<AuthOutcome>(new AdminAccountChanged(AdminAccountChange.Password, true, unit.Security.SecurityVersion));
         }, ct);
@@ -60,19 +70,16 @@ internal static partial class AccountSecurityService
         var signedIn = ReadSignedIn(services, authorization);
         if (signedIn is null) return Refuse(AuthenticationFailure.InvalidGrant);
         if (signedIn.Proof.UserID == request!.UserID) return Refuse(AuthenticationFailure.ClientDenied);
-        return await services.Store.AdmitAdminAsync<AuthOutcome>(signedIn.Proof.UserID, request.UserID, services.Client, async (actor, unit) =>
+        var who = new AdminActor(signedIn.Proof.UserID, signedIn);
+        return await services.Store.AdmitAdminAsync<AuthOutcome>(who.UserID, request.UserID, services.Client, async (actor, unit) =>
         {
-            var refusal = AdminTargetRefusal(services, actor, unit, signedIn);
+            var refusal = AdminTargetRefusal(services, actor, unit, who);
             if (refusal is not null) return refusal;
-            // Uninitialized lookup keys are an operational gap, not something a request silently repairs.
-            if (!RecoveryContact.LookupMatches(unit.User, unit.Security)) return Refuse(AuthenticationFailure.Unavailable);
-            if (string.Equals(unit.User.Username, username, StringComparison.Ordinal))
-                return new AdminAccountChanged(AdminAccountChange.Username, false, unit.Security.SecurityVersion);
-            if (await services.Store.IdentifierInUseAsync(username, unit.User.ID, ct)) return Refuse(AuthenticationFailure.DuplicateIdentifier);
+            var (failure, applied) = await ApplyUsernameAsync(services, unit, username, ct);
+            if (failure is not null) return failure;
+            if (!applied) return new AdminAccountChanged(AdminAccountChange.Username, false, unit.Security.SecurityVersion);
             var now = services.Clock.GetUtcNow();
-            unit.User.Username = username;
-            unit.Security.UsernameLookupKey = RecoveryContact.Key(username);
-            unit.Security.SecurityVersion = checked(unit.Security.SecurityVersion + 1);
+            Bump(unit);
             unit.Audit("AdminUsernameChanged", now, actorUserID: actor.User.ID);
             services.Observe?.Invoke("AdminAccountMutation");
             return new AdminAccountChanged(AdminAccountChange.Username, true, unit.Security.SecurityVersion);
@@ -88,25 +95,22 @@ internal static partial class AccountSecurityService
         var signedIn = ReadSignedIn(services, authorization);
         if (signedIn is null) return Refuse(AuthenticationFailure.InvalidGrant);
         if (signedIn.Proof.UserID == request.UserID) return Refuse(AuthenticationFailure.ClientDenied);
-        var outcome = await services.Store.AdmitAdminAsync<AuthOutcome>(signedIn.Proof.UserID, request.UserID, services.Client, async (actor, unit) =>
+        var who = new AdminActor(signedIn.Proof.UserID, signedIn);
+        var outcome = await services.Store.AdmitAdminAsync<AuthOutcome>(who.UserID, request.UserID, services.Client, async (actor, unit) =>
         {
-            var refusal = AdminTargetRefusal(services, actor, unit, signedIn);
+            var refusal = AdminTargetRefusal(services, actor, unit, who);
             if (refusal is not null) return refusal;
-            if (!RecoveryContact.LookupMatches(unit.User, unit.Security)) return Refuse(AuthenticationFailure.Unavailable);
-            if (RecoveryContact.Key(unit.User.Email) == RecoveryContact.Key(email))
-                return new AdminAccountChanged(AdminAccountChange.Email, false, unit.Security.SecurityVersion);
-            if (email is not null && await services.Store.IdentifierInUseAsync(email, unit.User.ID, ct)) return Refuse(AuthenticationFailure.DuplicateIdentifier);
             var now = services.Clock.GetUtcNow();
-            // Clears verification, advances contact/security versions, records admin-assigned recovery authority and supersedes links.
-            RecoveryContact.ApplyAuthorizedEmailChange(unit, unit.Security.SecurityVersion, unit.Security.ContactRevision, email,
-                RecoveryEmailProvenance.TrustedAdminAssignment, now);
+            var (failure, applied) = await ApplyEmailAsync(services, unit, email, now, ct);
+            if (failure is not null) return failure;
+            if (!applied) return new AdminAccountChanged(AdminAccountChange.Email, false, unit.Security.SecurityVersion);
             unit.Audit("AdminEmailChanged", now, actorUserID: actor.User.ID);
             services.Observe?.Invoke("AdminAccountMutation");
             return new AdminAccountChanged(AdminAccountChange.Email, true, unit.Security.SecurityVersion);
         }, ct);
         if (outcome is not AdminAccountChanged { Applied: true } changed || email is null || !request.SendVerification) return outcome;
         // The contact change has committed. Verification is a separate grant with its own budget, audit and awaited handoff.
-        return changed with { Delivery = await AdminSecurityLinkAsync(services, authorization, request.UserID, AuthenticationOperationPurpose.EmailVerify, ct) };
+        return changed with { Delivery = await AdminSecurityLinkAsync(services, who, request.UserID, AuthenticationOperationPurpose.EmailVerify, ct) };
     });
 
     internal static Task<AuthOutcome> SetActiveAsync(IdentityAdmissionServices services, string? authorization,
@@ -116,21 +120,85 @@ internal static partial class AccountSecurityService
         var signedIn = ReadSignedIn(services, authorization);
         if (signedIn is null) return Refuse(AuthenticationFailure.InvalidGrant);
         if (signedIn.Proof.UserID == request.UserID) return Refuse(AuthenticationFailure.ClientDenied);
-        return await services.Store.AdmitAdminAsync<AuthOutcome>(signedIn.Proof.UserID, request.UserID, services.Client, (actor, unit) =>
+        var who = new AdminActor(signedIn.Proof.UserID, signedIn);
+        return await services.Store.AdmitAdminAsync<AuthOutcome>(who.UserID, request.UserID, services.Client, (actor, unit) =>
         {
-            var refusal = AdminTargetRefusal(services, actor, unit, signedIn, allowInactive: true);
+            var refusal = AdminTargetRefusal(services, actor, unit, who);
             if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
-            if (unit.User.IsActive == request.Active)
+            if (!ApplyStatus(unit, request.Active))
                 return Task.FromResult<AuthOutcome>(new AdminAccountChanged(AdminAccountChange.Active, false, unit.Security.SecurityVersion));
             var now = services.Clock.GetUtcNow();
-            // Re-enabling bumps as well: credentials issued before deactivation never come back.
-            unit.User.IsActive = request.Active;
-            unit.Security.SecurityVersion = checked(unit.Security.SecurityVersion + 1);
+            Bump(unit);
             unit.Audit(request.Active ? "AccountActivated" : "AccountDeactivated", now, actorUserID: actor.User.ID);
             services.Observe?.Invoke("AdminAccountMutation");
             return Task.FromResult<AuthOutcome>(new AdminAccountChanged(AdminAccountChange.Active, true, unit.Security.SecurityVersion));
         }, ct);
     });
+
+    // ── Shared mutation bodies ───────────────────────────────────────────────────────────────────────────────────
+    // Each writes one kind of security-relevant change to the locked unit and nothing else. The caller decides the
+    // version increment and the audit row, so a save that combines several changes increments the version once.
+
+    internal static void ApplyPassword(IdentitySecurityTransaction unit, HashModel candidate, bool requireChangeAtNextLogin)
+    {
+        unit.User.PasswordHash = candidate.PasswordHash;
+        unit.User.Salt = candidate.Salt;
+        unit.User.RequireChangePassword = requireChangeAtNextLogin;
+    }
+
+    internal static string PasswordAudit(bool requireChangeAtNextLogin) =>
+        requireChangeAtNextLogin ? "AdminPasswordSetRequiringChange" : "AdminPasswordSet";
+
+    /// <summary>Renames the account after a range-locked duplicate check. Returns (refusal, applied).</summary>
+    internal static async Task<(AuthenticationRefused? Refusal, bool Applied)> ApplyUsernameAsync(IdentityAdmissionServices services,
+        IdentitySecurityTransaction unit, string username, CancellationToken ct)
+    {
+        // Uninitialized lookup keys are an operational gap, not something a request silently repairs.
+        if (!RecoveryContact.LookupMatches(unit.User, unit.Security)) return (Refuse(AuthenticationFailure.Unavailable), false);
+        if (string.Equals(unit.User.Username, username, StringComparison.Ordinal)) return (null, false);
+        if (await services.Store.IdentifierInUseAsync(username, unit.User.ID, ct)) return (Refuse(AuthenticationFailure.DuplicateIdentifier), false);
+        unit.User.Username = username;
+        unit.Security.UsernameLookupKey = RecoveryContact.Key(username);
+        return (null, true);
+    }
+
+    /// <summary>
+    /// Assigns or removes the saved email with administrator authority: verification is cleared, the contact and
+    /// security versions advance, outstanding links are superseded and the admin-assigned recovery provenance is
+    /// recorded. The version increment happens inside this change. Returns (refusal, applied).
+    /// </summary>
+    internal static async Task<(AuthenticationRefused? Refusal, bool Applied)> ApplyEmailAsync(IdentityAdmissionServices services,
+        IdentitySecurityTransaction unit, string? email, DateTimeOffset now, CancellationToken ct)
+    {
+        email = string.IsNullOrWhiteSpace(email) ? null : email.Trim();
+        if (email is not null && !IsDeliveryAddress(email)) return (Refuse(AuthenticationFailure.InvalidRequest), false);
+        if (!RecoveryContact.LookupMatches(unit.User, unit.Security)) return (Refuse(AuthenticationFailure.Unavailable), false);
+        if (RecoveryContact.Key(unit.User.Email) == RecoveryContact.Key(email)) return (null, false);
+        if (email is not null && await services.Store.IdentifierInUseAsync(email, unit.User.ID, ct)) return (Refuse(AuthenticationFailure.DuplicateIdentifier), false);
+        RecoveryContact.ApplyAuthorizedEmailChange(unit, unit.Security.SecurityVersion, unit.Security.ContactRevision, email,
+            RecoveryEmailProvenance.TrustedAdminAssignment, now);
+        return (null, true);
+    }
+
+    /// <summary>Changes the active status. Re-enabling counts as a change too: credentials issued before deactivation never come back.</summary>
+    internal static bool ApplyStatus(IdentitySecurityTransaction unit, bool active)
+    {
+        if (unit.User.IsActive == active) return false;
+        unit.User.IsActive = active;
+        return true;
+    }
+
+    /// <summary>Replaces the saved phone (already formatted by the caller) and clears its verification.</summary>
+    internal static bool ApplyPhone(IdentitySecurityTransaction unit, string? phone)
+    {
+        if (string.Equals(unit.User.Phone, phone, StringComparison.Ordinal)) return false;
+        unit.User.Phone = phone;
+        unit.User.PhoneVerified = false;
+        return true;
+    }
+
+    internal static void Bump(IdentitySecurityTransaction unit) =>
+        unit.Security.SecurityVersion = checked(unit.Security.SecurityVersion + 1);
 
     /// <summary>
     /// Operator checks shared by every administrator route: current-version session, proof younger than five
@@ -144,17 +212,36 @@ internal static partial class AccountSecurityService
         var now = services.Clock.GetUtcNow();
         if (now < signedIn.Proof.AuthenticatedAt || now >= signedIn.Proof.AuthenticatedAt.AddMinutes(5) || LocalStep(actor, signedIn.Proof.MfaSatisfied) is not null)
             return Refuse(AuthenticationFailure.InvalidProof);
+        return Permitted(actor, permitted) ? null : Refuse(AuthenticationFailure.ClientDenied);
+    }
+
+    /// <summary>
+    /// The same operator checks for either kind of operator. A legacy session has no version or proof time, so only
+    /// current account state, the current policy revision and the current permission can be checked for it.
+    /// </summary>
+    internal static AuthenticationRefused? ActorRefusal(IdentityAdmissionServices services, IdentitySecurityTransaction actor,
+        AdminActor who, Func<TypeAuthContext, bool> permitted)
+    {
+        if (who.Session is { } signedIn) return ActorRefusal(services, actor, signedIn, permitted);
+        if (actor.User.ID != who.UserID) return Refuse(AuthenticationFailure.InvalidGrant);
+        if (!actor.User.IsActive || actor.User.IsDeleted) return Refuse(AuthenticationFailure.AccountUnavailable);
+        if (services.Options.PolicyRevision != actor.Policy.Revision) return Refuse(AuthenticationFailure.Unavailable);
+        return Permitted(actor, permitted) ? null : Refuse(AuthenticationFailure.ClientDenied);
+    }
+
+    private static bool Permitted(IdentitySecurityTransaction actor, Func<TypeAuthContext, bool> permitted)
+    {
         var trees = actor.User.AccessTrees.Select(x => x.AccessTree.Tree).ToList();
         if (!string.IsNullOrWhiteSpace(actor.User.AccessTree)) trees.Add(actor.User.AccessTree);
-        return permitted(new TypeAuthContext(trees, typeof(ShiftIdentityActions))) ? null : Refuse(AuthenticationFailure.ClientDenied);
+        return permitted(new TypeAuthContext(trees, typeof(ShiftIdentityActions)));
     }
 
     private static AuthenticationRefused? AdminTargetRefusal(IdentityAdmissionServices services, IdentitySecurityTransaction actor,
-        IdentitySecurityTransaction unit, SignedInContext signedIn, bool allowInactive = false)
+        IdentitySecurityTransaction unit, AdminActor who)
     {
-        var refusal = ActorRefusal(services, actor, signedIn, permissions => permissions.CanWrite(ShiftIdentityActions.Users));
+        var refusal = ActorRefusal(services, actor, who, permissions => permissions.CanWrite(ShiftIdentityActions.Users));
         if (refusal is not null) return refusal;
-        if (unit.User.IsDeleted || (!allowInactive && !unit.User.IsActive)) return Refuse(AuthenticationFailure.AccountUnavailable);
+        if (unit.User.IsDeleted) return Refuse(AuthenticationFailure.AccountUnavailable);
         return unit.User.IsProtected ? Refuse(AuthenticationFailure.ClientDenied) : null;
     }
 }

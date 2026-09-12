@@ -64,14 +64,15 @@ public static class RecoveryContact
 
     /// <summary>
     /// Applies an already authorized email change inside the caller's admission transaction.
-    /// The caller owns actor permissions and fresh proof. This helper supplies no authentication.
+    /// The caller owns actor permissions, fresh proof and the target's eligibility (for example whether an
+    /// inactive account may be changed). This helper supplies no authentication.
     /// </summary>
     public static bool ApplyAuthorizedEmailChange(IdentitySecurityTransaction unit, long expectedVersion,
         long expectedContactRevision, string? email, RecoveryEmailProvenance provenance, DateTimeOffset now)
     {
         var user = unit.User;
         var security = unit.Security;
-        if (!LookupMatches(user, security) || !user.IsActive || security.SecurityVersion != expectedVersion || security.ContactRevision != expectedContactRevision)
+        if (!LookupMatches(user, security) || user.IsDeleted || security.SecurityVersion != expectedVersion || security.ContactRevision != expectedContactRevision)
             throw new IdentitySecurityConflictException("Contact authority changed.");
         if (provenance is not (RecoveryEmailProvenance.TrustedAdminAssignment or RecoveryEmailProvenance.AuthenticatedContactChange))
             throw new ArgumentException("A contact change requires existing assignment or authentication authority.");

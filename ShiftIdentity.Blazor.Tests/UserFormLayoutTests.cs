@@ -10,7 +10,7 @@ namespace ShiftIdentity.Blazor.Tests;
 /// The production User form groups related fields into titled sections, so the password and email choices sit with
 /// the fields they qualify instead of somewhere down one long column.
 /// </summary>
-[Trait("Category", "Ui")]
+[Trait("Category", "Ui"), Collection("User form")]
 public sealed class UserFormLayoutTests
 {
     private static readonly string[] SectionOrder = ["user-section-profile", "user-section-security", "user-section-contacts", "user-section-permissions"];

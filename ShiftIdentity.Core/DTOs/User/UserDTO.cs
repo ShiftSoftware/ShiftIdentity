@@ -79,11 +79,16 @@ public class UserValidator : AbstractValidator<UserDTO>
 {
     public UserValidator(ShiftIdentityLocalizer localizer)
     {
+        // The same policy the staged authority applies when it stores the password: 15–128 code points, no control
+        // characters, not a common password and not based on the username. There are no composition rules.
         RuleFor(x => x.Password)
-            .MinimumLength(6).WithMessage(localizer["The password must be at least n characters long", 6])
-            .MaximumLength(255).WithMessage(localizer["Your input cannot be more than 255 characters"])
-            .Matches(@"^(?=.*[0-9]).+$").WithMessage(localizer["The password must contain at least one digit"])
-            .Must(HaveRequiredUniqueChars).WithMessage(localizer["The password must contain at least 3 unique characters"])
+            .Custom((password, context) =>
+            {
+                if (new Authentication.NewPasswordPolicy().Validate(password, context.InstanceToValidate.Username ?? "") is { } failure)
+                    context.AddFailure(failure == Authentication.PasswordPolicyFailure.TooShort
+                        ? localizer["The password must be at least n characters long", Authentication.NewPasswordPolicy.MinimumLength]
+                        : localizer[Authentication.NewPasswordPolicy.Describe(failure)]);
+            })
             .When(x => !string.IsNullOrWhiteSpace(x.Password));
 
         RuleFor(x => x.Username)
@@ -117,8 +122,4 @@ public class UserValidator : AbstractValidator<UserDTO>
             .NotNull().WithMessage(localizer["Please select", localizer["Company Branch"]]);
     }
 
-    private bool HaveRequiredUniqueChars(string password)
-    {
-        return password.Distinct().Count() >= 3;
-    }
 }

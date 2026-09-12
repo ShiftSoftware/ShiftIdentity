@@ -34,7 +34,7 @@ public sealed class IdentityHttpHost : IDisposable
         var publicKey = new RsaSecurityKey(rsa.ExportParameters(false));
         server = new TestServer(new WebHostBuilder().UseEnvironment("Testing").ConfigureServices(services =>
         {
-            AddAdmissionServices(services, fixture, client, observe, interceptors);
+            AddAdmissionServices(services, fixture, client, observe, interceptors: interceptors);
             services.AddAuthentication().AddJwtBearer("FixtureResource", options =>
                 options.TokenValidationParameters = new()
                 {
@@ -66,14 +66,16 @@ public sealed class IdentityHttpHost : IDisposable
         return (verifier, WebEncoders.Base64UrlEncode(SHA256.HashData(System.Text.Encoding.ASCII.GetBytes(verifier))));
     }
 
-    // Shared test infrastructure also supports StockPlusPlus's explicitly enabled local preview.
+    // Shared test infrastructure also supports StockPlusPlus's explicitly enabled local preview. A host that
+    // registers its own ShiftIdentityDbContext (the legacy dashboard host) passes registerContext: false, so the
+    // staged store and the legacy repository share the one scoped context.
     public static void AddAdmissionServices(IServiceCollection services, SqlIdentityFixture fixture,
-        AuthenticationClient? client = null, Action<string>? observe = null,
+        AuthenticationClient? client = null, Action<string>? observe = null, bool registerContext = true,
         params Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor[] interceptors)
     {
         client ??= new("test-client", "test-api");
         services.AddRouting();
-        services.AddScoped(_ => fixture.CreateContext(interceptors));
+        if (registerContext) services.AddScoped(_ => fixture.CreateContext(interceptors));
         services.AddScoped<IIdentitySecurityStore, SqlIdentitySecurityStore>();
         if (fixture.EmailSink is { } sink) services.TryAddSingleton<ISecurityEmailSink>(sink);
         services.AddScoped(sp => new IdentityAdmissionServices(

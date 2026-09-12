@@ -5,12 +5,16 @@ using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftIdentity.Core;
+using ShiftSoftware.ShiftIdentity.Core.Authentication;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.UserManager;
+using ShiftSoftware.ShiftIdentity.Data.Authentication;
 using ShiftSoftware.ShiftIdentity.Data.Entities;
 using ShiftSoftware.ShiftIdentity.Data.IRepositories;
 using ShiftSoftware.ShiftIdentity.Core.Localization;
+using ShiftSoftware.ShiftIdentity.Data.Services;
 using ShiftSoftware.TypeAuth.Core;
+using System.Data;
 using System.Net;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
@@ -20,6 +24,10 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 // endpoints (UserEndpoints) + auth/account flows call. The heavy upsert moved to the User entity's
 // IUpsertsShiftRepository hook; the mapper config lives in the base-ctor builder below. No UpsertAsync/DeleteAsync
 // overrides — feature-lock + protected guard are central (Phase 0).
+//
+// With the staged authority registered (IUserAccountAuthority), every sensitive change collected by the hooks and
+// the bulk methods is admitted inside this repository's save transaction, just before the flush. One transaction
+// then commits the ordinary edits, the security changes, the version increments and the audit rows together.
 public class UserRepository :
     ShiftRepository<ShiftIdentityDbContext, User, UserListDTO, UserDTO>,
     IUserRepository
@@ -27,17 +35,24 @@ public class UserRepository :
     private readonly ITypeAuthService typeAuthService;
     private readonly ShiftIdentityLocalizer Loc;
     private readonly ShiftIdentityConfiguration configuration;
+    private readonly IUserAccountAuthority? authority;
 
     // Work the upsert hook defers until the save has committed (the verification email for a new address). It runs
     // after base.SaveChangesAsync() returns, i.e. outside the repository transaction, and is discarded if the save
     // throws. Each item is responsible for its own failure handling; nothing here can fail an already committed save.
     private readonly List<Func<Task>> afterSaveWork = [];
 
+    // Security changes waiting for admission in the next save, and rows created by that save whose security state
+    // must be recorded once their IDs exist. Both are cleared whether the save commits or fails.
+    private readonly List<UserAccountChange> pendingChanges = [];
+    private readonly List<UserAccountCreation> pendingCreations = [];
+
     public UserRepository(ShiftIdentityDbContext db,
         ITypeAuthService typeAuthService,
         ShiftIdentityDefaultDataLevelAccessOptions shiftIdentityDefaultDataLevelAccessOptions,
         ShiftIdentityLocalizer Loc,
-        ShiftIdentityConfiguration configuration) : base(db, r =>
+        ShiftIdentityConfiguration configuration,
+        IUserAccountAuthority? authority = null) : base(db, r =>
     {
         r.IncludeRelatedEntitiesWithFindAsync(
             x => x.Include(y => y.AccessTrees).ThenInclude(y => y.AccessTree),
@@ -57,9 +72,12 @@ public class UserRepository :
             .IgnoreView(d => d.RequireChangeAtNextLogin) // per-save form choice; no entity source, keeps its default (on)
             .IgnoreView(d => d.SendVerification) // per-save form choice; no entity source, keeps its default (on)
 
-            // ── ENTITY (write) ── Base() maps Username/IsActive/FullName/BirthDate; the hook owns Email/Phone/AccessTree/
-            // password/CompanyBranch-derivation/UserAccessTrees, so those are Ignore'd (or ForEntity'd) here.
+            // ── ENTITY (write) ── Base() maps FullName/BirthDate; the hook owns Username/IsActive/Email/Phone/
+            // AccessTree/password/CompanyBranch-derivation/UserAccessTrees (or hands them to the staged authority), so
+            // those are Ignore'd (or ForEntity'd) here.
             .ForEntity(e => e.IntegrationId, dto => string.IsNullOrWhiteSpace(dto.IntegrationId) ? null : dto.IntegrationId)
+            .IgnoreEntity(e => e.Username)
+            .IgnoreEntity(e => e.IsActive)
             .IgnoreEntity(e => e.Email)
             .IgnoreEntity(e => e.Phone)
             .IgnoreEntity(e => e.AccessTree)
@@ -78,8 +96,12 @@ public class UserRepository :
         this.typeAuthService = typeAuthService;
         this.Loc = Loc;
         this.configuration = configuration;
+        this.authority = authority;
         this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
     }
+
+    /// <summary>True when this host registered the staged authority; sensitive changes are then admitted, never written directly.</summary>
+    public bool UsesAuthority => authority is not null;
 
     /// <summary>
     /// Registers work that runs once the next <see cref="SaveChangesAsync"/> has committed — outside the repository
@@ -87,6 +109,35 @@ public class UserRepository :
     /// itself. The work is dropped when the save fails and must handle its own errors.
     /// </summary>
     public void RunAfterSave(Func<Task> work) => afterSaveWork.Add(work);
+
+    /// <summary>Queues a sensitive change for admission by the staged authority in the next save.</summary>
+    public void RequireAdmission(UserAccountChange change)
+    {
+        if (authority is null)
+            throw new InvalidOperationException("The staged authority is not registered in this host.");
+
+        pendingChanges.Add(change);
+    }
+
+    /// <summary>Queues a created user whose security state the staged authority records in the next save.</summary>
+    public void RequireCreation(UserAccountCreation creation)
+    {
+        if (authority is null)
+            throw new InvalidOperationException("The staged authority is not registered in this host.");
+
+        pendingCreations.Add(creation);
+    }
+
+    /// <summary>
+    /// After the commit: requests the verification link through the staged delivery path and reports the outcome to
+    /// the caller through the response envelope, so the form learns whether the host accepted the message.
+    /// </summary>
+    public async Task ReportVerificationAsync(IUserAccountAuthority authority, long userID)
+    {
+        var outcome = await authority.RequestVerificationAsync(userID, CancellationToken.None);
+        AdditionalResponseData ??= new Dictionary<string, object>();
+        AdditionalResponseData["EmailVerification"] = outcome.ToString();
+    }
 
     /// <summary>
     /// Builds the user's effective/combined access tree by unioning their user-specific
@@ -138,7 +189,8 @@ public class UserRepository :
         if (user is null)
             return null;
 
-        if (!HashService.VerifyPassword(dto.CurrentPassword, user.Salt, user.PasswordHash))
+        // Both credential formats verify: the legacy HMAC and the versioned adaptive hash the staged writers store.
+        if (!HashService.VerifyVersionedPassword(dto.CurrentPassword, user.Salt, user.PasswordHash))
             throw new ShiftEntityException(new Message(Loc["Validation Error"], Loc["Current Password is incorrect"]));
 
         if (dto.CurrentPassword == dto.NewPassword)
@@ -197,12 +249,16 @@ public class UserRepository :
 
         try
         {
-            result = await base.SaveChangesAsync();
+            result = authority is null || (pendingChanges.Count == 0 && pendingCreations.Count == 0)
+                ? await base.SaveChangesAsync()
+                : await SaveAdmittedAsync(authority);
         }
         catch
         {
             // Nothing was committed, so nothing may be sent for it.
             afterSaveWork.Clear();
+            pendingChanges.Clear();
+            pendingCreations.Clear();
             throw;
         }
 
@@ -218,9 +274,63 @@ public class UserRepository :
         return result;
     }
 
+    // One transaction: admission (locks, current-state checks, version increments, audit rows) → the ordinary flush →
+    // the security state of created rows → commit. A refusal or a failure at any stage leaves nothing committed.
+    private async Task<int> SaveAdmittedAsync(IUserAccountAuthority authority)
+    {
+        var changes = pendingChanges.ToArray();
+        var creations = pendingCreations.ToArray();
+        pendingChanges.Clear();
+        pendingCreations.Clear();
+
+        // A caller that already opened a transaction keeps it; otherwise this save owns one.
+        var owned = db.Database.CurrentTransaction is null
+            ? await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted)
+            : null;
+
+        try
+        {
+            if (changes.Length > 0)
+                await authority.AdmitAsync(db, changes, CancellationToken.None);
+
+            var result = await base.SaveChangesAsync();
+
+            if (creations.Length > 0)
+                await authority.RegisterCreatedAsync(db, creations, CancellationToken.None);
+
+            if (owned is not null)
+                await owned.CommitAsync();
+
+            return result;
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // A row this save relied on changed after it was loaded; the locks make this rare, and nothing was kept.
+            throw new ShiftEntityException(new Message(Loc["Conflict"], Loc["This user changed meanwhile. Reload the user and try again."]), (int)HttpStatusCode.Conflict);
+        }
+        catch (IdentitySecurityConflictException)
+        {
+            throw new ShiftEntityException(new Message(Loc["Conflict"], Loc["This user changed meanwhile. Reload the user and try again."]), (int)HttpStatusCode.Conflict);
+        }
+        catch (IdentitySecurityUnavailableException)
+        {
+            throw new ShiftEntityException(new Message(Loc["Error"], Loc["The change could not be saved. Please wait and try again."]), (int)HttpStatusCode.ServiceUnavailable);
+        }
+        finally
+        {
+            if (owned is not null)
+                await owned.DisposeAsync();
+        }
+    }
+
     public IEnumerable<UserInfoDTO> AssignRandomPasswords(List<User> users, int passwordLength, bool enforceChange)
     {
         var userInfos = new List<UserInfoDTO>();
+
+        // The staged authority applies the shared new-password policy, so a generated password must satisfy it.
+        if (authority is not null && passwordLength < NewPasswordPolicy.MinimumLength)
+            throw new ShiftEntityException(new Message(Loc["Validation Error"],
+                Loc["The password length must be at least {0}", NewPasswordPolicy.MinimumLength]));
 
         foreach (var user in users)
         {
@@ -229,13 +339,26 @@ public class UserRepository :
 
             var password = PasswordGenerator.GeneratePassword(passwordLength);
 
-            var hash = HashService.GenerateHash(password);
+            if (authority is null)
+            {
+                var hash = HashService.GenerateHash(password);
 
-            user.PasswordHash = hash.PasswordHash;
-            user.Salt = hash.Salt;
+                user.PasswordHash = hash.PasswordHash;
+                user.Salt = hash.Salt;
 
-            //Set flag to enforce password change
-            user.RequireChangePassword = enforceChange;
+                //Set flag to enforce password change
+                user.RequireChangePassword = enforceChange;
+            }
+            else
+            {
+                // Hashed here, outside the save transaction; the credential is written only when the save admits it.
+                RequireAdmission(new UserAccountChange
+                {
+                    User = user,
+                    Password = HashService.GenerateVersionedHash(password),
+                    RequireChangeAtNextLogin = enforceChange
+                });
+            }
 
             var userInfo = user.ToInfoDTO();
             userInfo.PlainTextPassword = password;
@@ -252,8 +375,13 @@ public class UserRepository :
             if (user.IsProtected)
                 continue;
 
-            if (!string.IsNullOrWhiteSpace(user.Phone))
+            if (string.IsNullOrWhiteSpace(user.Phone) || user.PhoneVerified)
+                continue;
+
+            if (authority is null)
                 user.PhoneVerified = true;
+            else
+                RequireAdmission(new UserAccountChange { User = user, VerifyPhone = true });
         }
 
         return users;
@@ -301,7 +429,8 @@ public class UserRepository :
 
             // Routes through the base UpsertAsync → the User entity's IUpsertsShiftRepository hook → Base(). Base()
             // maps + audits + guards but does NOT dbSet.Add (only the CRUD handler does), so the explicit Add below
-            // is still required for this direct call.
+            // is still required for this direct call. With the staged authority the hook also queues the created row,
+            // so its security state is recorded in the same save.
             var user = await UpsertAsync(new User(), userDto, ActionTypes.Insert, userId: null, idempotencyKey: null, disableDefaultDataLevelAccess: false, disableGlobalFilters: false);
             user.EmailVerified = true;
 

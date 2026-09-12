@@ -63,15 +63,23 @@ internal static partial class AccountSecurityService
     });
 
     internal static Task<AuthOutcome> AdminSecurityLinkAsync(IdentityAdmissionServices services, string? authorization,
+        long userID, AuthenticationOperationPurpose purpose, CancellationToken ct)
+    {
+        var signedIn = ReadSignedIn(services, authorization);
+        return signedIn is null ? Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.InvalidGrant))
+            : AdminSecurityLinkAsync(services, new AdminActor(signedIn.Proof.UserID, signedIn), userID, purpose, ct);
+    }
+
+    /// <summary>Issues a reset or verification grant for a target on behalf of an operator; shared by the staged routes and the legacy adapter.</summary>
+    internal static Task<AuthOutcome> AdminSecurityLinkAsync(IdentityAdmissionServices services, AdminActor who,
         long userID, AuthenticationOperationPurpose purpose, CancellationToken ct) => AtBoundary(async () =>
     {
         if (userID <= 0 || !IsSecurityLink(purpose)) return Refuse(AuthenticationFailure.InvalidRequest);
-        var signedIn = ReadSignedIn(services, authorization);
-        if (signedIn is null) return Refuse(AuthenticationFailure.InvalidGrant);
+        if (who.UserID == userID) return Refuse(AuthenticationFailure.ClientDenied);
         SecurityEmail? message = null;
-        var outcome = await services.Store.AdmitAdminAsync<AuthOutcome>(signedIn.Proof.UserID, userID, services.Client, (actor, unit) =>
+        var outcome = await services.Store.AdmitAdminAsync<AuthOutcome>(who.UserID, userID, services.Client, (actor, unit) =>
         {
-            var refusal = ActorRefusal(services, actor, signedIn, permissions => permissions.CanWrite(ShiftIdentityActions.Users));
+            var refusal = ActorRefusal(services, actor, who, permissions => permissions.CanWrite(ShiftIdentityActions.Users));
             if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
             return Task.FromResult(CreateSecurityLink(services, unit, purpose, out message, actor.User.ID));
         }, ct);

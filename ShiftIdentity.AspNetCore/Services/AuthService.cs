@@ -6,6 +6,7 @@ using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 using ShiftSoftware.ShiftIdentity.Core.Enums;
+using ShiftSoftware.ShiftIdentity.Data.Entities;
 using ShiftSoftware.ShiftIdentity.Data.IRepositories;
 using ShiftSoftware.ShiftIdentity.Core.Localization;
 using System.Security.Claims;
@@ -48,7 +49,8 @@ public partial class AuthService
         if (user is null)
             return new LoginResultModel(LoginResultEnum.UsernameIncorrect, Loc["Username or password is incorrect"]);
 
-        if (!HashService.VerifyPassword(loginDto.Password, user.Salt, user.PasswordHash))
+        // Both credential formats verify: the legacy HMAC and the versioned adaptive hash the staged writers store.
+        if (!HashService.VerifyVersionedPassword(loginDto.Password, user.Salt, user.PasswordHash))
         {
             //If password is incorrect update logigattempts
             user.LoginAttempts++;
@@ -89,6 +91,19 @@ public partial class AuthService
 
         TokenDTO tokenDTO = tokenService.IssueLoginToken(user);
         return new LoginResultModel(tokenDTO);
+    }
+
+    /// <summary>
+    /// The only issuance entry point for the dashboard's legacy flows (password change, enrollment confirmation).
+    /// It applies the eligibility TokenService alone never checked: an inactive or deleted user gets no credential.
+    /// Forced password change and the MFA policy still decide which token kind is issued.
+    /// </summary>
+    public TokenDTO? IssueLoginToken(User user, bool mfaSatisfiedThisSession = false)
+    {
+        if (user is null || !user.IsActive || user.IsDeleted)
+            return null;
+
+        return tokenService.IssueLoginToken(user, mfaSatisfiedThisSession);
     }
 
     public async Task<TokenDTO?> GenrerateExternalTokenWithAppIdOnly(GenerateExternalTokenWithAppIdOnlyDTO dto)

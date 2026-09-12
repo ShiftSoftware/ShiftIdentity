@@ -1,4 +1,4 @@
-using ShiftSoftware.ShiftIdentity.Data.Mappers;
+﻿using ShiftSoftware.ShiftIdentity.Data.Mappers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -19,7 +19,7 @@ using System;
 using System.Collections.Generic;
 using System.Security.Claims;
 using TotpService = ShiftSoftware.ShiftIdentity.AspNetCore.Services.TotpService;
-using AuthTokenService = ShiftSoftware.ShiftIdentity.AspNetCore.Services.TokenService;
+using AuthService = ShiftSoftware.ShiftIdentity.AspNetCore.Services.AuthService;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Endpoints;
 
@@ -74,9 +74,10 @@ internal static class UserManagerEndpoints
             })
             .RequireAuthorization();
 
-        // PUT api/UserManager/ChangePassword — step-up (ChangePassword purpose). Returns a fresh login token.
+        // PUT api/UserManager/ChangePassword — step-up (ChangePassword purpose). Returns a fresh login token issued by
+        // the coordinator, which also refuses an inactive or deleted user.
         app.MapPut("api/UserManager/ChangePassword",
-            async (ChangePasswordDTO dto, IClaimService claimService, UserRepository userRepo, AuthTokenService authTokenService) =>
+            async (ChangePasswordDTO dto, IClaimService claimService, UserRepository userRepo, AuthService authService) =>
             {
                 var loginUser = claimService.GetUser();
                 User? user;
@@ -95,8 +96,11 @@ internal static class UserManagerEndpoints
 
                 await userRepo.SaveChangesAsync();
 
-                var token = authTokenService.IssueLoginToken(user);
-                return Results.Ok(new ShiftEntityResponse<TokenDTO>(token!));
+                var token = authService.IssueLoginToken(user);
+                if (token is null)
+                    return Results.BadRequest(new ShiftEntityResponse<TokenDTO> { Message = new Message { Body = "The user is deactivated" } });
+
+                return Results.Ok(new ShiftEntityResponse<TokenDTO>(token));
             })
             .RequireAuthorization(StepUpPolicy.For(AuthPurpose.ChangePassword, allowAccessToken: true));
 
@@ -269,7 +273,7 @@ internal static class UserManagerEndpoints
         // POST api/UserManager/ConfirmTotpEnrollment — step-up (MfaEnrollment). Validates the code + persists.
         app.MapPost("api/UserManager/ConfirmTotpEnrollment",
             async (TotpDTO dto, HttpContext httpContext, UserRepository userRepo, IHashIdService hashIdService,
-                   TotpService totpService, AuthTokenService authTokenService, ShiftIdentityConfiguration options) =>
+                   TotpService totpService, AuthService authService, ShiftIdentityConfiguration options) =>
             {
                 var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (userId is null)
@@ -282,9 +286,15 @@ internal static class UserManagerEndpoints
                 if (totpService.Validate(dto.Code, dto.Secret))
                 {
                     var user = await userRepo.SetTotpSecret(totpService.DecodeSecret(dto.Secret), hashIdService.Decode<UserDTO>(userId));
+                    if (user is null)
+                        return Results.BadRequest(new ShiftEntityResponse<UserDataDTO> { Message = new Message { Body = "User not found!" } });
+
                     await userRepo.SaveChangesAsync();
-                    var token = authTokenService.IssueLoginToken(user, true);
-                    return Results.Ok(new ShiftEntityResponse<TokenDTO>(token!));
+                    var token = authService.IssueLoginToken(user, true);
+                    if (token is null)
+                        return Results.BadRequest(new ShiftEntityResponse<TokenDTO> { Message = new Message { Body = "The user is deactivated" } });
+
+                    return Results.Ok(new ShiftEntityResponse<TokenDTO>(token));
                 }
 
                 return Results.BadRequest(new ShiftEntityResponse<UserDataDTO> { Message = new Message { Body = "Invalid code." } });

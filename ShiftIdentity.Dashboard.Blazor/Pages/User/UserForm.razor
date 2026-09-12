@@ -107,7 +107,7 @@ else
                                    Class="flex-shrink-0"
                                    StartIcon="@Icons.Material.Filled.Autorenew"
                                    Disabled="@(context.ReadOnly || context.Disabled)"
-                                   OnClick="() => context.Item.Password = PasswordGenerator.GeneratePassword(8)">@Loc["Generate password"]</MudButton>
+                                   OnClick="() => context.Item.Password = PasswordGenerator.GeneratePassword(GeneratedPasswordLength)">@Loc["Generate password"]</MudButton>
                     </MudStack>
                 </MudItem>
 
@@ -247,6 +247,9 @@ else
     public object? Key { get; set; }
 
     private UserDTO _theItem = new();
+
+    // The generated password must satisfy the shared new-password policy (at least 15 code points).
+    private const int GeneratedPasswordLength = 16;
 
     private bool ready = false;
 

@@ -18,9 +18,9 @@ public sealed partial class SqlIdentitySecurityStore
         if (key.Length is 0 or > 255) return true;
         try
         {
-            var usernames = await db.Set<UserSecurityState>().FromSqlInterpolated($"SELECT * FROM [ShiftIdentity].[UserSecurityStates] WITH (HOLDLOCK, INDEX(IX_UserSecurityStates_UsernameLookupKey)) WHERE [UsernameLookupKey] = {key}")
+            var usernames = await Hinted<UserSecurityState>("HOLDLOCK", nameof(UserSecurityState.UsernameLookupKey), key, indexOn: nameof(UserSecurityState.UsernameLookupKey))
                 .AsNoTracking().ToArrayAsync(ct);
-            var emails = await db.Set<UserSecurityState>().FromSqlInterpolated($"SELECT * FROM [ShiftIdentity].[UserSecurityStates] WITH (HOLDLOCK, INDEX(IX_UserSecurityStates_EmailLookupKey)) WHERE [EmailLookupKey] = {key}")
+            var emails = await Hinted<UserSecurityState>("HOLDLOCK", nameof(UserSecurityState.EmailLookupKey), key, indexOn: nameof(UserSecurityState.EmailLookupKey))
                 .AsNoTracking().ToArrayAsync(ct);
             if (usernames.Concat(emails).Any(x => x.UserID != exceptUserID)) return true;
             var trimmed = value.Trim();

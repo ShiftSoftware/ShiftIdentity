@@ -1,6 +1,8 @@
 using System.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
+using ShiftSoftware.ShiftIdentity.Data.Entities;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Authentication;
 
@@ -10,6 +12,9 @@ namespace ShiftSoftware.ShiftIdentity.Data.Authentication;
 /// </summary>
 public sealed partial class SqlIdentitySecurityStore(ShiftIdentityDbContext db) : IIdentitySecurityStore
 {
+    /// <summary>True when this store works on the given context instance. The legacy writers must share one context.</summary>
+    public bool Shares(DbContext context) => ReferenceEquals(db, context);
+
     public async Task<IdentityProofSnapshot?> ReadProofAsync(string username, AuthenticationClient client, CancellationToken ct)
     {
         try
@@ -40,6 +45,20 @@ public sealed partial class SqlIdentitySecurityStore(ShiftIdentityDbContext db) 
         Func<IdentitySecurityTransaction, IdentitySecurityTransaction, Task<T>> transition, CancellationToken ct) =>
         AdmitUsersAsync([actorID, userID], userID, null, client, units => transition(units[actorID], units[userID]), ct);
 
+    public async Task<IReadOnlyDictionary<long, IdentitySecurityTransaction>> AdmitWithinAsync(IEnumerable<long> userIDs,
+        AuthenticationClient client, CancellationToken ct)
+    {
+        if (db.Database.CurrentTransaction is null)
+            throw new InvalidOperationException("Admission inside a caller's transaction requires that transaction to be open.");
+        try
+        {
+            // The caller's tracked rows stay tracked: the same instances receive the admitted changes and one flush
+            // writes them with the caller's own edits. Nothing is committed here.
+            return await LoadUnitsAsync(userIDs.ToArray(), null, null, client, requireClient: true, reuseTracked: true, ct);
+        }
+        catch (SqlException e) { throw new IdentitySecurityUnavailableException("Security transaction unavailable.", e); }
+    }
+
     private async Task<T> AdmitUsersAsync<T>(long[] userIDs, long targetID, Guid? operationID, AuthenticationClient client,
         Func<Dictionary<long, IdentitySecurityTransaction>, Task<T>> transition, CancellationToken ct, bool requireClient = true)
     {
@@ -49,39 +68,7 @@ public sealed partial class SqlIdentitySecurityStore(ShiftIdentityDbContext db) 
         try
         {
             await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
-            var policy = await db.Set<AuthenticationPolicyState>()
-                .FromSqlRaw("SELECT * FROM [ShiftIdentity].[AuthenticationPolicyStates] WITH (HOLDLOCK) WHERE [ID] = 1")
-                .SingleOrDefaultAsync(ct)
-                ?? throw new IdentitySecurityUnavailableException("Identity policy state is missing.");
-            var app = await db.Apps.FromSqlInterpolated(
-                $"SELECT * FROM [ShiftIdentity].[Apps] WITH (HOLDLOCK) WHERE [AppId] = {client.ID}")
-                .IgnoreQueryFilters().SingleOrDefaultAsync(ct);
-            if (requireClient && (app is null || app.IsDeleted))
-                throw new IdentitySecurityConflictException("Client unavailable.");
-            var units = new Dictionary<long, IdentitySecurityTransaction>();
-            // Actor and target locks have a stable order, including requests that target each other.
-            foreach (var userID in userIDs.Distinct().Order())
-            {
-                var security = await db.Set<UserSecurityState>().FromSqlInterpolated(
-                    $"SELECT * FROM [ShiftIdentity].[UserSecurityStates] WITH (UPDLOCK, HOLDLOCK) WHERE [UserID] = {userID}")
-                    .SingleOrDefaultAsync(ct)
-                    ?? throw new IdentitySecurityUnavailableException("User security state is missing.");
-                var user = await db.Users.IgnoreQueryFilters()
-                    .Include(x => x.Company).Include(x => x.CompanyBranch)
-                    .Include(x => x.TeamUsers).Include(x => x.AccessTrees).ThenInclude(x => x.AccessTree)
-                    .SingleOrDefaultAsync(x => x.ID == userID, ct)
-                    ?? throw new IdentitySecurityUnavailableException("User is missing.");
-                var operation = userID != targetID || operationID is null ? null
-                    : await db.Set<AuthenticationOperation>().SingleOrDefaultAsync(x => x.ID == operationID, ct);
-                var recoveryFamily = security.MfaRecoveryOperationID is { } root
-                    ? await db.Set<AuthenticationOperation>().Where(x => x.UserID == userID && (x.ID == root || x.ParentID == root)).ToListAsync(ct)
-                    : [];
-                var links = await db.Set<AuthenticationOperation>().Where(x => x.UserID == userID && x.OutstandingLinkSlot != null).ToListAsync(ct);
-                var unit = new IdentitySecurityTransaction(user, security, policy, operation,
-                    value => db.Set<AuthenticationOperation>().Add(value),
-                    value => db.Set<AuthenticationAuditEvent>().Add(value), recoveryFamily, links);
-                units.Add(userID, unit);
-            }
+            var units = await LoadUnitsAsync(userIDs, targetID, operationID, client, requireClient, reuseTracked: false, ct);
             var result = await transition(units);
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
@@ -92,6 +79,67 @@ public sealed partial class SqlIdentitySecurityStore(ShiftIdentityDbContext db) 
         catch (SqlException e) { throw new IdentitySecurityUnavailableException("Security transaction unavailable.", e); }
         catch (IOException e) { throw new IdentitySecurityUnavailableException("Security commit outcome unavailable.", e); }
         finally { db.ChangeTracker.Clear(); }
+    }
+
+    // The one lock order for every security writer: policy, App, then users in ascending ID order, and for each user
+    // its security state before its operation, recovery family and link rows.
+    private async Task<Dictionary<long, IdentitySecurityTransaction>> LoadUnitsAsync(long[] userIDs, long? targetID, Guid? operationID,
+        AuthenticationClient client, bool requireClient, bool reuseTracked, CancellationToken ct)
+    {
+        var policy = await Hinted<AuthenticationPolicyState>("HOLDLOCK", nameof(AuthenticationPolicyState.ID), 1)
+            .SingleOrDefaultAsync(ct)
+            ?? throw new IdentitySecurityUnavailableException("Identity policy state is missing.");
+        var app = await Hinted<App>("HOLDLOCK", nameof(App.AppId), client.ID)
+            .IgnoreQueryFilters().SingleOrDefaultAsync(ct);
+        if (requireClient && (app is null || app.IsDeleted))
+            throw new IdentitySecurityConflictException("Client unavailable.");
+        var units = new Dictionary<long, IdentitySecurityTransaction>();
+        // Actor and target locks have a stable order, including requests that target each other.
+        foreach (var userID in userIDs.Distinct().Order())
+        {
+            var security = await Hinted<UserSecurityState>("UPDLOCK, HOLDLOCK", nameof(UserSecurityState.UserID), userID)
+                .SingleOrDefaultAsync(ct)
+                ?? throw new IdentitySecurityUnavailableException("User security state is missing.");
+            var user = reuseTracked ? db.ChangeTracker.Entries<User>().FirstOrDefault(x => x.Entity.ID == userID)?.Entity : null;
+            user ??= await db.Users.IgnoreQueryFilters()
+                .Include(x => x.Company).Include(x => x.CompanyBranch)
+                .Include(x => x.TeamUsers).Include(x => x.AccessTrees).ThenInclude(x => x.AccessTree)
+                .SingleOrDefaultAsync(x => x.ID == userID, ct)
+                ?? throw new IdentitySecurityUnavailableException("User is missing.");
+            var operation = userID != targetID || operationID is null ? null
+                : await db.Set<AuthenticationOperation>().SingleOrDefaultAsync(x => x.ID == operationID, ct);
+            var recoveryFamily = security.MfaRecoveryOperationID is { } root
+                ? await db.Set<AuthenticationOperation>().Where(x => x.UserID == userID && (x.ID == root || x.ParentID == root)).ToListAsync(ct)
+                : [];
+            var links = await db.Set<AuthenticationOperation>().Where(x => x.UserID == userID && x.OutstandingLinkSlot != null).ToListAsync(ct);
+            var unit = new IdentitySecurityTransaction(user, security, policy, operation,
+                value => db.Set<AuthenticationOperation>().Add(value),
+                value => db.Set<AuthenticationAuditEvent>().Add(value), recoveryFamily, links);
+            units.Add(userID, unit);
+        }
+        return units;
+    }
+
+    /// <summary>
+    /// The single place that builds a hinted single-row read. The schema, table, column and index names come from
+    /// the EF model, so a mapping change cannot leave a literal behind; the value is always a parameter.
+    /// </summary>
+    private IQueryable<T> Hinted<T>(string hints, string property, object value, string? indexOn = null) where T : class
+    {
+        var entity = db.Model.FindEntityType(typeof(T)) ?? throw new InvalidOperationException($"{typeof(T).Name} is not part of this model.");
+        var tableName = entity.GetTableName() ?? throw new InvalidOperationException($"{typeof(T).Name} has no table.");
+        var schema = entity.GetSchema() ?? db.Model.GetDefaultSchema() ?? "dbo";
+        var table = StoreObjectIdentifier.Table(tableName, entity.GetSchema());
+        var column = entity.FindProperty(property)?.GetColumnName(table)
+            ?? throw new InvalidOperationException($"{typeof(T).Name}.{property} has no column.");
+        var hint = hints;
+        if (indexOn is not null)
+        {
+            var index = entity.GetIndexes().SingleOrDefault(x => x.Properties.Count == 1 && x.Properties[0].Name == indexOn)?.GetDatabaseName(table)
+                ?? throw new InvalidOperationException($"{typeof(T).Name}.{indexOn} has no single-column index.");
+            hint = $"{hints}, INDEX({index})";
+        }
+        return db.Set<T>().FromSqlRaw($"SELECT * FROM [{schema}].[{tableName}] WITH ({hint}) WHERE [{column}] = {{0}}", value);
     }
 
     /// <summary>Clears expired protected payloads under the same user lock; removes old terminal tombstones in bounded batches.</summary>

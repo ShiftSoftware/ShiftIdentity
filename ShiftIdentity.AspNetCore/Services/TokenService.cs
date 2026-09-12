@@ -21,6 +21,11 @@ using System.Text.Json;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 
+/// <summary>
+/// Signs the legacy credentials. Issuance is internal on purpose: only the authentication coordinator
+/// (<see cref="AuthService"/>) may turn a user row into a credential, so a host cannot mint a session for an
+/// arbitrary user or pass its own MFA/external flags. The SAS helpers and the validators stay public.
+/// </summary>
 public class TokenService
 {
     private readonly ShiftIdentityConfiguration shiftIdentityConfiguration;
@@ -32,12 +37,12 @@ public class TokenService
         this.hashIdService = hashIdService;
     }
 
-    public TokenDTO GenerateInternalJwtToken(User user)
+    internal TokenDTO GenerateInternalJwtToken(User user)
     {
         return GenerateToken(user);
     }
 
-    public TokenDTO? GenerateExternalJwtToken(User user, AuthCodeModel authCode)
+    internal TokenDTO? GenerateExternalJwtToken(User user, AuthCodeModel authCode)
     {
         if (user.RequireChangePassword)
             return null;
@@ -45,7 +50,7 @@ public class TokenService
         return GenerateToken(user, true);
     }
 
-    public TokenDTO IssueLoginToken(User user, bool mfaSatisfiedThisSession = false)
+    internal TokenDTO IssueLoginToken(User user, bool mfaSatisfiedThisSession = false)
     {
         if (user.RequireChangePassword)
             return GenerateChangePasswordToken(user);
@@ -103,7 +108,7 @@ public class TokenService
         return principal;
     }
 
-    public TokenDTO GenerateToken(User user, bool external = false)
+    internal TokenDTO GenerateToken(User user, bool external = false)
     {
         var userId = hashIdService.Encode<Core.DTOs.User.UserDTO>(user.ID);
 
@@ -203,17 +208,17 @@ public class TokenService
         return tokenString;
     }
 
-    public TokenDTO GenerateMfaToken(User user)
+    internal TokenDTO GenerateMfaToken(User user)
     {
         return GenerateTemporaryToken(user, AuthPurpose.Mfa);
     }
 
-    public TokenDTO GenerateMfaEnrollmentToken(User user)
+    internal TokenDTO GenerateMfaEnrollmentToken(User user)
     {
         return GenerateTemporaryToken(user, AuthPurpose.MfaEnrollment);
     }
 
-    public TokenDTO GenerateChangePasswordToken(User user)
+    internal TokenDTO GenerateChangePasswordToken(User user)
     {
         return GenerateTemporaryToken(user, AuthPurpose.ChangePassword);
     }

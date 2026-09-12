@@ -50,7 +50,7 @@ else
                                   Immediate="true" />
                     <br />
                     <MudAlert Severity="Severity.Info">
-                        @Loc["Password length should not be less that 6"]
+                        @Loc["The password length must be at least {0}", ShiftSoftware.ShiftIdentity.Core.Authentication.NewPasswordPolicy.MinimumLength]
                     </MudAlert>
                 </DialogBodyTemplate>
                 <ChildContent>
@@ -206,7 +206,8 @@ else
     private bool SharePasswordWithUser { get; set; }
     // Checked by default: the previous behaviour forced a change after a random password; the admin may turn it off.
     private bool RequireChangeAtNextLogin { get; set; } = true;
-    private int passwordLength = 6;
+    // The generated passwords must satisfy the shared new-password policy (at least 15 code points).
+    private int passwordLength = 16;
 
     private async Task OpenImportModal(long? id)
     {

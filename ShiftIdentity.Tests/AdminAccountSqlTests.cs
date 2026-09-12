@@ -96,21 +96,18 @@ public sealed class AdminAccountSqlTests(SqlIdentityFixture fixture) : IClassFix
     [InlineData("password", "stale", AuthenticationFailure.InvalidProof)]
     [InlineData("password", "protected", AuthenticationFailure.ClientDenied)]
     [InlineData("password", "deleted", AuthenticationFailure.AccountUnavailable)]
-    [InlineData("password", "inactive", AuthenticationFailure.AccountUnavailable)]
     [InlineData("password", "noSession", AuthenticationFailure.InvalidGrant)]
     [InlineData("username", "permission", AuthenticationFailure.ClientDenied)]
     [InlineData("username", "self", AuthenticationFailure.ClientDenied)]
     [InlineData("username", "stale", AuthenticationFailure.InvalidProof)]
     [InlineData("username", "protected", AuthenticationFailure.ClientDenied)]
     [InlineData("username", "deleted", AuthenticationFailure.AccountUnavailable)]
-    [InlineData("username", "inactive", AuthenticationFailure.AccountUnavailable)]
     [InlineData("username", "noSession", AuthenticationFailure.InvalidGrant)]
     [InlineData("email", "permission", AuthenticationFailure.ClientDenied)]
     [InlineData("email", "self", AuthenticationFailure.ClientDenied)]
     [InlineData("email", "stale", AuthenticationFailure.InvalidProof)]
     [InlineData("email", "protected", AuthenticationFailure.ClientDenied)]
     [InlineData("email", "deleted", AuthenticationFailure.AccountUnavailable)]
-    [InlineData("email", "inactive", AuthenticationFailure.AccountUnavailable)]
     [InlineData("email", "noSession", AuthenticationFailure.InvalidGrant)]
     [InlineData("status", "permission", AuthenticationFailure.ClientDenied)]
     [InlineData("status", "self", AuthenticationFailure.ClientDenied)]
@@ -299,19 +296,43 @@ public sealed class AdminAccountSqlTests(SqlIdentityFixture fixture) : IClassFix
         Assert.Equal(AdminAccountChange.Active, off.Change); Assert.True(off.Applied); Assert.Equal(2, off.SecurityVersion);
         Assert.Equal(AuthenticationFailure.AccountUnavailable, Assert.IsType<AuthenticationRefused>(await host.RefreshAsync(target.Session.RefreshToken)).Code);
         Assert.Equal(AuthenticationFailure.AccountUnavailable, Assert.IsType<AuthenticationRefused>(await host.LoginAsync(fixture, IdentityHttpHost.Pkce().Challenge)).Code);
-        // Only reactivation is available for an inactive account.
-        Assert.Equal(AuthenticationFailure.AccountUnavailable, Assert.IsType<AuthenticationRefused>(await host.AdminSetPasswordAsync(admin.Session.Token, fixture.UserID, NewPassword)).Code);
+        // An inactive account still accepts a correction; it holds no session and the change is versioned.
+        var set = Assert.IsType<AdminAccountChanged>(await host.AdminSetPasswordAsync(admin.Session.Token, fixture.UserID, NewPassword, false));
+        Assert.True(set.Applied); Assert.Equal(3, set.SecurityVersion);
+        Assert.Equal(AuthenticationFailure.AccountUnavailable, Assert.IsType<AuthenticationRefused>(await host.LoginAsync(fixture, IdentityHttpHost.Pkce().Challenge, NewPassword)).Code);
         var same = Assert.IsType<AdminAccountChanged>(await host.AdminSetActiveAsync(admin.Session.Token, fixture.UserID, false));
-        Assert.False(same.Applied); Assert.Equal(2, same.SecurityVersion);
+        Assert.False(same.Applied); Assert.Equal(3, same.SecurityVersion);
         clock.Advance(TimeSpan.FromSeconds(1));
         var on = Assert.IsType<AdminAccountChanged>(await host.AdminSetActiveAsync(admin.Session.Token, fixture.UserID, true));
-        Assert.True(on.Applied); Assert.Equal(3, on.SecurityVersion);
+        Assert.True(on.Applied); Assert.Equal(4, on.SecurityVersion);
         Assert.Equal(AuthenticationFailure.StaleOperation, Assert.IsType<AuthenticationRefused>(await host.RefreshAsync(target.Session.RefreshToken)).Code);
-        Assert.IsType<SessionIssued>(await host.LoginAsync(fixture, IdentityHttpHost.Pkce().Challenge));
+        Assert.IsType<SessionIssued>(await host.LoginAsync(fixture, IdentityHttpHost.Pkce().Challenge, NewPassword));
         await using var db = fixture.CreateContext();
         var audits = await db.Set<AuthenticationAuditEvent>().Where(x => x.UserID == fixture.UserID && x.ActorUserID == adminID)
-            .OrderBy(x => x.CreatedAt).Select(x => x.Outcome).ToListAsync();
-        Assert.Equal(new[] { "AccountDeactivated", "AccountActivated" }, audits);
+            .OrderBy(x => x.CreatedAt).ThenBy(x => x.SecurityVersion).Select(x => x.Outcome).ToListAsync();
+        Assert.Equal(new[] { "AccountDeactivated", "AdminPasswordSet", "AccountActivated" }, audits);
+    }
+
+    [Theory]
+    [InlineData("username")]
+    [InlineData("email")]
+    public async Task Inactive_targets_accept_identifier_and_contact_corrections(string route)
+    {
+        await Contact(SavedEmail, verified: true);
+        await SetTarget("inactive");
+        try
+        {
+            using var host = new IdentityHttpHost(fixture);
+            var admin = await AdminLogin(host);
+            var changed = Assert.IsType<AdminAccountChanged>(await Mutate(host, route, admin.Session.Token, fixture.UserID));
+            Assert.True(changed.Applied); Assert.Equal(2, changed.SecurityVersion);
+            await using var db = fixture.CreateContext();
+            var user = await db.Users.IgnoreQueryFilters().SingleAsync(x => x.ID == fixture.UserID);
+            Assert.False(user.IsActive);
+            if (route == "username") Assert.NotEqual(fixture.Username, user.Username);
+            else { Assert.NotEqual(SavedEmail, user.Email); Assert.False(user.EmailVerified); }
+        }
+        finally { await SetTarget("restore"); await RestoreUsername(); }
     }
 
     [Fact]

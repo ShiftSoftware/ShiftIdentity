@@ -46,6 +46,13 @@ public interface IIdentitySecurityStore
         Func<IdentitySecurityTransaction, Task<T>> transition, CancellationToken cancellationToken);
     Task<T> AdmitAdminAsync<T>(long actorID, long userID, AuthenticationClient client,
         Func<IdentitySecurityTransaction, IdentitySecurityTransaction, Task<T>> transition, CancellationToken cancellationToken);
+    /// <summary>
+    /// Locks the policy, the App and the given users (ascending ID order) inside the caller's already open
+    /// transaction and returns their units. Rows the caller already tracks are reused, so the admitted changes and
+    /// the caller's own edits reach the database in the caller's single flush. Nothing is committed here.
+    /// </summary>
+    Task<IReadOnlyDictionary<long, IdentitySecurityTransaction>> AdmitWithinAsync(IEnumerable<long> userIDs,
+        AuthenticationClient client, CancellationToken cancellationToken);
 }
 
 public sealed class IdentitySecurityUnavailableException(string message, Exception? inner = null) : Exception(message, inner);
