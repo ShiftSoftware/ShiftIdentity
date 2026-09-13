@@ -135,9 +135,13 @@ public partial class AuthService
 
     private static bool ValidAppID(string? value) => value is { Length: > 0 and <= 255 } && !string.IsNullOrWhiteSpace(value);
     private static bool ValidAppChallenge(string? value) => value is { Length: 128 } && value.All(char.IsAsciiHexDigit);
+    // Ask the parser for a RELATIVE Uri rather than refusing an absolute one: on Unix, Uri reads a leading '/' as an
+    // absolute file path, so "/orders" would count as absolute there and every relative return URL would be refused.
+    // A relative request is answered the same way on every platform, and anything carrying a scheme or an authority
+    // ("https://outside.invalid", "javascript:...") is refused as CannotCreateRelative.
     private static bool RelativeReturnUrl(string? value) => value is null || (value.Length <= 4000 &&
         !value.Any(char.IsControl) && !value.Contains('\\') && !value.StartsWith("//", StringComparison.Ordinal) &&
-        !Uri.TryCreate(value, UriKind.Absolute, out _));
+        Uri.TryCreate(value, UriKind.Relative, out _));
 
     private static void ClearAppCode(AuthenticationOperation op, DateTimeOffset now)
     {

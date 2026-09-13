@@ -55,11 +55,9 @@ public class AuthCodeService
         return code;
     }
 
-    private bool IsAbsoluteUrl(string url)
-    {
-        Uri result;
-        return Uri.TryCreate(url, UriKind.Absolute, out result);
-    }
+    // Asked as "is it NOT a relative Uri" on purpose: on Unix, Uri reads a leading '/' as an absolute file path,
+    // so testing for an absolute Uri would refuse every relative return URL there. See AuthService.AppCodes.
+    private bool IsAbsoluteUrl(string url) => url is not null && !Uri.TryCreate(url, UriKind.Relative, out _);
 
     public async Task<AuthCodeModel?> VerifyCodeByAppIdOnly(string appId, Guid code, string codeVerifier)
     {
