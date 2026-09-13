@@ -46,6 +46,16 @@ internal static class AdmissionRules
         return null;
     }
 
+    /// <summary>The legacy refresh format binds no version; this is the recorded one-time stamping exception.</summary>
+    internal static AuthenticationRefused? LegacyRefreshRefusal(IdentityAdmissionServices services,
+        IdentitySecurityTransaction unit)
+    {
+        services.Observe?.Invoke("AdmissionLock");
+        if (!unit.User.IsActive || unit.User.IsDeleted) return Refuse(AuthenticationFailure.AccountUnavailable);
+        return services.Options.PolicyRevision != unit.Policy.Revision
+            ? Refuse(AuthenticationFailure.Unavailable) : null;
+    }
+
     internal static AuthenticationStep? LocalStep(IdentitySecurityTransaction unit, bool mfaSatisfied, bool ignorePasswordChange = false)
     {
         if (unit.User.RequireChangePassword && !ignorePasswordChange) return AuthenticationStep.PasswordChange;
@@ -59,6 +69,14 @@ internal static class AdmissionRules
             return AuthenticationStep.EmailVerification;
         return null;
     }
+
+    /// <summary>
+    /// A converted legacy session keeps only its former ordinary-session capability until the old credential's
+    /// deadline. The marker is not MFA or freshness proof; sensitive flows continue to inspect those claims.
+    /// </summary>
+    internal static AuthenticationStep? ExistingSessionStep(IdentitySecurityTransaction unit, SessionProof proof,
+        DateTimeOffset now) => proof.LegacyCompatibilityExpiresAt is { } deadline && now < deadline
+            ? null : LocalStep(unit, proof.MfaSatisfied);
 
     internal static SessionProof Proof(IdentitySecurityTransaction unit, IdentityAdmissionServices services, bool mfa, DateTimeOffset now) =>
         new(unit.User.ID, unit.Security.SecurityVersion, unit.Policy.Revision, unit.Security.FactorGeneration,

@@ -34,8 +34,11 @@ public partial class AuthService
             if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
             if (!PublicApp(unit.App, destination)) return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.ClientDenied));
             var now = services.Clock.GetUtcNow();
-            var next = LocalStep(unit, signedIn.Proof.MfaSatisfied);
+            var next = ExistingSessionStep(unit, signedIn.Proof, now);
             if (next is not null) return Task.FromResult<AuthOutcome>(Restricted(next.Value, now));
+            var expiresAt = now.AddMinutes(5);
+            if (signedIn.Proof.LegacyCompatibilityExpiresAt is { } compatibilityDeadline && compatibilityDeadline < expiresAt)
+                expiresAt = compatibilityDeadline;
             var op = new AuthenticationOperation
             {
                 ID = Guid.NewGuid(), UserID = unit.User.ID, Purpose = AuthenticationOperationPurpose.AppExchange,
@@ -44,7 +47,9 @@ public partial class AuthService
                 FactorGeneration = signedIn.Proof.FactorGeneration, ClientID = destination.ID,
                 Audience = destination.Audience, External = true, CodeChallenge = request.CodeChallenge,
                 AppBinding = BindApp(unit.App!), SessionAuthenticatedAt = signedIn.Proof.AuthenticatedAt,
-                SessionMfaSatisfied = signedIn.Proof.MfaSatisfied, CreatedAt = now, ExpiresAt = now.AddMinutes(5)
+                SessionMfaSatisfied = signedIn.Proof.MfaSatisfied,
+                SessionLegacyCompatibilityExpiresAt = signedIn.Proof.LegacyCompatibilityExpiresAt,
+                CreatedAt = now, ExpiresAt = expiresAt
             };
             unit.AddOperation(op);
             unit.Audit("AppCodeCreated", now, op.ID);
@@ -83,7 +88,8 @@ public partial class AuthService
             if (now >= op.ExpiresAt) return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.Expired));
             if (op.FactorGeneration != unit.Security.FactorGeneration || !PublicApp(unit.App, destination) ||
                 op.AppBinding != BindApp(unit.App!) || op.SessionAuthenticatedAt is not { } authenticatedAt ||
-                authenticatedAt > now || op.SessionMfaSatisfied is not { } mfa)
+                authenticatedAt > now || op.SessionMfaSatisfied is not { } mfa ||
+                op.SessionLegacyCompatibilityExpiresAt is { } compatibilityDeadline && compatibilityDeadline <= now)
                 return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.StaleOperation));
             if (!ValidAppChallenge(op.CodeChallenge) || !CryptographicOperations.FixedTimeEquals(
                 Convert.FromHexString(op.CodeChallenge), Convert.FromHexString(HashService.SHA512GenerateHash(request.CodeVerifier))))
@@ -98,10 +104,11 @@ public partial class AuthService
                 return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.InvalidProof));
             }
             var next = LocalStep(unit, mfa);
-            if (next is not null) return Task.FromResult<AuthOutcome>(Restricted(next.Value, now));
+            var compatibility = op.SessionLegacyCompatibilityExpiresAt;
+            if (compatibility is null && next is not null) return Task.FromResult<AuthOutcome>(Restricted(next.Value, now));
             var proof = new SessionProof(op.UserID, op.SecurityVersion, op.PolicyRevision, op.FactorGeneration,
                 mfa, authenticatedAt, destination.ID, destination.Audience, true,
-                services.HashIds.Encode<UserDTO>(unit.User.ID), op.AppBinding);
+                services.HashIds.Encode<UserDTO>(unit.User.ID), op.AppBinding, compatibility);
             ClearAppCode(op, now);
             unit.Audit("AppCodeExchanged", now, op.ID);
             // Transferring an existing session does not establish fresh authentication or clear proof failures.
@@ -114,7 +121,7 @@ public partial class AuthService
     {
         if (!Valid(request)) return Refuse(AuthenticationFailure.InvalidRequest);
         var proof = services.Tokens.ValidateRefresh(request.RefreshToken);
-        if (proof is null) return Refuse(AuthenticationFailure.InvalidGrant);
+        if (proof is null) return await ExchangeLegacyRefreshAsync(services, request, ct);
         var client = new AuthenticationClient(proof.ClientID, proof.Audience, proof.External);
         // Internal refresh remains bound to this authority; app exchanges carry their own signed destination.
         if (proof.AppBinding is null && client != services.Client) return Refuse(AuthenticationFailure.InvalidGrant);
@@ -148,5 +155,6 @@ public partial class AuthService
         op.State = AuthenticationOperationState.Completed; op.CompletedAt = now;
         op.CodeChallenge = ""; op.HandleDigest = []; op.AppBinding = null;
         op.SessionAuthenticatedAt = null; op.SessionMfaSatisfied = null;
+        op.SessionLegacyCompatibilityExpiresAt = null;
     }
 }

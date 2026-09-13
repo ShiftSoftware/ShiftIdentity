@@ -2,6 +2,7 @@ using System.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using ShiftSoftware.ShiftIdentity.Core.Authentication;
 using ShiftSoftware.ShiftIdentity.Data.Entities;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Authentication;
@@ -41,6 +42,15 @@ public sealed partial class SqlIdentitySecurityStore(ShiftIdentityDbContext db) 
         Func<IdentitySecurityTransaction, Task<T>> transition, CancellationToken ct) =>
         AdmitUsersAsync([userID], userID, operationID, client, units => transition(units[userID]), ct);
 
+    public Task<T> AdmitLegacyRefreshAsync<T>(long userID, byte[] credentialDigest, AuthenticationClient client,
+        Func<IdentitySecurityTransaction, Task<T>> transition, CancellationToken ct)
+    {
+        if (credentialDigest is not { Length: 32 })
+            throw new ArgumentException("A legacy refresh digest must be 32 bytes.", nameof(credentialDigest));
+        return AdmitUsersAsync([userID], userID, null, client, units => transition(units[userID]), ct,
+            legacyRefreshDigest: credentialDigest);
+    }
+
     public Task<T> AdmitAdminAsync<T>(long actorID, long userID, AuthenticationClient client,
         Func<IdentitySecurityTransaction, IdentitySecurityTransaction, Task<T>> transition, CancellationToken ct) =>
         AdmitUsersAsync([actorID, userID], userID, null, client, units => transition(units[actorID], units[userID]), ct);
@@ -65,7 +75,7 @@ public sealed partial class SqlIdentitySecurityStore(ShiftIdentityDbContext db) 
 
     private async Task<T> AdmitUsersAsync<T>(long[] userIDs, long targetID, Guid? operationID, AuthenticationClient client,
         Func<Dictionary<long, IdentitySecurityTransaction>, Task<T>> transition, CancellationToken ct, bool requireClient = true,
-        AuthenticationClient? sourceClient = null)
+        AuthenticationClient? sourceClient = null, byte[]? legacyRefreshDigest = null)
     {
         // No execution-strategy replay: an uncertain commit must not repeat a consumed operation.
         // A caller can restart with fresh proof after an unavailable response.
@@ -73,7 +83,8 @@ public sealed partial class SqlIdentitySecurityStore(ShiftIdentityDbContext db) 
         try
         {
             await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
-            var units = await LoadUnitsAsync(userIDs, targetID, operationID, client, requireClient, reuseTracked: false, ct, sourceClient);
+            var units = await LoadUnitsAsync(userIDs, targetID, operationID, client, requireClient, reuseTracked: false, ct,
+                sourceClient, legacyRefreshDigest);
             var result = await transition(units);
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
@@ -89,7 +100,8 @@ public sealed partial class SqlIdentitySecurityStore(ShiftIdentityDbContext db) 
     // The one lock order for every security writer: policy, Apps in ordinal AppId order, then users in ascending ID order, and for each user
     // its security state before its operation, recovery family and link rows.
     private async Task<Dictionary<long, IdentitySecurityTransaction>> LoadUnitsAsync(long[] userIDs, long? targetID, Guid? operationID,
-        AuthenticationClient client, bool requireClient, bool reuseTracked, CancellationToken ct, AuthenticationClient? sourceClient = null)
+        AuthenticationClient client, bool requireClient, bool reuseTracked, CancellationToken ct,
+        AuthenticationClient? sourceClient = null, byte[]? legacyRefreshDigest = null)
     {
         var policy = await Hinted<AuthenticationPolicyState>("HOLDLOCK", nameof(AuthenticationPolicyState.ID), 1)
             .SingleOrDefaultAsync(ct)
@@ -117,8 +129,12 @@ public sealed partial class SqlIdentitySecurityStore(ShiftIdentityDbContext db) 
                 .Include(x => x.TeamUsers).Include(x => x.AccessTrees).ThenInclude(x => x.AccessTree)
                 .SingleOrDefaultAsync(x => x.ID == userID, ct)
                 ?? throw new IdentitySecurityUnavailableException("User is missing.");
-            var operation = userID != targetID || operationID is null ? null
-                : await db.Set<AuthenticationOperation>().SingleOrDefaultAsync(x => x.ID == operationID, ct);
+            var operation = userID != targetID ? null : operationID is not null
+                ? await db.Set<AuthenticationOperation>().SingleOrDefaultAsync(x => x.ID == operationID, ct)
+                : legacyRefreshDigest is null ? null
+                : await db.Set<AuthenticationOperation>().SingleOrDefaultAsync(x =>
+                    x.Purpose == AuthenticationOperationPurpose.LegacyRefreshExchange &&
+                    x.HandleDigest == legacyRefreshDigest, ct);
             var recoveryFamily = security.MfaRecoveryOperationID is { } root
                 ? await db.Set<AuthenticationOperation>().Where(x => x.UserID == userID && (x.ID == root || x.ParentID == root)).ToListAsync(ct)
                 : [];
@@ -179,14 +195,17 @@ public sealed partial class SqlIdentitySecurityStore(ShiftIdentityDbContext db) 
                     op.ProtectedPendingTotpSecret = null; op.RecoveryCodeDigest = null; op.OutstandingRecoveryUserID = null;
                     op.OutstandingLinkSlot = null; op.Destination = null;
                     op.AppBinding = null; op.SessionAuthenticatedAt = null; op.SessionMfaSatisfied = null;
+                    op.SessionLegacyCompatibilityExpiresAt = null;
                     unit.Audit("OperationExpired", now, op.ID);
                     return Task.FromResult(1);
                 }, ct, requireClient: false);
         }
         var retentionCutoff = now.AddHours(-24);
-        var tombstones = await db.Set<AuthenticationOperation>().Where(x => x.CompletedAt < retentionCutoff &&
+        var tombstones = await db.Set<AuthenticationOperation>().Where(x =>
             (x.State == AuthenticationOperationState.Completed || x.State == AuthenticationOperationState.Cancelled ||
              x.State == AuthenticationOperationState.Locked || x.State == AuthenticationOperationState.Superseded) &&
+            ((x.Purpose == AuthenticationOperationPurpose.LegacyRefreshExchange && x.ExpiresAt <= now) ||
+             (x.Purpose != AuthenticationOperationPurpose.LegacyRefreshExchange && x.CompletedAt < retentionCutoff)) &&
             !db.Set<UserSecurityState>().Any(s => s.MfaRecoveryOperationID == x.ID))
             .OrderBy(x => x.CompletedAt).Select(x => x.ID).Take(100).ToListAsync(ct);
         if (tombstones.Count > 0) await db.Set<AuthenticationOperation>().Where(x => tombstones.Contains(x.ID)).ExecuteDeleteAsync(ct);

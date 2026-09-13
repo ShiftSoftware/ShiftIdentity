@@ -16,6 +16,7 @@ internal sealed record IdentityAdmissionServices(
     internal Core.Authentication.NewPasswordPolicy PasswordPolicy { get; init; } = new();
     internal SecurityDeliveryLimits DeliveryLimits { get; init; } = new();
     internal ISecurityEmailSink? EmailSink { get; init; }
+    internal LegacyRefreshTokenCodec? LegacyRefreshTokens { get; init; }
     internal IdentityMaterialProtector LinkProtector => FactorProtector.CreateProtector("SecurityLinks.v1");
 }
 
@@ -31,7 +32,7 @@ internal sealed record IdentityAdmissionOptions(
 internal sealed record SessionProof(
     long UserID, long SecurityVersion, long PolicyRevision, long FactorGeneration,
     bool MfaSatisfied, DateTimeOffset AuthenticatedAt, string ClientID, string Audience, bool External, string Subject,
-    string? AppBinding = null);
+    string? AppBinding = null, DateTimeOffset? LegacyCompatibilityExpiresAt = null);
 
 internal sealed record SignedInContext(SessionProof Proof, DateTimeOffset ExpiresAt);
 

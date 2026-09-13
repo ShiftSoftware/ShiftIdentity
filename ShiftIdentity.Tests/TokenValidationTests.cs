@@ -1,3 +1,4 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -209,6 +210,43 @@ public sealed class TokenValidationTests
         Assert.Equal(clock.GetUtcNow().AddMinutes(15).UtcDateTime, validated.ValidTo);
         Assert.Throws<InvalidOperationException>(() => new AdmissionTokenCodec(options with { AccessLifetimeSeconds = 901 }, clock)
             .Issue(new(proof, "synthetic", "Synthetic", Array.Empty<Claim>(), clock.GetUtcNow())));
+    }
+
+    [Fact]
+    public void Legacy_compatibility_context_is_signed_preserved_and_caps_both_credentials()
+    {
+        var deadline = clock.GetUtcNow().AddMinutes(4);
+        var proof = new SessionProof(42, 3, 1, 1, false, DateTimeOffset.UnixEpoch,
+            client.ID, client.Audience, false, "encoded-user", LegacyCompatibilityExpiresAt: deadline);
+        var codec = new AdmissionTokenCodec(options, clock);
+        var tokens = codec.Issue(new(proof, "synthetic", "Synthetic", Array.Empty<Claim>(), clock.GetUtcNow()));
+        Assert.Equal(240, tokens.TokenLifeTimeInSeconds);
+        Assert.Equal(240, tokens.RefreshTokenLifeTimeInSeconds);
+        Assert.Equal(proof, codec.ValidateAccess(tokens.Token, client)!.Proof);
+        Assert.Equal(proof, codec.ValidateRefresh(tokens.RefreshToken, client));
+        Assert.Equal(deadline.UtcDateTime, new JwtSecurityTokenHandler().ReadJwtToken(tokens.Token).ValidTo);
+        Assert.Equal(deadline.UtcDateTime, new JwtSecurityTokenHandler().ReadJwtToken(tokens.RefreshToken).ValidTo);
+        clock.Advance(TimeSpan.FromMinutes(4));
+        Assert.Null(codec.ValidateAccess(tokens.Token, client));
+        Assert.Null(codec.ValidateRefresh(tokens.RefreshToken, client));
+    }
+
+    [Theory]
+    [InlineData("invalid")]
+    [InlineData("past")]
+    [InlineData("before-expiry")]
+    public void Legacy_compatibility_context_must_be_an_unambiguous_covering_deadline(string scenario)
+    {
+        var payload = Payload(false);
+        payload["shift_legacy_until"] = clock.GetUtcNow().AddMinutes(20).ToUnixTimeSeconds().ToString();
+        Assert.NotNull(new AdmissionTokenCodec(options, clock).ValidateRefresh(Sign(payload, false), client));
+        payload["shift_legacy_until"] = scenario switch
+        {
+            "invalid" => "not-a-time",
+            "past" => clock.GetUtcNow().ToUnixTimeSeconds().ToString(),
+            _ => clock.GetUtcNow().AddMinutes(5).ToUnixTimeSeconds().ToString()
+        };
+        Assert.Null(new AdmissionTokenCodec(options, clock).ValidateRefresh(Sign(payload, false), client));
     }
 
     private static IEnumerable<object[]> ForBothKinds(params string[] scenarios) =>

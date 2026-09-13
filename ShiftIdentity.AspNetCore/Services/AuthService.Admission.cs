@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Text;
 using OtpNet;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Authentication;
 using ShiftSoftware.ShiftIdentity.Core;
@@ -128,7 +129,7 @@ public partial class AuthService
                 if (proof.Subject != services.HashIds.Encode<UserDTO>(unit.User.ID))
                     return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.InvalidGrant));
                 var now = services.Clock.GetUtcNow();
-                var next = LocalStep(unit, proof.MfaSatisfied);
+                var next = ExistingSessionStep(unit, proof, now);
                 if (next is not null) return Task.FromResult<AuthOutcome>(Restricted(next.Value, now));
                 if (updateLastSeen)
                 {
@@ -139,5 +140,57 @@ public partial class AuthService
                 return Task.FromResult(Issue(services, unit, proof, now, false));
             }, ct);
         });
+
+    internal static Task<AuthOutcome> ExchangeLegacyRefreshAsync(IdentityAdmissionServices services,
+        RenewSessionRequest request, CancellationToken ct) => AtBoundary(async () =>
+    {
+        if (!Valid(request) || services.Client.External || services.LegacyRefreshTokens is not { } legacyTokens)
+            return Refuse(AuthenticationFailure.InvalidGrant);
+        var legacy = legacyTokens.Validate(request.RefreshToken);
+        if (legacy is null) return Refuse(AuthenticationFailure.InvalidGrant);
+        long userID;
+        try
+        {
+            userID = services.HashIds.Decode<UserDTO>(legacy.Subject);
+            if (userID <= 0 && !long.TryParse(legacy.Subject, NumberStyles.None, CultureInfo.InvariantCulture, out userID))
+                return Refuse(AuthenticationFailure.InvalidGrant);
+        }
+        catch (Exception e) when (e is ArgumentException or FormatException or OverflowException)
+        {
+            return Refuse(AuthenticationFailure.InvalidGrant);
+        }
+        if (userID <= 0) return Refuse(AuthenticationFailure.InvalidGrant);
+        var digest = HMACSHA256.HashData(services.Options.OperationKey, Encoding.UTF8.GetBytes(request.RefreshToken));
+        services.Observe?.Invoke("LegacyRefreshProof");
+        return await services.Store.AdmitLegacyRefreshAsync<AuthOutcome>(userID, digest, services.Client, unit =>
+        {
+            if (unit.Operation is not null) return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.InvalidGrant));
+            var current = legacyTokens.Validate(request.RefreshToken);
+            var now = services.Clock.GetUtcNow();
+            if (current is null || current.Subject != legacy.Subject || current.ExpiresAt != legacy.ExpiresAt || now >= legacy.ExpiresAt)
+                return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.Expired));
+            var refusal = LegacyRefreshRefusal(services, unit);
+            if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
+            var proof = new SessionProof(unit.User.ID, unit.Security.SecurityVersion, unit.Policy.Revision,
+                unit.Security.FactorGeneration, false, DateTimeOffset.UnixEpoch, services.Client.ID,
+                services.Client.Audience, false, services.HashIds.Encode<UserDTO>(unit.User.ID),
+                LegacyCompatibilityExpiresAt: legacy.ExpiresAt);
+            var exchange = new AuthenticationOperation
+            {
+                ID = Guid.NewGuid(), UserID = unit.User.ID,
+                Purpose = AuthenticationOperationPurpose.LegacyRefreshExchange,
+                State = AuthenticationOperationState.Completed,
+                SecurityVersion = unit.Security.SecurityVersion, PolicyRevision = unit.Policy.Revision,
+                FactorGeneration = unit.Security.FactorGeneration, ClientID = services.Client.ID,
+                Audience = services.Client.Audience, External = false, HandleDigest = digest,
+                CreatedAt = now, ExpiresAt = legacy.ExpiresAt, CompletedAt = now
+            };
+            unit.AddOperation(exchange);
+            unit.User.UserLog ??= new Data.Entities.UserLog();
+            unit.User.UserLog.LastSeen = now;
+            unit.Audit("LegacyRefreshExchanged", now, exchange.ID);
+            return Task.FromResult(Issue(services, unit, proof, now, freshAuthentication: false));
+        }, ct);
+    });
 
 }

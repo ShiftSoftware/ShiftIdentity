@@ -24,13 +24,15 @@ internal sealed class AdmissionTokenCodec(IdentityAdmissionOptions options, Time
     internal const string Route = "shift_route";
     internal const string UserID = "shift_uid";
     internal const string AppBinding = "shift_app";
+    internal const string LegacyCompatibility = "shift_legacy_until";
 
     public TokenDTO Issue(IssuanceDecision decision)
     {
         var proof = decision.Proof;
         if (proof.UserID <= 0 || string.IsNullOrWhiteSpace(proof.Subject) || proof.SecurityVersion < 1 || proof.PolicyRevision != options.PolicyRevision ||
             options.AccessLifetimeSeconds is < 1 or > 900 || options.RefreshLifetimeSeconds < 1 ||
-            options.RefreshKey.Length < 64 || options.OperationKey.Length < 32)
+            options.RefreshKey.Length < 64 || options.OperationKey.Length < 32 ||
+            proof.LegacyCompatibilityExpiresAt is { } compatibilityDeadline && compatibilityDeadline <= decision.AdmittedAt)
             throw new InvalidOperationException("Invalid admission configuration.");
         var now = decision.AdmittedAt;
         var common = new List<Claim>
@@ -45,21 +47,25 @@ internal sealed class AdmissionTokenCodec(IdentityAdmissionOptions options, Time
             new("auth_time", proof.AuthenticatedAt.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture))
         };
         if (proof.AppBinding is not null) common.Add(new(AppBinding, proof.AppBinding));
+        if (proof.LegacyCompatibilityExpiresAt is { } legacyDeadline)
+            common.Add(new(LegacyCompatibility, legacyDeadline.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture)));
         using var rsa = RSA.Create();
         rsa.ImportRSAPrivateKey(options.AccessPrivateKey, out _);
         var accessClaims = common.Concat(decision.Claims).Append(new Claim(Purpose, "access"));
-        var access = Encode(accessClaims, proof.Audience, now, options.AccessLifetimeSeconds,
+        var accessExpiresAt = Deadline(now, options.AccessLifetimeSeconds, proof.LegacyCompatibilityExpiresAt);
+        var refreshExpiresAt = Deadline(now, options.RefreshLifetimeSeconds, proof.LegacyCompatibilityExpiresAt);
+        var access = Encode(accessClaims, proof.Audience, now, accessExpiresAt,
             new SigningCredentials(new RsaSecurityKey(rsa)
             {
                 CryptoProviderFactory = new CryptoProviderFactory { CacheSignatureProviders = false }
             }, SecurityAlgorithms.RsaSha256));
-        var refresh = Encode(common.Append(new Claim(Purpose, "refresh")), options.RefreshAudience, now,
-            options.RefreshLifetimeSeconds,
+        var refresh = Encode(common.Append(new Claim(Purpose, "refresh")), options.RefreshAudience, now, refreshExpiresAt,
             new SigningCredentials(new SymmetricSecurityKey(options.RefreshKey), SecurityAlgorithms.HmacSha512));
         return new TokenDTO
         {
-            Token = access, RefreshToken = refresh, TokenLifeTimeInSeconds = options.AccessLifetimeSeconds,
-            RefreshTokenLifeTimeInSeconds = options.RefreshLifetimeSeconds,
+            Token = access, RefreshToken = refresh,
+            TokenLifeTimeInSeconds = Lifetime(now, accessExpiresAt, options.AccessLifetimeSeconds, proof.LegacyCompatibilityExpiresAt),
+            RefreshTokenLifeTimeInSeconds = Lifetime(now, refreshExpiresAt, options.RefreshLifetimeSeconds, proof.LegacyCompatibilityExpiresAt),
             UserData = new TokenUserDataDTO { ID = proof.UserID.ToString(CultureInfo.InvariantCulture),
                 Username = decision.Username, FullName = decision.FullName, CompanyType = decision.CompanyType,
                 Emails = decision.Email is null ? null! : [new EmailDTO { Email = decision.Email }],
@@ -124,8 +130,19 @@ internal sealed class AdmissionTokenCodec(IdentityAdmissionOptions options, Time
             var appBindings = principal.FindAll(AppBinding).Select(c => c.Value).ToArray();
             if (appBindings.Length > 1 || (appBindings.Length == 1 &&
                 (!client.External || appBindings[0].Length != 64 || !appBindings[0].All(char.IsAsciiHexDigit)))) return null;
+            var compatibilityClaims = principal.FindAll(LegacyCompatibility).Select(c => c.Value).ToArray();
+            DateTimeOffset? compatibilityDeadline = null;
+            if (compatibilityClaims.Length > 1) return null;
+            if (compatibilityClaims.Length == 1)
+            {
+                if (!long.TryParse(compatibilityClaims[0], NumberStyles.None, CultureInfo.InvariantCulture, out var deadlineSeconds))
+                    return null;
+                compatibilityDeadline = DateTimeOffset.FromUnixTimeSeconds(deadlineSeconds);
+                if (compatibilityDeadline <= clock.GetUtcNow() || DateTimeOffset.FromUnixTimeSeconds(expiry) > compatibilityDeadline)
+                    return null;
+            }
             return new(new(userID, version, policy, factor, Single(Mfa) == "true", authTime, client.ID, client.Audience,
-                client.External, Single("sub")!, appBindings.SingleOrDefault()), DateTimeOffset.FromUnixTimeSeconds(expiry));
+                client.External, Single("sub")!, appBindings.SingleOrDefault(), compatibilityDeadline), DateTimeOffset.FromUnixTimeSeconds(expiry));
         }
         catch (Exception e) when (e is SecurityTokenException or ArgumentException or FormatException or JsonException)
         {
@@ -133,11 +150,18 @@ internal sealed class AdmissionTokenCodec(IdentityAdmissionOptions options, Time
         }
     }
 
-    private string Encode(IEnumerable<Claim> claims, string audience, DateTimeOffset now, int seconds, SigningCredentials key)
+    private string Encode(IEnumerable<Claim> claims, string audience, DateTimeOffset now, DateTimeOffset expiresAt, SigningCredentials key)
     {
         var jwt = new JwtSecurityToken(options.Issuer, audience,
             claims.Append(new("jti", Guid.NewGuid().ToString("N"))).Append(new("iat", now.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture), ClaimValueTypes.Integer64)),
-            now.UtcDateTime, now.AddSeconds(seconds).UtcDateTime, key);
+            now.UtcDateTime, expiresAt.UtcDateTime, key);
         return new JwtSecurityTokenHandler().WriteToken(jwt);
     }
+
+    private static DateTimeOffset Deadline(DateTimeOffset now, int lifetimeSeconds, DateTimeOffset? compatibilityDeadline) =>
+        compatibilityDeadline is { } deadline && deadline < now.AddSeconds(lifetimeSeconds)
+            ? deadline : now.AddSeconds(lifetimeSeconds);
+
+    private static long Lifetime(DateTimeOffset now, DateTimeOffset expiresAt, int configured, DateTimeOffset? compatibilityDeadline) =>
+        compatibilityDeadline is null ? configured : Math.Max(0, expiresAt.ToUnixTimeSeconds() - now.ToUnixTimeSeconds());
 }

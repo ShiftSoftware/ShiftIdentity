@@ -26,6 +26,7 @@ public sealed class AuthenticationOperation
     public string? AppBinding { get; set; }
     public DateTimeOffset? SessionAuthenticatedAt { get; set; }
     public bool? SessionMfaSatisfied { get; set; }
+    public DateTimeOffset? SessionLegacyCompatibilityExpiresAt { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset ExpiresAt { get; set; }
     public DateTimeOffset? CompletedAt { get; set; }

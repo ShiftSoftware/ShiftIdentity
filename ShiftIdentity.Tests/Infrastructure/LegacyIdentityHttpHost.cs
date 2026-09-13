@@ -47,8 +47,8 @@ public sealed class LegacyIdentityHttpHost<TContext> : IDisposable where TContex
             FactorProtection = fixture.FactorProtection,
             Token = new() { Issuer = issuer, Audience = "legacy-test", ExpireSeconds = 900,
                 RSAPrivateKeyBase64 = Convert.ToBase64String(fixture.Options.AccessPrivateKey) },
-            RefreshToken = new() { Issuer = "https://legacy.invalid", Audience = "legacy-refresh", ExpireSeconds = 1800,
-                Key = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)) },
+            RefreshToken = new() { Issuer = "https://legacy.invalid", Audience = "legacy-refresh", ExpireSeconds = fixture.LegacyRefreshLifetimeSeconds,
+                Key = fixture.LegacyRefreshKey },
             TemporaryTokenSettings = new() { Issuer = "https://legacy.invalid", Audience = "legacy-temporary", ExpireSeconds = 300,
                 Key = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)) },
             // RequirePasswordChange is the configured default the form checkboxes replace; true makes an explicit

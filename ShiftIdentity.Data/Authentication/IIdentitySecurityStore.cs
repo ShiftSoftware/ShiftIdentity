@@ -45,6 +45,9 @@ public interface IIdentitySecurityStore
     Task<bool> ConsumeIngressAsync(string key, DateTimeOffset now, int limit, TimeSpan window, CancellationToken cancellationToken);
     Task<T> AdmitAsync<T>(long userID, Guid? operationID, AuthenticationClient client,
         Func<IdentitySecurityTransaction, Task<T>> transition, CancellationToken cancellationToken);
+    /// <summary>Serializes a one-time legacy refresh exchange and exposes its completed tombstone on replay.</summary>
+    Task<T> AdmitLegacyRefreshAsync<T>(long userID, byte[] credentialDigest, AuthenticationClient client,
+        Func<IdentitySecurityTransaction, Task<T>> transition, CancellationToken cancellationToken);
     /// <summary>Locks both source and destination Apps before the user when transferring an admitted session.</summary>
     Task<T> AdmitAppAsync<T>(long userID, AuthenticationClient source, AuthenticationClient destination,
         Func<IdentitySecurityTransaction, Task<T>> transition, CancellationToken cancellationToken);

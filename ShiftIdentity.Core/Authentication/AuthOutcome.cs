@@ -44,7 +44,7 @@ public enum AuthenticationFailure
     InvalidRequest, InvalidProof, InvalidGrant, StaleOperation, Expired, AttemptsExhausted,
     AccountUnavailable, ClientDenied, Unavailable, InvalidNewPassword, DuplicateIdentifier
 }
-public enum AuthenticationOperationPurpose { Login = 1, ContactChange = 2, MfaEnrollment = 3, PasswordChange = 4, MfaReplacement = 5, MfaRecovery = 6, PasswordResetEmail = 7, PasswordResetManual = 8, EmailVerify = 9, AppExchange = 10 }
+public enum AuthenticationOperationPurpose { Login = 1, ContactChange = 2, MfaEnrollment = 3, PasswordChange = 4, MfaReplacement = 5, MfaRecovery = 6, PasswordResetEmail = 7, PasswordResetManual = 8, EmailVerify = 9, AppExchange = 10, LegacyRefreshExchange = 11 }
 
 public sealed record AuthenticationChallenge(
     AuthenticationStep Step, string? Handle, DateTimeOffset ExpiresAt,

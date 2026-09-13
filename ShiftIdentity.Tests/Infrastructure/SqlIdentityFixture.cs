@@ -26,6 +26,8 @@ public class SqlIdentityFixture : IAsyncLifetime
     private string connectionString = "";
     private string serverConnectionString = "";
     public byte[] FactorSecret { get; } = RandomNumberGenerator.GetBytes(20);
+    public string LegacyRefreshKey { get; } = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+    public int LegacyRefreshLifetimeSeconds { get; set; } = 1800;
     public bool SeedLegacyFactorBeforeExpansion { get; init; }
     public ShiftSoftware.ShiftIdentity.Core.Models.FactorProtectionSettings FactorProtection { get; } = new()
     {
