@@ -2,6 +2,8 @@
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Auth;
 using ShiftSoftware.ShiftIdentity.Data.IRepositories;
 using ShiftSoftware.ShiftIdentity.Core.Models;
+using Microsoft.Extensions.DependencyInjection;
+using ShiftSoftware.ShiftIdentity.AspNetCore.Authentication;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 
@@ -9,17 +11,22 @@ public class AuthCodeService
 {
     private readonly IAppRepository appRepo;
     private readonly AuthCodeStoreService authCodeStoreService;
+    private readonly IServiceProvider? services;
 
     public AuthCodeService(
         IAppRepository appRepo,
-        AuthCodeStoreService authCodeStoreService)
+        AuthCodeStoreService authCodeStoreService,
+        IServiceProvider? services = null)
     {
         this.appRepo = appRepo;
         this.authCodeStoreService = authCodeStoreService;
+        this.services = services;
     }
 
     public async Task<AuthCodeModel?> GenerateCodeAsync(GenerateAuthCodeDTO authCodeDto, long userId, int expireInMinutes = 5)
     {
+        // A bare user ID cannot carry the current-version proof required by the staged authority.
+        if (services?.GetService<IdentityAdmissionServices>() is not null) return null;
         authCodeStoreService.RemoveExpireCodes();
 
         //The reutrn-url must be relative,
@@ -56,6 +63,8 @@ public class AuthCodeService
 
     public async Task<AuthCodeModel?> VerifyCodeByAppIdOnly(string appId, Guid code, string codeVerifier)
     {
+        // Staged consumption and issuance must be one transaction in AuthService.
+        if (services?.GetService<IdentityAdmissionServices>() is not null) return null;
         authCodeStoreService.RemoveExpireCodes();
 
         var authCode = authCodeStoreService.GetCode(code);

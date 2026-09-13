@@ -23,6 +23,7 @@ internal sealed class AdmissionTokenCodec(IdentityAdmissionOptions options, Time
     internal const string Mfa = "shift_mfa";
     internal const string Route = "shift_route";
     internal const string UserID = "shift_uid";
+    internal const string AppBinding = "shift_app";
 
     public TokenDTO Issue(IssuanceDecision decision)
     {
@@ -43,6 +44,7 @@ internal sealed class AdmissionTokenCodec(IdentityAdmissionOptions options, Time
             new(External, proof.External ? "true" : "false"),
             new("auth_time", proof.AuthenticatedAt.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture))
         };
+        if (proof.AppBinding is not null) common.Add(new(AppBinding, proof.AppBinding));
         using var rsa = RSA.Create();
         rsa.ImportRSAPrivateKey(options.AccessPrivateKey, out _);
         var accessClaims = common.Concat(decision.Claims).Append(new Claim(Purpose, "access"));
@@ -59,15 +61,22 @@ internal sealed class AdmissionTokenCodec(IdentityAdmissionOptions options, Time
             Token = access, RefreshToken = refresh, TokenLifeTimeInSeconds = options.AccessLifetimeSeconds,
             RefreshTokenLifeTimeInSeconds = options.RefreshLifetimeSeconds,
             UserData = new TokenUserDataDTO { ID = proof.UserID.ToString(CultureInfo.InvariantCulture),
-                Username = decision.Username, FullName = decision.FullName }
+                Username = decision.Username, FullName = decision.FullName, CompanyType = decision.CompanyType,
+                Emails = decision.Email is null ? null! : [new EmailDTO { Email = decision.Email }],
+                Phones = decision.Phone is null ? null! : [new PhoneDTO { Phone = decision.Phone }],
+                UserSignature = string.IsNullOrWhiteSpace(decision.Signature) ? null :
+                    JsonSerializer.Deserialize<IEnumerable<ShiftSoftware.ShiftEntity.Model.Dtos.ShiftFileDTO>>(decision.Signature) }
         };
     }
 
     public SessionProof? ValidateRefresh(string token, AuthenticationClient client) => ValidateCredential(token, client, false)?.Proof;
 
+    // The deployed refresh request has no AppId. Read its context only after signature and schema validation.
+    public SessionProof? ValidateRefresh(string token) => ValidateCredential(token, null, false)?.Proof;
+
     public SignedInContext? ValidateAccess(string token, AuthenticationClient client) => ValidateCredential(token, client, true);
 
-    private SignedInContext? ValidateCredential(string token, AuthenticationClient client, bool access)
+    private SignedInContext? ValidateCredential(string token, AuthenticationClient? client, bool access)
     {
         try
         {
@@ -88,7 +97,7 @@ internal sealed class AdmissionTokenCodec(IdentityAdmissionOptions options, Time
             if (names.Distinct(StringComparer.Ordinal).Count() != names.Length) return null;
             var principal = handler.ValidateToken(token, new TokenValidationParameters
             {
-                ValidIssuer = options.Issuer, ValidAudience = access ? client.Audience : options.RefreshAudience,
+                ValidIssuer = options.Issuer, ValidAudience = access ? client!.Audience : options.RefreshAudience,
                 IssuerSigningKey = key,
                 ValidateIssuer = true, ValidateAudience = true, ValidateIssuerSigningKey = true,
                 ValidateLifetime = true, RequireExpirationTime = true, RequireSignedTokens = true,
@@ -97,6 +106,10 @@ internal sealed class AdmissionTokenCodec(IdentityAdmissionOptions options, Time
                     nbf is not null && exp is not null && nbf <= clock.GetUtcNow().UtcDateTime && exp > clock.GetUtcNow().UtcDateTime
             }, out _);
             string? Single(string type) => principal.FindAll(type).Select(c => c.Value).ToArray() is [var value] ? value : null;
+            if (Single(Client) is not { Length: > 0 and <= 255 } clientID || string.IsNullOrWhiteSpace(clientID) ||
+                Single(Resource) is not { Length: > 0 and <= 255 } audience || string.IsNullOrWhiteSpace(audience) ||
+                Single(External) is not ("true" or "false")) return null;
+            client ??= new(clientID, audience, Single(External) == "true");
             if (Single(Schema) != "2" || Single(Purpose) != (access ? "access" : "refresh") || Single(Route) != "local" ||
                 Single(Client) != client.ID || Single(Resource) != client.Audience ||
                 Single(External) != (client.External ? "true" : "false")) return null;
@@ -108,8 +121,11 @@ internal sealed class AdmissionTokenCodec(IdentityAdmissionOptions options, Time
                 Single(Mfa) is not ("true" or "false")) return null;
             var authTime = DateTimeOffset.FromUnixTimeSeconds(authenticated);
             if (authTime > clock.GetUtcNow()) return null;
-            return new(new(userID, version, policy, factor, Single(Mfa) == "true", authTime, client.ID, client.Audience, client.External, Single("sub")!),
-                DateTimeOffset.FromUnixTimeSeconds(expiry));
+            var appBindings = principal.FindAll(AppBinding).Select(c => c.Value).ToArray();
+            if (appBindings.Length > 1 || (appBindings.Length == 1 &&
+                (!client.External || appBindings[0].Length != 64 || !appBindings[0].All(char.IsAsciiHexDigit)))) return null;
+            return new(new(userID, version, policy, factor, Single(Mfa) == "true", authTime, client.ID, client.Audience,
+                client.External, Single("sub")!, appBindings.SingleOrDefault()), DateTimeOffset.FromUnixTimeSeconds(expiry));
         }
         catch (Exception e) when (e is SecurityTokenException or ArgumentException or FormatException or JsonException)
         {

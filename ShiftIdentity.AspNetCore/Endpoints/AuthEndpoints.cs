@@ -13,16 +13,24 @@ using ShiftSoftware.ShiftIdentity.Core.Models;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Web;
+using Microsoft.Extensions.DependencyInjection;
+using ShiftSoftware.ShiftIdentity.AspNetCore.Authentication;
+using ShiftSoftware.ShiftIdentity.Core.Authentication;
 
 namespace Microsoft.AspNetCore.Builder;
 
 // The Auth endpoints (login / refresh / MFA / auth-code / external-token), ported from the API AuthController
-// (routes + verbs byte-identical). These are thin wrappers over the UNCHANGED AuthService / AuthCodeService — the
+// (routes + verbs byte-identical). App-code and v2 refresh adapters use staged admission when registered; the
 // class-level [Authorize] + per-action [AllowAnonymous]/[StepUp] map to .AllowAnonymous()/.RequireAuthorization(policy)
 // here. Backed by the AuthEndpointTests safety net. Host calls MapShiftIdentityAuthEndpoints() where the controller
 // used to be mapped by MapControllers().
 public static class ShiftIdentityAuthEndpoints
 {
+    private static IResult CompatibleTokenResult(AuthOutcome outcome, string message) => outcome is SessionIssued issued
+        ? Results.Ok(new ShiftEntityResponse<TokenDTO>(issued.Session))
+        : Results.Json(new ShiftEntityResponse<TokenDTO> { Message = new Message { Body = message } },
+            statusCode: outcome is AuthenticationRefused { Code: AuthenticationFailure.Unavailable } ? 503 : 400);
+
     public static IEndpointRouteBuilder MapShiftIdentityAuthEndpoints(this IEndpointRouteBuilder app)
     {
         // POST api/Auth/Login — anonymous.
@@ -42,6 +50,10 @@ public static class ShiftIdentityAuthEndpoints
             httpContext.Response.Headers["Cache-Control"] = "no-store, no-cache";
             httpContext.Response.Headers["Pragma"] = "no-cache";
             httpContext.Response.Headers["Expires"] = "0";
+
+            if (httpContext.RequestServices.GetService<IdentityAdmissionServices>() is { } admission)
+                return CompatibleTokenResult(await AuthService.RenewCompatibleSessionAsync(admission,
+                    new(dto.RefreshToken), httpContext.RequestAborted), Loc["Invalid refresh token"]);
 
             var token = await authService.RefreshAsync(dto.RefreshToken);
 
@@ -69,6 +81,18 @@ public static class ShiftIdentityAuthEndpoints
         // POST api/Auth/AuthCode — anonymous route, but requires an authenticated user (unless fake identity).
         app.MapPost("api/Auth/AuthCode", async (GenerateAuthCodeDTO generateAuthCodeDto, HttpContext httpContext, AuthCodeService authCodeService, IClaimService claimService, ShiftIdentityConfiguration shiftIdentityConfiguration, ShiftIdentityLocalizer Loc) =>
         {
+            if (httpContext.RequestServices.GetService<IdentityAdmissionServices>() is { } admission)
+            {
+                httpContext.Response.Headers["Cache-Control"] = "no-store";
+                if (AdmissionRules.ReadSignedIn(admission, httpContext.Request.Headers.Authorization) is null)
+                    return Results.Unauthorized();
+                var outcome = await AuthService.CreateAppCodeAsync(admission, httpContext.Request.Headers.Authorization,
+                    generateAuthCodeDto, httpContext.RequestAborted);
+                if (outcome is AppCodeIssued issued) return Results.Ok(new ShiftEntityResponse<AuthCodeModel>(issued.Code));
+                return Results.Json(new ShiftEntityResponse<AuthCodeModel>
+                    { Message = new Message { Body = Loc["Failed to genearate auth-code"] } },
+                    statusCode: outcome is AuthenticationRefused { Code: AuthenticationFailure.Unavailable } ? 503 : 400);
+            }
             if (!shiftIdentityConfiguration.IsFakeIdentity && !httpContext.User!.Identity!.IsAuthenticated)
                 return Results.Unauthorized();
 
@@ -92,8 +116,14 @@ public static class ShiftIdentityAuthEndpoints
         }).AllowAnonymous();
 
         // POST api/Auth/TokenWithAppIdOnly — anonymous; PKCE-verified external token.
-        app.MapPost("api/Auth/TokenWithAppIdOnly", async (GenerateExternalTokenWithAppIdOnlyDTO dto, AuthService authService, ShiftIdentityLocalizer Loc) =>
+        app.MapPost("api/Auth/TokenWithAppIdOnly", async (GenerateExternalTokenWithAppIdOnlyDTO dto, HttpContext httpContext, AuthService authService, ShiftIdentityLocalizer Loc) =>
         {
+            if (httpContext.RequestServices.GetService<IdentityAdmissionServices>() is { } admission)
+            {
+                httpContext.Response.Headers["Cache-Control"] = "no-store";
+                return CompatibleTokenResult(await AuthService.ExchangeAppCodeAsync(admission, dto, httpContext.RequestAborted),
+                    Loc["Failed to genearate token"]);
+            }
             var token = await authService.GenrerateExternalTokenWithAppIdOnly(dto);
 
             if (token is null)

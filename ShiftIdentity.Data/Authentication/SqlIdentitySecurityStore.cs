@@ -45,6 +45,10 @@ public sealed partial class SqlIdentitySecurityStore(ShiftIdentityDbContext db) 
         Func<IdentitySecurityTransaction, IdentitySecurityTransaction, Task<T>> transition, CancellationToken ct) =>
         AdmitUsersAsync([actorID, userID], userID, null, client, units => transition(units[actorID], units[userID]), ct);
 
+    public Task<T> AdmitAppAsync<T>(long userID, AuthenticationClient source, AuthenticationClient destination,
+        Func<IdentitySecurityTransaction, Task<T>> transition, CancellationToken ct) =>
+        AdmitUsersAsync([userID], userID, null, destination, units => transition(units[userID]), ct, sourceClient: source);
+
     public async Task<IReadOnlyDictionary<long, IdentitySecurityTransaction>> AdmitWithinAsync(IEnumerable<long> userIDs,
         AuthenticationClient client, CancellationToken ct)
     {
@@ -60,7 +64,8 @@ public sealed partial class SqlIdentitySecurityStore(ShiftIdentityDbContext db) 
     }
 
     private async Task<T> AdmitUsersAsync<T>(long[] userIDs, long targetID, Guid? operationID, AuthenticationClient client,
-        Func<Dictionary<long, IdentitySecurityTransaction>, Task<T>> transition, CancellationToken ct, bool requireClient = true)
+        Func<Dictionary<long, IdentitySecurityTransaction>, Task<T>> transition, CancellationToken ct, bool requireClient = true,
+        AuthenticationClient? sourceClient = null)
     {
         // No execution-strategy replay: an uncertain commit must not repeat a consumed operation.
         // A caller can restart with fresh proof after an unavailable response.
@@ -68,7 +73,7 @@ public sealed partial class SqlIdentitySecurityStore(ShiftIdentityDbContext db) 
         try
         {
             await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
-            var units = await LoadUnitsAsync(userIDs, targetID, operationID, client, requireClient, reuseTracked: false, ct);
+            var units = await LoadUnitsAsync(userIDs, targetID, operationID, client, requireClient, reuseTracked: false, ct, sourceClient);
             var result = await transition(units);
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
@@ -81,18 +86,24 @@ public sealed partial class SqlIdentitySecurityStore(ShiftIdentityDbContext db) 
         finally { db.ChangeTracker.Clear(); }
     }
 
-    // The one lock order for every security writer: policy, App, then users in ascending ID order, and for each user
+    // The one lock order for every security writer: policy, Apps in ordinal AppId order, then users in ascending ID order, and for each user
     // its security state before its operation, recovery family and link rows.
     private async Task<Dictionary<long, IdentitySecurityTransaction>> LoadUnitsAsync(long[] userIDs, long? targetID, Guid? operationID,
-        AuthenticationClient client, bool requireClient, bool reuseTracked, CancellationToken ct)
+        AuthenticationClient client, bool requireClient, bool reuseTracked, CancellationToken ct, AuthenticationClient? sourceClient = null)
     {
         var policy = await Hinted<AuthenticationPolicyState>("HOLDLOCK", nameof(AuthenticationPolicyState.ID), 1)
             .SingleOrDefaultAsync(ct)
             ?? throw new IdentitySecurityUnavailableException("Identity policy state is missing.");
-        var app = await Hinted<App>("HOLDLOCK", nameof(App.AppId), client.ID)
-            .IgnoreQueryFilters().SingleOrDefaultAsync(ct);
-        if (requireClient && (app is null || app.IsDeleted))
-            throw new IdentitySecurityConflictException("Client unavailable.");
+        App? app = null;
+        var clientIDs = sourceClient is null ? new[] { client.ID } : new[] { client.ID, sourceClient.ID };
+        foreach (var clientID in clientIDs.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
+        {
+            var matches = await Hinted<App>("HOLDLOCK", nameof(App.AppId), clientID)
+                .IgnoreQueryFilters().Where(x => !x.IsDeleted).Take(2).ToListAsync(ct);
+            if (requireClient && matches.Count != 1)
+                throw new IdentitySecurityConflictException("Client unavailable.");
+            if (clientID == client.ID) app = matches.Count == 1 ? matches[0] : null;
+        }
         var units = new Dictionary<long, IdentitySecurityTransaction>();
         // Actor and target locks have a stable order, including requests that target each other.
         foreach (var userID in userIDs.Distinct().Order())
@@ -102,7 +113,7 @@ public sealed partial class SqlIdentitySecurityStore(ShiftIdentityDbContext db) 
                 ?? throw new IdentitySecurityUnavailableException("User security state is missing.");
             var user = reuseTracked ? db.ChangeTracker.Entries<User>().FirstOrDefault(x => x.Entity.ID == userID)?.Entity : null;
             user ??= await db.Users.IgnoreQueryFilters()
-                .Include(x => x.Company).Include(x => x.CompanyBranch)
+                .Include(x => x.Company).Include(x => x.CompanyBranch).Include(x => x.UserLog)
                 .Include(x => x.TeamUsers).Include(x => x.AccessTrees).ThenInclude(x => x.AccessTree)
                 .SingleOrDefaultAsync(x => x.ID == userID, ct)
                 ?? throw new IdentitySecurityUnavailableException("User is missing.");
@@ -114,7 +125,7 @@ public sealed partial class SqlIdentitySecurityStore(ShiftIdentityDbContext db) 
             var links = await db.Set<AuthenticationOperation>().Where(x => x.UserID == userID && x.OutstandingLinkSlot != null).ToListAsync(ct);
             var unit = new IdentitySecurityTransaction(user, security, policy, operation,
                 value => db.Set<AuthenticationOperation>().Add(value),
-                value => db.Set<AuthenticationAuditEvent>().Add(value), recoveryFamily, links);
+                value => db.Set<AuthenticationAuditEvent>().Add(value), recoveryFamily, links, app);
             units.Add(userID, unit);
         }
         return units;
@@ -149,7 +160,8 @@ public sealed partial class SqlIdentitySecurityStore(ShiftIdentityDbContext db) 
         var candidates = await db.Set<AuthenticationOperation>().AsNoTracking().Where(x =>
             (x.State == AuthenticationOperationState.AwaitingMfa || x.State == AuthenticationOperationState.AwaitingPassword ||
              x.State == AuthenticationOperationState.AwaitingNewPassword || x.State == AuthenticationOperationState.AwaitingNewFactor ||
-             x.State == AuthenticationOperationState.AwaitingRecoveryProof || x.State == AuthenticationOperationState.AwaitingExplicitSubmit) &&
+             x.State == AuthenticationOperationState.AwaitingRecoveryProof || x.State == AuthenticationOperationState.AwaitingExplicitSubmit ||
+             x.State == AuthenticationOperationState.AwaitingAppExchange) &&
             (x.ExpiresAt <= now || x.PasswordProvenAt <= proofCutoff || x.MfaProvenAt <= proofCutoff))
             .OrderBy(x => x.ExpiresAt).Take(100).ToListAsync(ct);
         var count = 0;
@@ -166,6 +178,7 @@ public sealed partial class SqlIdentitySecurityStore(ShiftIdentityDbContext db) 
                     op.HandleDigest = []; op.CodeChallenge = ""; op.PendingPasswordHash = null; op.PendingPasswordSalt = null;
                     op.ProtectedPendingTotpSecret = null; op.RecoveryCodeDigest = null; op.OutstandingRecoveryUserID = null;
                     op.OutstandingLinkSlot = null; op.Destination = null;
+                    op.AppBinding = null; op.SessionAuthenticatedAt = null; op.SessionMfaSatisfied = null;
                     unit.Audit("OperationExpired", now, op.ID);
                     return Task.FromResult(1);
                 }, ct, requireClient: false);

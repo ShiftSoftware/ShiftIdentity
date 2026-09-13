@@ -15,12 +15,13 @@ public sealed class IdentitySecurityTransaction(
     User user, UserSecurityState security, AuthenticationPolicyState policy,
     AuthenticationOperation? operation, Action<AuthenticationOperation> addOperation,
     Action<AuthenticationAuditEvent> addAudit, IReadOnlyList<AuthenticationOperation>? recoveryFamily = null,
-    IReadOnlyList<AuthenticationOperation>? links = null)
+    IReadOnlyList<AuthenticationOperation>? links = null, App? app = null)
 {
     public User User { get; } = user;
     public UserSecurityState Security { get; } = security;
     public AuthenticationPolicyState Policy { get; } = policy;
     public AuthenticationOperation? Operation { get; } = operation;
+    public App? App { get; } = app;
     public IReadOnlyList<AuthenticationOperation> RecoveryFamily { get; } = recoveryFamily ?? [];
     public IReadOnlyList<AuthenticationOperation> Links { get; } = links ?? [];
     public void AddOperation(AuthenticationOperation value) => addOperation(value);
@@ -43,6 +44,9 @@ public interface IIdentitySecurityStore
     Task<bool> IdentifierInUseAsync(string value, long exceptUserID, CancellationToken cancellationToken);
     Task<bool> ConsumeIngressAsync(string key, DateTimeOffset now, int limit, TimeSpan window, CancellationToken cancellationToken);
     Task<T> AdmitAsync<T>(long userID, Guid? operationID, AuthenticationClient client,
+        Func<IdentitySecurityTransaction, Task<T>> transition, CancellationToken cancellationToken);
+    /// <summary>Locks both source and destination Apps before the user when transferring an admitted session.</summary>
+    Task<T> AdmitAppAsync<T>(long userID, AuthenticationClient source, AuthenticationClient destination,
         Func<IdentitySecurityTransaction, Task<T>> transition, CancellationToken cancellationToken);
     Task<T> AdmitAdminAsync<T>(long actorID, long userID, AuthenticationClient client,
         Func<IdentitySecurityTransaction, IdentitySecurityTransaction, Task<T>> transition, CancellationToken cancellationToken);

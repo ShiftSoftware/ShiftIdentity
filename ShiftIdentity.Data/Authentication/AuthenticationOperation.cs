@@ -2,7 +2,7 @@ using ShiftSoftware.ShiftIdentity.Core.Authentication;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Authentication;
 
-public enum AuthenticationOperationState { AwaitingMfa = 1, Completed = 2, Locked = 3, AwaitingPassword = 4, AwaitingNewPassword = 5, Cancelled = 6, AwaitingNewFactor = 7, AwaitingRecoveryProof = 8, Superseded = 9, AwaitingExplicitSubmit = 10 }
+public enum AuthenticationOperationState { AwaitingMfa = 1, Completed = 2, Locked = 3, AwaitingPassword = 4, AwaitingNewPassword = 5, Cancelled = 6, AwaitingNewFactor = 7, AwaitingRecoveryProof = 8, Superseded = 9, AwaitingExplicitSubmit = 10, AwaitingAppExchange = 11 }
 public enum PasswordChangeOrigin { Voluntary = 1, RequiredLogin = 2 }
 
 /// <summary>A single-use, purpose-bound continuation; it is never an ordinary session credential.</summary>
@@ -23,6 +23,9 @@ public sealed class AuthenticationOperation
     public bool External { get; set; }
     public byte[] HandleDigest { get; set; } = [];
     public string CodeChallenge { get; set; } = "";
+    public string? AppBinding { get; set; }
+    public DateTimeOffset? SessionAuthenticatedAt { get; set; }
+    public bool? SessionMfaSatisfied { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset ExpiresAt { get; set; }
     public DateTimeOffset? CompletedAt { get; set; }

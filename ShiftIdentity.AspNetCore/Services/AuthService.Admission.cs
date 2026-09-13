@@ -22,7 +22,7 @@ namespace ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 public partial class AuthService
 {
     // Staged entry points share the existing coordinator. Only isolated fixtures map them in this slice.
-    // Production LoginAsync/RefreshAsync and DI remain unchanged until all security writers are adapted.
+    // Production registration remains unchanged until all issuers and security writers are adapted.
     internal static Task<AuthOutcome> BeginLoginAsync(IdentityAdmissionServices services, PasswordLoginRequest request, CancellationToken ct) =>
         AtBoundary(async () =>
         {
@@ -106,7 +106,8 @@ public partial class AuthService
                 : Issue(services, unit, Proof(unit, services, true, op.PasswordProvenAt ?? op.CreatedAt), now));
         }, ct);
     });
-    internal static Task<AuthOutcome> RenewSessionAsync(IdentityAdmissionServices services, RenewSessionRequest request, CancellationToken ct) =>
+    internal static Task<AuthOutcome> RenewSessionAsync(IdentityAdmissionServices services, RenewSessionRequest request, CancellationToken ct,
+        bool updateLastSeen = false) =>
         AtBoundary(async () =>
         {
             if (!Valid(request)) return Refuse(AuthenticationFailure.InvalidRequest);
@@ -122,11 +123,20 @@ public partial class AuthService
                     return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.Expired));
                 if (unit.Security.FactorGeneration != proof.FactorGeneration)
                     return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.StaleOperation));
+                if (!AppSessionIsCurrent(unit, proof))
+                    return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.ClientDenied));
                 if (proof.Subject != services.HashIds.Encode<UserDTO>(unit.User.ID))
                     return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.InvalidGrant));
                 var now = services.Clock.GetUtcNow();
                 var next = LocalStep(unit, proof.MfaSatisfied);
-                return Task.FromResult<AuthOutcome>(next is not null ? Restricted(next.Value, now) : Issue(services, unit, proof, now, false));
+                if (next is not null) return Task.FromResult<AuthOutcome>(Restricted(next.Value, now));
+                if (updateLastSeen)
+                {
+                    // The deployed refresh timer also maintains LastSeen through this route.
+                    unit.User.UserLog ??= new Data.Entities.UserLog();
+                    unit.User.UserLog.LastSeen = now;
+                }
+                return Task.FromResult(Issue(services, unit, proof, now, false));
             }, ct);
         });
 

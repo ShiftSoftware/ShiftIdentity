@@ -34,7 +34,8 @@ public static class IdentitySecurityModel
         {
             e.ToTable("AuthenticationOperations", "ShiftIdentity", t =>
             {
-                t.HasCheckConstraint("CK_AuthenticationOperation_State", "[State] IN (1,2,3,4,5,6,7,8,9,10) AND [Purpose] IN (1,2,3,4,5,6,7,8,9)");
+                t.HasCheckConstraint("CK_AuthenticationOperation_State", "[State] IN (1,2,3,4,5,6,7,8,9,10,11) AND [Purpose] IN (1,2,3,4,5,6,7,8,9,10)");
+                t.HasCheckConstraint("CK_AuthenticationOperation_App", "([State] <> 11 OR ([Purpose] = 10 AND [External] = 1 AND [AppBinding] IS NOT NULL AND [SessionAuthenticatedAt] IS NOT NULL AND [SessionMfaSatisfied] IS NOT NULL)) AND ([Purpose] <> 10 OR [State] IN (2,3,6,9,11))");
                 t.HasCheckConstraint("CK_AuthenticationOperation_Link", "([State] <> 10 OR [Purpose] IN (7,8,9)) AND ([OutstandingLinkSlot] IS NULL OR ([Purpose] IN (7,8,9) AND [State] = 10))");
                 t.HasCheckConstraint("CK_AuthenticationOperation_Password", "([PasswordChangeOrigin] IS NULL OR [PasswordChangeOrigin] IN (1,2)) AND (([PendingPasswordHash] IS NULL AND [PendingPasswordSalt] IS NULL) OR ([Purpose] = 4 AND [State] IN (1,7) AND [PendingPasswordHash] IS NOT NULL AND [PendingPasswordSalt] IS NOT NULL))");
                 t.HasCheckConstraint("CK_AuthenticationOperation_Factor", "[ProtectedPendingTotpSecret] IS NULL OR ([Purpose] IN (3,4,5,6) AND [State] = 7)");
@@ -46,7 +47,8 @@ public static class IdentitySecurityModel
             e.Property(x => x.ClientID).HasMaxLength(255);
             e.Property(x => x.Audience).HasMaxLength(255);
             e.Property(x => x.HandleDigest).HasMaxLength(32);
-            e.Property(x => x.CodeChallenge).HasMaxLength(43);
+            e.Property(x => x.CodeChallenge).HasMaxLength(128);
+            e.Property(x => x.AppBinding).HasMaxLength(64);
             e.Property(x => x.PendingPasswordHash).HasMaxLength(256);
             e.Property(x => x.PendingPasswordSalt).HasMaxLength(128);
             e.Property(x => x.ProtectedPendingTotpSecret).HasMaxLength(1024);

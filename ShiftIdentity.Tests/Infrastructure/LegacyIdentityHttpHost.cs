@@ -32,6 +32,7 @@ public sealed class LegacyIdentityHttpHost<TContext> : IDisposable where TContex
 {
     private readonly TestServer server;
     public HttpClient Client { get; }
+    internal IServiceProvider Services => server.Services;
     /// <summary>The host's single ISendEmailVerification provider; records every link handed to it.</summary>
     public RecordingEmailVerification Verifications { get; } = new();
     public LegacyIdentityHttpHost(SqlIdentityFixture fixture, bool authority = false, Action<string>? observe = null,

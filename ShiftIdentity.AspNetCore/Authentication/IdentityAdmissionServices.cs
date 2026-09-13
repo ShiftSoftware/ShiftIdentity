@@ -30,11 +30,14 @@ internal sealed record IdentityAdmissionOptions(
 
 internal sealed record SessionProof(
     long UserID, long SecurityVersion, long PolicyRevision, long FactorGeneration,
-    bool MfaSatisfied, DateTimeOffset AuthenticatedAt, string ClientID, string Audience, bool External, string Subject);
+    bool MfaSatisfied, DateTimeOffset AuthenticatedAt, string ClientID, string Audience, bool External, string Subject,
+    string? AppBinding = null);
 
 internal sealed record SignedInContext(SessionProof Proof, DateTimeOffset ExpiresAt);
 
 /// <summary>Only the admission coordinator creates this after evaluating current state.</summary>
 internal sealed record IssuanceDecision(
     SessionProof Proof, string Username, string FullName,
-    IReadOnlyList<System.Security.Claims.Claim> Claims, DateTimeOffset AdmittedAt);
+    IReadOnlyList<System.Security.Claims.Claim> Claims, DateTimeOffset AdmittedAt,
+    string? Email = null, string? Phone = null, string? Signature = null,
+    ShiftSoftware.ShiftEntity.Model.Enums.CompanyTypes? CompanyType = null);

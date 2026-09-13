@@ -10,6 +10,9 @@ using ShiftSoftware.ShiftIdentity.Data.Entities;
 using ShiftSoftware.ShiftIdentity.Data.IRepositories;
 using ShiftSoftware.ShiftIdentity.Core.Localization;
 using System.Security.Claims;
+using Microsoft.Extensions.DependencyInjection;
+using ShiftSoftware.ShiftIdentity.AspNetCore.Authentication;
+using ShiftSoftware.ShiftIdentity.Core.Authentication;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 
@@ -22,6 +25,7 @@ public partial class AuthService
     private readonly ShiftIdentityLocalizer Loc;
     private readonly IHashIdService hashIdService;
     private readonly TotpService totpService;
+    private readonly IServiceProvider? services;
 
     public AuthService(
         IUserRepository userRepo,
@@ -30,7 +34,8 @@ public partial class AuthService
         AuthCodeService authCodeService,
         ShiftIdentityLocalizer Loc,
         IHashIdService hashIdService,
-        TotpService totpService
+        TotpService totpService,
+        IServiceProvider? services = null
         )
     {
         this.userRepo = userRepo;
@@ -40,6 +45,7 @@ public partial class AuthService
         this.Loc = Loc;
         this.hashIdService = hashIdService;
         this.totpService = totpService;
+        this.services = services;
     }
 
     public async Task<LoginResultModel> LoginAsync(LoginDTO loginDto)
@@ -108,6 +114,8 @@ public partial class AuthService
 
     public async Task<TokenDTO?> GenrerateExternalTokenWithAppIdOnly(GenerateExternalTokenWithAppIdOnlyDTO dto)
     {
+        if (services?.GetService<IdentityAdmissionServices>() is { } admission)
+            return (await ExchangeAppCodeAsync(admission, dto, CancellationToken.None) as SessionIssued)?.Session;
         var authCode = await authCodeService.VerifyCodeByAppIdOnly(dto.AppId, dto.AuthCode, dto.CodeVerifier);
 
         if (authCode is null)
@@ -156,6 +164,8 @@ public partial class AuthService
 
     public async Task<TokenDTO?> RefreshAsync(string refreshToken)
     {
+        if (services?.GetService<IdentityAdmissionServices>() is { } admission)
+            return (await RenewCompatibleSessionAsync(admission, new(refreshToken), CancellationToken.None) as SessionIssued)?.Session;
         try
         {
             var claimPrincipal = tokenService.GetPrincipalFromRefreshToken(refreshToken);

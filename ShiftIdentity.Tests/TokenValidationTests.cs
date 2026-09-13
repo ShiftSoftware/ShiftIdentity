@@ -214,6 +214,50 @@ public sealed class TokenValidationTests
     private static IEnumerable<object[]> ForBothKinds(params string[] scenarios) =>
         scenarios.SelectMany(scenario => new[] { new object[] { false, scenario }, new object[] { true, scenario } });
 
+    [Theory]
+    [InlineData("client-missing")]
+    [InlineData("client-blank")]
+    [InlineData("resource-array")]
+    [InlineData("external-invalid")]
+    [InlineData("binding-short")]
+    [InlineData("binding-array")]
+    [InlineData("binding-internal")]
+    [InlineData("wrong-key")]
+    [InlineData("tampered")]
+    [InlineData("expired")]
+    public void Compatible_refresh_context_requires_valid_signed_unambiguous_claims(string scenario)
+    {
+        var payload = Payload(false);
+        payload["shift_client"] = "destination";
+        payload["shift_resource"] = "destination";
+        payload["shift_external"] = "true";
+        payload["shift_app"] = new string('A', 64);
+        var codec = new AdmissionTokenCodec(options, clock);
+        var valid = codec.ValidateRefresh(Sign(payload, false));
+        Assert.NotNull(valid);
+        Assert.Equal("destination", valid.ClientID);
+        Assert.Equal("destination", valid.Audience);
+        Assert.Equal(new string('A', 64), valid.AppBinding);
+        switch (scenario)
+        {
+            case "client-missing": payload.Remove("shift_client"); break;
+            case "client-blank": payload["shift_client"] = " "; break;
+            case "resource-array": payload["shift_resource"] = new[] { "destination", "different" }; break;
+            case "external-invalid": payload["shift_external"] = "yes"; break;
+            case "binding-short": payload["shift_app"] = "AAA"; break;
+            case "binding-array": payload["shift_app"] = new[] { new string('A', 64), new string('B', 64) }; break;
+            case "binding-internal": payload["shift_external"] = "false"; break;
+            case "expired": payload["exp"] = clock.GetUtcNow().ToUnixTimeSeconds(); break;
+        }
+        var token = scenario switch
+        {
+            "wrong-key" => SignJson(JsonSerializer.Serialize(payload), false, key: RandomNumberGenerator.GetBytes(64)),
+            "tampered" => TamperPayload(Sign(payload, false)),
+            _ => Sign(payload, false)
+        };
+        Assert.Null(codec.ValidateRefresh(token));
+    }
+
     private SessionProof? Validate(string token, bool access)
     {
         var codec = new AdmissionTokenCodec(options, clock);

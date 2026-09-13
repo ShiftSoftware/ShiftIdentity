@@ -30,6 +30,7 @@ internal static class AdmissionRules
         var refusal = CommonRefusal(services, unit, proof.SecurityVersion, proof.PolicyRevision);
         if (refusal is not null) return refusal;
         if (services.Clock.GetUtcNow() >= signedIn.ExpiresAt) return Refuse(AuthenticationFailure.Expired);
+        if (!Services.AuthService.AppSessionIsCurrent(unit, proof)) return Refuse(AuthenticationFailure.ClientDenied);
         return unit.Security.FactorGeneration != proof.FactorGeneration || proof.Subject != services.HashIds.Encode<UserDTO>(unit.User.ID)
             ? Refuse(AuthenticationFailure.StaleOperation) : null;
     }
@@ -89,7 +90,8 @@ internal static class AdmissionRules
             unit.Security.FailureWindowStart = null;
             unit.Audit("SessionIssued", now);
         }
-        return new SessionIssued(services.Tokens.Issue(new(proof, user.Username, user.FullName, claims.AsReadOnly(), now)));
+        return new SessionIssued(services.Tokens.Issue(new(proof, user.Username, user.FullName, claims.AsReadOnly(), now,
+            user.Email, user.Phone, user.Signature, user.Company?.CompanyType)));
     }
 
     internal static bool BudgetExhausted(UserSecurityState security, DateTimeOffset now) =>
