@@ -1,6 +1,9 @@
 $ErrorActionPreference = 'Stop'
-# Microsoft Artifact Registry: 2022-CU25-ubuntu-22.04, verified 2026-09-06.
-$image = 'mcr.microsoft.com/mssql/server@sha256:e07b9699a2b749969f19d86563ceeea22bd3a69f7f1db85a8d1ac4bdaf0c6f56'
+# Microsoft Artifact Registry: 2025-CU8-GDR1-ubuntu-24.04, verified 2026-09-13.
+# SQL Server 2025, matching the engine the identity suites are developed against; the 2022 image
+# (2022-CU25-ubuntu-22.04, sha256:e07b9699a2b749969f19d86563ceeea22bd3a69f7f1db85a8d1ac4bdaf0c6f56)
+# failed the app-code exchange tests that pass on 2025.
+$image = 'mcr.microsoft.com/mssql/server@sha256:b036b61e953e6e660f04514fc3f703b995a9cdda569cf96d07d3f751240f615a'
 $container = 'identity-tests-' + [Guid]::NewGuid().ToString('N')
 $env:MSSQL_SA_PASSWORD = 'Test!1' + [Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(24))
 $env:SQLCMDPASSWORD = $env:MSSQL_SA_PASSWORD
