@@ -70,7 +70,7 @@ internal static partial class AccountSecurityService
     });
 
     internal static Task<AuthOutcome> CompletePasswordChangeAsync(IdentityAdmissionServices services, string? handle,
-        CompletePasswordChangeRequest request, CancellationToken ct) => AtBoundary(async () =>
+        CompletePasswordChangeRequest request, CancellationToken ct, string? legacyCurrentPassword = null) => AtBoundary(async () =>
     {
         if (!Valid(request)) return Refuse(AuthenticationFailure.InvalidRequest);
         var reference = await AdmissionOperations.ReadAsync(services, handle, AuthenticationOperationPurpose.PasswordChange, ct);
@@ -78,6 +78,18 @@ internal static partial class AccountSecurityService
         var read = await ReadSnapshot(services, reference, request.CodeVerifier, AuthenticationOperationState.AwaitingNewPassword, ct);
         if (read.Failure is not null) return read.Failure;
         var snapshot = read.Snapshot!;
+        // The deployed forced-change form re-proves CurrentPassword. Bind that proof to the same snapshot used
+        // for preparing the new hash; a concurrent change can never upgrade it to the current credential.
+        if (legacyCurrentPassword is not null && !HashService.VerifyVersionedPassword(legacyCurrentPassword, snapshot.User.Salt, snapshot.User.PasswordHash))
+            return await services.Store.AdmitAsync<AuthOutcome>(reference.UserID, reference.ID, services.Client, unit =>
+            {
+                var refusal = AdmissionOperations.Check(services, unit, reference, request.CodeVerifier,
+                    AuthenticationOperationPurpose.PasswordChange, AuthenticationOperationState.AwaitingNewPassword);
+                if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
+                if (!SameCredential(snapshot, unit)) return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.StaleOperation));
+                AdmissionOperations.FailedAttempt(unit, services.Clock.GetUtcNow(), "InvalidPassword");
+                return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.InvalidProof));
+            }, ct);
         var failure = services.PasswordPolicy.Validate(request.NewPassword, snapshot.User.Username);
         if (failure is not null) return new AuthenticationRefused(AuthenticationFailure.InvalidNewPassword, failure);
         if (HashService.VerifyVersionedPassword(request.NewPassword, snapshot.User.Salt, snapshot.User.PasswordHash))

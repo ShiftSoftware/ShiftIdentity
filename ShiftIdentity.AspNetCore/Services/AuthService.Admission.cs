@@ -62,25 +62,7 @@ public partial class AuthService
                     unit.User.PasswordHash = upgrade.PasswordHash;
                     unit.User.Salt = upgrade.Salt;
                 }
-                if (unit.User.RequireChangePassword)
-                    return Task.FromResult<AuthOutcome>(AdmissionOperations.Create(services, unit,
-                        AuthenticationOperationPurpose.PasswordChange, AuthenticationOperationState.AwaitingNewPassword,
-                        request.CodeChallenge, startedAt, startedAt.AddMinutes(5), PasswordChangeOrigin.RequiredLogin, provenAt));
-                var next = LocalStep(unit, mfaSatisfied: false);
-                if (next == AuthenticationStep.NewMfa)
-                    return Task.FromResult<AuthOutcome>(AdmissionOperations.Create(services, unit,
-                        AuthenticationOperationPurpose.MfaEnrollment, AuthenticationOperationState.AwaitingNewFactor,
-                        request.CodeChallenge, startedAt, startedAt.AddMinutes(10), passwordProvenAt: provenAt, prepareNewFactor: true));
-                if (next is not null && next != AuthenticationStep.ExistingMfa)
-                    return Task.FromResult<AuthOutcome>(Restricted(next.Value, now));
-                if (next == AuthenticationStep.ExistingMfa)
-                {
-                    return Task.FromResult<AuthOutcome>(AdmissionOperations.Create(services, unit,
-                        AuthenticationOperationPurpose.Login, AuthenticationOperationState.AwaitingMfa,
-                        request.CodeChallenge, startedAt, startedAt.AddMinutes(5), passwordProvenAt: provenAt));
-                }
-                var proof = Proof(unit, services, false, provenAt);
-                return Task.FromResult(Issue(services, unit, proof, now));
+                return Task.FromResult(ContinuePasswordLogin(services, unit, request.CodeChallenge, startedAt, provenAt));
             }, ct);
         });
 

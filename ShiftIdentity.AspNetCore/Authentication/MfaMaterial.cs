@@ -15,9 +15,7 @@ internal static class MfaMaterial
         try
         {
             op.ProtectedPendingTotpSecret = PendingProtector(services, op).Protect(secret);
-            var uri = new OtpUri(OtpType.Totp, secret, unit.User.Username, "Shift Identity", OtpHashMode.Sha1,
-                digits: unit.Policy.TotpDigits, period: unit.Policy.TotpPeriodSeconds).ToString();
-            return new(Base32Encoding.ToString(secret), uri, QrCode.EncodeText(uri, QrCode.Ecc.Medium).ToSvgString(4));
+            return Describe(unit, secret);
         }
         finally { CryptographicOperations.ZeroMemory(secret); }
     }
@@ -37,6 +35,13 @@ internal static class MfaMaterial
     {
         security.ProtectedTotpSecret = ActiveProtector(protector, security).Protect(secret);
         security.TotpProtectionVersion = 1;
+    }
+
+    internal static NewAuthenticatorSetup Describe(IdentitySecurityTransaction unit, byte[] secret)
+    {
+        var uri = new OtpUri(OtpType.Totp, secret, unit.User.Username, "Shift Identity", OtpHashMode.Sha1,
+            digits: unit.Policy.TotpDigits, period: unit.Policy.TotpPeriodSeconds).ToString();
+        return new(Base32Encoding.ToString(secret), uri, QrCode.EncodeText(uri, QrCode.Ecc.Medium).ToSvgString(4));
     }
 
     internal static void Activate(IdentityAdmissionServices services, UserSecurityState security, byte[] secret, long step)

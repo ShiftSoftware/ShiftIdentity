@@ -4,14 +4,16 @@ using Microsoft.Extensions.Options;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using Microsoft.Extensions.DependencyInjection;
+using ShiftSoftware.ShiftIdentity.AspNetCore.Authentication;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Authorization;
 
 /// <summary>
 /// Authenticates ShiftIdentity <em>temporary</em> tokens presented as a <c>Bearer</c> token.
 /// These are the short-lived, purpose-bound tokens issued before login completes for an enforced
-/// flow (forced change-password / two-factor enrollment). They are signed with the refresh-token
-/// key, so the default access-token bearer scheme rejects them — this scheme validates them instead.
+/// flow (forced change-password / two-factor enrollment). Production uses the temporary-token key;
+/// staged login steps use a separate operation-derived key. The default access bearer rejects both.
 /// <para>
 /// The resulting principal carries the same <see cref="ClaimTypes.NameIdentifier"/> and
 /// <c>TokenPurpose</c> claims as the original token, so step-up authorization can check the purpose
@@ -49,7 +51,9 @@ public class TemporaryTokenAuthenticationHandler : AuthenticationHandler<Authent
 
         try
         {
-            var principal = tokenService.ValidateTemporaryToken(token);
+            var admission = Context.RequestServices.GetService<IdentityAdmissionServices>();
+            var principal = admission is null ? tokenService.ValidateTemporaryToken(token)
+                : new LegacyLoginTokenCodec(admission).Read(header)?.Principal;
             if (principal is null)
                 return Task.FromResult(AuthenticateResult.NoResult());
 

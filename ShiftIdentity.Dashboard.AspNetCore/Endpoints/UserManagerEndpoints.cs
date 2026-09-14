@@ -20,6 +20,7 @@ using System.Collections.Generic;
 using System.Security.Claims;
 using TotpService = ShiftSoftware.ShiftIdentity.AspNetCore.Services.TotpService;
 using AuthService = ShiftSoftware.ShiftIdentity.AspNetCore.Services.AuthService;
+using ShiftSoftware.ShiftIdentity.AspNetCore.Endpoints;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Endpoints;
 
@@ -77,8 +78,10 @@ internal static class UserManagerEndpoints
         // PUT api/UserManager/ChangePassword — step-up (ChangePassword purpose). Returns a fresh login token issued by
         // the coordinator, which also refuses an inactive or deleted user.
         app.MapPut("api/UserManager/ChangePassword",
-            async (ChangePasswordDTO dto, IClaimService claimService, UserRepository userRepo, AuthService authService) =>
+            async (ChangePasswordDTO dto, HttpContext httpContext, IClaimService claimService, UserRepository userRepo, AuthService authService) =>
             {
+                if (LegacyLoginEndpoints.IsStaged(httpContext))
+                    return await LegacyLoginEndpoints.ChangePasswordAsync(httpContext, dto);
                 var loginUser = claimService.GetUser();
                 User? user;
 
@@ -245,8 +248,10 @@ internal static class UserManagerEndpoints
 
         // GET api/UserManager/StartTotpEnrollment — step-up (MfaEnrollment). Returns a signed TOTP secret + QR.
         app.MapGet("api/UserManager/StartTotpEnrollment",
-            (HttpContext httpContext, TotpService totpService, ShiftIdentityConfiguration options) =>
+            async (HttpContext httpContext, TotpService totpService, ShiftIdentityConfiguration options) =>
             {
+                if (LegacyLoginEndpoints.IsStaged(httpContext))
+                    return await LegacyLoginEndpoints.StartEnrollmentAsync(httpContext);
                 var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (userId is null)
                     return Results.BadRequest(new ShiftEntityResponse<UserDataDTO> { Message = new Message { Body = "Invalid token." } });
@@ -275,6 +280,8 @@ internal static class UserManagerEndpoints
             async (TotpDTO dto, HttpContext httpContext, UserRepository userRepo, IHashIdService hashIdService,
                    TotpService totpService, AuthService authService, ShiftIdentityConfiguration options) =>
             {
+                if (LegacyLoginEndpoints.IsStaged(httpContext))
+                    return await LegacyLoginEndpoints.ConfirmEnrollmentAsync(httpContext, dto);
                 var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (userId is null)
                     return Results.BadRequest(new ShiftEntityResponse<UserDataDTO> { Message = new Message { Body = "Invalid token." } });

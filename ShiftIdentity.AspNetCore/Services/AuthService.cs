@@ -50,6 +50,8 @@ public partial class AuthService
 
     public async Task<LoginResultModel> LoginAsync(LoginDTO loginDto)
     {
+        if (services?.GetService<IdentityAdmissionServices>() is { } admission)
+            return CompatibleLoginResult(await BeginCompatibleLoginAsync(admission, loginDto, shiftIdentityConfigurations, CancellationToken.None));
         var user = await userRepo.GetUserByUsernameAsync(loginDto.Username);
 
         if (user is null)
@@ -106,6 +108,8 @@ public partial class AuthService
     /// </summary>
     public TokenDTO? IssueLoginToken(User user, bool mfaSatisfiedThisSession = false)
     {
+        // A bare user/Boolean is not a staged proof. Compatibility completions carry their SQL operation instead.
+        if (services?.GetService<IdentityAdmissionServices>() is not null) return null;
         if (user is null || !user.IsActive || user.IsDeleted)
             return null;
 
@@ -145,6 +149,7 @@ public partial class AuthService
     /// </summary>
     public async Task<TokenDTO?> MfaLogin(string userId, string code)
     {
+        if (services?.GetService<IdentityAdmissionServices>() is not null) return null;
         try
         {
             var user = await userRepo.FindAsync(hashIdService.Decode<UserDTO>(userId), disableDefaultDataLevelAccess: true, disableGlobalFilters: true);

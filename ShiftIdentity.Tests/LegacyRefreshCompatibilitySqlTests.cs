@@ -27,7 +27,8 @@ public sealed class LegacyRefreshCompatibilitySqlTests(SqlIdentityFixture fixtur
         fixture.Clock = TimeProvider.System;
         await fixture.ResetAsync();
         using var host = new LegacyIdentityHttpHost<IdentityTestDbContext>(fixture, authority: true);
-        var legacy = await LegacyLoginAsync(host);
+        using var oldAuthority = new LegacyIdentityHttpHost<IdentityTestDbContext>(fixture);
+        var legacy = await LegacyLoginAsync(oldAuthority);
         var legacyDeadline = Read(legacy.RefreshToken).ValidTo;
         await using (var db = fixture.CreateContext())
         {

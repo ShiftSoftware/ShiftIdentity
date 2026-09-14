@@ -16,11 +16,12 @@ using System.Web;
 using Microsoft.Extensions.DependencyInjection;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Authentication;
 using ShiftSoftware.ShiftIdentity.Core.Authentication;
+using ShiftSoftware.ShiftIdentity.AspNetCore.Endpoints;
 
 namespace Microsoft.AspNetCore.Builder;
 
 // The Auth endpoints (login / refresh / MFA / auth-code / external-token), ported from the API AuthController
-// (routes + verbs byte-identical). App-code and v2 refresh adapters use staged admission when registered; the
+// (routes + verbs byte-identical). Login, app-code and refresh adapters use staged admission when registered; the
 // class-level [Authorize] + per-action [AllowAnonymous]/[StepUp] map to .AllowAnonymous()/.RequireAuthorization(policy)
 // here. Backed by the AuthEndpointTests safety net. Host calls MapShiftIdentityAuthEndpoints() where the controller
 // used to be mapped by MapControllers().
@@ -34,8 +35,15 @@ public static class ShiftIdentityAuthEndpoints
     public static IEndpointRouteBuilder MapShiftIdentityAuthEndpoints(this IEndpointRouteBuilder app)
     {
         // POST api/Auth/Login — anonymous.
-        app.MapPost("api/Auth/Login", async (LoginDTO loginDto, AuthService authService) =>
+        app.MapPost("api/Auth/Login", async (LoginDTO loginDto, AuthService authService, HttpContext httpContext, ShiftIdentityConfiguration configuration) =>
         {
+            if (httpContext.RequestServices.GetService<IdentityAdmissionServices>() is { } admission)
+            {
+                httpContext.Response.Headers["Cache-Control"] = "no-store";
+                var outcome = await AuthService.BeginCompatibleLoginAsync(admission, loginDto, configuration, httpContext.RequestAborted);
+                var compatible = authService.CompatibleLoginResult(outcome);
+                return LegacyLoginEndpoints.TokenResult(outcome, compatible.ErrorMessage ?? "Login could not be completed.");
+            }
             var result = await authService.LoginAsync(loginDto);
 
             if (result.Result != LoginResultEnum.Success)
@@ -66,6 +74,8 @@ public static class ShiftIdentityAuthEndpoints
         // POST api/Auth/Login/mfa — gated by the step-up MFA policy (a full access token must NOT satisfy it).
         app.MapPost("api/Auth/Login/mfa", async (MfaDTO mfaDto, HttpContext httpContext, AuthService authService, ShiftIdentityLocalizer Loc) =>
         {
+            if (LegacyLoginEndpoints.IsStaged(httpContext))
+                return await LegacyLoginEndpoints.CompleteMfaAsync(httpContext, mfaDto.Code);
             var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId is null)
                 return Results.BadRequest(new ShiftEntityResponse<TokenDTO> { Message = new Message { Body = Loc["Invalid token"] } });

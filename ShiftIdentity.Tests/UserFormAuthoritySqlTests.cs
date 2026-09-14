@@ -5,6 +5,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
 using ShiftIdentity.Tests.Infrastructure;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
@@ -644,7 +645,10 @@ public sealed class UserFormAuthoritySqlTests(SqlIdentityFixture fixture) : ICla
         string token;
         if (legacyToken)
         {
-            using var login = await host.Client.PostAsJsonAsync("/api/Auth/Login", new LoginDTO { Username = AdminName, Password = fixture.Password });
+            // Mint the pre-cutover credential with production registration, then present it to the staged host.
+            using var oldAuthority = new LegacyIdentityHttpHost<IdentityTestDbContext>(fixture);
+            oldAuthority.Services.GetRequiredService<ShiftIdentityConfiguration>().Token.Issuer = fixture.Options.Issuer;
+            using var login = await oldAuthority.Client.PostAsJsonAsync("/api/Auth/Login", new LoginDTO { Username = AdminName, Password = fixture.Password });
             Assert.True(login.StatusCode == HttpStatusCode.OK, await login.Content.ReadAsStringAsync());
             token = (await login.Content.ReadFromJsonAsync<ShiftEntityResponse<TokenDTO>>())!.Entity!.Token;
         }
