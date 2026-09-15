@@ -9,6 +9,7 @@ using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Data.IRepositories;
 using ShiftSoftware.ShiftIdentity.Data;
+using ShiftSoftware.ShiftIdentity.Data.Replication;
 using ShiftSoftware.ShiftIdentity.Data.Repositories;
 using ShiftSoftware.ShiftIdentity.Data.Services;
 using System.Reflection;
@@ -107,6 +108,13 @@ public static class IMvcBuilderExtensions
         builder.Services.AddScoped<CalendarService>();
 
         builder.Services.AddScoped<ShiftIdentityDbContext>(x=> x.GetRequiredService<TDbContext>());
+
+        // The ShiftMapper mapper the identity Cosmos replication maps through. SetUpAllIdentityReplications passes no
+        // mapping delegates, and the replication trigger resolves IShiftMapper for every document — so the mapper has
+        // to be in the container of every host that hosts identity, whether or not it turns replication on: the
+        // registration is a factory, nothing is built until something replicates. Idempotent, so a host that also
+        // calls AddShiftIdentityReplicationMapper() itself does not end up with two.
+        builder.Services.AddShiftIdentityReplicationMapper();
 
         // Step-up scheme + policies (shared with the fake host; defined in ShiftIdentity.AspNetCore).
         builder.AddStepUpAuthorization();

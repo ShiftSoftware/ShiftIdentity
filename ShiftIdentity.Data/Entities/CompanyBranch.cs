@@ -68,7 +68,10 @@ public class CompanyBranch :
 
     public virtual Company? Company { get; set; } = default!;
     public virtual Region? Region { get; set; } = default!;
-    public virtual City City { get; set; } = default!;
+    // Nullable like Company and Region, and for the same reason CityID is: the relationship is optional. The
+    // annotation is also load-bearing for replication — ShiftMapper null-guards a nested navigation in memory only
+    // when the entity declares it nullable, and City is null on every save that did not load it.
+    public virtual City? City { get; set; } = default!;
     public virtual ICollection<CompanyBranchDepartment>? CompanyBranchDepartments { get; set; }
     public virtual ICollection<CompanyBranchService>? CompanyBranchServices { get; set; }
     public virtual ICollection<CompanyBranchBrand>? CompanyBranchBrands { get; set; }

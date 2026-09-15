@@ -28,6 +28,15 @@
 		     ships inside the ShiftSoftware.ShiftEntity package, so this is only needed when the sibling ShiftEntity
 		     repo is cloned (development mode). -->
 		<ProjectReference Include="..\..\ShiftEntity\ShiftEntity.SourceGenerator\ShiftEntity.SourceGenerator.csproj" Condition="Exists('..\..\ShiftEntity\ShiftEntity.SourceGenerator\ShiftEntity.SourceGenerator.csproj')" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+
+		<!-- ShiftMapper carries the Cosmos replication maps (Replication/IdentityReplicationProfile.cs). Its generator
+		     MUST run on this assembly, not only on the host's: a consumer's generator sees this package as metadata —
+		     never a method body — so the profile's CreateMap calls reach it only as the declaration attributes this
+		     project's own build writes. The same run generates the Map methods of ShiftIdentityReplicationMapper, the
+		     ready-made mapper next to the profile. Dev mode wires both halves as projects; in package mode the single
+		     ShiftSoftware.ShiftMapper package (below) brings the library and ships the generator as an analyzer. -->
+		<ProjectReference Include="..\..\ShiftMapper\ShiftMapper\ShiftMapper.csproj" Condition="Exists('..\..\ShiftMapper\ShiftMapper\ShiftMapper.csproj')" />
+		<ProjectReference Include="..\..\ShiftMapper\ShiftMapper.Generator\ShiftMapper.Generator.csproj" Condition="Exists('..\..\ShiftMapper\ShiftMapper.Generator\ShiftMapper.Generator.csproj')" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -43,6 +52,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="ShiftSoftware.ShiftEntity.EFCore" Version="$(ShiftFrameworkVersion)" Condition="!Exists('..\..\ShiftEntity\ShiftEntity.EFCore\ShiftEntity.EFCore.csproj')" />
+		<PackageReference Include="ShiftSoftware.ShiftMapper" Version="$(ShiftMapperVersion)" Condition="!Exists('..\..\ShiftMapper\ShiftMapper\ShiftMapper.csproj')" />
 		<PackageReference Include="Microsoft.Azure.Cosmos" Version="3.62.0" />
 	</ItemGroup>
 
