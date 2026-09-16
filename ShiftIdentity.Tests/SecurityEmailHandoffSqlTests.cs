@@ -16,8 +16,11 @@ using Xunit;
 
 namespace ShiftIdentity.Tests;
 
-public sealed partial class SecurityLinkSqlTests
+[Trait("Category", "Sql"), Trait("Category", "Http")]
+public sealed class SecurityEmailHandoffSqlTests : SecurityLinkTestBase, IClassFixture<SqlIdentityFixture>
 {
+    public SecurityEmailHandoffSqlTests(SqlIdentityFixture fixture) : base(fixture) { }
+
     [Fact]
     public async Task Sender_is_awaited_after_commit_without_holding_the_account_lock()
     {
@@ -113,7 +116,7 @@ public sealed partial class SecurityLinkSqlTests
         fixture.EmailSink = sink;
         using var host = new IdentityHttpHost(fixture);
         var timer = Stopwatch.StartNew();
-        Assert.IsType<SecurityDeliveryRequested>(await Request(host, Email).WaitAsync(TimeSpan.FromSeconds(3)));
+        Assert.IsType<SecurityDeliveryRequested>(await Request(host, Email).WaitAsync(TimeSpan.FromSeconds(10)));
         Assert.True(timer.Elapsed >= TimeSpan.FromMilliseconds(100));
         var first = sink.Messages.Single();
         Assert.IsType<AuthenticationRefused>(await Open(host, first.Grant, first.Purpose));
@@ -220,6 +223,8 @@ public sealed partial class SecurityLinkSqlTests
     [Fact]
     public async Task Public_response_floor_covers_both_fast_sender_and_unknown_account()
     {
+        // The floor itself is under test, so this one waits for real; the shortest budgets keep that wait small.
+        clock.RealDelays = true; fixture.UseFastPublicResponses();
         using var host = new IdentityHttpHost(fixture);
         foreach (var identifier in new[] { Email, "absent-user" })
         {

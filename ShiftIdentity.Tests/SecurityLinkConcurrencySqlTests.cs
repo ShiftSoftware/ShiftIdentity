@@ -9,8 +9,11 @@ using Xunit;
 
 namespace ShiftIdentity.Tests;
 
-public sealed partial class SecurityLinkSqlTests
+[Trait("Category", "Sql"), Trait("Category", "Http")]
+public sealed class SecurityLinkConcurrencySqlTests : SecurityLinkTestBase, IClassFixture<SqlIdentityFixture>
 {
+    public SecurityLinkConcurrencySqlTests(SqlIdentityFixture fixture) : base(fixture) { }
+
     [Fact]
     public async Task Contact_change_and_change_back_cannot_revive_a_prepared_password_reset()
     {
@@ -58,6 +61,8 @@ public sealed partial class SecurityLinkSqlTests
     [Fact]
     public async Task Reset_and_verification_share_hourly_budget_and_public_ingress_across_hosts()
     {
+        // Only the counts matter here, so the twenty-three public requests take the shortest response floor.
+        fixture.UseFastPublicResponses();
         using var host = new IdentityHttpHost(fixture); using var second = new IdentityHttpHost(fixture);
         for (var i = 0; i < 6; i++)
         {

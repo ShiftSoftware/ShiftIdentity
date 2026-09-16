@@ -11,7 +11,9 @@ namespace ShiftIdentity.Blazor.Tests;
 /// <summary>
 /// The production User form's two choices: each is offered only while it applies (a password being set, a new or
 /// changed address), checked by default, and posted with the legacy UserDTO exactly as chosen through the real
-/// ShiftEntityForm save path against a scripted HTTP transport.
+/// ShiftEntityForm save path against a scripted HTTP transport. A field change reaches the form markup only after
+/// MudBlazor's asynchronous change handling, and bUnit's synchronous Change returns at the handler's first await, so
+/// every expectation that follows a change waits for the render that carries it.
 /// </summary>
 [Trait("Category", "Ui"), Collection("User form")]
 public sealed class UserFormCheckboxTests
@@ -31,18 +33,18 @@ public sealed class UserFormCheckboxTests
         Assert.Empty(cut.FindAll(EmailChoice));
 
         cut.Find(PasswordInput).Change("Synthetic password 7");
-        Assert.True(cut.Find(PasswordChoice).HasAttribute("checked"));
+        cut.WaitForAssertion(() => Assert.True(cut.Find(PasswordChoice).HasAttribute("checked")));
         Assert.Contains("Ask the user to change this password at next sign-in", cut.Markup);
         Assert.Empty(cut.FindAll(EmailChoice));
 
         cut.Find(EmailInput).Change("new@example.invalid");
-        Assert.True(cut.Find(EmailChoice).HasAttribute("checked"));
+        cut.WaitForAssertion(() => Assert.True(cut.Find(EmailChoice).HasAttribute("checked")));
         Assert.Contains("Send a verification link to this address", cut.Markup);
 
         cut.Find(PasswordInput).Change("");
-        Assert.Empty(cut.FindAll(PasswordChoice));
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(PasswordChoice)));
         cut.Find(EmailInput).Change("");
-        Assert.Empty(cut.FindAll(EmailChoice));
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(EmailChoice)));
         Assert.Empty(transport.Posts);
     }
 
@@ -61,8 +63,8 @@ public sealed class UserFormCheckboxTests
         form.Instance.Value.CompanyBranchID = new ShiftEntitySelectDTO { Value = "1", Text = "Synthetic Branch" };
         cut.Find(PasswordInput).Change("Synthetic password 7");
         cut.Find(EmailInput).Change("new@example.invalid");
-        if (!requireChange) cut.Find(PasswordChoice).Change(false);
-        if (!sendVerification) cut.Find(EmailChoice).Change(false);
+        if (!requireChange) cut.WaitForElement(PasswordChoice).Change(false);
+        if (!sendVerification) cut.WaitForElement(EmailChoice).Change(false);
         cut.Find("form").Submit();
         cut.WaitForAssertion(() => Assert.Single(transport.Posts));
         var post = transport.Posts.Single();
@@ -98,13 +100,13 @@ public sealed class UserFormCheckboxTests
         Assert.Empty(cut.FindAll(EmailChoice));
 
         cut.Find(EmailInput).Change("changed@example.invalid");
-        Assert.True(cut.Find(EmailChoice).HasAttribute("checked"));
+        cut.WaitForAssertion(() => Assert.True(cut.Find(EmailChoice).HasAttribute("checked")));
         // Back to the saved address, in another case: the hook compares case-insensitively, so nothing would be sent.
         cut.Find(EmailInput).Change("Existing@Example.invalid");
-        Assert.Empty(cut.FindAll(EmailChoice));
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(EmailChoice)));
 
         cut.Find(PasswordInput).Change("Synthetic password 7");
-        Assert.True(cut.Find(PasswordChoice).HasAttribute("checked"));
+        cut.WaitForAssertion(() => Assert.True(cut.Find(PasswordChoice).HasAttribute("checked")));
         Assert.Empty(transport.Posts);
     }
 }

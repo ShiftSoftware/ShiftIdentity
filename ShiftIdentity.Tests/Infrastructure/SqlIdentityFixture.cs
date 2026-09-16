@@ -37,8 +37,22 @@ public class SqlIdentityFixture : IAsyncLifetime
     internal IdentityMaterialProtector Protection => new(FactorProtection);
     public TimeProvider Clock { get; set; } = TimeProvider.System;
     public ISecurityEmailSink? EmailSink { get; set; } = new LocalSecurityInbox();
-    internal SecurityDeliveryLimits DeliveryLimits { get; set; } = new(HandoffTimeoutMilliseconds: 100, ResultPersistenceTimeoutMilliseconds: 100, PublicPaddingMilliseconds: 50);
+    /// <summary>
+    /// The test budgets. Every ordinary public request sleeps until the sum of the three has elapsed (the response
+    /// floor), so the sender wait stays short: the local inbox answers synchronously, and the padding is dropped.
+    /// The result-persistence budget is the production default, because the audit or cancellation it bounds is written
+    /// by a SQL transaction whose duration a loaded two-core agent decides, not the test; 100 ms was exceeded there.
+    /// </summary>
+    internal static SecurityDeliveryLimits TestDeliveryLimits => new(HandoffTimeoutMilliseconds: 100, ResultPersistenceTimeoutMilliseconds: 2000, PublicPaddingMilliseconds: 0);
+    /// <summary>
+    /// The shortest response floor, for a test that issues many public requests and reads only the inbox, the
+    /// delivery counters or the response body. Such a test never observes the handoff result being persisted, so
+    /// that budget may expire without changing what it asserts.
+    /// </summary>
+    internal static SecurityDeliveryLimits FastPublicResponses => new(HandoffTimeoutMilliseconds: 100, ResultPersistenceTimeoutMilliseconds: 100, PublicPaddingMilliseconds: 0);
+    internal SecurityDeliveryLimits DeliveryLimits { get; set; } = TestDeliveryLimits;
     public void UseRuntimeDeliveryLimits() => DeliveryLimits = new();
+    internal void UseFastPublicResponses() => DeliveryLimits = FastPublicResponses;
     public Func<DbContextOptions, ShiftIdentityDbContext>? ContextFactory { get; set; }
     internal IdentityAdmissionOptions Options { get; private set; } = null!;
     public string Password { get; } = "Synthetic Password 7!";
@@ -148,7 +162,7 @@ public class SqlIdentityFixture : IAsyncLifetime
     {
         await using var db = CreateContext();
         EmailSink = new LocalSecurityInbox(Clock);
-        DeliveryLimits = new(HandoffTimeoutMilliseconds: 100, ResultPersistenceTimeoutMilliseconds: 100, PublicPaddingMilliseconds: 50);
+        DeliveryLimits = TestDeliveryLimits;
         await db.Set<AuthThrottleBucket>().ExecuteDeleteAsync();
         await db.Set<AuthenticationOperation>().ExecuteDeleteAsync();
         await db.Set<AuthenticationAuditEvent>().ExecuteDeleteAsync();
@@ -226,7 +240,9 @@ public class SqlIdentityFixture : IAsyncLifetime
             if (await check.ExecuteScalarAsync() is not Guid marker || marker != ownership)
                 throw new InvalidOperationException("Database ownership marker mismatch; refusing teardown.");
         }
-        SqlConnection.ClearAllPools();
+        // Only this database's pooled connections must go before the drop; clearing every pool in the process would
+        // cost the classes still running against their own databases a reconnect in the middle of a request.
+        SqlConnection.ClearPool(new SqlConnection(connectionString));
         await using var server = new SqlConnection(serverConnectionString);
         await server.OpenAsync();
         await using var drop = server.CreateCommand();
@@ -235,5 +251,8 @@ public class SqlIdentityFixture : IAsyncLifetime
     }
 }
 
-[CollectionDefinition("Identity SQL", DisableParallelization = true)]
+// Classes in one collection already run one after another, sharing this fixture's database. DisableParallelization
+// would not add to that; it only makes xUnit hold the whole collection back until every other collection has
+// finished, which turned the run into two serial halves.
+[CollectionDefinition("Identity SQL")]
 public sealed class IdentitySqlCollection : ICollectionFixture<SqlIdentityFixture>;

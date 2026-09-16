@@ -37,7 +37,7 @@ public sealed class UserFormLayoutTests
         Assert.DoesNotContain("Authenticator App (TOTP)", security.TextContent);
         // Entering a password adds a full-width notice at the bottom of Security that carries the next-login choice.
         cut.Find("[data-testid=user-password] input").Change("Synthetic password 7");
-        var passwordNotice = cut.Find("[data-testid=user-section-security] [data-testid=user-password-require-change]");
+        var passwordNotice = cut.WaitForElement("[data-testid=user-section-security] [data-testid=user-password-require-change]");
         Assert.Contains("mud-alert-text-warning", passwordNotice.ClassName);
         Assert.Contains("A new password will be saved for this user.", passwordNotice.TextContent);
         Assert.NotNull(passwordNotice.QuerySelector("input[type=checkbox]"));
@@ -50,7 +50,7 @@ public sealed class UserFormLayoutTests
         Assert.Contains("Phone", contacts.TextContent);
         // A new address adds the same kind of notice at the bottom of Contacts with the verification choice.
         cut.Find("[data-testid=user-email] input").Change("new@example.invalid");
-        var emailNotice = cut.Find("[data-testid=user-section-contacts] [data-testid=user-email-send-verification]");
+        var emailNotice = cut.WaitForElement("[data-testid=user-section-contacts] [data-testid=user-email-send-verification]");
         Assert.Contains("mud-alert-text-warning", emailNotice.ClassName);
         Assert.Contains("This address will be saved unverified.", emailNotice.TextContent);
         Assert.NotNull(emailNotice.QuerySelector("input[type=checkbox]"));

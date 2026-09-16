@@ -14,18 +14,9 @@ using Xunit;
 namespace ShiftIdentity.Tests;
 
 [Trait("Category", "Sql"), Trait("Category", "Http")]
-public sealed partial class SecurityLinkSqlTests(SqlIdentityFixture fixture) : IClassFixture<SqlIdentityFixture>, IAsyncLifetime
+public sealed class SecurityLinkSqlTests : SecurityLinkTestBase, IClassFixture<SqlIdentityFixture>
 {
-    private readonly string Email = "saved+reset-" + Guid.NewGuid().ToString("N") + "@example.invalid";
-    private const string NewPassword = "Another synthetic password 83!";
-    private ControlledClock clock = null!;
-    public async ValueTask InitializeAsync()
-    {
-        clock = new(DateTimeOffset.UtcNow); fixture.Clock = clock;
-        await fixture.ResetAsync();
-        await Contact(Email, true);
-    }
-    public ValueTask DisposeAsync() { fixture.Clock = TimeProvider.System; return ValueTask.CompletedTask; }
+    public SecurityLinkSqlTests(SqlIdentityFixture fixture) : base(fixture) { }
 
     [Theory]
     [InlineData(false)]
@@ -108,6 +99,8 @@ public sealed partial class SecurityLinkSqlTests(SqlIdentityFixture fixture) : I
     [InlineData("cooldown")]
     public async Task Public_suppression_has_identical_status_and_body(string scenario)
     {
+        // Only the status and body are compared, so the fourteen public requests take the shortest response floor.
+        fixture.UseFastPublicResponses();
         using var host = new IdentityHttpHost(fixture);
         var identifier = fixture.Username;
         var verification = scenario == "alreadyVerified";
@@ -219,42 +212,4 @@ public sealed partial class SecurityLinkSqlTests(SqlIdentityFixture fixture) : I
         await AssertPassword(fixture.Password, 1, false);
         Assert.IsType<SecurityLinkOpened>(await Open(host, grant, AuthenticationOperationPurpose.EmailVerify));
     }
-
-    private async Task Contact(string? email, bool eligible, bool verified = false, long? userID = null)
-    {
-        await using var db = fixture.CreateContext();
-        var id = userID ?? fixture.UserID;
-        var user = await db.Users.SingleAsync(x => x.ID == id); var state = await db.Set<UserSecurityState>().SingleAsync(x => x.UserID == id);
-        user.Email = email; user.EmailVerified = verified; RecoveryContact.Invalidate(state);
-        state.UsernameLookupKey = null; state.EmailLookupKey = null; RecoveryContact.InitializeLookup(user, state);
-        if (eligible) RecoveryContact.RecordOwnership(user, state, RecoveryEmailProvenance.TrustedAdminAssignment);
-        await db.SaveChangesAsync();
-    }
-    private static async Task<AuthOutcome> Request(IdentityHttpHost host, string identifier, bool verification = false) =>
-        await Post(host, (verification ? "email-verification" : "password-reset") + "/request", new RequestSecurityEmail(identifier));
-    private static Task<AuthOutcome> Open(IdentityHttpHost host, string grant, AuthenticationOperationPurpose purpose) => Post(host, "security-link/open", new OpenSecurityLinkRequest(grant, purpose));
-    private static Task<AuthOutcome> Reset(IdentityHttpHost host, string page, string password = NewPassword) => Post(host, "password-reset/complete", new CompletePasswordResetRequest(page, password));
-    private static Task<AuthOutcome> Verify(IdentityHttpHost host, string page) => Post(host, "email-verification/complete", new CompleteEmailVerificationRequest(page));
-    private static async Task<AuthOutcome> Post<T>(IdentityHttpHost host, string path, T payload, string? access = null)
-    {
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/identity/v2/" + path) { Content = JsonContent.Create(payload) };
-        if (access is not null) request.Headers.Authorization = new("Bearer", access);
-        return await IdentityHttpHost.Read(await host.Client.SendAsync(request));
-    }
-    private LocalSecurityInbox Inbox => Assert.IsType<LocalSecurityInbox>(fixture.EmailSink);
-    private static Task<string> Grant(IdentityHttpHost host)
-    {
-        var inbox = Assert.IsType<LocalSecurityInbox>(host.Services.GetRequiredService<ISecurityEmailSink>());
-        var link = inbox.Messages.First().Link;
-        return Task.FromResult(Uri.UnescapeDataString(link.Split("#grant=", 2)[1].Split('&', 2)[0]));
-    }
-    private async Task<UserSecurityState> State()
-    { await using var db = fixture.CreateContext(); return await db.Set<UserSecurityState>().AsNoTracking().SingleAsync(x => x.UserID == fixture.UserID); }
-    private async Task AssertPassword(string password, long version, bool verified)
-    {
-        await using var db = fixture.CreateContext(); var user = await db.Users.SingleAsync(x => x.ID == fixture.UserID);
-        Assert.True(HashService.VerifyVersionedPassword(password, user.Salt, user.PasswordHash)); Assert.Equal(verified, user.EmailVerified);
-        Assert.Equal(version, (await db.Set<UserSecurityState>().SingleAsync(x => x.UserID == fixture.UserID)).SecurityVersion);
-    }
-    private string Code() => new Totp(fixture.FactorSecret).ComputeTotp(clock.GetUtcNow().UtcDateTime);
 }

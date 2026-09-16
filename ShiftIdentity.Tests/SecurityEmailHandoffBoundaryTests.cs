@@ -11,8 +11,11 @@ using Xunit;
 
 namespace ShiftIdentity.Tests;
 
-public sealed partial class SecurityLinkSqlTests
+[Trait("Category", "Sql"), Trait("Category", "Http")]
+public sealed class SecurityEmailHandoffBoundaryTests : SecurityLinkTestBase, IClassFixture<SqlIdentityFixture>
 {
+    public SecurityEmailHandoffBoundaryTests(SqlIdentityFixture fixture) : base(fixture) { }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -106,77 +109,33 @@ public sealed partial class SecurityLinkSqlTests
         Assert.Null(original.Destination);
         Assert.Equal(2, (await State()).DeliveryCount);
     }
+}
 
-    [Fact]
-    public async Task Public_response_floor_includes_sender_and_result_persistence_timeouts()
+/// <summary>Fails or blocks the write that records the handoff result; shared with the timing class.</summary>
+internal sealed class HandoffResultPersistenceFault(bool afterSave = false, bool blockUntilCancellation = false) : SaveChangesInterceptor
+{
+    public int Calls { get; private set; }
+    public bool CancellationObserved { get; private set; }
+
+    private async Task FailAsync(DbContext? db, bool after, CancellationToken cancellationToken)
     {
-        fixture.DeliveryLimits = new(HandoffTimeoutMilliseconds: 100, ResultPersistenceTimeoutMilliseconds: 500,
-            PublicPaddingMilliseconds: 200);
-        var sink = new HandoffTimeoutSink();
-        fixture.EmailSink = sink;
-        var fault = new HandoffResultPersistenceFault(blockUntilCancellation: true);
-        using var host = new IdentityHttpHost(fixture, null, null, fault);
-        string? expectedBody = null;
-        var floor = TimeSpan.FromMilliseconds(fixture.DeliveryLimits.HandoffTimeoutMilliseconds +
-            fixture.DeliveryLimits.ResultPersistenceTimeoutMilliseconds + fixture.DeliveryLimits.PublicPaddingMilliseconds);
-        foreach (var identifier in new[] { Email, "unknown-handoff-budget-account" })
+        if (after != afterSave || db?.ChangeTracker.Entries<AuthenticationAuditEvent>().Any(x =>
+                x.Entity.Outcome is "SecurityDeliveryAccepted" or "SecurityDeliveryUnconfirmed") != true) return;
+        Calls++;
+        if (blockUntilCancellation)
         {
-            var started = Stopwatch.GetTimestamp();
-            using var response = await host.Client.PostAsJsonAsync("/api/identity/v2/password-reset/request",
-                new RequestSecurityEmail(identifier), TestContext.Current.CancellationToken)
-                .WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
-            var elapsed = Stopwatch.GetElapsedTime(started);
-            Assert.True(elapsed >= floor - TimeSpan.FromMilliseconds(20), $"Public response returned after {elapsed}, below the complete {floor} budget.");
-            Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-            var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-            expectedBody ??= body;
-            Assert.Equal(expectedBody, body);
-        }
-        Assert.Equal(1, sink.Calls);
-        Assert.True(sink.CancellationObserved);
-        Assert.Equal(1, fault.Calls);
-        Assert.True(fault.CancellationObserved);
-        await AssertPassword(fixture.Password, 1, false);
-    }
-
-    private sealed class HandoffResultPersistenceFault(bool afterSave = false, bool blockUntilCancellation = false) : SaveChangesInterceptor
-    {
-        public int Calls { get; private set; }
-        public bool CancellationObserved { get; private set; }
-
-        private async Task FailAsync(DbContext? db, bool after, CancellationToken cancellationToken)
-        {
-            if (after != afterSave || db?.ChangeTracker.Entries<AuthenticationAuditEvent>().Any(x =>
-                    x.Entity.Outcome is "SecurityDeliveryAccepted" or "SecurityDeliveryUnconfirmed") != true) return;
-            Calls++;
-            if (blockUntilCancellation)
-            {
-                try { await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken); }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-                { CancellationObserved = true; throw; }
-            }
-            throw new IOException("Synthetic handoff result persistence failure.");
-        }
-
-        public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData,
-            InterceptionResult<int> result, CancellationToken cancellationToken = default)
-        { await FailAsync(eventData.Context, false, cancellationToken); return result; }
-
-        public override async ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result,
-            CancellationToken cancellationToken = default)
-        { await FailAsync(eventData.Context, true, cancellationToken); return result; }
-    }
-
-    private sealed class HandoffTimeoutSink : ISecurityEmailSink
-    {
-        public int Calls { get; private set; }
-        public bool CancellationObserved { get; private set; }
-        public async Task DeliverAsync(SecurityEmail message, CancellationToken cancellationToken)
-        {
-            Calls++;
             try { await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken); }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             { CancellationObserved = true; throw; }
         }
+        throw new IOException("Synthetic handoff result persistence failure.");
     }
+
+    public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData,
+        InterceptionResult<int> result, CancellationToken cancellationToken = default)
+    { await FailAsync(eventData.Context, false, cancellationToken); return result; }
+
+    public override async ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result,
+        CancellationToken cancellationToken = default)
+    { await FailAsync(eventData.Context, true, cancellationToken); return result; }
 }

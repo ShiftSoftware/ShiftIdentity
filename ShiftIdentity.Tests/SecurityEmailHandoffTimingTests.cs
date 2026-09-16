@@ -11,9 +11,17 @@ using Xunit;
 
 namespace ShiftIdentity.Tests;
 
-public sealed partial class SecurityLinkSqlTests
+/// <summary>
+/// Real-clock evidence that the public response floor is honoured: these tests wait the production budgets for
+/// real, tens of seconds in total, so they carry only the LongRunning category. The pipeline runs that category
+/// when the release tag name contains "with-long-running-tests"; the ordinary Sql gate skips it.
+/// </summary>
+[Trait("Category", "LongRunning")]
+public sealed class SecurityEmailHandoffTimingTests : SecurityLinkTestBase, IClassFixture<SqlIdentityFixture>
 {
-    [Theory]
+    public SecurityEmailHandoffTimingTests(SqlIdentityFixture fixture) : base(fixture) { }
+
+    [Theory(Skip = LongRunningTests.SkipReason, SkipUnless = nameof(LongRunningTests.Enabled), SkipType = typeof(LongRunningTests))]
     [InlineData("accepted")]
     [InlineData("unknown")]
     [InlineData("ineligible")]
@@ -23,6 +31,7 @@ public sealed partial class SecurityLinkSqlTests
     [InlineData("timeoutAndBlockedResult")]
     public async Task Actual_default_public_handoff_latency_covers_all_outcomes(string scenario)
     {
+        clock.RealDelays = true;
         fixture.DeliveryLimits = new();
         Assert.Equal(3000, fixture.DeliveryLimits.HandoffTimeoutMilliseconds);
         Assert.Equal(2000, fixture.DeliveryLimits.ResultPersistenceTimeoutMilliseconds);
@@ -67,6 +76,39 @@ public sealed partial class SecurityLinkSqlTests
         await AssertPassword(fixture.Password, 1, false);
     }
 
+    [Fact(Skip = LongRunningTests.SkipReason, SkipUnless = nameof(LongRunningTests.Enabled), SkipType = typeof(LongRunningTests))]
+    public async Task Public_response_floor_includes_sender_and_result_persistence_timeouts()
+    {
+        clock.RealDelays = true;
+        fixture.DeliveryLimits = new(HandoffTimeoutMilliseconds: 100, ResultPersistenceTimeoutMilliseconds: 2000,
+            PublicPaddingMilliseconds: 200);
+        var sink = new HandoffTimeoutSink();
+        fixture.EmailSink = sink;
+        var fault = new HandoffResultPersistenceFault(blockUntilCancellation: true);
+        using var host = new IdentityHttpHost(fixture, null, null, fault);
+        string? expectedBody = null;
+        var floor = TimeSpan.FromMilliseconds(fixture.DeliveryLimits.HandoffTimeoutMilliseconds +
+            fixture.DeliveryLimits.ResultPersistenceTimeoutMilliseconds + fixture.DeliveryLimits.PublicPaddingMilliseconds);
+        foreach (var identifier in new[] { Email, "unknown-handoff-budget-account" })
+        {
+            var started = Stopwatch.GetTimestamp();
+            using var response = await host.Client.PostAsJsonAsync("/api/identity/v2/password-reset/request",
+                new RequestSecurityEmail(identifier), TestContext.Current.CancellationToken)
+                .WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+            var elapsed = Stopwatch.GetElapsedTime(started);
+            Assert.True(elapsed >= floor - TimeSpan.FromMilliseconds(20), $"Public response returned after {elapsed}, below the complete {floor} budget.");
+            Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+            var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+            expectedBody ??= body;
+            Assert.Equal(expectedBody, body);
+        }
+        Assert.Equal(1, sink.Calls);
+        Assert.True(sink.CancellationObserved);
+        Assert.Equal(1, fault.Calls);
+        Assert.True(fault.CancellationObserved);
+        await AssertPassword(fixture.Password, 1, false);
+    }
+
     private sealed class MeasuredHandoffSink(ISecurityEmailSink inner, string scenario) : ISecurityEmailSink
     {
         public int Calls { get; private set; }
@@ -101,6 +143,19 @@ public sealed partial class SecurityLinkSqlTests
             var started = Stopwatch.GetTimestamp();
             try { return await inner.SavingChangesAsync(eventData, result, cancellationToken); }
             finally { if (inner.Calls != calls) Duration = Stopwatch.GetElapsedTime(started); }
+        }
+    }
+
+    private sealed class HandoffTimeoutSink : ISecurityEmailSink
+    {
+        public int Calls { get; private set; }
+        public bool CancellationObserved { get; private set; }
+        public async Task DeliverAsync(SecurityEmail message, CancellationToken cancellationToken)
+        {
+            Calls++;
+            try { await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken); }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            { CancellationObserved = true; throw; }
         }
     }
 }

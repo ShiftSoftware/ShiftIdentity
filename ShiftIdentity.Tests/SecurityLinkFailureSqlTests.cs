@@ -10,8 +10,11 @@ using Xunit;
 
 namespace ShiftIdentity.Tests;
 
-public sealed partial class SecurityLinkSqlTests
+[Trait("Category", "Sql"), Trait("Category", "Http")]
+public sealed class SecurityLinkFailureSqlTests : SecurityLinkTestBase, IClassFixture<SqlIdentityFixture>
 {
+    public SecurityLinkFailureSqlTests(SqlIdentityFixture fixture) : base(fixture) { }
+
     [Fact]
     public async Task Known_and_unknown_public_requests_remain_identical_when_loaded_policy_is_stale()
     {

@@ -43,7 +43,9 @@ internal static partial class AccountSecurityService
         // SQL contention and cancellation can still affect timing; this is not a constant-time guarantee.
         var remaining = TimeSpan.FromMilliseconds(services.DeliveryLimits.HandoffTimeoutMilliseconds +
             services.DeliveryLimits.ResultPersistenceTimeoutMilliseconds + services.DeliveryLimits.PublicPaddingMilliseconds) - Stopwatch.GetElapsedTime(started);
-        if (remaining > TimeSpan.Zero) await Task.Delay(remaining, ct);
+        // The wait runs on the injected clock, like every other deadline here, so a test that owns time is not
+        // obliged to sleep through it; production supplies the system clock and waits the full floor.
+        if (remaining > TimeSpan.Zero) await Task.Delay(remaining, services.Clock, ct);
         return result;
     }
 
