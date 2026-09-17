@@ -52,7 +52,7 @@ public static class IFunctionsWorkerApplicationBuilderExtension
 
         // The ShiftMapper mapper the identity catch-up replication (Replication/IdentityCatchUpReplicationExtensions)
         // maps through: ReplicateAllAsync and the per-entity ReplicateXAsync calls pass no mapping delegates, so the
-        // CosmosDBReplication service resolves IShiftMapper for every document. Registered here, with identity, so a
+        // CosmosDBReplication service resolves IMapper for every document. Registered here, with identity, so a
         // Functions host that hosts identity never has to remember it. A host that does not replicate pays nothing —
         // the registration is a factory, and nothing is built until something replicates. Idempotent.
         builder.Services.AddShiftIdentityReplicationMapper();

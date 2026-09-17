@@ -10,30 +10,32 @@ namespace ShiftSoftware.ShiftIdentity.Data.Replication;
 public static class IdentityReplicationMapperServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers <see cref="ShiftIdentityReplicationMapper"/> under its own type and under <see cref="IShiftMapper"/>,
-    /// which is how the replication pipeline finds it.
+    /// Registers THIS ASSEMBLY's generated mapper — the class ShiftMapper's generator wrote holding the 19 pairs
+    /// <see cref="ShiftIdentityReplicationMapper"/> declares — together with <see cref="Mapper"/> and
+    /// <see cref="IMapper"/> over everything registered so far, which is how the replication pipeline finds it.
+    /// Nothing is named: <c>AddShiftMapper</c> reads the generated class out of the assembly's own metadata, and the
+    /// mapper class itself is never registered — the generated mapper builds it on first use.
     /// <para>
     /// A host normally never calls this: the identity registrations do — <c>AddShiftIdentityDashboard&lt;TDbContext&gt;()</c>
     /// on the API side (the save trigger's <c>SetUpAllIdentityReplications</c>) and the Functions worker's
     /// <c>AddShiftIdentity(issuer, key)</c> (the catch-up <c>ReplicateAllAsync</c>). It is public for a host that
-    /// wires replication without either, and it is IDEMPOTENT so that path cannot double-register: once the mapper is
-    /// in the collection every later call is a no-op, whichever lifetime it asks for — the first registration wins.
-    /// That matters more than it used to: ShiftMapper keeps ONE registry per collection and refuses the same mapper
-    /// registered twice from the same assembly, so the guard is what lets both identity registrations and an
-    /// explicit host call coexist.
+    /// wires replication without either, and it is IDEMPOTENT: ShiftMapper keeps ONE registry per collection and a
+    /// second registration of the same assembly's generated mapper changes nothing, whichever lifetime it asks for —
+    /// the first registration wins. So both identity registrations and an explicit host call coexist without a
+    /// guard of this method's own.
     /// </para>
     /// <para>
-    /// The registration is made FROM THIS ASSEMBLY — the mapper's own — which ShiftMapper treats as the package's
-    /// fallback registration: a host that registers <see cref="ShiftIdentityReplicationMapper"/> itself
-    /// (<c>o.AddMapper&lt;ShiftIdentityReplicationMapper&gt;()</c>, which gives it an adapter carrying the host's own
-    /// packs) wins in either order, and the guard above yields to it the same way. A host whose own mapper INCLUDES
-    /// this one keeps working alongside it too: <see cref="IShiftMapper"/> then resolves to a composite that
-    /// dispatches each pair to the first registered mapper declaring it, and a pair reached two ways through one
-    /// declaration runs the same map whichever answers.
+    /// A host with a generator of its own does not need to know about this: its generated mapper already carries
+    /// these 19 pairs, re-baked with the host's rules, because ShiftMapper reads every mapper class of every
+    /// referenced package into it (<c>MapperDiscovery.All</c>, the default). <see cref="Mapper"/> puts that one
+    /// FIRST and this assembly's second, so the host's answers and this registration is the fallback — for a host
+    /// with no generator, or one that maps only through <see cref="IMapper"/>. What ShiftMapper refuses (SM0042 at
+    /// build time) is a second mapper class writing its OWN <c>CreateMap</c> for one of these pairs.
     /// </para>
     /// <para>
-    /// Singleton by default: the mapper takes no dependencies, and its maps read nothing scoped. When a host
-    /// registers a scoped mapper of its own, the composite ShiftMapper builds over both takes the shorter lifetime.
+    /// Singleton by default: the mapper class takes no dependencies, and its maps read nothing scoped. When a host
+    /// registers a scoped generated mapper of its own, the <see cref="Mapper"/> ShiftMapper builds over both takes
+    /// the shorter lifetime.
     /// </para>
     /// <para>
     /// Written as an inline options lambda rather than the generic short form on purpose. The generator reads either,
@@ -50,16 +52,6 @@ public static class IdentityReplicationMapperServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        //Keyed on the mapper's own type rather than IShiftMapper: another mapper under the interface is the
-        //application's, and this registration must neither replace it nor be skipped because of it. The host's own
-        //adapter for THIS mapper also lands under this type, and yielding to it is exactly ShiftMapper's rule.
-        if (services.Any(descriptor => descriptor.ServiceType == typeof(ShiftIdentityReplicationMapper)))
-            return services;
-
-        return services.AddShiftMapper(o =>
-        {
-            o.Lifetime = lifetime;
-            o.AddMapper<ShiftIdentityReplicationMapper>();
-        });
+        return services.AddShiftMapper(o => o.Lifetime = lifetime);
     }
 }

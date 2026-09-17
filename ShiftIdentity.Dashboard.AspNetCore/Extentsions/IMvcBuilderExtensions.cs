@@ -110,7 +110,7 @@ public static class IMvcBuilderExtensions
         builder.Services.AddScoped<ShiftIdentityDbContext>(x=> x.GetRequiredService<TDbContext>());
 
         // The ShiftMapper mapper the identity Cosmos replication maps through. SetUpAllIdentityReplications passes no
-        // mapping delegates, and the replication trigger resolves IShiftMapper for every document — so the mapper has
+        // mapping delegates, and the replication trigger resolves IMapper for every document — so the mapper has
         // to be in the container of every host that hosts identity, whether or not it turns replication on: the
         // registration is a factory, nothing is built until something replicates. Idempotent, so a host that also
         // calls AddShiftIdentityReplicationMapper() itself does not end up with two.

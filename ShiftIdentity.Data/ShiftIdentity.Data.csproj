@@ -33,7 +33,8 @@
 		     generator MUST run on this assembly, not only on the host's: a consumer's generator sees this package as
 		     metadata — never a method body — so the mapper's CreateMap calls, and the package's own AddShiftMapper
 		     registration (Replication/IdentityReplicationMapperServiceCollectionExtensions.cs), reach it only as the
-		     declaration attributes this project's own build writes. The same run generates the mapper's Map methods.
+		     declaration attributes this project's own build writes. The same run writes this assembly's GENERATED mapper —
+		     the one class holding the real Map methods, which that registration registers and Mapper dispatches to.
 		     Dev mode wires both halves as projects; in package mode the single ShiftSoftware.ShiftMapper package
 		     (below) brings the library and ships the generator as an analyzer. -->
 		<ProjectReference Include="..\..\ShiftMapper\ShiftMapper\ShiftMapper.csproj" Condition="Exists('..\..\ShiftMapper\ShiftMapper\ShiftMapper.csproj')" />

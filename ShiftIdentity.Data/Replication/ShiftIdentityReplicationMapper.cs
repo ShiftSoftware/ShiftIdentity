@@ -6,30 +6,26 @@ using System.Globalization;
 namespace ShiftSoftware.ShiftIdentity.Data.Replication;
 
 /// <summary>
-/// The <c>Entity → *Model</c> maps Cosmos replication uses for the ShiftIdentity domain — the ShiftMapper mapper the
-/// package ships. The trigger side (<c>SetUpAllIdentityReplications</c>) and the catch-up side (<c>ReplicateAllAsync</c>)
+/// The <c>Entity → *Model</c> maps Cosmos replication uses for the ShiftIdentity domain — the ShiftMapper mapper class
+/// the package ships. The trigger side (<c>SetUpAllIdentityReplications</c>) and the catch-up side (<c>ReplicateAllAsync</c>)
 /// register their <c>Replicate</c> / <c>UpdateReference</c> / <c>UpdatePropertyReference</c> calls WITHOUT a mapping
-/// delegate, and the replication pipeline maps every document through the host's registered <see cref="IShiftMapper"/>
+/// delegate, and the replication pipeline maps every document through the host's registered <see cref="IMapper"/>
 /// — so the host has to carry these 19 pairs. It does so without asking: the identity registrations
 /// (<c>AddShiftIdentityDashboard&lt;TDbContext&gt;()</c> on the API side, the Functions worker's
-/// <c>AddShiftIdentity(issuer, key)</c>) register this mapper through <c>AddShiftIdentityReplicationMapper()</c> — the
-/// package registering itself, the way ShiftMapper expects a framework to. A host that wires replication without
-/// either calls that method itself.
+/// <c>AddShiftIdentity(issuer, key)</c>) register this assembly's generated mapper through
+/// <c>AddShiftIdentityReplicationMapper()</c> — the package registering itself, the way ShiftMapper expects a
+/// framework to. A host that wires replication without either calls that method itself.
 /// <para>
-/// A host with a mapper of its own does not need a second registration: <c>IncludeMapper&lt;ShiftIdentityReplicationMapper&gt;()</c>
-/// from its constructor (or <c>o.AddMapper&lt;AppMapper&gt;(m =&gt; m.IncludeMapper&lt;ShiftIdentityReplicationMapper&gt;())</c>
-/// at registration) folds the same 19 pairs into that mapper. Both may be registered side by side — an included
-/// mapper is an ordinary mapper, and a pair reached two ways through ONE declaration is what the
-/// <see cref="IShiftMapper"/> composite is built for. What ShiftMapper refuses (SM0040 at build time, and the same
-/// check when the container is built) is a second mapper writing its OWN <c>CreateMap</c> for one of these pairs:
-/// include this one instead of re-declaring it.
-/// </para>
-/// <para>
-/// PARTIAL, because the ShiftMapper generator writes the other half — the real <c>Map</c> methods and the explicit
-/// <see cref="IShiftMapper"/> implementation the replication pipeline resolves. That half is generated on THIS
-/// assembly's build (the generator is referenced here), which is what makes the class usable as-is from a host that
-/// only references the package: a consumer's generator sees this assembly as metadata, never a method body, and the
-/// declarations below reach it only as the assembly attributes this project's own build writes.
+/// NOTHING IS GENERATED ONTO THIS CLASS, AND NOTHING INJECTS IT. It is a place to write declarations: ShiftMapper's
+/// generator reads them on THIS assembly's build and writes ONE generated class for the assembly, holding the real
+/// <c>Map</c> methods and the <see cref="IMapper"/> implementation the replication pipeline resolves; <see cref="Mapper"/>
+/// is what a caller injects. The same build writes what these lines DECLARE into the assembly as attributes
+/// (<c>ShiftMapperDeclaredMap</c> and friends), because a consumer's generator sees this assembly as metadata and
+/// never a method body — and from those a host with a generator of its own gets these 19 pairs into ITS generated
+/// mapper with nothing written, re-baked with its own rules, typed methods (<c>mapper.MapToBrandModel(brand)</c>)
+/// included. Both generated mappers may be registered side by side: <see cref="Mapper"/> answers from the host's
+/// first, and a pair reached two ways through ONE declaration runs the same map whichever answers. What ShiftMapper
+/// refuses (SM0042 at build time) is a second mapper class writing its OWN <c>CreateMap</c> for one of these pairs.
 /// </para>
 /// <para>
 /// Every pair reproduces the AutoMapper profile it descends from EXACTLY — the members AutoMapper filled by
@@ -65,7 +61,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Replication;
 /// <c>AddShiftIdentityReplicationMapper()</c> shares with <c>o.ShareConversions&lt;…&gt;()</c>.
 /// </para>
 /// </summary>
-public partial class ShiftIdentityReplicationMapper : ShiftMapperBase
+public class ShiftIdentityReplicationMapper : ShiftMapperBase
 {
     public ShiftIdentityReplicationMapper()
     {
