@@ -21,8 +21,8 @@ namespace ShiftSoftware.ShiftIdentity.AzureFunctions.Replication;
 /// the same maps the trigger side uses, so a backfilled document is byte-identical to one a live save produces.
 /// The Functions worker's <c>AddShiftIdentity(issuer, key)</c> registers that mapper (the ready-made
 /// <see cref="ShiftIdentityReplicationMapper"/>), so a host that hosts identity has nothing extra to wire; one that
-/// wires replication without it calls <c>AddShiftIdentityReplicationMapper()</c> itself, or adds
-/// <c>IdentityReplicationProfile</c> to a mapper of its own. A host with neither throws out of <c>RunAsync</c> before
+/// wires replication without it calls <c>AddShiftIdentityReplicationMapper()</c> itself, or includes
+/// <see cref="ShiftIdentityReplicationMapper"/> in a mapper of its own. A host with neither throws out of <c>RunAsync</c> before
 /// any row is touched.
 ///
 /// The catch-up side has no <c>IShiftEntityPrepareForReplicationAsync</c> hook (that runs only inside the save
