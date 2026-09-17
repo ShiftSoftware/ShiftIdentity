@@ -13,15 +13,13 @@ namespace ShiftIdentity.Tests;
 
 /// <summary>
 /// Real-clock evidence that the public response floor is honoured: these tests wait the production budgets for
-/// real, tens of seconds in total, so they carry only the LongRunning category. The pipeline runs that category
-/// when the release tag name contains "with-long-running-tests"; the ordinary Sql gate skips it.
+/// real, tens of seconds in total. That is why they live in this project and not in ShiftIdentity.Tests.
 /// </summary>
-[Trait("Category", "LongRunning")]
 public sealed class SecurityEmailHandoffTimingTests : SecurityLinkTestBase, IClassFixture<SqlIdentityFixture>
 {
     public SecurityEmailHandoffTimingTests(SqlIdentityFixture fixture) : base(fixture) { }
 
-    [Theory(Skip = LongRunningTests.SkipReason, SkipUnless = nameof(LongRunningTests.Enabled), SkipType = typeof(LongRunningTests))]
+    [Theory]
     [InlineData("accepted")]
     [InlineData("unknown")]
     [InlineData("ineligible")]
@@ -76,7 +74,7 @@ public sealed class SecurityEmailHandoffTimingTests : SecurityLinkTestBase, ICla
         await AssertPassword(fixture.Password, 1, false);
     }
 
-    [Fact(Skip = LongRunningTests.SkipReason, SkipUnless = nameof(LongRunningTests.Enabled), SkipType = typeof(LongRunningTests))]
+    [Fact]
     public async Task Public_response_floor_includes_sender_and_result_persistence_timeouts()
     {
         clock.RealDelays = true;

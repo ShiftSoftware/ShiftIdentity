@@ -250,9 +250,3 @@ public class SqlIdentityFixture : IAsyncLifetime
         await drop.ExecuteNonQueryAsync();
     }
 }
-
-// Classes in one collection already run one after another, sharing this fixture's database. DisableParallelization
-// would not add to that; it only makes xUnit hold the whole collection back until every other collection has
-// finished, which turned the run into two serial halves.
-[CollectionDefinition("Identity SQL")]
-public sealed class IdentitySqlCollection : ICollectionFixture<SqlIdentityFixture>;
