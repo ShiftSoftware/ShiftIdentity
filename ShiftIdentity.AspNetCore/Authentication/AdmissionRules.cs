@@ -46,8 +46,11 @@ internal static class AdmissionRules
         return null;
     }
 
-    /// <summary>The legacy refresh format binds no version; this is the recorded one-time stamping exception.</summary>
-    internal static AuthenticationRefused? LegacyRefreshRefusal(IdentityAdmissionServices services,
+    /// <summary>
+    /// The legacy refresh and temporary-step formats bind no version; this is the recorded one-time stamping
+    /// exception, applied to the first presentation of a pre-cutover credential only.
+    /// </summary>
+    internal static AuthenticationRefused? LegacyCredentialRefusal(IdentityAdmissionServices services,
         IdentitySecurityTransaction unit)
     {
         services.Observe?.Invoke("AdmissionLock");

@@ -1,3 +1,4 @@
+using ShiftSoftware.ShiftIdentity.Core.Authentication;
 using ShiftSoftware.ShiftIdentity.Data.Entities;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Authentication;
@@ -48,6 +49,12 @@ public interface IIdentitySecurityStore
     /// <summary>Serializes a one-time legacy refresh exchange and exposes its completed tombstone on replay.</summary>
     Task<T> AdmitLegacyRefreshAsync<T>(long userID, byte[] credentialDigest, AuthenticationClient client,
         Func<IdentitySecurityTransaction, Task<T>> transition, CancellationToken cancellationToken);
+    /// <summary>
+    /// Serializes the exchange of one pre-cutover credential of the given legacy purpose and exposes the row bound
+    /// to its digest, whether still pending, locked or the completed tombstone.
+    /// </summary>
+    Task<T> AdmitLegacyCredentialAsync<T>(long userID, AuthenticationOperationPurpose purpose, byte[] credentialDigest,
+        AuthenticationClient client, Func<IdentitySecurityTransaction, Task<T>> transition, CancellationToken cancellationToken);
     /// <summary>Locks both source and destination Apps before the user when transferring an admitted session.</summary>
     Task<T> AdmitAppAsync<T>(long userID, AuthenticationClient source, AuthenticationClient destination,
         Func<IdentitySecurityTransaction, Task<T>> transition, CancellationToken cancellationToken);

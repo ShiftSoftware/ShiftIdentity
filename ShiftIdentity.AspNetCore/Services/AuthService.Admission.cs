@@ -130,18 +130,7 @@ public partial class AuthService
             return Refuse(AuthenticationFailure.InvalidGrant);
         var legacy = legacyTokens.Validate(request.RefreshToken);
         if (legacy is null) return Refuse(AuthenticationFailure.InvalidGrant);
-        long userID;
-        try
-        {
-            userID = services.HashIds.Decode<UserDTO>(legacy.Subject);
-            if (userID <= 0 && !long.TryParse(legacy.Subject, NumberStyles.None, CultureInfo.InvariantCulture, out userID))
-                return Refuse(AuthenticationFailure.InvalidGrant);
-        }
-        catch (Exception e) when (e is ArgumentException or FormatException or OverflowException)
-        {
-            return Refuse(AuthenticationFailure.InvalidGrant);
-        }
-        if (userID <= 0) return Refuse(AuthenticationFailure.InvalidGrant);
+        if (LegacySubject(services, legacy.Subject) is not { } userID) return Refuse(AuthenticationFailure.InvalidGrant);
         var digest = HMACSHA256.HashData(services.Options.OperationKey, Encoding.UTF8.GetBytes(request.RefreshToken));
         services.Observe?.Invoke("LegacyRefreshProof");
         return await services.Store.AdmitLegacyRefreshAsync<AuthOutcome>(userID, digest, services.Client, unit =>
@@ -151,7 +140,7 @@ public partial class AuthService
             var now = services.Clock.GetUtcNow();
             if (current is null || current.Subject != legacy.Subject || current.ExpiresAt != legacy.ExpiresAt || now >= legacy.ExpiresAt)
                 return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.Expired));
-            var refusal = LegacyRefreshRefusal(services, unit);
+            var refusal = LegacyCredentialRefusal(services, unit);
             if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
             var proof = new SessionProof(unit.User.ID, unit.Security.SecurityVersion, unit.Policy.Revision,
                 unit.Security.FactorGeneration, false, DateTimeOffset.UnixEpoch, services.Client.ID,

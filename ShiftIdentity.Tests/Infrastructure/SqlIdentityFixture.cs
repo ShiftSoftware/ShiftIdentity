@@ -28,6 +28,17 @@ public class SqlIdentityFixture : IAsyncLifetime
     public byte[] FactorSecret { get; } = RandomNumberGenerator.GetBytes(20);
     public string LegacyRefreshKey { get; } = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
     public int LegacyRefreshLifetimeSeconds { get; set; } = 1800;
+    /// <summary>
+    /// The temporary-token key every host built on this fixture shares, so a pre-cutover step credential minted by an
+    /// unstaged host validates on a staged one, the way one deployment's hosts share their configured key.
+    /// </summary>
+    public string LegacyTemporaryKey { get; } = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+    public int LegacyTemporaryLifetimeSeconds { get; set; } = 300;
+    /// <summary>
+    /// Whether a host built while this is set applies the deployed MFA policy, so its password login issues the old
+    /// MFA step credential. Off by default; <see cref="ResetAsync"/> clears it.
+    /// </summary>
+    public bool LegacyMfaEnabled { get; set; }
     public bool SeedLegacyFactorBeforeExpansion { get; init; }
     public ShiftSoftware.ShiftIdentity.Core.Models.FactorProtectionSettings FactorProtection { get; } = new()
     {
@@ -163,6 +174,7 @@ public class SqlIdentityFixture : IAsyncLifetime
         await using var db = CreateContext();
         EmailSink = new LocalSecurityInbox(Clock);
         DeliveryLimits = TestDeliveryLimits;
+        LegacyMfaEnabled = false; LegacyTemporaryLifetimeSeconds = 300;
         await db.Set<AuthThrottleBucket>().ExecuteDeleteAsync();
         await db.Set<AuthenticationOperation>().ExecuteDeleteAsync();
         await db.Set<AuthenticationAuditEvent>().ExecuteDeleteAsync();

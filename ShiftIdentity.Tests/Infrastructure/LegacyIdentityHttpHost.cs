@@ -49,14 +49,15 @@ public sealed class LegacyIdentityHttpHost<TContext> : IDisposable where TContex
                 RSAPrivateKeyBase64 = Convert.ToBase64String(fixture.Options.AccessPrivateKey) },
             RefreshToken = new() { Issuer = "https://legacy.invalid", Audience = "legacy-refresh", ExpireSeconds = fixture.LegacyRefreshLifetimeSeconds,
                 Key = fixture.LegacyRefreshKey },
-            TemporaryTokenSettings = new() { Issuer = "https://legacy.invalid", Audience = "legacy-temporary", ExpireSeconds = 300,
-                Key = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)) },
+            // The temporary key and lifetime are the fixture's, shared by every host built on it, like one deployment's hosts.
+            TemporaryTokenSettings = new() { Issuer = "https://legacy.invalid", Audience = "legacy-temporary",
+                ExpireSeconds = fixture.LegacyTemporaryLifetimeSeconds, Key = fixture.LegacyTemporaryKey },
             // RequirePasswordChange is the configured default the form checkboxes replace; true makes an explicit
             // "false" choice observable.
             Security = new() { LoginAttemptsForLockDown = 10, LockDownInMinutes = 5, RequirePasswordChange = true },
             SASToken = new() { Key = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)), ExpiresInSeconds = 3600 },
             HashIdSettings = new() { AcceptUnencodedIds = true, UserIdsSalt = "synthetic-test", UserIdsMinHashLength = 5 },
-            MfaSettings = new() { Enabled = false }, ActionTrees = []
+            MfaSettings = new() { Enabled = fixture.LegacyMfaEnabled }, ActionTrees = []
         };
         server = new TestServer(new WebHostBuilder().UseEnvironment("Testing").ConfigureServices(services =>
         {

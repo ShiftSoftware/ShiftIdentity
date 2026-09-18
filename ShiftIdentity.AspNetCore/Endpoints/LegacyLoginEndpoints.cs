@@ -36,7 +36,8 @@ public static class LegacyLoginEndpoints
     public static async Task<IResult> CompleteMfaAsync(HttpContext http, string code)
     {
         var services = Services(http);
-        var credential = new LegacyLoginTokenCodec(services).Read(http.Request.Headers.Authorization);
+        var authorization = http.Request.Headers.Authorization.ToString();
+        var credential = new LegacyLoginTokenCodec(services).Read(authorization);
         AuthOutcome outcome = Refuse(AuthenticationFailure.InvalidGrant);
         if (credential is { Flow: AuthPurpose.Mfa })
         {
@@ -46,7 +47,23 @@ public static class LegacyLoginEndpoints
                 : await AccountSecurityService.CompleteMfaAsync(services, credential.Handle, request, http.RequestAborted);
             outcome = await AuthService.CompatibleLoginOutcomeAsync(services, outcome, credential.Verifier, http.RequestAborted);
         }
+        else if (credential is null && LegacyTemporary(services, authorization) is (var token, { Purpose: AuthPurpose.Mfa } legacy))
+        {
+            // The old issuer's MFA step, finished through the staged bridge with a real current factor proof.
+            outcome = await AuthService.CompleteLegacyMfaAsync(services, token, legacy, code, http.RequestAborted);
+            if (outcome is ChallengeRequired { Challenge.Step: AuthenticationStep.PasswordChange or AuthenticationStep.NewMfa })
+                return TokenResult(outcome, "Sign in again to continue.");
+        }
         return TokenResult(outcome, "Invalid code");
+    }
+
+    /// <summary>The deployed pre-cutover step credential, while the staged host still carries the legacy temporary settings.</summary>
+    private static (string Token, LegacyTemporaryTokenCodec.Proof Proof)? LegacyTemporary(IdentityAdmissionServices services, string authorization)
+    {
+        if (services.LegacyTemporaryTokens is not { } codec ||
+            !authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)) return null;
+        var token = authorization[7..].Trim();
+        return codec.Validate(token) is { } proof ? (token, proof) : null;
     }
 
     public static async Task<IResult> ChangePasswordAsync(HttpContext http, ChangePasswordDTO dto)

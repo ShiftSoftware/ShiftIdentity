@@ -17,7 +17,8 @@ namespace ShiftSoftware.ShiftIdentity.AspNetCore.Authentication;
 /// <summary>
 /// The deployed client carries a bearer JWT, not a v2 handle/verifier pair. This signed envelope carries that
 /// pair to the same SQL operation checks. It is never an access token, refresh token or independent proof.
-/// It only wraps newly admitted login steps; pre-cutover temporary credentials need their separate bridge.
+/// It only wraps newly admitted login steps; a pre-cutover temporary credential is read by
+/// <see cref="LegacyTemporaryTokenCodec"/> and finished by its own bridge instead.
 /// </summary>
 internal sealed class LegacyLoginTokenCodec(IdentityAdmissionServices services)
 {

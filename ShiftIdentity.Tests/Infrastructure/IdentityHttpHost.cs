@@ -87,7 +87,9 @@ public sealed class IdentityHttpHost : IDisposable
         {
             EmailSink = sp.GetService<ISecurityEmailSink>(), DeliveryLimits = fixture.DeliveryLimits,
             LegacyRefreshTokens = LegacyRefreshTokenCodec.TryCreate(
-                sp.GetService<ShiftSoftware.ShiftIdentity.Core.ShiftIdentityConfiguration>()?.RefreshToken, fixture.Clock)
+                sp.GetService<ShiftSoftware.ShiftIdentity.Core.ShiftIdentityConfiguration>()?.RefreshToken, fixture.Clock),
+            LegacyTemporaryTokens = LegacyTemporaryTokenCodec.TryCreate(
+                sp.GetService<ShiftSoftware.ShiftIdentity.Core.ShiftIdentityConfiguration>()?.TemporaryTokenSettings, fixture.Clock)
         });
         services.AddIdentityAdmissionAuthentication();
         // Request fixtures inject faults and hold locks across requests. Startup has its own host lifecycle tests;

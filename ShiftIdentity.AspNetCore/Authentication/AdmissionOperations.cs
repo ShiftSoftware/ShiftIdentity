@@ -92,9 +92,11 @@ internal static class AdmissionOperations
         return Challenge(op, credential.Handle, setup);
     }
 
-    internal static AuthenticationRefused? VerifyMfa(IdentityAdmissionServices services, IdentitySecurityTransaction unit, string code, bool requireEnabled = true)
+    // The operation defaults to the admitted one; a bridge that adds its row in the same transaction passes that row.
+    internal static AuthenticationRefused? VerifyMfa(IdentityAdmissionServices services, IdentitySecurityTransaction unit, string code,
+        bool requireEnabled = true, AuthenticationOperation? operation = null)
     {
-        var op = unit.Operation!;
+        var op = operation ?? unit.Operation!;
         if (unit.Security.ProtectedTotpSecret is null || (requireEnabled && !unit.Policy.MfaEnabled) || unit.Security.LocalMfaRecoveryRequired)
             return Refuse(AuthenticationFailure.StaleOperation);
         var now = services.Clock.GetUtcNow();
@@ -109,7 +111,7 @@ internal static class AdmissionOperations
         finally { CryptographicOperations.ZeroMemory(secret); }
         if (!valid || matchedStep <= (unit.Security.LastAcceptedTotpStep ?? -1))
         {
-            FailedAttempt(unit, now, "InvalidMfa");
+            FailedAttempt(unit, now, "InvalidMfa", op);
             return Refuse(AuthenticationFailure.InvalidProof);
         }
         unit.Security.LastAcceptedTotpStep = matchedStep;
@@ -118,9 +120,9 @@ internal static class AdmissionOperations
         return null;
     }
 
-    internal static void FailedAttempt(IdentitySecurityTransaction unit, DateTimeOffset now, string outcome)
+    internal static void FailedAttempt(IdentitySecurityTransaction unit, DateTimeOffset now, string outcome, AuthenticationOperation? operation = null)
     {
-        var op = unit.Operation!;
+        var op = operation ?? unit.Operation!;
         op.FailedAttempts++;
         if (op.FailedAttempts >= 5)
         {
