@@ -21,7 +21,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 // name-uniqueness + the TypeAuth access-tree generation — moves onto the entity via IUpsertsShiftRepository.
 [TemporalShiftEntity]
 [Table("AccessTrees", Schema = "ShiftIdentity")]
-[ShiftEntitySecureEndpoint<AccessTreeListDTO, AccessTreeDTO, ShiftIdentityActions>("api/IdentityAccessTree", nameof(ShiftIdentityActions.AccessTrees), UseGeneratedMapper = true)]
+[ShiftEntitySecureEndpoint<AccessTreeListDTO, AccessTreeDTO, ShiftIdentityActions>("api/IdentityAccessTree", nameof(ShiftIdentityActions.AccessTrees))]
 public class AccessTree : ShiftEntity<AccessTree>, IUpsertsShiftRepository<AccessTree, AccessTreeListDTO, AccessTreeDTO>
 {
     [Required]

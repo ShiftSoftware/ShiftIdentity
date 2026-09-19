@@ -12,18 +12,18 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 // THIN repository (Rung C): Company's CRUD is attribute-driven, but the endpoint routes through this repository
 // (not the built-in one) solely because ApplyPostODataProcessing must shape the list query — there is no entity
 // hook for that. Everything else moved off: write logic → the Company entity's IUpsertsShiftRepository hook
-// (phone/circular-ref/CustomFields merge), the protected-row guard + feature lock are central. The mapper config
-// lives HERE in the base-ctor builder (not IConfiguresShiftRepository — that is built-in-only and would trip
-// SHENGEN006 against this builder; and UseGeneratedMapper=true is illegal on the custom-repository attribute).
+// (phone/circular-ref/CustomFields merge), the protected-row guard + feature lock are central. The mapping
+// customizations live HERE in the base-ctor builder (not IConfiguresShiftRepository — that is built-in-only, and a
+// pair is configured in one place).
 public class CompanyRepository : ShiftRepository<ShiftIdentityDbContext, Company, CompanyListDTO, CompanyDTO>
 {
     public CompanyRepository(
         ShiftIdentityDbContext db,
         ShiftIdentityDefaultDataLevelAccessOptions shiftIdentityDefaultDataLevelAccessOptions)
-        : base(db, o => o.UseGeneratedMapper(map => map
-
+        : base(db, o => o.Mapping(m =>
+        {
             // VIEW — CustomFields with read-side password strip (reproduces the profile Company→CompanyDTO ForMember).
-            .ForView(d => d.CustomFields, e => e.CustomFields == null ? null : e.CustomFields
+            m.View.ForMember(d => d.CustomFields, opt => opt.MapFrom(e => e.CustomFields == null ? null : e.CustomFields
                 .ToDictionary(x => x.Key, x => new CustomFieldDTO
                 {
                     DisplayName = x.Value.DisplayName,
@@ -31,24 +31,25 @@ public class CompanyRepository : ShiftRepository<ShiftIdentityDbContext, Company
                     IsEncrypted = x.Value.IsEncrypted,
                     Value = x.Value.IsPassword ? null : x.Value.Value,
                     HasValue = x.Value.Value != null
-                }))
+                })));
 
             // VIEW — ParentCompany select DTO (Value only; the profile left Text null — no Include on ParentCompany).
-            .ForView(d => d.ParentCompany, e => new ShiftEntitySelectDTO { Value = e.ParentCompanyID.ToString()! })
+            m.View.ForMember(d => d.ParentCompany, opt => opt.MapFrom(e => new ShiftEntitySelectDTO { Value = e.ParentCompanyID.ToString()! }));
 
             // ENTITY — leave the loaded CustomFields dict intact so the hook's password-preserving merge owns it.
-            .IgnoreEntity(e => e.CustomFields)
+            m.Entity.ForMember(e => e.CustomFields, opt => opt.Ignore());
 
             // LIST — flattened parent name + the Brands aggregation (reproduce the profile Company→CompanyListDTO).
-            .ForList(d => d.ParentCompanyName, e => e.ParentCompany == null ? null : e.ParentCompany.Name)
-            // ParentCompanyID needs nothing here: string? on the DTO ← long? on the entity, and the names match
-            // ORDINALLY, so the list convention bakes the same bound scalar in the same position. It therefore
-            // stays filterable — $filter=ParentCompanyID eq X still translates, and EF still does not inline the
-            // Brands aggregation into the WHERE.
-            .ForList(d => d.Brands, e => e.CompanyBranches!
+            m.List.ForMember(d => d.ParentCompanyName, opt => opt.MapFrom(e => e.ParentCompany == null ? null : e.ParentCompany.Name));
+            // ParentCompanyID needs nothing here: string? on the DTO ← long? on the entity, and the names match,
+            // so the list convention binds the same scalar in the same position. It therefore stays filterable —
+            // $filter=ParentCompanyID eq X still translates, and EF still does not inline the Brands aggregation
+            // into the WHERE.
+            m.List.ForMember(d => d.Brands, opt => opt.MapFrom(e => e.CompanyBranches!
                 .SelectMany(x => x.CompanyBranchBrands!)
                 .Select(x => x.BrandID).Distinct()
-                .Select(x => new ShiftEntitySelectDTO { Value = x.ToString() }).ToList())))
+                .Select(x => new ShiftEntitySelectDTO { Value = x.ToString() }).ToList()));
+        }))
     {
         this.ShiftRepositoryOptions.DefaultDataLevelAccessOptions = shiftIdentityDefaultDataLevelAccessOptions;
     }

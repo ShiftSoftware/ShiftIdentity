@@ -24,7 +24,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 // one custom endpoint (GetCalendarEvents) becomes a sibling minimal API (see MapShiftIdentityDashboard).
 [TemporalShiftEntity]
 [Table("CompanyCalendars", Schema = "ShiftIdentity")]
-[ShiftEntitySecureEndpoint<CompanyCalendarListDTO, CompanyCalendarDTO, ShiftIdentityActions>("api/IdentityCompanyCalendar", nameof(ShiftIdentityActions.CompanyCalendars), UseGeneratedMapper = true)]
+[ShiftEntitySecureEndpoint<CompanyCalendarListDTO, CompanyCalendarDTO, ShiftIdentityActions>("api/IdentityCompanyCalendar", nameof(ShiftIdentityActions.CompanyCalendars))]
 public class CompanyCalendar :
     ShiftEntity<CompanyCalendar>,
     IEntityHasCompany<CompanyCalendar>,
@@ -64,28 +64,18 @@ public class CompanyCalendar :
     {
         context.Options.IncludeRelatedEntitiesWithFindAsync(i => i.Include(e => e.Branches));
 
-        context.Options.UseGeneratedMapper(map => map
+        context.Options.Mapping(m =>
+        {
             // VIEW — Branches M:N join → List<ShiftEntitySelectDTO> (raw ids; the DTO's CompanyBranchHashIdConverter
             // encodes on the wire). The write side is owned by the IUpsertsShiftRepository merge, so ignore it here.
-            .ForView(v => v.Branches, e => e.Branches
-                .Select(b => new ShiftEntitySelectDTO { Value = b.CompanyBranchID.ToString() }).ToList())
-            .IgnoreEntity(e => e.Branches)
+            m.View.ForMember(v => v.Branches, opt => opt.MapFrom(e => e.Branches
+                .Select(b => new ShiftEntitySelectDTO { Value = b.CompanyBranchID.ToString() }).ToList()));
+            m.Entity.ForMember(e => e.Branches, opt => opt.Ignore());
 
-            // JSON children: auto-deep composes the structure + trivial grandchildren, but the nested
-            // Departments/Brands are hashid-encoded long lists — supply them explicitly on the pair mappers.
-            .ForViewChildren(v => v.ShiftGroups, e => e.ShiftGroups, child => child
-                .For(d => d.Departments, (sg, c) => { var h = c.Services!.GetRequiredService<IHashIdService>(); return sg.DepartmentIds.Select(id => new ShiftEntitySelectDTO { Value = h.Encode<DepartmentListDTO>(id) }).ToList(); })
-                .For(d => d.Brands, (sg, c) => { var h = c.Services!.GetRequiredService<IHashIdService>(); return sg.BrandIds.Select(id => new ShiftEntitySelectDTO { Value = h.Encode<BrandListDTO>(id) }).ToList(); }))
-            .ForEntityChildren(e => e.ShiftGroups, dto => dto.ShiftGroups, child => child
-                .For(sg => sg.DepartmentIds, (d, c) => { var h = c.Services!.GetRequiredService<IHashIdService>(); return d.Departments.Where(x => x.Value != null).Select(x => h.Decode<DepartmentListDTO>(x.Value!)).ToList(); })
-                .For(sg => sg.BrandIds, (d, c) => { var h = c.Services!.GetRequiredService<IHashIdService>(); return d.Brands.Where(x => x.Value != null).Select(x => h.Decode<BrandListDTO>(x.Value!)).ToList(); }))
-
-            .ForViewChildren(v => v.WeekendGroups, e => e.WeekendGroups, child => child
-                .For(d => d.Departments, (wg, c) => { var h = c.Services!.GetRequiredService<IHashIdService>(); return wg.DepartmentIds.Select(id => new ShiftEntitySelectDTO { Value = h.Encode<DepartmentListDTO>(id) }).ToList(); })
-                .For(d => d.Brands, (wg, c) => { var h = c.Services!.GetRequiredService<IHashIdService>(); return wg.BrandIds.Select(id => new ShiftEntitySelectDTO { Value = h.Encode<BrandListDTO>(id) }).ToList(); }))
-            .ForEntityChildren(e => e.WeekendGroups, dto => dto.WeekendGroups, child => child
-                .For(wg => wg.DepartmentIds, (d, c) => { var h = c.Services!.GetRequiredService<IHashIdService>(); return d.Departments.Where(x => x.Value != null).Select(x => h.Decode<DepartmentListDTO>(x.Value!)).ToList(); })
-                .For(wg => wg.BrandIds, (d, c) => { var h = c.Services!.GetRequiredService<IHashIdService>(); return d.Brands.Where(x => x.Value != null).Select(x => h.Decode<BrandListDTO>(x.Value!)).ToList(); })));
+            // JSON children: ShiftGroups and WeekendGroups nest automatically, structure and trivial grandchildren
+            // alike. Their Departments/Brands are hashid-encoded long lists, which is a customization of the CHILD
+            // pairs — written once, in Mappers/CompanyCalendarGroupMapper.cs, and applied inside every parent.
+        });
     }
 
     public async ValueTask<CompanyCalendar> UpsertAsync(

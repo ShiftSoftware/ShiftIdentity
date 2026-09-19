@@ -13,7 +13,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 // IdentityServiceController's "api/[controller]" output exactly.
 [TemporalShiftEntity]
 [Table("Services", Schema = "ShiftIdentity")]
-[ShiftEntitySecureEndpoint<ServiceListDTO, ServiceDTO, ShiftIdentityActions>("api/IdentityService", nameof(ShiftIdentityActions.Services), UseGeneratedMapper = true)]
+[ShiftEntitySecureEndpoint<ServiceListDTO, ServiceDTO, ShiftIdentityActions>("api/IdentityService", nameof(ShiftIdentityActions.Services))]
 public class Service : ShiftEntity<Service>, IShiftEntityReplication
 {
     /// <inheritdoc />

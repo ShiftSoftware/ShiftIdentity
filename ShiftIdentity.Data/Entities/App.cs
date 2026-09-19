@@ -22,7 +22,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 // IAppRepository.GetAppAsync (used by the OAuth AuthCodeService) — it no longer participates in CRUD.
 [TemporalShiftEntity]
 [Table("Apps", Schema = "ShiftIdentity")]
-[ShiftEntitySecureEndpoint<AppDTO, AppDTO, ShiftIdentityActions>("api/IdentityApp", nameof(ShiftIdentityActions.Apps), UseGeneratedMapper = true)]
+[ShiftEntitySecureEndpoint<AppDTO, AppDTO, ShiftIdentityActions>("api/IdentityApp", nameof(ShiftIdentityActions.Apps))]
 public class App : ShiftEntity<App>, IUpsertsShiftRepository<App, AppDTO, AppDTO>
 {
     [Required]

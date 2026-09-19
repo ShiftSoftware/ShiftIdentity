@@ -18,14 +18,14 @@ namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 
 
 // Attribute-driven endpoint (Rung B): City has no controller and no repository class. The secure CRUD routes come
-// from the attribute (built-in repository + source-generated mapper), gated by ShiftIdentityActions.Cities. The
+// from the attribute (built-in repository + the automatic ShiftMapper maps), gated by ShiftIdentityActions.Cities. The
 // protected-row guard (IsProtected) is enforced by the built-in repository and feature locking by
 // FeatureLockSaveValidator. The old CityRepository's two jobs move onto the entity: the Region→Country include +
 // flattened list columns via IConfiguresShiftRepository, and the CountryID-from-Region derivation (genuine write
 // logic) via IUpsertsShiftRepository.
 [TemporalShiftEntity]
 [Table("Cities", Schema = "ShiftIdentity")]
-[ShiftEntitySecureEndpoint<CityListDTO, CityDTO, ShiftIdentityActions>("api/IdentityCity", nameof(ShiftIdentityActions.Cities), UseGeneratedMapper = true)]
+[ShiftEntitySecureEndpoint<CityListDTO, CityDTO, ShiftIdentityActions>("api/IdentityCity", nameof(ShiftIdentityActions.Cities))]
 public class City : ShiftEntity<City>, IEntityHasCity<City>, IEntityHasRegion<City>, IEntityHasCountry<City>, IShiftEntityReplication, IShiftEntityProtectable,
     IConfiguresShiftRepository<City, CityListDTO, CityDTO>,
     IUpsertsShiftRepository<City, CityListDTO, CityDTO>
@@ -55,16 +55,19 @@ public class City : ShiftEntity<City>, IEntityHasCity<City>, IEntityHasRegion<Ci
     // Moves the old CityRepository's constructor config onto the entity: load Region→Country on FindAsync (so the
     // view DTO's Region ShiftEntitySelectDTO gets its Text = Region.Name), and project the four flattened list
     // columns (Region/Country names + display orders) the AutoMapper profile used to compute — these reach through
-    // navigations and aren't convention-mappable, so they're supplied as ForList projections spliced into the SQL.
+    // navigations and aren't convention-mappable, so they're customized on the LIST map, as expressions spliced
+    // into the SQL. Everything else on the triple's four maps is automatic.
     public void ConfigureRepository(ShiftRepositoryConfigurationContext<City, CityListDTO, CityDTO> context)
     {
         context.Options.IncludeRelatedEntitiesWithFindAsync(i => i.Include(x => x.Region).ThenInclude(x => x.Country));
 
-        context.Options.UseGeneratedMapper(map => map
-            .ForList(d => d.Region, e => e.Region != null ? e.Region.Name : null)
-            .ForList(d => d.Country, e => e.Region != null && e.Region.Country != null ? e.Region.Country.Name : null)
-            .ForList(d => d.CountryDisplayOrder, e => e.Region != null && e.Region.Country != null ? e.Region.Country.DisplayOrder : null)
-            .ForList(d => d.RegionDisplayOrder, e => e.Region != null ? e.Region.DisplayOrder : null));
+        context.Options.Mapping(m =>
+        {
+            m.List.ForMember(d => d.Region, opt => opt.MapFrom(e => e.Region != null ? e.Region.Name : null));
+            m.List.ForMember(d => d.Country, opt => opt.MapFrom(e => e.Region != null && e.Region.Country != null ? e.Region.Country.Name : null));
+            m.List.ForMember(d => d.CountryDisplayOrder, opt => opt.MapFrom(e => e.Region != null && e.Region.Country != null ? e.Region.Country.DisplayOrder : null));
+            m.List.ForMember(d => d.RegionDisplayOrder, opt => opt.MapFrom(e => e.Region != null ? e.Region.DisplayOrder : null));
+        });
     }
 
     // Genuine write logic from the old CityRepository.UpsertAsync: CountryID is denormalized from the selected

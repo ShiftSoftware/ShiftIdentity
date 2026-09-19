@@ -62,35 +62,37 @@ public class UserRepository :
             x => x.Include(y => y.Company)
         );
 
-        r.UseGeneratedMapper(map => map
-            // ── VIEW ── (the FK convention can't fill CompanyBranchID: the DTO member is already named …ID, so the
-            // convention appends another ID and misses — provide it explicitly, like the old profile map)
-            .ForView(d => d.CompanyBranchID, e => new ShiftEntitySelectDTO { Value = e.CompanyBranchID.ToString()!, Text = e.CompanyBranch != null ? e.CompanyBranch.Name : null })
-            .ForView(d => d.TotpEnabled, e => e.TotpSecret != null)
-            .ForView(d => d.AccessTrees, e => e.AccessTrees.Select(y => new ShiftEntitySelectDTO { Value = y.AccessTreeID.ToString()!, Text = y.AccessTree.Name }).ToList())
-            .IgnoreView(d => d.Password) // write-only; no entity source
-            .IgnoreView(d => d.RequireChangeAtNextLogin) // per-save form choice; no entity source, keeps its default (on)
-            .IgnoreView(d => d.SendVerification) // per-save form choice; no entity source, keeps its default (on)
+        r.Mapping(m =>
+        {
+            // ── VIEW ── (the select convention can't fill CompanyBranchID: the DTO member is already named …ID, so
+            // the convention appends another ID and misses — provide it explicitly, like the old profile map)
+            m.View.ForMember(d => d.CompanyBranchID, opt => opt.MapFrom(e => new ShiftEntitySelectDTO { Value = e.CompanyBranchID.ToString()!, Text = e.CompanyBranch != null ? e.CompanyBranch.Name : null }));
+            m.View.ForMember(d => d.TotpEnabled, opt => opt.MapFrom(e => e.TotpSecret != null));
+            // AccessTrees reads through an explicit junction row, so the element convention does not reach it.
+            m.View.ForMember(d => d.AccessTrees, opt => opt.MapFrom(e => e.AccessTrees.Select(y => new ShiftEntitySelectDTO { Value = y.AccessTreeID.ToString()!, Text = y.AccessTree.Name }).ToList()));
+            m.View.ForMember(d => d.Password, opt => opt.Ignore()); // write-only; no entity source
+            m.View.ForMember(d => d.RequireChangeAtNextLogin, opt => opt.Ignore()); // per-save form choice; no entity source, keeps its default (on)
+            m.View.ForMember(d => d.SendVerification, opt => opt.Ignore()); // per-save form choice; no entity source, keeps its default (on)
 
             // ── ENTITY (write) ── Base() maps FullName/BirthDate; the hook owns Username/IsActive/Email/Phone/
             // AccessTree/password/CompanyBranch-derivation/UserAccessTrees (or hands them to the staged authority), so
-            // those are Ignore'd (or ForEntity'd) here.
-            .ForEntity(e => e.IntegrationId, dto => string.IsNullOrWhiteSpace(dto.IntegrationId) ? null : dto.IntegrationId)
-            .IgnoreEntity(e => e.Username)
-            .IgnoreEntity(e => e.IsActive)
-            .IgnoreEntity(e => e.Email)
-            .IgnoreEntity(e => e.Phone)
-            .IgnoreEntity(e => e.AccessTree)
+            // those are ignored (or customized) here.
+            m.Entity.ForMember(e => e.IntegrationId, opt => opt.MapFrom(dto => string.IsNullOrWhiteSpace(dto.IntegrationId) ? null : dto.IntegrationId));
+            m.Entity.ForMember(e => e.Username, opt => opt.Ignore());
+            m.Entity.ForMember(e => e.IsActive, opt => opt.Ignore());
+            m.Entity.ForMember(e => e.Email, opt => opt.Ignore());
+            m.Entity.ForMember(e => e.Phone, opt => opt.Ignore());
+            m.Entity.ForMember(e => e.AccessTree, opt => opt.Ignore());
+            m.Entity.ForMember(e => e.AccessTrees, opt => opt.Ignore()); // the M:N rows: the hook (or the authority) writes them
 
             // ── LIST ── flattened CompanyBranch name, TotpEnabled, LastSeen (UserLog fallback), and the
-            // AccessTrees M:N projection. The scope-ids CompanyBranchID/CompanyID used to need a ForList as
-            // well; they no longer do — their names match the entity's ORDINALLY, so the list convention bakes
-            // long?→string itself. (CompanyBranch's CompanyId/CityId/RegionId still need theirs: those differ by
-            // CASE, and case-insensitive matching is not implemented.)
-            .ForList(d => d.CompanyBranch, e => e.CompanyBranch != null ? e.CompanyBranch.Name : null)
-            .ForList(d => d.TotpEnabled, e => e.TotpSecret != null)
-            .ForList(d => d.LastSeen, e => ((e.UserLog == null || e.UserLog.LastSeen == null) ? e.LastSeen : e.UserLog.LastSeen) ?? default)
-            .ForList(d => d.AccessTrees, e => e.AccessTrees.Select(y => new ShiftEntitySelectDTO { Value = y.AccessTreeID.ToString()!, Text = y.AccessTree.Name })));
+            // AccessTrees M:N projection. The scope-ids CompanyBranchID/CompanyID need nothing — their names
+            // match the entity's, and long?→string is a standard conversion.
+            m.List.ForMember(d => d.CompanyBranch, opt => opt.MapFrom(e => e.CompanyBranch != null ? e.CompanyBranch.Name : null));
+            m.List.ForMember(d => d.TotpEnabled, opt => opt.MapFrom(e => e.TotpSecret != null));
+            m.List.ForMember(d => d.LastSeen, opt => opt.MapFrom(e => ((e.UserLog == null || e.UserLog.LastSeen == null) ? e.LastSeen : e.UserLog.LastSeen) ?? default));
+            m.List.ForMember(d => d.AccessTrees, opt => opt.MapFrom(e => e.AccessTrees.Select(y => new ShiftEntitySelectDTO { Value = y.AccessTreeID.ToString()!, Text = y.AccessTree.Name }).ToList()));
+        });
     })
     {
         this.typeAuthService = typeAuthService;

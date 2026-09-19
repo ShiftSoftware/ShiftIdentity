@@ -14,7 +14,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 // IdentityDepartmentController's "api/[controller]" output exactly.
 [TemporalShiftEntity]
 [Table("Departments", Schema = "ShiftIdentity")]
-[ShiftEntitySecureEndpoint<DepartmentListDTO, DepartmentDTO, ShiftIdentityActions>("api/IdentityDepartment", nameof(ShiftIdentityActions.Departments), UseGeneratedMapper = true)]
+[ShiftEntitySecureEndpoint<DepartmentListDTO, DepartmentDTO, ShiftIdentityActions>("api/IdentityDepartment", nameof(ShiftIdentityActions.Departments))]
 public class Department : ShiftEntity<Department>, IShiftEntityReplication
 {
     /// <inheritdoc />

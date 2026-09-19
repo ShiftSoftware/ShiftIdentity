@@ -21,7 +21,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 // The route reproduces the old IdentityCountryController's "api/[controller]" output exactly.
 [TemporalShiftEntity]
 [Table("Countries", Schema = "ShiftIdentity")]
-[ShiftEntitySecureEndpoint<CountryListDTO, CountryDTO, ShiftIdentityActions>("api/IdentityCountry", nameof(ShiftIdentityActions.Countries), UseGeneratedMapper = true)]
+[ShiftEntitySecureEndpoint<CountryListDTO, CountryDTO, ShiftIdentityActions>("api/IdentityCountry", nameof(ShiftIdentityActions.Countries))]
 public class Country : ShiftEntity<Country>, IEntityHasCountry<Country>, IShiftEntityReplication, IShiftEntityProtectable
 {
     /// <inheritdoc />

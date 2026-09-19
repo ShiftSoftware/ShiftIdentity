@@ -12,13 +12,13 @@ using ShiftSoftware.ShiftIdentity.Core;
 namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 
 // Attribute-driven endpoint (Rung B): Region has no controller and no repository class. The secure CRUD routes
-// come from the attribute (built-in repository + source-generated mapper), gated by ShiftIdentityActions.Regions.
+// come from the attribute (built-in repository + the automatic ShiftMapper maps), gated by ShiftIdentityActions.Regions.
 // The protected-row guard (IsProtected) is enforced by the built-in repository and feature locking by
 // FeatureLockSaveValidator. The only repository shaping Region needs — the Country include and the flattened
 // list columns the old AutoMapper profile projected — moves onto the entity via IConfiguresShiftRepository.
 [TemporalShiftEntity]
 [Table("Regions", Schema = "ShiftIdentity")]
-[ShiftEntitySecureEndpoint<RegionListDTO, RegionDTO, ShiftIdentityActions>("api/IdentityRegion", nameof(ShiftIdentityActions.Regions), UseGeneratedMapper = true)]
+[ShiftEntitySecureEndpoint<RegionListDTO, RegionDTO, ShiftIdentityActions>("api/IdentityRegion", nameof(ShiftIdentityActions.Regions))]
 public class Region : ShiftEntity<Region>, IEntityHasCountry<Region>, IEntityHasRegion<Region>, IShiftEntityReplication, IShiftEntityProtectable,
     IConfiguresShiftRepository<Region, RegionListDTO, RegionDTO>
 {
@@ -26,14 +26,16 @@ public class Region : ShiftEntity<Region>, IEntityHasCountry<Region>, IEntityHas
     // view DTO's Country ShiftEntitySelectDTO gets its Text = Country.Name — the generated FK convention fills
     // that when the navigation is loaded), and project the two flattened list columns the AutoMapper profile
     // used to compute. Country (name) and CountryDisplayOrder are NOT convention-mappable (they reach through the
-    // Country navigation), so they're supplied as ForList projections spliced into the list SQL.
+    // Country navigation), so they're customized on the LIST map, as expressions spliced into the list SQL.
     public void ConfigureRepository(ShiftRepositoryConfigurationContext<Region, RegionListDTO, RegionDTO> context)
     {
         context.Options.IncludeRelatedEntitiesWithFindAsync(i => i.Include(x => x.Country));
 
-        context.Options.UseGeneratedMapper(map => map
-            .ForList(d => d.Country, e => e.Country != null ? e.Country.Name : null)
-            .ForList(d => d.CountryDisplayOrder, e => e.Country != null ? e.Country.DisplayOrder : null));
+        context.Options.Mapping(m =>
+        {
+            m.List.ForMember(d => d.Country, opt => opt.MapFrom(e => e.Country != null ? e.Country.Name : null));
+            m.List.ForMember(d => d.CountryDisplayOrder, opt => opt.MapFrom(e => e.Country != null ? e.Country.DisplayOrder : null));
+        });
     }
 
     /// <inheritdoc />

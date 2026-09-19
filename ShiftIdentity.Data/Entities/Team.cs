@@ -24,7 +24,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 // validation + M:N TeamUsers/TeamCompanyBranches sync via IUpsertsShiftRepository. Feature locking is central.
 [TemporalShiftEntity]
 [Table("Teams", Schema = "ShiftIdentity")]
-[ShiftEntitySecureEndpoint<TeamListDTO, TeamDTO, ShiftIdentityActions>("api/IdentityTeam", nameof(ShiftIdentityActions.Teams), UseGeneratedMapper = true)]
+[ShiftEntitySecureEndpoint<TeamListDTO, TeamDTO, ShiftIdentityActions>("api/IdentityTeam", nameof(ShiftIdentityActions.Teams))]
 public class Team : ShiftEntity<Team>, IEntityHasCompany<Team>, IEntityHasTeam<Team>, IShiftEntityReplication,
     IConfiguresShiftRepository<Team, TeamListDTO, TeamDTO>,
     IUpsertsShiftRepository<Team, TeamListDTO, TeamDTO>
@@ -62,20 +62,22 @@ public class Team : ShiftEntity<Team>, IEntityHasCompany<Team>, IEntityHasTeam<T
             s => s.Include(i => i.TeamCompanyBranches).ThenInclude(i => i.CompanyBranch),
             s => s.Include(i => i.Company));
 
-        context.Options.UseGeneratedMapper(map => map
+        context.Options.Mapping(m =>
+        {
             // VIEW — M:N join → List<ShiftEntitySelectDTO>. Not convention: DTO names (Users/CompanyBranches)
             // don't match the join navigations, and Text reaches through .User/.CompanyBranch.
-            .ForView(d => d.Users, e => e.TeamUsers
-                .Select(y => new ShiftEntitySelectDTO { Value = y.UserID.ToString(), Text = y.User.Username }).ToList())
-            .ForView(d => d.CompanyBranches, e => e.TeamCompanyBranches
-                .Select(y => new ShiftEntitySelectDTO { Value = y.CompanyBranchID.ToString(), Text = y.CompanyBranch.Name }).ToList())
+            m.View.ForMember(d => d.Users, opt => opt.MapFrom(e => e.TeamUsers
+                .Select(y => new ShiftEntitySelectDTO { Value = y.UserID.ToString(), Text = y.User.Username }).ToList()));
+            m.View.ForMember(d => d.CompanyBranches, opt => opt.MapFrom(e => e.TeamCompanyBranches
+                .Select(y => new ShiftEntitySelectDTO { Value = y.CompanyBranchID.ToString(), Text = y.CompanyBranch.Name }).ToList()));
             // Tags is IReadOnlyCollection<string> on the DTO and List<string> on the entity. Same element type,
-            // different container, which the collection convention now adapts on both legs.
-            // LIST — the flattened Company name still needs a ForList: reaching through a navigation is not a
-            // convention, by design. CompanyId no longer does — matching ignores case by default now, so it
-            // binds to the entity's CompanyID, and long? -> string is a standard list conversion. It is still
-            // a LIST FILTER target, so it must keep being projected; the convention is what projects it.
-            .ForList(d => d.Company, e => e.Company != null ? e.Company.Name : null));
+            // different container, which the collection conversion adapts on both legs.
+            // LIST — the flattened Company name still needs a customization: reaching through a navigation is
+            // not a convention, by design. CompanyId does not — matching ignores case, so it binds to the
+            // entity's CompanyID, and long? -> string is a standard conversion. It is still a LIST FILTER
+            // target, so it must keep being projected; the convention is what projects it.
+            m.List.ForMember(d => d.Company, opt => opt.MapFrom(e => e.Company != null ? e.Company.Name : null));
+        });
     }
 
     public async ValueTask<Team> UpsertAsync(

@@ -20,7 +20,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 [TemporalShiftEntity]
 [Table("Brands", Schema = "ShiftIdentity")]
 [ShiftEntityKeyAndName(nameof(ID), nameof(Name))]
-[ShiftEntitySecureEndpoint<BrandListDTO, BrandDTO, ShiftIdentityActions>("api/IdentityBrand", nameof(ShiftIdentityActions.Brands), UseGeneratedMapper = true)]
+[ShiftEntitySecureEndpoint<BrandListDTO, BrandDTO, ShiftIdentityActions>("api/IdentityBrand", nameof(ShiftIdentityActions.Brands))]
 public class Brand : ShiftEntity<Brand>, IEntityHasBrand<Brand>, IShiftEntityReplication
 {
     /// <inheritdoc />
