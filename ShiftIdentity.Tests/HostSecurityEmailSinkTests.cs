@@ -79,6 +79,59 @@ public sealed class HostSecurityEmailSinkTests
             new HostSecurityEmailSink(settings, [provider], [provider]).CheckReady()).Message);
     }
 
+    [Fact]
+    public async Task Staged_provider_gets_shared_content_and_replaces_only_the_legacy_fallback()
+    {
+        var old = new Provider(); var sender = new StagedProvider();
+        var message = Message(AuthenticationOperationPurpose.EmailVerify);
+        var sink = new HostSecurityEmailSink(Settings, [old], [old], [sender]);
+        sink.CheckReady();
+        await sink.DeliverAsync(message, TestContext.Current.CancellationToken);
+        var content = Assert.Single(sender.Deliveries);
+        Assert.Equal(message.ID, content.ID); Assert.Equal(message.Destination, content.Destination);
+        Assert.Contains("Saved Name", content.HtmlBody); Assert.Contains("saved-user", content.TextBody);
+        Assert.Contains(message.ExpiresAt.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss 'UTC'"), content.TextBody);
+        Assert.Empty(old.Deliveries);
+        new HostSecurityEmailSink(Settings, [], [], [sender]).CheckReady();
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Staged_acceptance_is_awaited_and_cancellation_reaches_IO_before_later_providers(bool cancel)
+    {
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var first = new StagedProvider { Pending = release.Task }; var next = new StagedProvider();
+        using var stop = new CancellationTokenSource();
+        var sink = new HostSecurityEmailSink(Settings, [], [], [first, next]);
+        var send = sink.DeliverAsync(Message(AuthenticationOperationPurpose.PasswordResetEmail), stop.Token);
+        Assert.False(send.IsCompleted); Assert.Empty(next.Deliveries);
+        if (cancel)
+        {
+            stop.Cancel();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => send);
+            Assert.True(first.Token.IsCancellationRequested); Assert.Empty(next.Deliveries);
+        }
+        else
+        {
+            release.SetException(new InvalidOperationException("Synthetic failure"));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => send);
+            Assert.Empty(next.Deliveries);
+        }
+    }
+
+    private sealed class StagedProvider : ISecurityEmailSender
+    {
+        public List<SecurityEmailContent> Deliveries { get; } = [];
+        public Task Pending { get; init; } = Task.CompletedTask;
+        public CancellationToken Token { get; private set; }
+        public async Task SendAsync(SecurityEmailContent message, CancellationToken cancellationToken)
+        {
+            Token = cancellationToken; Deliveries.Add(message);
+            await Pending.WaitAsync(cancellationToken);
+        }
+    }
+
     [Theory]
     [InlineData(true, false, "ISendEmailResetPassword")]
     [InlineData(false, true, "ISendEmailVerification")]

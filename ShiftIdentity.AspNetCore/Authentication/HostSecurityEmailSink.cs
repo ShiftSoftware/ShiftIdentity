@@ -5,35 +5,39 @@ using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Authentication;
 
 /// <summary>
-/// Temporary delivery adapter for hosts using the existing sender interfaces. Remove with those interfaces in
-/// Phase 6. It delivers staged grants only; it never invokes the legacy SAS-grant generator.
+/// Composes staged email for registered providers. The old provider fallback is temporary until Phase 6;
+/// it never invokes the legacy SAS-grant generator.
 /// </summary>
 internal sealed class HostSecurityEmailSink(ShiftIdentityConfiguration configuration,
-    IEnumerable<ISendEmailVerification> verification, IEnumerable<ISendEmailResetPassword> reset) : ISecurityEmailSink
+    IEnumerable<ISendEmailVerification> verification, IEnumerable<ISendEmailResetPassword> reset,
+    IEnumerable<ISecurityEmailSender>? senders = null) : ISecurityEmailSink
 {
+    private readonly ISecurityEmailSender[] staged = senders?.ToArray() ?? [];
     internal void CheckReady()
     {
         var missing = new List<string>();
-        if (!verification.Any()) missing.Add(nameof(ISendEmailVerification));
-        if (!reset.Any()) missing.Add(nameof(ISendEmailResetPassword));
+        if (staged.Length == 0 && !verification.Any()) missing.Add(nameof(ISendEmailVerification));
+        if (staged.Length == 0 && !reset.Any()) missing.Add(nameof(ISendEmailResetPassword));
         if (missing.Count > 0)
             throw new InvalidOperationException("The identity authority requires an ISecurityEmailSink or its host sender adapters. Missing: " + string.Join(", ", missing) + ".");
-        if (configuration.FrontEndUrl is not { } url || !IdentityAuthorityRegistration.IsWebUrl(url)
-            || new Uri(url).Query.Length != 0 || new Uri(url).Fragment.Length != 0)
-            throw new InvalidOperationException("The identity authority's host sender adapter requires ShiftIdentityConfiguration.FrontEndUrl: an absolute HTTP(S) dashboard URL without a query or fragment.");
+        SecurityEmailTemplate.ValidateFrontEndUrl(configuration.FrontEndUrl);
     }
 
     public async Task DeliverAsync(SecurityEmail message, CancellationToken cancellationToken)
     {
         CheckReady();
-        var page = message.Purpose switch
+        cancellationToken.ThrowIfCancellationRequested();
+        if (staged.Length > 0)
         {
-            AuthenticationOperationPurpose.EmailVerify => "VerifyEmail",
-            AuthenticationOperationPurpose.PasswordResetEmail => "ResetPassword",
-            _ => throw new InvalidOperationException("This purpose cannot be delivered by email.")
-        };
-        var link = configuration.FrontEndUrl!.TrimEnd('/') + "/Identity/" + page
-            + "#grant=" + Uri.EscapeDataString(message.Grant) + "&purpose=" + message.Purpose;
+            var content = SecurityEmailTemplate.Render(message, configuration.FrontEndUrl!);
+            foreach (var sender in staged)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await sender.SendAsync(content, cancellationToken).WaitAsync(cancellationToken);
+            }
+            return;
+        }
+        var link = SecurityEmailTemplate.Link(message, configuration.FrontEndUrl!);
         // The recipient and display fields are the snapshot admitted with this grant, never a later database lookup
         // or caller-supplied address. The legacy interfaces lack cancellation; stop awaiting when the budget ends.
         UserDataDTO Recipient() => new()

@@ -287,7 +287,7 @@ else
         }
         else
         {
-            this.MessageService.Error("An error occurred while resetting the password.");
+            this.MessageService.Error("An error occurred while resetting the password.", res.Message?.Title, res.Message?.Body);
         }
 
         return false;
@@ -300,7 +300,7 @@ else
             this.MessageService.Success($"TOTP Authentication was reset for ({res.Entity.Count}) users.");
             return ValueTask.FromResult(true);
         }
-        this.MessageService.Error("An error occurred while resetting TOTP Authentication.");
+        this.MessageService.Error("An error occurred while resetting TOTP Authentication.", res.Message?.Title, res.Message?.Body);
         return ValueTask.FromResult(false);
     }
 
@@ -319,7 +319,7 @@ else
         }
         else
         {
-            this.MessageService.Error("An error occurred while verifying the email.");
+            this.MessageService.Error("An error occurred while verifying the email.", res.Message?.Title, res.Message?.Body);
         }
 
         return ValueTask.FromResult(false);
@@ -333,7 +333,7 @@ else
         }
         else
         {
-            this.MessageService.Error("An error occurred while verifying the phone.");
+            this.MessageService.Error("An error occurred while verifying the phone.", res.Message?.Title, res.Message?.Body);
         }
 
         return ValueTask.FromResult(false);
