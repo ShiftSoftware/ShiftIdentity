@@ -37,7 +37,7 @@ public static class IdentitySecurityModel
         {
             e.ToTable("AuthenticationOperations", "ShiftIdentity", t =>
             {
-                t.HasCheckConstraint("CK_AuthenticationOperation_State", "[State] IN (1,2,3,4,5,6,7,8,9,10,11) AND [Purpose] IN (1,2,3,4,5,6,7,8,9,10,11,12)");
+                t.HasCheckConstraint("CK_AuthenticationOperation_State", "[State] IN (1,2,3,4,5,6,7,8,9,10,11) AND [Purpose] IN (1,2,3,4,5,6,7,8,9,10,11,12,13)");
                 t.HasCheckConstraint("CK_AuthenticationOperation_App", "([State] <> 11 OR ([Purpose] = 10 AND [External] = 1 AND [AppBinding] IS NOT NULL AND [SessionAuthenticatedAt] IS NOT NULL AND [SessionMfaSatisfied] IS NOT NULL)) AND ([Purpose] <> 10 OR [State] IN (2,3,6,9,11))");
                 t.HasCheckConstraint("CK_AuthenticationOperation_LegacyRefresh", "[Purpose] <> 11 OR ([State] = 2 AND [External] = 0 AND DATALENGTH([HandleDigest]) = 32 AND [CompletedAt] IS NOT NULL)");
                 // A pre-cutover MFA row is keyed by its credential digest for its whole life: pending, locked, completed or cancelled.
@@ -55,6 +55,7 @@ public static class IdentitySecurityModel
             e.Property(x => x.Audience).HasMaxLength(255);
             e.Property(x => x.HandleDigest).HasMaxLength(32);
             e.Property(x => x.CodeChallenge).HasMaxLength(128);
+            e.Property(x => x.SourceSessionDigest).HasMaxLength(32);
             e.Property(x => x.AppBinding).HasMaxLength(64);
             e.Property(x => x.PendingPasswordHash).HasMaxLength(256);
             e.Property(x => x.PendingPasswordSalt).HasMaxLength(128);

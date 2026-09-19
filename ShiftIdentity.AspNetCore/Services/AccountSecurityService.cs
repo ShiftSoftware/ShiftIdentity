@@ -148,7 +148,8 @@ internal static partial class AccountSecurityService
         if (!Valid(request)) return Refuse(AuthenticationFailure.InvalidRequest);
         var reference = await AdmissionOperations.ReadAnyAsync(services, handle, ct,
             AuthenticationOperationPurpose.PasswordChange, AuthenticationOperationPurpose.Login,
-            AuthenticationOperationPurpose.MfaEnrollment, AuthenticationOperationPurpose.MfaReplacement, AuthenticationOperationPurpose.MfaRecovery);
+            AuthenticationOperationPurpose.MfaEnrollment, AuthenticationOperationPurpose.MfaReplacement, AuthenticationOperationPurpose.MfaRecovery,
+            AuthenticationOperationPurpose.AdministratorConfirmation);
         if (reference is null) return Refuse(AuthenticationFailure.InvalidGrant);
         return await services.Store.AdmitAsync<AuthOutcome>(reference.UserID, reference.ID, services.Client, unit =>
         {

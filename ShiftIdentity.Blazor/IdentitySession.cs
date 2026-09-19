@@ -40,6 +40,37 @@ public sealed class IdentitySession
         Notify();
     }
 
+    internal sealed record Checkpoint(long Generation, string? Access, string? Refresh);
+
+    internal async Task<Checkpoint> ReadCheckpointAsync()
+    {
+        await state.WaitAsync();
+        try
+        {
+            var token = await storage.ReadAsync();
+            return new(generation, token?.Token, token?.RefreshToken);
+        }
+        finally { state.Release(); }
+    }
+
+    internal async Task<bool> MatchesAsync(Checkpoint expected) => expected == await ReadCheckpointAsync();
+
+    internal async Task<bool> TryStoreTokenAsync(Checkpoint expected, TokenDTO replacement)
+    {
+        transport.ValidateForStorage(replacement);
+        await state.WaitAsync();
+        try
+        {
+            var current = await storage.ReadAsync();
+            if (expected.Generation != generation || expected.Access != current?.Token || expected.Refresh != current?.RefreshToken) return false;
+            generation++;
+            await storage.WriteAsync(replacement);
+        }
+        finally { state.Release(); }
+        Notify();
+        return true;
+    }
+
     public async Task RemoveTokenAsync()
     {
         await state.WaitAsync();

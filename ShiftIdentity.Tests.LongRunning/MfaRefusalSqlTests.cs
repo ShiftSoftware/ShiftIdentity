@@ -31,7 +31,11 @@ public sealed partial class MfaLifecycleSqlTests
             if (scenario == "stale-admin") await db.Set<UserSecurityState>().Where(x => x.UserID == adminID).ExecuteUpdateAsync(x => x.SetProperty(s => s.SecurityVersion, 2));
             if (scenario == "disabled-admin") await db.Users.Where(x => x.ID == adminID).ExecuteUpdateAsync(x => x.SetProperty(u => u.IsActive, false));
         }
-        if (scenario == "stale-authentication") clock.Advance(TimeSpan.FromMinutes(5));
+        if (scenario == "stale-authentication")
+        {
+            clock.Advance(TimeSpan.FromHours(20));
+            admin = Assert.IsType<SessionIssued>(await host.RefreshAsync(admin.Session.RefreshToken));
+        }
         using var other = new IdentityHttpHost(fixture, new("other-client", "other-api"));
         var response = await (scenario == "wrong-client" ? other : host).IssueRecoveryAsync(admin.Session.Token,
             scenario == "self-reset" ? adminID : fixture.UserID, scenario == "blank-reference" ? "   " : "Synthetic independent check");

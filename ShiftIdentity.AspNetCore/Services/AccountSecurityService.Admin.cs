@@ -17,7 +17,7 @@ internal sealed record AdminActor(long UserID, SignedInContext? Session);
 
 /// <summary>
 /// Administrator account mutations. Each runs under the ordered actor/target admission lock, requires Users.Write
-/// with operator proof younger than five minutes, increments the target's SecurityVersion once and never issues a
+/// with recent operator proof, increments the target's SecurityVersion once and never issues a
 /// session. Operators cannot target themselves, built-in accounts or deleted accounts. An inactive target accepts
 /// every change: an inactive account holds no session, and correcting it must not require activating it first.
 /// The mutation bodies are shared with the legacy administrator writers, so each security-relevant change has one
@@ -242,18 +242,21 @@ internal static partial class AccountSecurityService
         unit.Security.SecurityVersion = checked(unit.Security.SecurityVersion + 1);
 
     /// <summary>
-    /// Operator checks shared by every administrator route: current-version session, proof younger than five
-    /// minutes, no pending local step for the operator, and the named permission from the operator's own trees.
+    /// Current session and permission checks apply to every route. Protected changes also require recent proof.
     /// </summary>
     internal static AuthenticationRefused? ActorRefusal(IdentityAdmissionServices services, IdentitySecurityTransaction actor,
-        SignedInContext signedIn, Func<TypeAuthContext, bool> permitted)
+        SignedInContext signedIn, Func<TypeAuthContext, bool> permitted, bool requireRecent = true)
     {
         var refusal = SignedInRefusal(services, actor, signedIn);
         if (refusal is not null) return refusal;
+        if (!Permitted(actor, permitted)) return Refuse(AuthenticationFailure.ClientDenied);
         var now = services.Clock.GetUtcNow();
-        if (now < signedIn.Proof.AuthenticatedAt || now >= signedIn.Proof.AuthenticatedAt.AddMinutes(5) || LocalStep(actor, signedIn.Proof.MfaSatisfied) is not null)
-            return Refuse(AuthenticationFailure.InvalidProof);
-        return Permitted(actor, permitted) ? null : Refuse(AuthenticationFailure.ClientDenied);
+        var step = LocalStep(actor, signedIn.Proof.MfaSatisfied);
+        if (step is not null && step != AuthenticationStep.ExistingMfa) return Refuse(AuthenticationFailure.InvalidProof);
+        if (requireRecent && (now < signedIn.Proof.AuthenticatedAt ||
+            now >= signedIn.Proof.AuthenticatedAt.AddSeconds(services.Options.AdministratorAuthenticationGraceSeconds) || step == AuthenticationStep.ExistingMfa))
+            return Refuse(AuthenticationFailure.ReauthenticationRequired);
+        return step is not null ? Refuse(AuthenticationFailure.InvalidProof) : null;
     }
 
     /// <summary>
@@ -261,9 +264,9 @@ internal static partial class AccountSecurityService
     /// current account state, the current policy revision and the current permission can be checked for it.
     /// </summary>
     internal static AuthenticationRefused? ActorRefusal(IdentityAdmissionServices services, IdentitySecurityTransaction actor,
-        AdminActor who, Func<TypeAuthContext, bool> permitted)
+        AdminActor who, Func<TypeAuthContext, bool> permitted, bool requireRecent = true)
     {
-        if (who.Session is { } signedIn) return ActorRefusal(services, actor, signedIn, permitted);
+        if (who.Session is { } signedIn) return ActorRefusal(services, actor, signedIn, permitted, requireRecent);
         if (actor.User.ID != who.UserID) return Refuse(AuthenticationFailure.InvalidGrant);
         if (!actor.User.IsActive || actor.User.IsDeleted) return Refuse(AuthenticationFailure.AccountUnavailable);
         if (services.Options.PolicyRevision != actor.Policy.Revision) return Refuse(AuthenticationFailure.Unavailable);

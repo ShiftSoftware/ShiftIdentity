@@ -29,10 +29,14 @@ public static class IServiceCollectionExtensions
 
         if (shiftIdentityDashboardBlazorOptions.StagedAuthority)
         {
+            services.TryAddScoped<IAdministratorConfirmation, AdministratorConfirmation>();
+            services.TryAddScoped(sp => new AdministratorActionContinuation(sp.GetRequiredService<IdentitySession>(),
+                sp.GetRequiredService<IAdministratorConfirmation>(), StagedAuthorityHttpClient.ApiRootOf(sp.GetRequiredService<ShiftIdentityBlazorOptions>().BaseUrl)));
             // The staged security flows of the account screens. The flow addresses the staged routes from the identity
             // API root and sets its own bearer and operation credentials, so it gets a raw client that never passes
             // through the ordinary bearer handler. A host that registered a flow of its own keeps it.
-            services.TryAddScoped(sp => new StagedAuthorityHttpClient
+            services.TryAddScoped(sp => new StagedAuthorityHttpClient(new AdministratorActionHandler(sp.GetRequiredService<AdministratorActionContinuation>())
+                { InnerHandler = new HttpClientHandler() })
             {
                 BaseAddress = StagedAuthorityHttpClient.ApiRootOf(sp.GetRequiredService<ShiftIdentityBlazorOptions>().BaseUrl)
             });

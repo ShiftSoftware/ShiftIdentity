@@ -9,6 +9,7 @@ public class TokenMessageHandlerWithAutoRefresh : DelegatingHandler
 {
     private readonly IdentitySession tokenStore;
     private readonly MessageService msg;
+    private readonly AdministratorActionContinuation? administratorActions;
 
     // On a dead-session 401 (the refresh token was rejected upstream, so an empty bearer went out) we remove
     // the stored token and show this banner. Removing it is essential, not optional: while the dead token
@@ -21,13 +22,14 @@ public class TokenMessageHandlerWithAutoRefresh : DelegatingHandler
     private const string SessionExpiredMessage = "Your session has expired. Please login again (in another tab). ";
     private const string SessionExpiredLinkText = "Login another tab";
 
-    public TokenMessageHandlerWithAutoRefresh(IdentitySession tokenProvider, MessageService msg)
+    public TokenMessageHandlerWithAutoRefresh(IdentitySession tokenProvider, MessageService msg, AdministratorActionContinuation? administratorActions = null)
     {
         //add this to solve "The inner handler has not been assigned"
         InnerHandler = new HttpClientHandler();
 
         tokenStore = tokenProvider;
         this.msg = msg;
+        this.administratorActions = administratorActions;
     }
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -35,7 +37,9 @@ public class TokenMessageHandlerWithAutoRefresh : DelegatingHandler
         var token = (await tokenStore.GetTokenAsync())?.Token ?? "";
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var result = await base.SendAsync(await CloneRequestIfNeededAsync(request), cancellationToken);
+        var result = administratorActions is null
+            ? await base.SendAsync(await CloneRequestIfNeededAsync(request), cancellationToken)
+            : await administratorActions.SendAsync(request, async (message, ct) => await base.SendAsync(await CloneRequestIfNeededAsync(message), ct), cancellationToken);
 
         if(result.IsSuccessStatusCode)
             await this.msg.RemoveWarningMessageAsync();

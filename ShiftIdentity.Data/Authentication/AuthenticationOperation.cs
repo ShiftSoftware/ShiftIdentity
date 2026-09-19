@@ -23,6 +23,8 @@ public sealed class AuthenticationOperation
     public bool External { get; set; }
     public byte[] HandleDigest { get; set; } = [];
     public string CodeChallenge { get; set; } = "";
+    /// <summary>Digest of the access credential that started an administrator confirmation.</summary>
+    public byte[]? SourceSessionDigest { get; set; }
     public string? AppBinding { get; set; }
     public DateTimeOffset? SessionAuthenticatedAt { get; set; }
     public bool? SessionMfaSatisfied { get; set; }

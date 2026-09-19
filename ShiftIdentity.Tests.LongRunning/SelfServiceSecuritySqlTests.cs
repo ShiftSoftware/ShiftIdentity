@@ -388,7 +388,12 @@ public sealed class SelfServiceSecuritySqlTests(SqlIdentityFixture fixture) : IC
             if (scenario == "protected")
                 await using (var db = fixture.CreateContext())
                     await db.Users.Where(x => x.ID == fixture.UserID).ExecuteUpdateAsync(x => x.SetProperty(u => u.IsProtected, true));
-            if (scenario == "stale-proof") clock.Advance(TimeSpan.FromMinutes(6));
+            if (scenario == "stale-proof")
+            {
+                clock.Advance(TimeSpan.FromHours(20));
+                admin = Assert.IsType<SessionIssued>(await IdentityHttpHost.Read(await host.Client.PostAsJsonAsync(
+                    "/api/identity/v2/refresh", new RenewSessionRequest(admin.RefreshToken)))).Session;
+            }
             using var response = await ResetTotp(host, admin.Token, targetID);
             switch (scenario)
             {

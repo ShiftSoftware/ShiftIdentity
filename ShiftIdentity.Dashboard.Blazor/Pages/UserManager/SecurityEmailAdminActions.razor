@@ -37,6 +37,6 @@
             ? "If the saved address is eligible, check its inbox. Wait before requesting another link."
             : result is AuthenticationRefused { Code: AuthenticationFailure.Unavailable }
                 ? "The send could not be confirmed. Check the recipient's inbox, wait and request a fresh link."
-                : "Sign in again with Users write permission before sending links. A sign-in within the last five minutes is required.";
+                : "The request could not be completed. Check your session and Users write permission before sending links.";
     }
 }

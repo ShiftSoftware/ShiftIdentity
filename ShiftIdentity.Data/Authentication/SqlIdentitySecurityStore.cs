@@ -206,6 +206,7 @@ public sealed partial class SqlIdentitySecurityStore(ShiftIdentityDbContext db) 
                     // A legacy MFA row keeps its credential digest: the cancelled row stays that credential's tombstone until its expiry.
                     if (op.Purpose != AuthenticationOperationPurpose.LegacyMfaExchange) op.HandleDigest = [];
                     op.CodeChallenge = ""; op.PendingPasswordHash = null; op.PendingPasswordSalt = null;
+                    op.SourceSessionDigest = null;
                     op.ProtectedPendingTotpSecret = null; op.RecoveryCodeDigest = null; op.OutstandingRecoveryUserID = null;
                     op.OutstandingLinkSlot = null; op.Destination = null;
                     op.AppBinding = null; op.SessionAuthenticatedAt = null; op.SessionMfaSatisfied = null;

@@ -390,7 +390,7 @@ public sealed class UserFormAuthoritySqlTests(SqlIdentityFixture fixture) : ICla
             if (scenario == "protected")
                 await using (var setup = fixture.CreateContext())
                     await setup.Users.Where(x => x.ID == id).ExecuteUpdateAsync(x => x.SetProperty(u => u.IsProtected, true));
-            if (scenario == "stale-proof") clock.Advance(TimeSpan.FromMinutes(6));
+            if (scenario == "stale-proof") await AgeOperatorAsync(host);
             var dto = await GetAsync(host, id);
             dto.Password = OtherPassword; dto.FullName = "Synthetic Form User (edited)";
             using var response = await host.Client.PutAsJsonAsync($"/api/IdentityUser/{id}", dto);
@@ -679,7 +679,7 @@ public sealed class UserFormAuthoritySqlTests(SqlIdentityFixture fixture) : ICla
     {
         using var host = await HostAsync(legacyToken: false);
         var id = await CreateAsync(host, NewUser(email: refusal + "@example.invalid", requireChange: false, sendVerification: false));
-        if (refusal == "old-proof") clock.Advance(TimeSpan.FromMinutes(5));
+        if (refusal == "old-proof") await AgeOperatorAsync(host);
         await using (var db = fixture.CreateContext())
         {
             if (refusal == "stale-version") await db.Set<UserSecurityState>().Where(x => x.UserID == adminID).ExecuteUpdateAsync(x => x.SetProperty(s => s.SecurityVersion, 2));
@@ -688,6 +688,13 @@ public sealed class UserFormAuthoritySqlTests(SqlIdentityFixture fixture) : ICla
         using var response = await host.Client.PostAsJsonAsync("api/IdentityUser/VerifyEmails", new SelectStateDTO<UserListDTO> { Items = [new() { ID = id.ToString() }] });
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var result = (await response.Content.ReadFromJsonAsync<ShiftEntityResponse<IEnumerable<UserInfoDTO>>>())!;
+        if (refusal == "old-proof")
+        {
+            Assert.Null(result.Message);
+            Assert.Single(Inbox.Messages);
+            Assert.Equal(1, (await StateAsync(id)).State.DeliveryCount);
+            return;
+        }
         Assert.NotNull(result.Message);
         Assert.Equal("NotRequested", Assert.IsType<System.Text.Json.JsonElement>(result.Additional!["EmailVerification"]).GetProperty(id.ToString()).GetString());
         Assert.Empty(Inbox.Messages); Assert.Equal(0, (await StateAsync(id)).State.DeliveryCount);
@@ -715,6 +722,32 @@ public sealed class UserFormAuthoritySqlTests(SqlIdentityFixture fixture) : ICla
     {
         public Task DeliverAsync(ShiftSoftware.ShiftIdentity.AspNetCore.Authentication.SecurityEmail message, CancellationToken ct) =>
             message.Destination == refuse ? Task.FromException(new IOException("Synthetic missed recipient")) : inbox.DeliverAsync(message, ct);
+    }
+
+    [Fact]
+    public async Task Old_ordinary_session_can_create_and_import_without_fresh_confirmation()
+    {
+        using var host = await HostAsync(legacyToken: false);
+        await AgeOperatorAsync(host);
+        var created = await CreateAsync(host, NewUser(requireChange: false, sendVerification: false));
+        Assert.Equal(1, (await StateAsync(created)).State.SecurityVersion);
+        var username = "synthetic-import-" + Guid.NewGuid().ToString("N")[..12];
+        using var response = await host.Client.PostAsJsonAsync("/api/IdentityUser/ImportUsers", new UserImportDTO
+        {
+            Users = [new UserImportUserDTO { FullName = "Synthetic Import", Username = username, Email = username + "@example.invalid", CompanyBranchID = branchID }]
+        });
+        Assert.True(response.StatusCode == HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        await using var db = fixture.CreateContext();
+        Assert.True(await db.Users.AnyAsync(x => x.Username == username));
+        Assert.Empty(await db.Set<AuthenticationOperation>().Where(x => x.Purpose == AuthenticationOperationPurpose.AdministratorConfirmation).ToArrayAsync());
+    }
+
+    private async Task AgeOperatorAsync(LegacyIdentityHttpHost<IdentityTestDbContext> host)
+    {
+        var session = Assert.IsType<SessionIssued>(await LoginAsync(host, AdminName, fixture.Password));
+        clock.Advance(TimeSpan.FromHours(20));
+        var renewed = Assert.IsType<SessionIssued>(await RefreshAsync(host, session.Session.RefreshToken));
+        host.Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", renewed.Session.Token);
     }
 
     private async Task<LegacyIdentityHttpHost<IdentityTestDbContext>> HostAsync(bool legacyToken = true, Action<string>? observe = null,

@@ -93,25 +93,25 @@ public sealed class AdminAccountSqlTests(SqlIdentityFixture fixture) : IClassFix
     [Theory]
     [InlineData("password", "permission", AuthenticationFailure.ClientDenied)]
     [InlineData("password", "self", AuthenticationFailure.ClientDenied)]
-    [InlineData("password", "stale", AuthenticationFailure.InvalidProof)]
+    [InlineData("password", "stale", AuthenticationFailure.ReauthenticationRequired)]
     [InlineData("password", "protected", AuthenticationFailure.ClientDenied)]
     [InlineData("password", "deleted", AuthenticationFailure.AccountUnavailable)]
     [InlineData("password", "noSession", AuthenticationFailure.InvalidGrant)]
     [InlineData("username", "permission", AuthenticationFailure.ClientDenied)]
     [InlineData("username", "self", AuthenticationFailure.ClientDenied)]
-    [InlineData("username", "stale", AuthenticationFailure.InvalidProof)]
+    [InlineData("username", "stale", AuthenticationFailure.ReauthenticationRequired)]
     [InlineData("username", "protected", AuthenticationFailure.ClientDenied)]
     [InlineData("username", "deleted", AuthenticationFailure.AccountUnavailable)]
     [InlineData("username", "noSession", AuthenticationFailure.InvalidGrant)]
     [InlineData("email", "permission", AuthenticationFailure.ClientDenied)]
     [InlineData("email", "self", AuthenticationFailure.ClientDenied)]
-    [InlineData("email", "stale", AuthenticationFailure.InvalidProof)]
+    [InlineData("email", "stale", AuthenticationFailure.ReauthenticationRequired)]
     [InlineData("email", "protected", AuthenticationFailure.ClientDenied)]
     [InlineData("email", "deleted", AuthenticationFailure.AccountUnavailable)]
     [InlineData("email", "noSession", AuthenticationFailure.InvalidGrant)]
     [InlineData("status", "permission", AuthenticationFailure.ClientDenied)]
     [InlineData("status", "self", AuthenticationFailure.ClientDenied)]
-    [InlineData("status", "stale", AuthenticationFailure.InvalidProof)]
+    [InlineData("status", "stale", AuthenticationFailure.ReauthenticationRequired)]
     [InlineData("status", "protected", AuthenticationFailure.ClientDenied)]
     [InlineData("status", "deleted", AuthenticationFailure.AccountUnavailable)]
     [InlineData("status", "noSession", AuthenticationFailure.InvalidGrant)]
@@ -123,7 +123,11 @@ public sealed class AdminAccountSqlTests(SqlIdentityFixture fixture) : IClassFix
         var target = scenario == "self" ? adminID : fixture.UserID;
         try
         {
-            if (scenario == "stale") clock.Advance(TimeSpan.FromMinutes(6));
+            if (scenario == "stale")
+            {
+                clock.Advance(TimeSpan.FromHours(20));
+                access = Assert.IsType<SessionIssued>(await host.RefreshAsync(actor.Session.RefreshToken)).Session.Token;
+            }
             if (scenario is "protected" or "deleted" or "inactive") await SetTarget(scenario);
             var result = Assert.IsType<AuthenticationRefused>(await Mutate(host, route, access, target));
             Assert.Equal(expected, result.Code);

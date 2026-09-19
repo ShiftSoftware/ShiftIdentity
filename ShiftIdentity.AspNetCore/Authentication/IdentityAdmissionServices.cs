@@ -32,7 +32,8 @@ internal sealed record SecurityDeliveryLimits(int CooldownSeconds = 60, int PerU
 internal sealed record IdentityAdmissionOptions(
     string Issuer, string RefreshAudience, byte[] AccessPrivateKey, byte[] RefreshKey,
     byte[] OperationKey, long PolicyRevision = 1, int AccessLifetimeSeconds = 900,
-    int RefreshLifetimeSeconds = 2592000);
+    int RefreshLifetimeSeconds = 2592000,
+    int AdministratorAuthenticationGraceSeconds = Core.Authentication.AdministratorAuthentication.DefaultGracePeriodSeconds);
 
 internal sealed record SessionProof(
     long UserID, long SecurityVersion, long PolicyRevision, long FactorGeneration,

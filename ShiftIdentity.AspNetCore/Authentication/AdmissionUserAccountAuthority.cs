@@ -76,11 +76,15 @@ internal sealed class AdmissionUserAccountAuthority(IdentityAdmissionServices se
             {
                 AuthenticationFailure.InvalidGrant => (HttpStatusCode.Unauthorized, "Unauthorized", "Sign in again before changing this account."),
                 AuthenticationFailure.InvalidProof => (HttpStatusCode.Forbidden, "Forbidden", "Your sign-in is too old for this change. Sign in again and retry."),
+                AuthenticationFailure.ReauthenticationRequired => (HttpStatusCode.Forbidden, "Confirm your identity", "Confirm your password and applicable MFA to continue this change."),
                 AuthenticationFailure.AccountUnavailable => (HttpStatusCode.Forbidden, "Forbidden", "Your account is not available for this change."),
                 AuthenticationFailure.Unavailable => (HttpStatusCode.ServiceUnavailable, "Error", "The change could not be saved. Please wait and try again."),
                 _ => (HttpStatusCode.Forbidden, "Forbidden", "You do not have permission to change this account.")
             }
         };
-        return new ShiftEntityException(new Message(Text(title), Text(body)) { For = refused.Field }, (int)status);
+        return new ShiftEntityException(new Message(Text(title), Text(body))
+        {
+            For = refused.Code == AuthenticationFailure.ReauthenticationRequired ? AdministratorAuthentication.RequiredMessage : refused.Field
+        }, (int)status);
     }
 }

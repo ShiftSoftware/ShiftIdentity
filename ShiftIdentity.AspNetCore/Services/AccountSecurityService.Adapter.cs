@@ -144,7 +144,7 @@ internal static partial class AccountSecurityService
     {
         var store = SharedStore(services, db);
         var units = await store.AdmitWithinAsync([who.UserID], services.Client, ct);
-        var refusal = ActorRefusal(services, units[who.UserID], who, permissions => permissions.CanWrite(ShiftIdentityActions.Users));
+        var refusal = ActorRefusal(services, units[who.UserID], who, permissions => permissions.CanWrite(ShiftIdentityActions.Users), requireRecent: false);
         if (refusal is not null) throw new AdmissionRefusedException(refusal.Code, AdmissionRefusalReason.Operator);
         var now = services.Clock.GetUtcNow();
         foreach (var creation in created)

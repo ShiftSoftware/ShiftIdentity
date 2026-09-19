@@ -66,7 +66,7 @@ internal static class AdmissionOperations
     internal static ChallengeRequired Create(IdentityAdmissionServices services, IdentitySecurityTransaction unit,
         AuthenticationOperationPurpose purpose, AuthenticationOperationState state, string codeChallenge,
         DateTimeOffset createdAt, DateTimeOffset expiresAt, PasswordChangeOrigin? origin = null, DateTimeOffset? passwordProvenAt = null,
-        bool prepareNewFactor = false, Guid? parentID = null, int failedAttempts = 0)
+        bool prepareNewFactor = false, Guid? parentID = null, int failedAttempts = 0, byte[]? sourceSessionDigest = null)
     {
         var credential = OperationCredential.Create(services.Options.OperationKey);
         var op = new AuthenticationOperation
@@ -76,11 +76,12 @@ internal static class AdmissionOperations
             PolicyRevision = unit.Policy.Revision, ClientID = services.Client.ID, Audience = services.Client.Audience,
             External = services.Client.External, HandleDigest = credential.Digest, CodeChallenge = codeChallenge,
             CreatedAt = createdAt, ExpiresAt = expiresAt, PasswordChangeOrigin = origin, PasswordProvenAt = passwordProvenAt,
-            ParentID = parentID, FailedAttempts = failedAttempts
+            ParentID = parentID, FailedAttempts = failedAttempts, SourceSessionDigest = sourceSessionDigest
         };
         var setup = prepareNewFactor ? MfaMaterial.Prepare(services, unit, op) : null;
         unit.AddOperation(op);
-        unit.Audit(purpose == AuthenticationOperationPurpose.Login ? "LoginChallenge" : purpose == AuthenticationOperationPurpose.PasswordChange ? "PasswordChangeStarted" : "MfaOperationStarted", createdAt, op.ID);
+        unit.Audit(purpose == AuthenticationOperationPurpose.Login ? "LoginChallenge" : purpose == AuthenticationOperationPurpose.PasswordChange ? "PasswordChangeStarted"
+            : purpose == AuthenticationOperationPurpose.AdministratorConfirmation ? "AdministratorConfirmationStarted" : "MfaOperationStarted", createdAt, op.ID);
         return Challenge(op, credential.Handle, setup);
     }
 
@@ -151,6 +152,7 @@ internal static class AdmissionOperations
         op.RecoveryCodeDigest = null;
         op.OutstandingRecoveryUserID = null;
         op.OutstandingLinkSlot = null;
+        op.SourceSessionDigest = null;
         op.Destination = null;
     }
 
