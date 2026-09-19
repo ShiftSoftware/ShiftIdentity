@@ -6,6 +6,7 @@
 @inject ODataQuery odataQuery
 @inject IDialogService DialogService
 @inject ShiftIdentityLocalizer Loc
+@inject ShiftIdentityDashboardBlazorOptions DashboardOptions
 
 @using ShiftSoftware.ShiftEntity.Model.Dtos
 @using ShiftSoftware.ShiftBlazor.Enums
@@ -30,11 +31,16 @@ else
                  ModeChanged="ModeChanged"
                  TypeAuthAction="ShiftIdentityActions.Users"
                  OnTaskFinished="@(()=> ready=true)"
+                 OnResult="HandleSaveResult"
                  OnSubmit="()=> { _theItem.AccessTree =  actionTree!.GenerateAccessTree(); }"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.User.UserDTO">
 
     @* Related fields sit together: who the user is, how they sign in, how to reach them, what they may do. *@
     <MudStack Spacing="4">
+        @if (verificationSendUnconfirmed)
+        {
+            <MudAlert Severity="Severity.Warning" data-testid="user-verification-unconfirmed">The user was saved, but the verification send could not be confirmed. Check the recipient's inbox, wait and request a fresh link.</MudAlert>
+        }
 
         <FormSectionCard Title="@Loc["Profile"]" Icon="@Icons.Material.Filled.Person" data-testid="user-section-profile">
             <MudGrid Spacing="4">
@@ -76,6 +82,10 @@ else
         </FormSectionCard>
 
         <FormSectionCard Title="@Loc["Security"]" Icon="@Icons.Material.Filled.Lock" data-testid="user-section-security">
+            @if (DashboardOptions.StagedAuthority && context.Mode == FormModes.View && !string.IsNullOrEmpty(context.Item.ID))
+            {
+                <ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.UserManager.SecurityEmailAdminActions UserKey="@context.Item.ID" Disabled="@context.Disabled" />
+            }
             @* Credentials on the first row, account state on the second. *@
             <MudGrid Spacing="4">
                 <MudItem xs="12" md="6">
@@ -247,6 +257,14 @@ else
     public object? Key { get; set; }
 
     private UserDTO _theItem = new();
+    private bool verificationSendUnconfirmed;
+
+    private ValueTask<bool> HandleSaveResult(ShiftEntityResponse<UserDTO>? result)
+    {
+        if (result?.Additional?.TryGetValue("EmailVerification", out var delivery) == true)
+            verificationSendUnconfirmed = delivery?.ToString() is "Unconfirmed" or "NotRequested";
+        return ValueTask.FromResult(true);
+    }
 
     // The generated password must satisfy the shared new-password policy (at least 15 code points).
     private const int GeneratedPasswordLength = 16;

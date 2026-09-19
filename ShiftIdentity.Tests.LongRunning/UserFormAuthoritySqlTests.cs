@@ -638,6 +638,85 @@ public sealed class UserFormAuthoritySqlTests(SqlIdentityFixture fixture) : ICla
 
     // ── helpers ──────────────────────────────────────────────────────────────────────────────────────────────────
 
+    [Fact]
+    public async Task Bulk_verification_keeps_partial_results_and_never_writes_a_SAS_token()
+    {
+        using var host = await HostAsync(legacyToken: false);
+        var first = await CreateAsync(host, NewUser(email: "accepted@example.invalid", requireChange: false, sendVerification: false));
+        var second = await CreateAsync(host, NewUser(email: "missed@example.invalid", requireChange: false, sendVerification: false));
+        var inbox = Inbox;
+        fixture.EmailSink = new SelectiveSink(inbox, "missed@example.invalid");
+        using var sender = await HostAsync(legacyToken: false);
+        var selected = new SelectStateDTO<UserListDTO> { Items = [new() { ID = first.ToString() }, new() { ID = second.ToString() }] };
+        using var response = await sender.Client.PostAsJsonAsync("api/IdentityUser/VerifyEmails", selected);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = (await response.Content.ReadFromJsonAsync<ShiftEntityResponse<IEnumerable<UserInfoDTO>>>())!;
+        Assert.Equal(2, result.Entity!.Count()); Assert.NotNull(result.Message);
+        var statuses = Assert.IsType<System.Text.Json.JsonElement>(result.Additional!["EmailVerification"]);
+        Assert.Equal("Requested", statuses.GetProperty(first.ToString()).GetString());
+        Assert.Equal("Unconfirmed", statuses.GetProperty(second.ToString()).GetString());
+        Assert.Equal("accepted@example.invalid", Assert.Single(inbox.Messages).Destination);
+        foreach (var id in new[] { first, second })
+        {
+            var (user, state) = await StateAsync(id);
+            Assert.Null(user.VerificationSASToken); Assert.False(user.EmailVerified); Assert.Equal(1, state.SecurityVersion);
+            Assert.Equal(1, state.DeliveryCount);
+            Assert.Contains(await AuditsAsync(id), x => x.Outcome == "EmailVerificationRequested" && x.ActorUserID == adminID);
+        }
+        await using var db = fixture.CreateContext();
+        Assert.Equal(AuthenticationOperationState.AwaitingExplicitSubmit, (await db.Set<AuthenticationOperation>().SingleAsync(x => x.UserID == first)).State);
+        Assert.Equal(AuthenticationOperationState.Cancelled, (await db.Set<AuthenticationOperation>().SingleAsync(x => x.UserID == second)).State);
+        // A retry during the shared cooldown sends neither recipient again.
+        using var retry = await sender.Client.PostAsJsonAsync("api/IdentityUser/VerifyEmails", selected);
+        Assert.Equal(HttpStatusCode.OK, retry.StatusCode); Assert.Single(inbox.Messages);
+    }
+
+    [Theory]
+    [InlineData("old-proof")]
+    [InlineData("stale-version")]
+    [InlineData("removed-permission")]
+    public async Task Bulk_verification_rechecks_operator_proof_version_and_current_permission(string refusal)
+    {
+        using var host = await HostAsync(legacyToken: false);
+        var id = await CreateAsync(host, NewUser(email: refusal + "@example.invalid", requireChange: false, sendVerification: false));
+        if (refusal == "old-proof") clock.Advance(TimeSpan.FromMinutes(5));
+        await using (var db = fixture.CreateContext())
+        {
+            if (refusal == "stale-version") await db.Set<UserSecurityState>().Where(x => x.UserID == adminID).ExecuteUpdateAsync(x => x.SetProperty(s => s.SecurityVersion, 2));
+            if (refusal == "removed-permission") await db.Users.Where(x => x.ID == adminID).ExecuteUpdateAsync(x => x.SetProperty(u => u.AccessTree, ReadOnlyTree));
+        }
+        using var response = await host.Client.PostAsJsonAsync("api/IdentityUser/VerifyEmails", new SelectStateDTO<UserListDTO> { Items = [new() { ID = id.ToString() }] });
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = (await response.Content.ReadFromJsonAsync<ShiftEntityResponse<IEnumerable<UserInfoDTO>>>())!;
+        Assert.NotNull(result.Message);
+        Assert.Equal("NotRequested", Assert.IsType<System.Text.Json.JsonElement>(result.Additional!["EmailVerification"]).GetProperty(id.ToString()).GetString());
+        Assert.Empty(Inbox.Messages); Assert.Equal(0, (await StateAsync(id)).State.DeliveryCount);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Admin_link_routes_accept_a_dashboard_key_and_refuse_conflicting_identifiers(bool verification)
+    {
+        using var host = await HostAsync(legacyToken: false);
+        var email = "dashboard-key-" + verification + "@example.invalid";
+        var id = await CreateAsync(host, NewUser(email: email, requireChange: false, sendVerification: false));
+        var route = "api/identity/v2/" + (verification ? "email-verification" : "password-reset") + "/admin";
+        using (var bad = await host.Client.PostAsJsonAsync(route, new { UserID = id, UserKey = id.ToString() }))
+            Assert.IsType<AuthenticationRefused>(await bad.Content.ReadFromJsonAsync<AuthOutcome>());
+        Assert.Empty(Inbox.Messages);
+        using var accepted = await host.Client.PostAsJsonAsync(route, new { UserKey = id.ToString() });
+        Assert.Equal(HttpStatusCode.Accepted, accepted.StatusCode);
+        Assert.Equal(email, Assert.Single(Inbox.Messages).Destination);
+        Assert.Null((await StateAsync(id)).User.VerificationSASToken);
+    }
+
+    private sealed class SelectiveSink(LocalSecurityInbox inbox, string refuse) : ShiftSoftware.ShiftIdentity.AspNetCore.Authentication.ISecurityEmailSink
+    {
+        public Task DeliverAsync(ShiftSoftware.ShiftIdentity.AspNetCore.Authentication.SecurityEmail message, CancellationToken ct) =>
+            message.Destination == refuse ? Task.FromException(new IOException("Synthetic missed recipient")) : inbox.DeliverAsync(message, ct);
+    }
+
     private async Task<LegacyIdentityHttpHost<IdentityTestDbContext>> HostAsync(bool legacyToken = true, Action<string>? observe = null,
         params IInterceptor[] interceptors)
     {

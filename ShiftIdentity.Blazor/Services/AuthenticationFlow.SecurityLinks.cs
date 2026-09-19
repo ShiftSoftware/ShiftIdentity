@@ -18,6 +18,10 @@ public sealed partial class AuthenticationFlow
             : result is SecurityDeliveryRequested, access);
     public Task<AuthOutcome> RequestAdminEmailVerificationAsync(string access, long userID) => SecurityRequestAsync(
         "email-verification/admin", new AdminEmailVerificationRequest(userID), result => result is SecurityDeliveryRequested, access);
+    public Task<AuthOutcome> RequestAdminPasswordResetAsync(string access, string userKey) => SecurityRequestAsync(
+        "password-reset/admin", new AdminPasswordResetRequest(UserKey: userKey), result => result is SecurityDeliveryRequested, access);
+    public Task<AuthOutcome> RequestAdminEmailVerificationAsync(string access, string userKey) => SecurityRequestAsync(
+        "email-verification/admin", new AdminEmailVerificationRequest(UserKey: userKey), result => result is SecurityDeliveryRequested, access);
     public Task<AuthOutcome> OpenSecurityLinkAsync(string grant, AuthenticationOperationPurpose purpose) => SecurityRequestAsync(
         "security-link/open", new OpenSecurityLinkRequest(grant, purpose), result =>
             result is SecurityLinkOpened { PageHandle.Length: > 0 } opened && opened.Purpose == purpose && opened.ExpiresAt > clock.GetUtcNow());

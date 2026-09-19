@@ -7,6 +7,8 @@
 @inject IJSRuntime JS
 @implements IDisposable
 
+<HeadContent><meta name="referrer" content="no-referrer" /></HeadContent>
+
 <MudPaper Class="pa-5" data-testid="security-link-form">
     <MudText Typo="Typo.h5">@(Verification ? "Verify your email" : "Choose a new password")</MudText>
     @if (loading) { <MudText>Checking your link…</MudText> }
@@ -16,7 +18,7 @@
         @if (Verification)
         {
             <MudText>Opening this page does not verify your email. Confirm that this email address belongs to you.</MudText>
-            <MudButton Color="Color.Primary" Disabled="Context.Flow.Busy" OnClick="Verify">Verify my email</MudButton>
+            <MudButton Color="Color.Primary" Disabled="CurrentFlow.Busy" OnClick="Verify">Verify my email</MudButton>
         }
         else
         {
@@ -25,7 +27,7 @@
                 <DataAnnotationsValidator />
                 <PasswordField Label="New Password" @bind-Value="entry.Password" For="@(() => entry.Password)" Immediate="true" autocomplete="new-password" />
                 <PasswordField Label="Confirm Password" @bind-Value="entry.Confirm" For="@(() => entry.Confirm)" Immediate="true" autocomplete="new-password" />
-                <MudButton Color="Color.Primary" ButtonType="ButtonType.Submit" Disabled="Context.Flow.Busy">Reset password</MudButton>
+                <MudButton Color="Color.Primary" ButtonType="ButtonType.Submit" Disabled="CurrentFlow.Busy">Reset password</MudButton>
             </EditForm>
             <MudText>Your authenticator and recovery requirements still apply after resetting your password.</MudText>
         }
@@ -48,7 +50,9 @@
 </MudPaper>
 
 @code {
-    [Parameter, EditorRequired] public AdmissionUiContext Context { get; set; } = null!;
+    [Parameter] public AdmissionUiContext? Context { get; set; }
+    [Parameter] public AuthenticationFlow? Flow { get; set; }
+    private AuthenticationFlow CurrentFlow => Flow ?? Context!.Flow;
     [Parameter] public bool Verification { get; set; }
     private SecurityLinkOpened? opened;
     private Entry entry = new();
@@ -103,7 +107,7 @@
                     finally { await module.DisposeAsync(); }
                     if (disposed || current != pageGeneration) continue;
                     // Exchanging a grant only establishes inert page context. The explicit submit makes the change.
-                    var result = valid && cleared ? await Context.Flow.OpenSecurityLinkAsync(grant, purpose)
+                    var result = valid && cleared ? await CurrentFlow.OpenSecurityLinkAsync(grant, purpose)
                         : new AuthenticationRefused(AuthenticationFailure.InvalidGrant);
                     if (disposed || current != pageGeneration) continue;
                     opened = result as SecurityLinkOpened;
@@ -127,7 +131,7 @@
     {
         if (opened is null || entry.Password != entry.Confirm) return;
         var current = pageGeneration;
-        activeCompletion = Context.Flow.CompletePasswordResetAsync(opened.PageHandle, entry.Password);
+        activeCompletion = CurrentFlow.CompletePasswordResetAsync(opened.PageHandle, entry.Password);
         var result = await activeCompletion;
         activeCompletion = null;
         if (disposed || current != pageGeneration) return;
@@ -143,11 +147,18 @@
     {
         if (opened is null) return;
         var current = pageGeneration;
-        activeCompletion = Context.Flow.CompleteEmailVerificationAsync(opened.PageHandle);
+        activeCompletion = CurrentFlow.CompleteEmailVerificationAsync(opened.PageHandle);
         var result = await activeCompletion;
         activeCompletion = null;
         if (disposed || current != pageGeneration) return;
-        if (result is EmailVerificationCompleted) { verified = true; opened = null; error = null; }
+        if (result is EmailVerificationCompleted completed)
+        {
+            verified = true; opened = null; error = null;
+            // Only the successful authority response supplies this host-configured destination.
+            if (Uri.TryCreate(completed.RedirectUrl, UriKind.Absolute, out var redirect)
+                && redirect.Scheme is "https" or "http" && string.IsNullOrEmpty(redirect.UserInfo))
+                Navigation.NavigateTo(redirect.AbsoluteUri, forceLoad: true, replace: true);
+        }
         else HandleFailure(result);
     }
     private void HandleFailure(AuthOutcome result)
@@ -170,7 +181,7 @@
     private void ClearPage()
     {
         pageGeneration++; pendingUri = null; opened = null; entry = new(); verified = false; error = null;
-        loading = false; Context.Flow.Restart();
+        loading = false; CurrentFlow.Restart();
     }
     public void Dispose()
     {

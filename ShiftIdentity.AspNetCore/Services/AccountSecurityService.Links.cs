@@ -130,7 +130,11 @@ internal static partial class AccountSecurityService
         if (!manual)
         {
             message = new(op.ID, destination!, verification ? "Verify your email" : "Reset your password",
-                credential.Handle, purpose, op.ExpiresAt);
+                credential.Handle, purpose, op.ExpiresAt)
+            {
+                UserID = services.HashIds.Encode<Core.DTOs.User.UserDTO>(unit.User.ID),
+                Username = unit.User.Username, FullName = unit.User.FullName
+            };
         }
         unit.Audit(manual ? "ManualPasswordResetIssued" : verification ? "EmailVerificationRequested" : "PasswordResetRequested", now, op.ID, actorID);
         services.Observe?.Invoke("SecurityLinkPrepared");
@@ -259,7 +263,7 @@ internal static partial class AccountSecurityService
             AdmissionOperations.Finish(unit.Operation!, now);
             unit.Audit("EmailVerified", now, reference.ID);
             services.Observe?.Invoke("EmailVerificationMutation");
-            return Task.FromResult<AuthOutcome>(new EmailVerificationCompleted());
+            return Task.FromResult<AuthOutcome>(new EmailVerificationCompleted(services.EmailVerificationRedirectUrl));
         }, ct);
     });
 

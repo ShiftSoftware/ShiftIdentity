@@ -159,6 +159,17 @@ else
 
     private async Task SendEmailVerification()
     {
+        if (DashboardOptions.StagedAuthority)
+        {
+            var access = await Session.GetTokenAsync() is { Flow: AuthPurpose.None, Token: { Length: > 0 } token } ? token : null;
+            var result = access is null ? new AuthenticationRefused(AuthenticationFailure.InvalidGrant)
+                : await Services.GetRequiredService<AuthenticationFlow>().RequestCurrentEmailVerificationAsync(access);
+            if (result is SecurityDeliveryRequested)
+                MessageService.Success("Check your saved email inbox. Wait before requesting another link.");
+            else
+                MessageService.Error("The send could not be confirmed. Check your inbox, wait and retry; sign in again if your session is no longer accepted.");
+            return;
+        }
         var response = await Http.GetAsync("usermanager/SendEmailVerificationLink");
 
         if (response.IsSuccessStatusCode)

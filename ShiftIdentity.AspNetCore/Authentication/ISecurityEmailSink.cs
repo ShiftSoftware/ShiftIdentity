@@ -3,7 +3,13 @@ using ShiftSoftware.ShiftIdentity.Core.Authentication;
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Authentication;
 
 public sealed record SecurityEmail(Guid ID, string Destination, string Subject, string Grant,
-    AuthenticationOperationPurpose Purpose, DateTimeOffset ExpiresAt);
+    AuthenticationOperationPurpose Purpose, DateTimeOffset ExpiresAt)
+{
+    // Captured from the saved account under admission, along with the exact delivery destination.
+    public string? UserID { get; init; }
+    public string Username { get; init; } = "";
+    public string FullName { get; init; } = "";
+}
 
 /// <summary>
 /// One awaited handoff. Normal return means the host accepted responsibility; an exception or

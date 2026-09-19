@@ -30,6 +30,8 @@ public class ShiftIdentityConfiguration
     internal bool IsFakeIdentity { get; set; }
     public ShiftIdentityHostingTypes ShiftIdentityHostingType { get; set; }
     public string? FrontEndUrl { get; set; } = default!;
+    /// <summary>The absolute HTTP(S) destination after an explicit email verification succeeds. Never supplied by a link or caller.</summary>
+    public string? EmailVerificationRedirectUrl { get; set; }
     public ShiftIdentityFeatureLocking ShiftIdentityFeatureLocking { get; set; } = new ShiftIdentityFeatureLocking();
     public ShiftIdentityDefaultDataLevelAccessOptions DefaultDataLevelAccessOptions { get; set; } = new();
 }

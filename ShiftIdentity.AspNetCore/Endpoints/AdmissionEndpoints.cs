@@ -56,6 +56,7 @@ internal static class AdmissionEndpoints
         var group = endpoints.MapGroup("/api/identity/v2").AddEndpointFilter(async (context, next) =>
         {
             context.HttpContext.Response.Headers.CacheControl = "no-store";
+            context.HttpContext.Response.Headers["Referrer-Policy"] = "no-referrer";
             if (context.HttpContext.Request.Path.Value is "/api/identity/v2/security-link/open" or "/api/identity/v2/password-reset/complete" or "/api/identity/v2/email-verification/complete")
             {
                 var admission = context.HttpContext.RequestServices.GetRequiredService<IdentityAdmissionServices>();
@@ -118,10 +119,10 @@ internal static class AdmissionEndpoints
         group.MapPost("/email-verification/request-current", async (HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
             Result(await AccountSecurityService.RequestCurrentEmailVerificationAsync(services, context.Request.Headers.Authorization.ToString(), ct)));
         group.MapPost("/password-reset/admin", async (AdminPasswordResetRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
-            Result(await AccountSecurityService.AdminSecurityLinkAsync(services, context.Request.Headers.Authorization.ToString(), request.UserID,
+            Result(await AccountSecurityService.AdminSecurityLinkAsync(services, context.Request.Headers.Authorization.ToString(), LinkTarget(services, request.UserID, request.UserKey),
                 request.Manual ? AuthenticationOperationPurpose.PasswordResetManual : AuthenticationOperationPurpose.PasswordResetEmail, ct)));
         group.MapPost("/email-verification/admin", async (AdminEmailVerificationRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
-            Result(await AccountSecurityService.AdminSecurityLinkAsync(services, context.Request.Headers.Authorization.ToString(), request.UserID, AuthenticationOperationPurpose.EmailVerify, ct)));
+            Result(await AccountSecurityService.AdminSecurityLinkAsync(services, context.Request.Headers.Authorization.ToString(), LinkTarget(services, request.UserID, request.UserKey), AuthenticationOperationPurpose.EmailVerify, ct)));
         group.MapPost("/admin/password", async (AdminSetPasswordRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
             Result(await AccountSecurityService.SetPasswordAsync(services, context.Request.Headers.Authorization.ToString(), request, ct)));
         group.MapPost("/admin/username", async (AdminUsernameChangeRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
@@ -136,6 +137,14 @@ internal static class AdmissionEndpoints
             Result(await AccountSecurityService.CompletePasswordResetAsync(services, request, ct)));
         group.MapPost("/email-verification/complete", async (CompleteEmailVerificationRequest request, IdentityAdmissionServices services, CancellationToken ct) =>
             Result(await AccountSecurityService.CompleteEmailVerificationAsync(services, request, ct)));
+    }
+
+    private static long LinkTarget(IdentityAdmissionServices services, long id, string? key)
+    {
+        if (key is null) return id;
+        if (id != 0 || key.Length is 0 or > 255) return 0;
+        try { return services.HashIds.Decode<Core.DTOs.User.UserDTO>(key); }
+        catch (Exception error) when (error is ArgumentException or FormatException or OverflowException) { return 0; }
     }
 
     private static IResult Result(AuthOutcome result) => Results.Json<AuthOutcome>(result, statusCode: result switch

@@ -34,7 +34,7 @@ public sealed record MfaRecoveryCodeIssued(string Code, DateTimeOffset ExpiresAt
 public sealed record SecurityDeliveryRequested : AuthOutcome;
 public sealed record SecurityLinkOpened(string PageHandle, string MaskedTarget, AuthenticationOperationPurpose Purpose, DateTimeOffset ExpiresAt) : AuthOutcome;
 public sealed record ManualPasswordResetIssued(string Grant, string MaskedTarget, DateTimeOffset ExpiresAt) : AuthOutcome;
-public sealed record EmailVerificationCompleted : AuthOutcome;
+public sealed record EmailVerificationCompleted(string? RedirectUrl = null) : AuthOutcome;
 /// <summary>An administrator mutation committed, or was already in effect. It never carries a session.</summary>
 public sealed record AdminAccountChanged(AdminAccountChange Change, bool Applied, long SecurityVersion, AuthOutcome? Delivery = null) : AuthOutcome;
 public enum AdminAccountChange { Password = 1, Username = 2, Email = 3, Active = 4 }

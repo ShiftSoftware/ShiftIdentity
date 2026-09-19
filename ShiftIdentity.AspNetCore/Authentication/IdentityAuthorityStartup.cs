@@ -25,6 +25,7 @@ internal sealed class IdentityAuthorityStartup(IServiceScopeFactory scopes, Iden
         try
         {
             await using var scope = scopes.CreateAsyncScope();
+            CheckAdapters(scope.ServiceProvider);
             var db = scope.ServiceProvider.GetRequiredService<ShiftIdentityDbContext>();
             var revision = await EnsurePolicyAsync(db, registration, cancellationToken);
             var created = await EnsureClientAsync(db, registration, cancellationToken);
@@ -44,6 +45,19 @@ internal sealed class IdentityAuthorityStartup(IServiceScopeFactory scopes, Iden
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    internal static void CheckAdapters(IServiceProvider services)
+    {
+        var missing = new List<string>();
+        var registered = services.GetRequiredService<IServiceProviderIsService>();
+        if (!registered.IsService(typeof(Data.Services.IUserAccountAuthority))) missing.Add("IUserAccountAuthority (administrator writers and verification delivery)");
+        if (!registered.IsService(typeof(IIdentitySecurityStore))) missing.Add(nameof(IIdentitySecurityStore));
+        if (!registered.IsService(typeof(IdentityAdmissionServices))) missing.Add(nameof(IdentityAdmissionServices));
+        if (!registered.IsService(typeof(ISecurityEmailSink))) missing.Add(nameof(ISecurityEmailSink));
+        if (missing.Count > 0)
+            throw new InvalidOperationException("The identity authority cannot start. Missing adapter: " + string.Join(", ", missing) + ".");
+        if (services.GetRequiredService<ISecurityEmailSink>() is HostSecurityEmailSink adapter) adapter.CheckReady();
+    }
 
     /// <summary>The single policy row follows configuration; a change advances the revision, which ends every session bound to the old one.</summary>
     internal static async Task<long> EnsurePolicyAsync(ShiftIdentityDbContext db, IdentityAuthorityRegistration registration, CancellationToken ct)

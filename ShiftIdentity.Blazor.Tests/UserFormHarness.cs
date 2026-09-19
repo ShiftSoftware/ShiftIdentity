@@ -44,6 +44,7 @@ internal sealed class UserFormTransport : HttpMessageHandler
 
     /// <summary>Served for GET IdentityUser/{ID}; the form opens it in view mode.</summary>
     public UserDTO? Existing { get; set; }
+    public string? VerificationDelivery { get; set; }
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
@@ -53,7 +54,10 @@ internal sealed class UserFormTransport : HttpMessageHandler
             Posts.Add((path, await request.Content!.ReadAsStringAsync(cancellationToken)));
             var saved = new UserDTO { ID = "42", Username = "synthetic-form", FullName = "Synthetic User", IsActive = true, AccessTree = "{}",
                 CompanyBranchID = new ShiftEntitySelectDTO { Value = "1", Text = "Synthetic Branch" } };
-            return new(HttpStatusCode.Created) { Content = JsonContent.Create(new ShiftEntityResponse<UserDTO>(saved)) };
+            return new(HttpStatusCode.Created) { Content = JsonContent.Create(new ShiftEntityResponse<UserDTO>(saved)
+            {
+                Additional = VerificationDelivery is null ? null : new() { ["EmailVerification"] = VerificationDelivery }
+            }) };
         }
         if (request.Method == HttpMethod.Get && Existing is not null && path == $"/IdentityUser/{Existing.ID}")
             return new(HttpStatusCode.OK) { Content = JsonContent.Create(new ShiftEntityResponse<UserDTO>(Existing)) };

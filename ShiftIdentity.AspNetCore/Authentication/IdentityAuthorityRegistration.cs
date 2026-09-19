@@ -36,8 +36,13 @@ internal sealed class IdentityAuthorityRegistration
     public string ClientDisplayName { get; }
     public string RedirectUri { get; }
 
+    internal static bool IsWebUrl(string value) => Uri.TryCreate(value, UriKind.Absolute, out var uri)
+        && uri.Scheme is "http" or "https" && string.IsNullOrEmpty(uri.UserInfo);
+
     internal static IdentityAuthorityRegistration Create(ShiftIdentityConfiguration configuration)
     {
+        if (configuration.EmailVerificationRedirectUrl is { } redirect && !IsWebUrl(redirect))
+            throw Invalid("EmailVerificationRedirectUrl", "must be an absolute HTTP(S) URL without credentials.");
         var settings = configuration.Authority ?? throw Invalid("Authority", "is required when the authority is enabled.");
         if (!settings.Enabled) throw Invalid("Authority.Enabled", "must be true to register the authority.");
         var clientID = settings.ClientId?.Trim();

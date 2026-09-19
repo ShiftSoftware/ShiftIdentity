@@ -143,6 +143,22 @@ internal static class UserEndpoints
 
                 List<(User user, string fullUrl)> datas = new();
 
+                // Temporary adapter for the deployed bulk contract; remove the SAS branch in Phase 6.
+                // Each recipient is independent: an unconfirmed handoff cannot undo an earlier accepted one.
+                if (userRepo.UsesAuthority)
+                {
+                    var delivery = new Dictionary<string, string>();
+                    foreach (var user in users)
+                        delivery[hashIdService.Encode<UserDTO>(user.ID)] =
+                            (await userRepo.RequestVerificationAsync(user.ID, httpContext.RequestAborted)).ToString();
+                    return Results.Ok(new ShiftEntityResponse<IEnumerable<UserInfoDTO>>(users.ToInfoDTOs())
+                    {
+                        Additional = new Dictionary<string, object> { ["EmailVerification"] = delivery },
+                        Message = delivery.Values.Any(x => x != nameof(Data.Services.UserAccountDelivery.Requested))
+                            ? new Message("Email verification", "Some requests could not be confirmed. Check the recipients' inboxes, wait and request fresh links for those missed.") : null
+                    });
+                }
+
                 foreach (var user in users)
                 {
                     if (user.EmailVerified || string.IsNullOrWhiteSpace(user.Email))

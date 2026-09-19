@@ -109,7 +109,7 @@
             {
                 <MudAlert Severity="Severity.Success" data-testid="recovery-completed">@Loc["Authenticator recovery completed. Sign in with your password and a new code from your authenticator."]</MudAlert>
             }
-            @if (AdmissionContext is not null && SecurityLink == "reset")
+            @if ((AdmissionContext is not null || ShiftIdentityDashboardBlazorOptions.StagedAuthority) && SecurityLink == "reset")
             {
                 <MudAlert Severity="Severity.Success">Password reset. Sign in with your new password.</MudAlert>
             }
@@ -178,7 +178,7 @@
 
             //Return to home if user already loged-in
             if ((authState?.User?.Identity?.IsAuthenticated ?? false) &&
-                !(AdmissionContext is not null && SecurityLink is "reset" or "verification" or "cancelled"))
+                !((AdmissionContext is not null || ShiftIdentityDashboardBlazorOptions.StagedAuthority) && SecurityLink is "reset" or "verification" or "cancelled"))
                 NavManager.NavigateTo("/");
         }
 

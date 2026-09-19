@@ -28,7 +28,8 @@ public sealed class ConfiguredIdentityHttpHost<TContext> : IDisposable where TCo
     internal IServiceProvider Services => server.Services;
     public ShiftIdentityConfiguration Settings { get; }
 
-    public ConfiguredIdentityHttpHost(SqlIdentityFixture fixture, Action<ShiftIdentityConfiguration>? configure = null, bool enabled = true)
+    public ConfiguredIdentityHttpHost(SqlIdentityFixture fixture, Action<ShiftIdentityConfiguration>? configure = null, bool enabled = true,
+        Action<IServiceCollection>? configureServices = null)
     {
         Settings = SettingsFor(fixture, enabled);
         configure?.Invoke(Settings);
@@ -40,13 +41,15 @@ public sealed class ConfiguredIdentityHttpHost<TContext> : IDisposable where TCo
             services.AddRouting();
             services.AddLocalization();
             services.AddHttpContextAccessor();
+            services.AddSingleton(fixture.Clock);
             services.AddTypeAuth(o => o.AddActionTree<ShiftIdentityActions>());
             services.AddSingleton<IHashIdService>(new HashIdService(Options.Create(new ShiftEntityOptions())));
-            services.AddSingleton<ISendEmailVerification>(new RecordingEmailVerification());
+            services.AddSingleton<ShiftSoftware.ShiftIdentity.AspNetCore.Authentication.ISecurityEmailSink>(fixture.EmailSink!);
             services.AddScoped(sp => (TContext)fixture.CreateContext(sp));
             var mvc = services.AddControllers();
             mvc.AddShiftEntityWeb(x => x.AddShiftIdentityDataAssembly());
             mvc.AddShiftIdentity(Settings.Token.Issuer, publicKey).AddShiftIdentityDashboard<TContext>(Settings);
+            configureServices?.Invoke(services);
         }).Configure(app =>
         {
             app.UseRouting();

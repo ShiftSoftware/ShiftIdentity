@@ -27,6 +27,7 @@ internal sealed class UserEmailVerificationSender : IUserEmailVerificationSender
     private readonly ShiftIdentityDbContext db;
     private readonly IEnumerable<ISendEmailVerification> providers;
     private readonly ILogger<UserEmailVerificationSender> logger;
+    private readonly IUserAccountAuthority? authority;
 
     public UserEmailVerificationSender(
         IHttpContextAccessor httpContextAccessor,
@@ -35,7 +36,8 @@ internal sealed class UserEmailVerificationSender : IUserEmailVerificationSender
         ShiftIdentityConfiguration options,
         ShiftIdentityDbContext db,
         IEnumerable<ISendEmailVerification> providers,
-        ILogger<UserEmailVerificationSender> logger)
+        ILogger<UserEmailVerificationSender> logger,
+        IUserAccountAuthority? authority = null)
     {
         this.httpContextAccessor = httpContextAccessor;
         this.linkGenerator = linkGenerator;
@@ -44,10 +46,26 @@ internal sealed class UserEmailVerificationSender : IUserEmailVerificationSender
         this.db = db;
         this.providers = providers;
         this.logger = logger;
+        this.authority = authority;
     }
 
     public async Task SendAsync(User user)
     {
+        // Temporary adapter: direct users of this legacy interface also enter the authority. Remove in Phase 6.
+        if (authority is not null)
+        {
+            try
+            {
+                if (await authority.RequestVerificationAsync(user.ID, CancellationToken.None) != UserAccountDelivery.Requested)
+                    logger.LogWarning("Verification delivery was not confirmed for user {UserID} after the save.", user.ID);
+            }
+            catch (Exception)
+            {
+                // A provider exception can contain its link. Never log it or fail the already committed save.
+                logger.LogWarning("Verification delivery failed for user {UserID} after the save.", user.ID);
+            }
+            return;
+        }
         if (string.IsNullOrWhiteSpace(user.Email) || user.EmailVerified)
             return;
 

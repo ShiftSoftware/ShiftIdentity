@@ -7,8 +7,8 @@
     <MudText>Enter your username or saved email address.</MudText>
     <EditForm Model="entry" OnValidSubmit="Send">
         <DataAnnotationsValidator />
-        <MudTextField T="string" Label="Username or email" @bind-Value="entry.Identifier" For="@(() => entry.Identifier)" Immediate="true" Disabled="Context.Flow.Busy" autocomplete="username" />
-        <MudButton Color="Color.Primary" ButtonType="ButtonType.Submit" Disabled="Context.Flow.Busy">@(Context.Flow.Busy ? "Sending request…" : Verification ? "Send verification link" : "Send reset link")</MudButton>
+        <MudTextField T="string" Label="Username or email" @bind-Value="entry.Identifier" For="@(() => entry.Identifier)" Immediate="true" Disabled="CurrentFlow.Busy" autocomplete="username" />
+        <MudButton Color="Color.Primary" ButtonType="ButtonType.Submit" Disabled="CurrentFlow.Busy">@(CurrentFlow.Busy ? "Sending request…" : Verification ? "Send verification link" : "Send reset link")</MudButton>
     </EditForm>
     @if (requested)
     {
@@ -19,7 +19,9 @@
 </MudPaper>
 
 @code {
-    [Parameter, EditorRequired] public AdmissionUiContext Context { get; set; } = null!;
+    [Parameter] public AdmissionUiContext? Context { get; set; }
+    [Parameter] public AuthenticationFlow? Flow { get; set; }
+    private AuthenticationFlow CurrentFlow => Flow ?? Context!.Flow;
     [Parameter] public bool Verification { get; set; }
     private readonly Entry entry = new();
     private bool requested;
@@ -28,8 +30,8 @@
     private async Task Send()
     {
         requested = false; error = null;
-        var result = Verification ? await Context.Flow.RequestEmailVerificationAsync(entry.Identifier)
-            : await Context.Flow.RequestPasswordResetAsync(entry.Identifier);
+        var result = Verification ? await CurrentFlow.RequestEmailVerificationAsync(entry.Identifier)
+            : await CurrentFlow.RequestPasswordResetAsync(entry.Identifier);
         requested = result is SecurityDeliveryRequested;
         if (!requested) error = result is AuthenticationRefused { Code: AuthenticationFailure.Unavailable }
             ? "Email requests are unavailable right now. Please wait and try again."

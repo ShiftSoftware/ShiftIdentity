@@ -1,0 +1,42 @@
+@using ShiftSoftware.ShiftIdentity.Blazor.Services
+@using ShiftSoftware.ShiftIdentity.Blazor
+@using ShiftSoftware.ShiftIdentity.Core.Authentication
+@using ShiftSoftware.ShiftIdentity.Core.Enums
+@inject AuthenticationFlow Flow
+@inject IdentitySession Session
+
+<MudStack data-testid="security-email-admin">
+    <MudStack Row Wrap="Wrap.Wrap">
+        <MudButton Disabled="@(Disabled || Flow.Busy)" OnClick="() => Send(false)">Send password reset link</MudButton>
+        <MudButton Disabled="@(Disabled || Flow.Busy)" OnClick="() => Send(true)">Send email verification link</MudButton>
+    </MudStack>
+    @if (message is not null) { <MudAlert Severity="severity">@message</MudAlert> }
+</MudStack>
+
+@code {
+    [Parameter, EditorRequired] public string UserKey { get; set; } = "";
+    [Parameter] public bool Disabled { get; set; }
+    private string? message;
+    private Severity severity;
+    private string? previousKey;
+    protected override void OnParametersSet()
+    {
+        if (previousKey != UserKey) { message = null; previousKey = UserKey; }
+    }
+    private async Task Send(bool verification)
+    {
+        var target = UserKey;
+        message = null;
+        var access = await Session.GetTokenAsync() is { Flow: AuthPurpose.None, Token: { Length: > 0 } token } ? token : null;
+        var result = access is null ? new AuthenticationRefused(AuthenticationFailure.InvalidGrant)
+            : verification ? await Flow.RequestAdminEmailVerificationAsync(access, target)
+            : await Flow.RequestAdminPasswordResetAsync(access, target);
+        if (target != UserKey) return;
+        severity = result is SecurityDeliveryRequested ? Severity.Info : Severity.Error;
+        message = result is SecurityDeliveryRequested
+            ? "If the saved address is eligible, check its inbox. Wait before requesting another link."
+            : result is AuthenticationRefused { Code: AuthenticationFailure.Unavailable }
+                ? "The send could not be confirmed. Check the recipient's inbox, wait and request a fresh link."
+                : "Sign in again with Users write permission before sending links. A sign-in within the last five minutes is required.";
+    }
+}

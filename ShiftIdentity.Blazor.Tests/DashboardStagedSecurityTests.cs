@@ -290,6 +290,113 @@ public sealed class DashboardStagedSecurityTests
 
     // ── fixtures ─────────────────────────────────────────────────────────────────────────────────────────────────
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Reset_return_keeps_explicit_login_visible_under_the_dashboard_switch_only(bool staged)
+    {
+        var store = new RecordingStore();
+        await store.Session.StoreTokenAsync(AuthenticationFlowTests.Session().Session);
+        await using var context = Context(new DashboardTransport(), store.Session, staged);
+        var nav = context.Services.GetRequiredService<NavigationManager>(); nav.NavigateTo(SecurityLinkNavigation.LoginAfterReset);
+        var cut = context.Render<Microsoft.AspNetCore.Components.Authorization.CascadingAuthenticationState>(p => p
+            .AddChildContent<ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.Auth.LoginForm>());
+        if (staged)
+        {
+            cut.WaitForAssertion(() => Assert.Contains("Password reset. Sign in with your new password.", cut.Markup));
+            Assert.EndsWith(SecurityLinkNavigation.LoginAfterReset, nav.Uri);
+        }
+        else cut.WaitForAssertion(() => Assert.Equal("http://localhost/", nav.Uri));
+        Assert.Single(store.Writes);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Deployed_public_request_pages_use_the_flow_even_with_an_unrelated_browser_session(bool verification)
+    {
+        var store = new RecordingStore();
+        await store.Session.StoreTokenAsync(AuthenticationFlowTests.Session().Session);
+        var transport = new DashboardTransport { Staged = (_, _) => Task.FromResult<AuthOutcome>(new SecurityDeliveryRequested()) };
+        await using var context = Context(transport, store.Session, staged: true);
+        var cut = context.Render(builder => { builder.OpenComponent(0, verification ? typeof(SendEmailVerificationLink) : typeof(SendResetPasswordLink)); builder.CloseComponent(); });
+        cut.Find("input").Input("saved-user");
+        await cut.InvokeAsync(() => cut.FindComponent<EditForm>().Instance.OnValidSubmit.InvokeAsync(new EditContext(new object())));
+        cut.WaitForAssertion(() => Assert.Contains("If an eligible account matches", cut.Markup));
+        var request = Assert.Single(transport.Requests);
+        Assert.Equal("/api/identity/v2/" + (verification ? "email-verification" : "password-reset") + "/request", request.Path);
+        Assert.Null(request.Scheme); Assert.Contains("saved-user", request.Body);
+        Assert.Single(store.Writes);
+        Assert.DoesNotContain("Identity/login", context.Services.GetRequiredService<NavigationManager>().Uri);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Deployed_link_pages_open_inertly_and_complete_without_changing_the_browser_session(bool verification)
+    {
+        var store = new RecordingStore();
+        await store.Session.StoreTokenAsync(AuthenticationFlowTests.Session().Session);
+        var purpose = verification ? AuthenticationOperationPurpose.EmailVerify : AuthenticationOperationPurpose.PasswordResetEmail;
+        var transport = new DashboardTransport { Staged = (route, _) => Task.FromResult<AuthOutcome>(route.EndsWith("/open")
+            ? new SecurityLinkOpened("protected-page", "saved@example.invalid", purpose, DateTimeOffset.UtcNow.AddMinutes(5))
+            : verification ? new EmailVerificationCompleted("https://hub.example.invalid/home") : new ReturnToLogin()) };
+        await using var context = Context(transport, store.Session, staged: true);
+        context.JSInterop.SetupModule("./_content/ShiftSoftware.ShiftIdentity.Dashboard.Blazor/security-link.js")
+            .Setup<bool>("clearFragment", _ => true).SetResult(true);
+        var nav = context.Services.GetRequiredService<NavigationManager>();
+        nav.NavigateTo("Identity/" + (verification ? "VerifyEmail" : "ResetPassword") + "?returnUrl=https://ignored.example.invalid/#grant=opaque&purpose=" + purpose);
+        var cut = context.Render(builder => { builder.OpenComponent(0, verification ? typeof(VerifyEmail) : typeof(ResetPassword)); builder.CloseComponent(); });
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("[data-testid=security-link-target]")));
+        Assert.Single(transport.Requests); Assert.EndsWith("/security-link/open", transport.Requests[0].Path);
+        Assert.DoesNotContain("hub.example.invalid", nav.Uri);
+        if (verification) cut.FindAll("button").Single(x => x.TextContent.Trim() == "Verify my email").Click();
+        else
+        {
+            foreach (var input in cut.FindAll("input")) input.Input("A new synthetic phrase 89!");
+            await cut.InvokeAsync(() => cut.FindComponent<EditForm>().Instance.OnValidSubmit.InvokeAsync(new EditContext(new object())));
+        }
+        cut.WaitForAssertion(() => Assert.Equal(2, transport.Requests.Count));
+        Assert.Contains("protected-page", transport.Requests[1].Body);
+        cut.WaitForAssertion(() => Assert.Equal(verification ? "https://hub.example.invalid/home" : "http://localhost/Identity/login?securityLink=reset", nav.Uri));
+        Assert.All(transport.Requests, x => Assert.Null(x.Scheme)); Assert.Single(store.Writes);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Administrator_link_actions_use_the_saved_encoded_key_and_an_explicit_bearer(bool verification)
+    {
+        var store = new RecordingStore();
+        await store.Session.StoreTokenAsync(AuthenticationFlowTests.Session().Session);
+        var transport = new DashboardTransport { Staged = (_, _) => Task.FromResult<AuthOutcome>(new SecurityDeliveryRequested()) };
+        await using var context = Context(transport, store.Session, staged: true);
+        var cut = context.Render<SecurityEmailAdminActions>(p => p.Add(x => x.UserKey, "encoded-target"));
+        cut.FindAll("button")[verification ? 1 : 0].Click();
+        cut.WaitForAssertion(() => Assert.Contains("check its inbox", cut.Markup));
+        var request = Assert.Single(transport.Requests);
+        Assert.Equal("/api/identity/v2/" + (verification ? "email-verification" : "password-reset") + "/admin", request.Path);
+        Assert.Equal("Bearer", request.Scheme); Assert.Contains("encoded-target", request.Body);
+        Assert.Single(store.Writes);
+    }
+
+    [Fact]
+    public async Task Profile_verification_uses_current_account_authority_and_reports_unconfirmed_delivery()
+    {
+        var store = new RecordingStore();
+        await store.Session.StoreTokenAsync(AuthenticationFlowTests.Session().Session);
+        var transport = new DashboardTransport { EmailVerified = false, Staged = (_, _) => Task.FromResult<AuthOutcome>(new AuthenticationRefused(AuthenticationFailure.Unavailable)) };
+        await using var context = Context(transport, store.Session, staged: true);
+        var cut = context.Render<UserDataForm>();
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("button").Where(x => x.TextContent.Trim() == "Send Email Verification")));
+        cut.FindAll("button").Single(x => x.TextContent.Trim() == "Send Email Verification").Click();
+        cut.WaitForAssertion(() => Assert.Contains(transport.Requests, x => x.Path.EndsWith("email-verification/request-current")));
+        var request = Assert.Single(transport.Requests, x => x.Path.EndsWith("email-verification/request-current"));
+        Assert.Equal("Bearer", request.Scheme);
+        Assert.DoesNotContain(transport.Requests, x => x.Path.Contains("SendEmailVerificationLink", StringComparison.OrdinalIgnoreCase));
+        Assert.Single(store.Writes);
+    }
+
     private static BunitContext Context(DashboardTransport transport, IdentitySession session, bool staged)
     {
         var context = new BunitContext();
@@ -328,6 +435,7 @@ public sealed class DashboardStagedSecurityTests
     {
         public AuthOutcome Status { get; set; } = new AuthenticatorStatus(false, false);
         public bool Fail { get; set; }
+        public bool EmailVerified { get; set; } = true;
         public Func<string, string, Task<AuthOutcome>> Staged { get; set; } = (_, _) => Task.FromResult<AuthOutcome>(new AuthenticationRefused(AuthenticationFailure.InvalidRequest));
         public List<(string Method, string Path, string? Scheme, string? Credential, string Body)> Requests { get; } = [];
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -356,7 +464,7 @@ public sealed class DashboardStagedSecurityTests
             if (request.Method == HttpMethod.Get && path.StartsWith("/UserManager/UserData", StringComparison.OrdinalIgnoreCase))
                 return new(HttpStatusCode.OK) { Content = JsonContent.Create(new ShiftEntityResponse<UserDataDTO>(new UserDataDTO
                 {
-                    ID = "42", Username = "synthetic", FullName = "Synthetic User", Email = "saved@example.invalid", EmailVerified = true
+                    ID = "42", Username = "synthetic", FullName = "Synthetic User", Email = "saved@example.invalid", EmailVerified = EmailVerified
                 })) };
             return new(HttpStatusCode.OK) { Content = new StringContent("{\"value\":[]}", System.Text.Encoding.UTF8, "application/json") };
         }

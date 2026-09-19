@@ -109,4 +109,24 @@ public sealed class UserFormCheckboxTests
         cut.WaitForAssertion(() => Assert.True(cut.Find(PasswordChoice).HasAttribute("checked")));
         Assert.Empty(transport.Posts);
     }
+
+    [Theory]
+    [InlineData("Requested", false)]
+    [InlineData("Unconfirmed", true)]
+    [InlineData("NotRequested", true)]
+    public async Task A_committed_save_reports_unconfirmed_verification_without_claiming_the_save_failed(string delivery, bool warning)
+    {
+        await using var context = UserFormHarness.Create(out var transport);
+        transport.VerificationDelivery = delivery;
+        var cut = context.Render<UserForm>();
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll(PasswordInput)));
+        var form = cut.FindComponent<ShiftEntityForm<UserDTO>>();
+        form.Instance.Value.Username = "synthetic-form"; form.Instance.Value.FullName = "Synthetic User";
+        form.Instance.Value.CompanyBranchID = new ShiftEntitySelectDTO { Value = "1", Text = "Synthetic Branch" };
+        cut.Find(PasswordInput).Change("Synthetic password 7"); cut.Find(EmailInput).Change("new@example.invalid");
+        cut.Find("form").Submit();
+        cut.WaitForAssertion(() => Assert.Single(transport.Posts));
+        cut.WaitForAssertion(() => Assert.Equal("42", form.Instance.Value.ID));
+        cut.WaitForAssertion(() => Assert.Equal(warning ? 1 : 0, cut.FindAll("[data-testid=user-verification-unconfirmed]").Count));
+    }
 }

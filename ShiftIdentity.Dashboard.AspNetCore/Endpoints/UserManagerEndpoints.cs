@@ -113,6 +113,8 @@ internal static class UserManagerEndpoints
                    IHashIdService hashIdService, ShiftIdentityConfiguration options, LinkGenerator linkGenerator,
                    IEnumerable<ISendEmailVerification>? sendEmailVerifications) =>
             {
+                // Dashboard callers use the v2 link flow under the authority. Pre-cutover SAS grants may lapse.
+                if (LegacyLoginEndpoints.IsStaged(httpContext)) return RetiredSecurityLink();
                 var loginUser = claimService.GetUser();
                 var userId = loginUser.ID.ToLong();
                 var encodedId = hashIdService.Encode<UserDTO>(userId);
@@ -152,6 +154,7 @@ internal static class UserManagerEndpoints
                    ShiftIdentityConfiguration options, LinkGenerator linkGenerator,
                    [FromQuery] string? expires, [FromQuery] string? token) =>
             {
+                if (LegacyLoginEndpoints.IsStaged(httpContext)) return RetiredSecurityLink();
                 var decodedId = hashIdService.Decode<UserDTO>(userId);
 
                 var user = await userRepo.FindAsync(decodedId, asOf: null, disableDefaultDataLevelAccess: true, disableGlobalFilters: true);
@@ -183,6 +186,7 @@ internal static class UserManagerEndpoints
                    IHashIdService hashIdService, ShiftIdentityConfiguration options, LinkGenerator linkGenerator,
                    IEnumerable<ISendEmailResetPassword>? sendEmailResetPasswords) =>
             {
+                if (LegacyLoginEndpoints.IsStaged(httpContext)) return RetiredSecurityLink();
                 var user = await userRepo.GetUserByEmailAsync(email);
                 if (user is null)
                     return Results.NotFound(new ShiftEntityResponse<UserDataDTO> { Message = new Message { Body = "User not found!" } });
@@ -220,6 +224,7 @@ internal static class UserManagerEndpoints
                    IHashIdService hashIdService, ShiftIdentityConfiguration options, LinkGenerator linkGenerator,
                    [FromQuery] string? expires, [FromQuery] string? token) =>
             {
+                if (LegacyLoginEndpoints.IsStaged(httpContext)) return RetiredSecurityLink();
                 var decodedId = hashIdService.Decode<UserDTO>(userId);
                 var user = await userRepo.FindAsync(decodedId, asOf: null, disableDefaultDataLevelAccess: true, disableGlobalFilters: true);
                 if (user is null)
@@ -310,4 +315,9 @@ internal static class UserManagerEndpoints
 
         return app;
     }
+
+    private static IResult RetiredSecurityLink() => Results.Json(new ShiftEntityResponse<UserDataDTO>
+    {
+        Message = new Message("Link expired", "Request a fresh link from the identity dashboard.")
+    }, statusCode: StatusCodes.Status410Gone);
 }

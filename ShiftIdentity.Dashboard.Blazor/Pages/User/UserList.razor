@@ -307,6 +307,12 @@ else
 
     private ValueTask<bool> VerifyEmailsResponse(ShiftEntityResponse<IList<UserListDTO>> res)
     {
+        if (res.Additional?.ContainsKey("EmailVerification") == true)
+        {
+            if (res.Message is not null) this.MessageService.Error(res.Message.Body!);
+            else this.MessageService.Success("Verification links requested. Eligible recipients should check their saved email inboxes.");
+            return ValueTask.FromResult(false);
+        }
         if (res.Message == null && res.Entity?.Count > 0)
         {
             this.MessageService.Success($"The verification link send throw email for ({res.Entity.Count}) users.");

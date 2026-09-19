@@ -103,6 +103,11 @@ public class UserRepository :
     /// <summary>True when this host registered the staged authority; sensitive changes are then admitted, never written directly.</summary>
     public bool UsesAuthority => authority is not null;
 
+    /// <summary>Requests one admitted verification grant, outside the repository transaction. The bulk route keeps each recipient's result.</summary>
+    public Task<UserAccountDelivery> RequestVerificationAsync(long userID, CancellationToken cancellationToken) =>
+        (authority ?? throw new InvalidOperationException("The identity authority is required."))
+            .RequestVerificationAsync(userID, cancellationToken);
+
     /// <summary>
     /// Registers work that runs once the next <see cref="SaveChangesAsync"/> has committed — outside the repository
     /// transaction. Used by the User upsert hook, which runs before the save and therefore cannot send anything

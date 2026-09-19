@@ -112,7 +112,10 @@ public sealed class AuthorityRegistrationTests
         { "Token.RSAPrivateKeyBase64", c => c.Token.RSAPrivateKeyBase64 = PublicKey },
         { "Token.Issuer", c => c.Token.Issuer = "" },
         { "FactorProtection", c => c.FactorProtection = new() },
-        { "Authority.Enabled", c => c.Authority.Enabled = false }
+        { "Authority.Enabled", c => c.Authority.Enabled = false },
+        { "EmailVerificationRedirectUrl", c => c.EmailVerificationRedirectUrl = "/caller/path" },
+        { "EmailVerificationRedirectUrl", c => c.EmailVerificationRedirectUrl = "javascript:alert(1)" },
+        { "EmailVerificationRedirectUrl", c => c.EmailVerificationRedirectUrl = "https://user:pass@example.invalid/" }
     };
 
     [Theory, MemberData(nameof(Invalid))]
@@ -177,6 +180,22 @@ public sealed class AuthorityRegistrationTests
         using var response = await server.CreateClient().GetAsync("/api/identity/v2/mfa");
         // Without a bearer the route answers with a refusal, not with 404; and it does that before touching the store.
         Assert.Equal(enabled ? HttpStatusCode.BadRequest : HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void A_host_sink_overrides_the_adapter_before_or_after_authority_registration(bool before)
+    {
+        var services = new ServiceCollection();
+        var inbox = new LocalSecurityInbox();
+        if (before) services.AddSingleton<ISecurityEmailSink>(inbox);
+        services.AddShiftIdentityAuthority(Valid());
+        if (!before) services.AddSingleton<ISecurityEmailSink>(inbox);
+        using var provider = services.BuildServiceProvider();
+        Assert.Same(inbox, provider.GetRequiredService<ISecurityEmailSink>());
+        // A custom sink does not need any legacy provider or a front-end URL.
+        IdentityAuthorityStartup.CheckAdapters(provider);
     }
 
     private static ServiceCollection Dashboard(ShiftIdentityConfiguration configuration)

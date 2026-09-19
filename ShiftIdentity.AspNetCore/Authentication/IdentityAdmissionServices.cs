@@ -19,6 +19,7 @@ internal sealed record IdentityAdmissionServices(
     internal Core.Authentication.NewPasswordPolicy PasswordPolicy { get; init; } = new();
     internal SecurityDeliveryLimits DeliveryLimits { get; init; } = new();
     internal ISecurityEmailSink? EmailSink { get; init; }
+    internal string? EmailVerificationRedirectUrl { get; init; }
     internal LegacyRefreshTokenCodec? LegacyRefreshTokens { get; init; }
     internal LegacyTemporaryTokenCodec? LegacyTemporaryTokens { get; init; }
     internal IdentityMaterialProtector LinkProtector => FactorProtector.CreateProtector("SecurityLinks.v1");

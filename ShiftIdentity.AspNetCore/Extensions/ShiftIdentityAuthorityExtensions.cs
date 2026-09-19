@@ -28,6 +28,7 @@ namespace Microsoft.Extensions.DependencyInjection
             var registration = IdentityAuthorityRegistration.Create(configuration);
             services.AddSingleton(registration);
             services.TryAddSingleton(configuration);
+            services.TryAddScoped<ISecurityEmailSink, HostSecurityEmailSink>();
             services.AddScoped<IIdentitySecurityStore, SqlIdentitySecurityStore>();
             services.AddScoped(sp =>
             {
@@ -39,6 +40,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     new AdmissionTokenCodec(options, clock))
                 {
                     EmailSink = sp.GetService<ISecurityEmailSink>(),
+                    EmailVerificationRedirectUrl = configuration.EmailVerificationRedirectUrl,
                     LegacyRefreshTokens = LegacyRefreshTokenCodec.TryCreate(configuration.RefreshToken, clock),
                     LegacyTemporaryTokens = LegacyTemporaryTokenCodec.TryCreate(configuration.TemporaryTokenSettings, clock)
                 };
