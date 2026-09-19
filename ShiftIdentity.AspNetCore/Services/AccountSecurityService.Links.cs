@@ -80,7 +80,7 @@ internal static partial class AccountSecurityService
         SecurityEmail? message = null;
         var outcome = await services.Store.AdmitAdminAsync<AuthOutcome>(who.UserID, userID, services.Client, (actor, unit) =>
         {
-            var refusal = ActorRefusal(services, actor, who, permissions => permissions.CanWrite(ShiftIdentityActions.Users));
+            var refusal = ActorRefusal(services, actor, who, permissions => permissions.CanWrite(ShiftIdentityActions.Users), requireRecent: false);
             if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
             return Task.FromResult(CreateSecurityLink(services, unit, purpose, out message, actor.User.ID));
         }, ct);

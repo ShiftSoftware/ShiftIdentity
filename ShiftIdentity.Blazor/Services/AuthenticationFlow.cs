@@ -15,6 +15,7 @@ public sealed partial class AuthenticationFlow(HttpClient http, IdentitySession 
     private readonly TimeProvider clock = clock ?? TimeProvider.System;
     private string? verifier;
     private long generation;
+    private IdentitySession.Checkpoint? administratorSession;
     public AuthenticationChallenge? Pending { get; private set; }
     public bool Busy { get; private set; }
     public bool PasswordWasChanged { get; private set; }
@@ -22,7 +23,7 @@ public sealed partial class AuthenticationFlow(HttpClient http, IdentitySession 
     public bool ReturnToLoginRequired { get; private set; }
 
     // Invalidates late responses locally. Visible cancel/restart controls also call CancelAsync.
-    public void Restart() { generation++; Pending = null; verifier = null; }
+    public void Restart() { generation++; Pending = null; verifier = null; administratorSession = null; }
 
     public Task<AuthOutcome> LoginAsync(string username, string password) => SendAsync(() =>
     {
@@ -167,6 +168,16 @@ public sealed partial class AuthenticationFlow(HttpClient http, IdentitySession 
             switch (outcome)
             {
                 case SessionIssued session when response.IsSuccessStatusCode && IsSession(session.Session):
+                    if (administratorSession is { } expected)
+                    {
+                        if (!SameAdministrator(expected.Access!, session.Session.Token) || !await store.TryStoreTokenAsync(expected, session.Session))
+                        {
+                            Restart();
+                            return new AuthenticationRefused(AuthenticationFailure.StaleOperation);
+                        }
+                        Restart();
+                        return Completed(session);
+                    }
                     Restart();
                     await store.StoreTokenAsync(session.Session);
                     return Completed(session);

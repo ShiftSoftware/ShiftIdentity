@@ -38,7 +38,8 @@ internal static class AdmissionEndpoints
             policy.AddAuthenticationSchemes(OperationAuthenticationHandler.SchemeName).RequireAuthenticatedUser()
                 .RequireClaim(OperationAuthenticationHandler.PurposeClaim,
                     AuthenticationOperationPurpose.Login.ToString(), AuthenticationOperationPurpose.PasswordChange.ToString(),
-                    AuthenticationOperationPurpose.MfaEnrollment.ToString(), AuthenticationOperationPurpose.MfaReplacement.ToString(), AuthenticationOperationPurpose.MfaRecovery.ToString()));
+                    AuthenticationOperationPurpose.MfaEnrollment.ToString(), AuthenticationOperationPurpose.MfaReplacement.ToString(), AuthenticationOperationPurpose.MfaRecovery.ToString(),
+                    AuthenticationOperationPurpose.AdministratorConfirmation.ToString()));
         services.AddAuthorizationBuilder().AddPolicy("IdentityMfaEnrollment", policy =>
             policy.AddAuthenticationSchemes(OperationAuthenticationHandler.SchemeName).RequireAuthenticatedUser()
                 .RequireClaim(OperationAuthenticationHandler.PurposeClaim, AuthenticationOperationPurpose.MfaEnrollment.ToString()));
@@ -81,6 +82,12 @@ internal static class AdmissionEndpoints
             .RequireAuthorization("IdentityLoginContinuation");
         group.MapPost("/refresh", async (RenewSessionRequest request, IdentityAdmissionServices services, CancellationToken ct) =>
             Result(await AuthService.RenewSessionAsync(services, request, ct)));
+        group.MapPost("/admin-confirmation", async (StartPasswordChangeRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.BeginAdministratorConfirmationAsync(services, context.Request.Headers.Authorization.ToString(), request, ct)));
+        group.MapPost("/admin-confirmation/password", async (AdministratorPasswordProofRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.ProveAdministratorPasswordAsync(services, context.Request.Headers.Authorization.ToString(), request, ct)));
+        group.MapPost("/admin-confirmation/mfa", async (AdministratorMfaProofRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.ProveAdministratorMfaAsync(services, context.Request.Headers.Authorization.ToString(), request, ct)));
         group.MapPost("/password-change", async (StartPasswordChangeRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
             Result(await AccountSecurityService.BeginPasswordChangeAsync(services, context.Request.Headers.Authorization.ToString(), request, ct)));
         group.MapPost("/password-change/password", async (PasswordChangeProofRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
@@ -151,6 +158,7 @@ internal static class AdmissionEndpoints
     {
         AuthenticationRefused { Code: AuthenticationFailure.Unavailable } => 503,
         AuthenticationRefused { Code: AuthenticationFailure.StaleOperation } => 409,
+        AuthenticationRefused { Code: AuthenticationFailure.ReauthenticationRequired } => 403,
         AuthenticationRefused => 400,
         SecurityDeliveryRequested => 202,
         _ => 200

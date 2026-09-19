@@ -65,6 +65,7 @@ public sealed class AuthorityRegistrationTests
         Assert.Equal(Convert.FromBase64String(OperationKey), options.OperationKey);
         Assert.Equal(600, options.AccessLifetimeSeconds);
         Assert.Equal(3600, options.RefreshLifetimeSeconds);
+        Assert.Equal(72000, options.AdministratorAuthenticationGraceSeconds);
         Assert.Equal(1, options.PolicyRevision);
         Assert.Equal(new AuthenticationClient("identity-host", "configured-api"), registration.Client);
         Assert.True(registration.MfaEnabled); Assert.False(registration.MfaMandatory); Assert.True(registration.RequireVerifiedEmail);
@@ -78,10 +79,12 @@ public sealed class AuthorityRegistrationTests
         var configuration = Valid();
         configuration.FrontEndUrl = "https://identity.invalid/app/";
         configuration.Authority.AccessLifetimeSeconds = 300; configuration.Authority.RefreshLifetimeSeconds = 60;
+        configuration.Authority.AdministratorAuthenticationGraceSeconds = 120;
         configuration.Authority.Audience = "explicit-api"; configuration.Authority.RefreshAudience = "explicit-refresh";
         configuration.Authority.ClientDisplayName = "  Identity  "; configuration.Authority.ClientId = " identity-host ";
         var registration = IdentityAuthorityRegistration.Create(configuration);
         Assert.Equal(300, registration.Options.AccessLifetimeSeconds); Assert.Equal(60, registration.Options.RefreshLifetimeSeconds);
+        Assert.Equal(120, registration.Options.AdministratorAuthenticationGraceSeconds);
         Assert.Equal("explicit-refresh", registration.Options.RefreshAudience);
         Assert.Equal(new AuthenticationClient("identity-host", "explicit-api"), registration.Client);
         Assert.Equal("Identity", registration.ClientDisplayName);
@@ -109,6 +112,8 @@ public sealed class AuthorityRegistrationTests
         { "Authority.AccessLifetimeSeconds", c => c.Token.ExpireSeconds = 3600 },
         { "Authority.AccessLifetimeSeconds", c => c.Authority.AccessLifetimeSeconds = 901 },
         { "Authority.RefreshLifetimeSeconds", c => { c.RefreshToken.ExpireSeconds = 0; c.Authority.RefreshLifetimeSeconds = null; } },
+        { "Authority.AdministratorAuthenticationGraceSeconds", c => c.Authority.AdministratorAuthenticationGraceSeconds = 0 },
+        { "Authority.AdministratorAuthenticationGraceSeconds", c => c.Authority.AdministratorAuthenticationGraceSeconds = -1 },
         { "Token.RSAPrivateKeyBase64", c => c.Token.RSAPrivateKeyBase64 = PublicKey },
         { "Token.Issuer", c => c.Token.Issuer = "" },
         { "FactorProtection", c => c.FactorProtection = new() },

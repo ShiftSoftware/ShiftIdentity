@@ -1,0 +1,72 @@
+@using ShiftSoftware.ShiftIdentity.Blazor.Services
+@using ShiftSoftware.ShiftIdentity.Core.Authentication
+
+<MudDialog>
+    <DialogContent>
+        <MudText Class="mb-3">Confirm your current administrator account to continue. Your edits and selection will stay here.</MudText>
+        @if (Flow.Pending?.Step is AuthenticationStep.Password or AuthenticationStep.ExistingMfa)
+        {
+            <form @onsubmit="Submit" @onsubmit:preventDefault data-testid="administrator-confirmation-form">
+                @if (Flow.Pending.Step == AuthenticationStep.Password)
+                {
+                    <MudTextField T="string" Label="Your password" InputType="InputType.Password" @bind-Value="password"
+                                  Immediate="true" Disabled="Flow.Busy" AutoFocus="true" autocomplete="current-password" />
+                }
+                else
+                {
+                    <MudTextField T="string" Label="Authenticator code" @bind-Value="code" Immediate="true"
+                                  Disabled="Flow.Busy" AutoFocus="true" autocomplete="one-time-code" />
+                }
+                <MudButton ButtonType="ButtonType.Submit" Color="Color.Primary" Variant="Variant.Filled" Disabled="Flow.Busy"
+                           Class="mt-3" data-testid="administrator-confirmation-submit">Confirm and continue</MudButton>
+            </form>
+        }
+        else if (Flow.Busy) { <MudProgressCircular Indeterminate="true" /> }
+        @if (error is not null) { <MudAlert Severity="Severity.Error" Class="mt-3" data-testid="administrator-confirmation-error">@error</MudAlert> }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" data-testid="administrator-confirmation-cancel">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter, EditorRequired] public AuthenticationFlow Flow { get; set; } = null!;
+    [Parameter, EditorRequired] public string CurrentAccess { get; set; } = "";
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = null!;
+    private string password = "", code = "";
+    private string? error;
+    private bool cancelled;
+
+    protected override async Task OnInitializedAsync() => Show(await Flow.BeginAdministratorConfirmationAsync(CurrentAccess));
+
+    private async Task Submit()
+    {
+        if (Flow.Busy || cancelled) return;
+        error = null;
+        var result = Flow.Pending?.Step == AuthenticationStep.Password
+            ? await Flow.ConfirmAdministratorPasswordAsync(password) : await Flow.ConfirmAdministratorMfaAsync(code);
+        password = ""; code = "";
+        if (!cancelled) Show(result);
+    }
+
+    private void Show(AuthOutcome result)
+    {
+        if (cancelled) return;
+        if (result is SessionIssued session) { Dialog.Close(DialogResult.Ok(session.Session.Token)); return; }
+        error = result switch
+        {
+            ChallengeRequired { Challenge.Step: AuthenticationStep.Password or AuthenticationStep.ExistingMfa } => null,
+            AuthenticationRefused { Code: AuthenticationFailure.InvalidProof } => "The password or authenticator code was not accepted. Check it and try again.",
+            AuthenticationRefused { Code: AuthenticationFailure.AttemptsExhausted } => "Too many attempts. Cancel and try again later.",
+            AuthenticationRefused { Code: AuthenticationFailure.Unavailable } => "Confirmation could not be completed. Your action has not been retried. Cancel and try again later.",
+            _ => "Your session or account changed, or confirmation expired. Cancel and review your session before trying again."
+        };
+    }
+
+    private async Task Cancel()
+    {
+        cancelled = true; password = ""; code = "";
+        await Flow.CancelAsync();
+        Dialog.Cancel();
+    }
+}

@@ -71,10 +71,13 @@ internal sealed class IdentityAuthorityRegistration
             throw Invalid("Authority.AccessLifetimeSeconds", $"must be between 1 and 900 seconds; the value in effect is {accessLifetime} (Token.ExpireSeconds applies when it is not set).");
         var refreshLifetime = settings.RefreshLifetimeSeconds ?? configuration.RefreshToken?.ExpireSeconds ?? 0;
         if (refreshLifetime < 1) throw Invalid("Authority.RefreshLifetimeSeconds", "must be at least 1 second (RefreshToken.ExpireSeconds applies when it is not set).");
+        if (settings.AdministratorAuthenticationGraceSeconds < 1)
+            throw Invalid("Authority.AdministratorAuthenticationGraceSeconds", "must be at least 1 second.");
         var audience = First(settings.Audience, token.Audience, issuer);
         var refreshAudience = First(settings.RefreshAudience, configuration.RefreshToken?.Audience, issuer);
         var options = new IdentityAdmissionOptions(issuer, refreshAudience, accessKey, refreshKey, operationKey,
-            AccessLifetimeSeconds: accessLifetime, RefreshLifetimeSeconds: refreshLifetime);
+            AccessLifetimeSeconds: accessLifetime, RefreshLifetimeSeconds: refreshLifetime,
+            AdministratorAuthenticationGraceSeconds: settings.AdministratorAuthenticationGraceSeconds);
         return new(options, new AuthenticationClient(clientID, audience), configuration);
     }
 

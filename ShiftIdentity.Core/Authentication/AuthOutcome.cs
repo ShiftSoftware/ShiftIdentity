@@ -48,9 +48,25 @@ public enum AuthenticationStep { ExistingMfa, PasswordChange, MfaRecovery, NewMf
 public enum AuthenticationFailure
 {
     InvalidRequest, InvalidProof, InvalidGrant, StaleOperation, Expired, AttemptsExhausted,
-    AccountUnavailable, ClientDenied, Unavailable, InvalidNewPassword, DuplicateIdentifier
+    AccountUnavailable, ClientDenied, Unavailable, InvalidNewPassword, DuplicateIdentifier, ReauthenticationRequired
 }
-public enum AuthenticationOperationPurpose { Login = 1, ContactChange = 2, MfaEnrollment = 3, PasswordChange = 4, MfaReplacement = 5, MfaRecovery = 6, PasswordResetEmail = 7, PasswordResetManual = 8, EmailVerify = 9, AppExchange = 10, LegacyRefreshExchange = 11, LegacyMfaExchange = 12 }
+public enum AuthenticationOperationPurpose { Login = 1, ContactChange = 2, MfaEnrollment = 3, PasswordChange = 4, MfaReplacement = 5, MfaRecovery = 6, PasswordResetEmail = 7, PasswordResetManual = 8, EmailVerify = 9, AppExchange = 10, LegacyRefreshExchange = 11, LegacyMfaExchange = 12, AdministratorConfirmation = 13 }
+
+/// <summary>A definitive refusal before an administrator mutation. Other errors never authorize a replay.</summary>
+public static class AdministratorAuthentication
+{
+    public const string RequiredMessage = "IdentityReauthenticationRequired";
+    public const int DefaultGracePeriodSeconds = 20 * 60 * 60;
+}
+
+public sealed record AdministratorPasswordProofRequest(
+    [property: Required, MaxLength(2048)] string Handle,
+    [property: Required, MaxLength(1024)] string CurrentPassword,
+    [property: Required, StringLength(128, MinimumLength = 43)] string CodeVerifier);
+public sealed record AdministratorMfaProofRequest(
+    [property: Required, MaxLength(2048)] string Handle,
+    [property: Required, RegularExpression(@"^[0-9]{6,8}$")] string Code,
+    [property: Required, StringLength(128, MinimumLength = 43)] string CodeVerifier);
 
 public sealed record AuthenticationChallenge(
     AuthenticationStep Step, string? Handle, DateTimeOffset ExpiresAt,

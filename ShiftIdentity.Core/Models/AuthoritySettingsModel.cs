@@ -48,6 +48,13 @@ public sealed class AuthoritySettingsModel
     public int? RefreshLifetimeSeconds { get; set; }
 
     /// <summary>
+    /// Maximum age of actual password and applicable MFA authentication for protected administrator actions.
+    /// Defaults to 20 hours; must be positive. Read at startup. Token renewal never extends this interval.
+    /// This does not change the separate five-minute confirmation-operation deadline.
+    /// </summary>
+    public int AdministratorAuthenticationGraceSeconds { get; set; } = Authentication.AdministratorAuthentication.DefaultGracePeriodSeconds;
+
+    /// <summary>
     /// Refuses a local login until the account's saved email address is verified. Together with the MFA settings this
     /// is the authority's policy; a change is applied at the next start and ends every session bound to the old policy.
     /// </summary>
