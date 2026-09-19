@@ -218,11 +218,24 @@ public class UserRepository :
         return user;
     }
 
-    public async Task<User?> SetTotpSecret(byte[]? secret, User user)
+    public Task<User?> SetTotpSecret(byte[]? secret, User user)
     {
-        user.TotpSecret = secret;
+        if (authority is null)
+        {
+            user.TotpSecret = secret;
+            return Task.FromResult<User?>(user);
+        }
 
-        return user;
+        // The staged authority owns the protected factor. A new factor is activated only by the staged enrollment
+        // flows, after the proofs they require; a reset is admitted in this save (operator checks, one version
+        // increment, operator audit) and never touches the retained plaintext column.
+        if (secret is not null)
+            throw new InvalidOperationException("A host with the staged authority activates authenticators only through the admission flows.");
+
+        if (!user.IsProtected)
+            RequireAdmission(new UserAccountChange { User = user, ResetAuthenticator = true });
+
+        return Task.FromResult<User?>(user);
     }
 
     public async Task<User?> UpdateUserDataAsync(UserDataDTO dto, long userId)

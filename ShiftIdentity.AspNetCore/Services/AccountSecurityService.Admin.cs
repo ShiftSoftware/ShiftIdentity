@@ -149,6 +149,47 @@ internal static partial class AccountSecurityService
     internal static string PasswordAudit(bool requireChangeAtNextLogin) =>
         requireChangeAtNextLogin ? "AdminPasswordSetRequiringChange" : "AdminPasswordSet";
 
+    /// <summary>
+    /// Disables the authenticator and requires individual local recovery, whatever the global MFA policy says: the
+    /// factor generation advances, the protected secret and its replay state are cleared, and a password alone can
+    /// no longer open an ordinary session. The caller decides whether the account qualifies, increments the version
+    /// once and writes the audit row. The retained plaintext column is not touched; recovery keeps the startup copy
+    /// from restoring the removed factor.
+    /// </summary>
+    internal static void DisableActiveFactor(UserSecurityState security)
+    {
+        security.FactorGeneration = checked(security.FactorGeneration + 1);
+        security.ProtectedTotpSecret = null;
+        security.LastAcceptedTotpStep = null;
+        security.TotpProtectionVersion = 0;
+        security.LocalMfaRecoveryRequired = true;
+    }
+
+    /// <summary>Ends the outstanding recovery root and its children; a later code or reset starts a new family.</summary>
+    internal static void SupersedeRecovery(IdentitySecurityTransaction unit, DateTimeOffset now)
+    {
+        foreach (var previous in unit.RecoveryFamily.Where(x => x.State is AuthenticationOperationState.AwaitingRecoveryProof or AuthenticationOperationState.AwaitingNewFactor))
+        {
+            AdmissionOperations.Finish(previous, now, cancelled: true);
+            previous.State = AuthenticationOperationState.Superseded;
+        }
+    }
+
+    /// <summary>
+    /// The bulk administrator reset (the deployed <c>ResetTotp</c> route): disables an active authenticator and
+    /// requires individual recovery, without issuing a recovery code. That code, and the independent identity check
+    /// behind it, stay with the dedicated recovery permission. An account with no active factor is left as it is: a
+    /// reset without a code would only lock it out. Returns whether anything changed.
+    /// </summary>
+    internal static bool ApplyAuthenticatorReset(IdentitySecurityTransaction unit, DateTimeOffset now)
+    {
+        if (unit.Security.ProtectedTotpSecret is null) return false;
+        SupersedeRecovery(unit, now);
+        unit.Security.MfaRecoveryOperationID = null;
+        DisableActiveFactor(unit.Security);
+        return true;
+    }
+
     /// <summary>Renames the account after a range-locked duplicate check. Returns (refusal, applied).</summary>
     internal static async Task<(AuthenticationRefused? Refusal, bool Applied)> ApplyUsernameAsync(IdentityAdmissionServices services,
         IdentitySecurityTransaction unit, string username, CancellationToken ct)

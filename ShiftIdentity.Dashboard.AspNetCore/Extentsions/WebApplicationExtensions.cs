@@ -19,7 +19,11 @@ public static class WebApplicationExtensions
 
         var actionTrees = GetRegisteredActionTrees(scopedServices);
 
-        await new DBSeed(db, actionTrees, adminUserName, adminPassword, dBSeedOptions).SeedAsync();
+        await new DBSeed(db, actionTrees, adminUserName, adminPassword, dBSeedOptions)
+        {
+            // With the identity authority registered, the built-in user gets its security row with the user.
+            CreateSecurityState = scopedServices.GetService<ShiftSoftware.ShiftIdentity.Data.Services.IUserAccountAuthority>() is not null
+        }.SeedAsync();
 
         return app;
     }

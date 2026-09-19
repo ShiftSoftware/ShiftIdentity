@@ -24,6 +24,16 @@ public class ShiftIdentityDashboardBlazorOptions
 
     public Func<Task>? DynamicTypeAuthActionExpander { get; set; }
 
+    /// <summary>
+    /// True when the identity API this dashboard talks to registers the staged authority. The self-service
+    /// security screens (password change, authenticator set-up and replacement) then use the staged flows under
+    /// <c>api/identity/v2</c> instead of the deployed <c>UserManager</c> routes, which that authority serves only
+    /// for the forced steps of a login. The identity host's own client sets this at its cutover, together with the
+    /// API's registration; consumers on the old package are unaffected. Temporary: Phase 6 makes the staged
+    /// authority the only one and removes this switch with the legacy branches it selects between.
+    /// </summary>
+    public bool StagedAuthority { get; set; }
+
     public ShiftIdentityDashboardBlazorOptions AddCompanyBranchPhoneTag(string tag)
     {
         this.CompanyBranchPhoneTags.Add(tag);

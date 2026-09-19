@@ -9,7 +9,10 @@ using ShiftSoftware.ShiftIdentity.Core.Authentication;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Endpoints;
 
-/// <summary>Internal staged wiring, used only by isolated automated/consumer fixtures in this slice.</summary>
+/// <summary>
+/// The authority's services and its api/identity/v2 routes. A host reaches them through AddShiftIdentityAuthority and
+/// MapShiftIdentityAuthority (called by the dashboard registration when the authority is enabled); the fixtures call them directly.
+/// </summary>
 internal static class AdmissionEndpoints
 {
     internal static void AddIdentityAdmissionAuthentication(this IServiceCollection services)
@@ -91,6 +94,8 @@ internal static class AdmissionEndpoints
         group.MapPost("/operations/cancel", async (CancelOperationRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
             Result(await AccountSecurityService.CancelAsync(services, context.Request.Headers.Authorization.ToString()[10..], request, ct)))
             .RequireAuthorization("IdentityOperation");
+        group.MapGet("/mfa", async (HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.ReadAuthenticatorAsync(services, context.Request.Headers.Authorization.ToString(), ct)));
         group.MapPost("/mfa/start", async (StartMfaRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
             Result(await AccountSecurityService.BeginMfaAsync(services, context.Request.Headers.Authorization.ToString(), request, ct)));
         group.MapPost("/mfa/password", async (PasswordChangeProofRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>

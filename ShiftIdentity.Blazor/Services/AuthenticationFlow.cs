@@ -74,6 +74,29 @@ public sealed partial class AuthenticationFlow(HttpClient http, IdentitySession 
         return request;
     });
 
+    /// <summary>
+    /// Reads the signed-in account's authenticator state for the account screens. A read only: it proves nothing,
+    /// changes no pending operation and never touches the browser's stored credentials.
+    /// </summary>
+    public async Task<AuthOutcome> ReadAuthenticatorAsync(string access)
+    {
+        if (Busy) return new AuthenticationRefused(AuthenticationFailure.InvalidRequest);
+        Busy = true;
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, "api/identity/v2/mfa");
+            request.Headers.Authorization = new("Bearer", access);
+            using var response = await http.SendAsync(request);
+            var result = await response.Content.ReadFromJsonAsync<AuthOutcome>();
+            if (result is AuthenticationRefused refused) return refused;
+            return response.IsSuccessStatusCode && result is AuthenticatorStatus status
+                ? status : new AuthenticationRefused(AuthenticationFailure.InvalidGrant);
+        }
+        catch (Exception error) when (error is HttpRequestException or JsonException or NotSupportedException or TaskCanceledException)
+        { return new AuthenticationRefused(AuthenticationFailure.Unavailable); }
+        finally { Busy = false; }
+    }
+
     public async Task<AuthOutcome> CancelAsync()
     {
         var pending = Pending;

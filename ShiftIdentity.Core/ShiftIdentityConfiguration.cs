@@ -16,6 +16,9 @@ public class ShiftIdentityConfiguration
 
     public FactorProtectionSettings FactorProtection { get; set; } = new();
 
+    /// <summary>The identity authority; off unless the host enables it. See <see cref="AuthoritySettingsModel"/>.</summary>
+    public AuthoritySettingsModel Authority { get; set; } = new();
+
     public TemporaryTokenSettingsModel TemporaryTokenSettings { get; set; } = default!;
 
     public HashIdSettings HashIdSettings { get; set; } = default!;

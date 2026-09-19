@@ -20,6 +20,7 @@ namespace ShiftSoftware.ShiftIdentity.Core.Authentication;
 [JsonDerivedType(typeof(ManualPasswordResetIssued), "manualPasswordResetIssued")]
 [JsonDerivedType(typeof(EmailVerificationCompleted), "emailVerificationCompleted")]
 [JsonDerivedType(typeof(AdminAccountChanged), "adminAccountChanged")]
+[JsonDerivedType(typeof(AuthenticatorStatus), "authenticatorStatus")]
 public abstract record AuthOutcome;
 
 public sealed record SessionIssued(TokenDTO Session) : AuthOutcome;
@@ -37,6 +38,11 @@ public sealed record EmailVerificationCompleted : AuthOutcome;
 /// <summary>An administrator mutation committed, or was already in effect. It never carries a session.</summary>
 public sealed record AdminAccountChanged(AdminAccountChange Change, bool Applied, long SecurityVersion, AuthOutcome? Delivery = null) : AuthOutcome;
 public enum AdminAccountChange { Password = 1, Username = 2, Email = 3, Active = 4 }
+/// <summary>
+/// The signed-in account's own authenticator state, read from the authoritative security state. It is a read for
+/// the account screens: it proves nothing, issues nothing and never carries a session.
+/// </summary>
+public sealed record AuthenticatorStatus(bool Enrolled, bool RecoveryRequired) : AuthOutcome;
 
 public enum AuthenticationStep { ExistingMfa, PasswordChange, MfaRecovery, NewMfa, EmailVerification, Password }
 public enum AuthenticationFailure

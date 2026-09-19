@@ -1,10 +1,18 @@
-﻿@attribute [Authorize]
+@attribute [Authorize]
 @layout Shared.DefaultLayout
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(UserDataForm)}")]
 @inject ShiftModal ShiftModal
 @inject HttpClient Http
 @inject MessageService MessageService
+@inject ShiftIdentityDashboardBlazorOptions DashboardOptions
+@inject IServiceProvider Services
+@inject IdentitySession Session
+@using Microsoft.Extensions.DependencyInjection
 @using ShiftSoftware.ShiftBlazor.Enums
+@using ShiftSoftware.ShiftIdentity.Blazor
+@using ShiftSoftware.ShiftIdentity.Core.Authentication
+@using ShiftSoftware.ShiftIdentity.Core.Enums
+@using AuthenticationFlow = ShiftSoftware.ShiftIdentity.Blazor.Services.AuthenticationFlow
 @inject ShiftIdentityLocalizer Loc
 
 @if (AdmissionContext is not null)
@@ -23,8 +31,22 @@ else
     <ToolbarStartTemplate>
         @if (_mode == FormModes.View)
         {
-            <MudButton OnClick="()=> ShiftModal.Open<ChangePasswordForm>(null, ModalOpenMode.Popup, null)" Size="Size.Small" Color="Color.Warning" StartIcon="@Icons.Material.Filled.Edit" Variant="Variant.Filled">@Loc["Change Password"]</MudButton>
-            <MudButton OnClick="()=> ShiftModal.Open<TotpEnrollmentForm>(null, ModalOpenMode.Popup, null)" Size="Size.Small" Color="Color.Warning" StartIcon="@Icons.Material.Filled.Edit" Variant="Variant.Filled">@Loc["Enroll Two Factor"]</MudButton>
+            <MudButton OnClick="ChangePassword" Size="Size.Small" Color="Color.Warning" StartIcon="@Icons.Material.Filled.Edit" Variant="Variant.Filled" data-testid="profile-change-password">@Loc["Change Password"]</MudButton>
+            @if (!DashboardOptions.StagedAuthority)
+            {
+                <MudButton OnClick="ManageAuthenticator" Size="Size.Small" Color="Color.Warning" StartIcon="@Icons.Material.Filled.Edit" Variant="Variant.Filled" data-testid="profile-authenticator">@Loc["Enroll Two Factor"]</MudButton>
+            }
+            else if (authenticator is { RecoveryRequired: true })
+            {
+                <MudText Typo="Typo.body2" Class="ml-2 align-self-center" data-testid="profile-authenticator-status">@Loc["Authenticator recovery is required. Contact your administrator."]</MudText>
+            }
+            else
+            {
+                @* The authoritative state names the action: a first authenticator asks for the password, a replacement for the existing authenticator. *@
+                <MudButton OnClick="ManageAuthenticator" Size="Size.Small" Color="Color.Warning" StartIcon="@Icons.Material.Filled.Edit" Variant="Variant.Filled" data-testid="profile-authenticator">
+                    @(authenticator is null ? Loc["Authenticator"] : authenticator.Enrolled ? Loc["Replace authenticator"] : Loc["Set up authenticator"])
+                </MudButton>
+            }
         }
     </ToolbarStartTemplate>
 
@@ -110,6 +132,30 @@ else
 @code {
     [CascadingParameter] public ShiftSoftware.ShiftIdentity.Blazor.Services.AdmissionUiContext? AdmissionContext { get; set; }
     private FormModes _mode;
+    // The signed-in account's authenticator state under the staged authority; null until read or when it cannot be read.
+    private AuthenticatorStatus? authenticator;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (DashboardOptions.StagedAuthority && AdmissionContext is null)
+            await ReadAuthenticatorAsync();
+    }
+
+    private async Task ReadAuthenticatorAsync()
+    {
+        var access = await Session.GetTokenAsync() is { Flow: AuthPurpose.None, Token: { Length: > 0 } token } ? token : null;
+        authenticator = access is null ? null
+            : await Services.GetRequiredService<AuthenticationFlow>().ReadAuthenticatorAsync(access) as AuthenticatorStatus;
+    }
+
+    private async Task ChangePassword() => await ShiftModal.Open<ChangePasswordForm>(null, ModalOpenMode.Popup, null);
+
+    private async Task ManageAuthenticator()
+    {
+        await ShiftModal.Open<TotpEnrollmentForm>(null, ModalOpenMode.Popup, null);
+        // Show the committed state once the dialog has closed, whichever way it closed.
+        if (DashboardOptions.StagedAuthority) await ReadAuthenticatorAsync();
+    }
 
     private async Task SendEmailVerification()
     {

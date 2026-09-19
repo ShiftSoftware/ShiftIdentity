@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -28,7 +29,7 @@ internal static class IdentitySyncEndpoints
         // request body — illegal on a GET — which fails at MAP time (and cascades to a host-startup error). The MVC
         // controller never hit this because it resolved the context via constructor DI at request time.
         app.MapGet("api/IdentitySync/pull-live-db-data",
-            async ([FromServices] ShiftIdentityDbContext db, [FromServices] LiveShiftIdentityDbContext liveDb, [FromServices] IHostEnvironment hostEnvironment) =>
+            async (HttpContext http, [FromServices] ShiftIdentityDbContext db, [FromServices] LiveShiftIdentityDbContext liveDb, [FromServices] IHostEnvironment hostEnvironment) =>
             {
                 if (!(hostEnvironment.IsDevelopment() || hostEnvironment.IsStaging()))
                     return Results.Json("Only available in Staging & Development", statusCode: StatusCodes.Status401Unauthorized);
@@ -36,6 +37,11 @@ internal static class IdentitySyncEndpoints
                 await db.UserLogs.ExecuteDeleteAsync();
                 await db.UserAccessTrees.ExecuteDeleteAsync();
                 await db.TeamUsers.ExecuteDeleteAsync();
+                // The authority's rows of the users about to be replaced (their security state references the user row).
+                await db.Set<ShiftSoftware.ShiftIdentity.Data.Authentication.AuthenticationOperation>()
+                    .Where(o => db.Users.Any(u => u.ID == o.UserID && !u.IsProtected)).ExecuteDeleteAsync();
+                await db.Set<ShiftSoftware.ShiftIdentity.Data.Authentication.UserSecurityState>()
+                    .Where(s => db.Users.Any(u => u.ID == s.UserID && !u.IsProtected)).ExecuteDeleteAsync();
                 await db.Users.Where(x => !x.IsProtected).ExecuteDeleteAsync();
                 await db.AccessTrees.ExecuteDeleteAsync();
                 await db.CompanyBranchBrands.ExecuteDeleteAsync();
@@ -61,6 +67,10 @@ internal static class IdentitySyncEndpoints
                 await CopyCompanyBranches(db, liveDb);
                 await CopyAccessTrees(db, liveDb);
                 await CopyUsers(db, liveDb);
+                // With the identity authority registered, the copied users get their security rows now (the authority
+                // creates them at startup otherwise, so a restart would do the same).
+                if (http.RequestServices.GetService<ShiftSoftware.ShiftIdentity.Data.Services.IUserAccountAuthority>() is not null)
+                    await ShiftSoftware.ShiftIdentity.Data.Authentication.UserSecurityExpansion.ExpandMissingAsync(db);
                 await CopyTeams(db, liveDb);
                 await CopyUserAccessTrees(db, liveDb);
                 await CopyTeamUsers(db, liveDb);

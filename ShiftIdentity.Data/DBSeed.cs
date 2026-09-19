@@ -14,6 +14,12 @@ public class DBSeed
     private readonly string adminUserName;
     private readonly string adminPassword;
 
+    /// <summary>
+    /// Set by a host that enabled the identity authority: the built-in user then gets its security row with the
+    /// user, the way every admitted creation does, so it can sign in before the host restarts.
+    /// </summary>
+    public bool CreateSecurityState { get; init; }
+
     public DBSeed(ShiftIdentityDbContext db, List<Type> actionTrees, string adminUserName, string adminPassword, DBSeedOptions? dBSeedOptions)
     {
         this.db = db;
@@ -35,9 +41,15 @@ public class DBSeed
 
         CompanyBranch companyBranch = await SeedCompanyBranchAsync(city, company);
 
-        await SeedUserAsync(country, region, company, companyBranch);
+        var user = await SeedUserAsync(country, region, company, companyBranch);
 
         await db.SaveChangesAsync();
+
+        if (CreateSecurityState && !await db.Set<Authentication.UserSecurityState>().AnyAsync(x => x.UserID == user.ID))
+        {
+            db.Add(Authentication.UserSecurityExpansion.CreateFor(user));
+            await db.SaveChangesAsync();
+        }
     }
 
     private async Task<Country> SeedCountryAsync()
@@ -123,7 +135,7 @@ public class DBSeed
         return companyBranch;
     }
 
-    private async Task SeedUserAsync(Country country, Region region, Company company, CompanyBranch companyBranch)
+    private async Task<User> SeedUserAsync(Country country, Region region, Company company, CompanyBranch companyBranch)
     {
         var user = await db.Users.FirstOrDefaultAsync(x => x.Username == Core.Constants.BuiltInUsername);
 
@@ -154,5 +166,7 @@ public class DBSeed
         user.PasswordHash = hash.PasswordHash;
 
         user.Salt = hash.Salt;
+
+        return user;
     }
 }

@@ -21,6 +21,9 @@ public static class EndpointRouteBuilderExtensions
         // (was the API AuthController). Folded in here so the host wires the entire identity server with one call.
         app.MapShiftIdentityAuthEndpoints();
 
+        // The authority's api/identity/v2 routes, only when this host enabled the authority (see AddShiftIdentityDashboard).
+        app.MapShiftIdentityAuthority();
+
         app.MapCompanyCalendarEndpoints();
         app.MapUserEndpoints();
         app.MapReverseTypeAuthLookupEndpoints();

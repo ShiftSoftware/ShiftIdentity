@@ -2,7 +2,10 @@ using ShiftSoftware.ShiftIdentity.Data.Authentication;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Authentication;
 
-/// <summary>Dependencies for the staged flow; deliberately absent from production registration.</summary>
+/// <summary>
+/// Dependencies of the authority's flows. Registered by <c>AddShiftIdentityAuthority</c> when a host enables the
+/// authority and absent otherwise, which is what the deployed routes test to keep their previous behaviour.
+/// </summary>
 internal sealed record IdentityAdmissionServices(
     IIdentitySecurityStore Store,
     AuthenticationClient Client,

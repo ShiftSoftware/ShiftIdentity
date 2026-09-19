@@ -40,6 +40,8 @@ public class SqlIdentityFixture : IAsyncLifetime
     /// </summary>
     public bool LegacyMfaEnabled { get; set; }
     public bool SeedLegacyFactorBeforeExpansion { get; init; }
+    /// <summary>Maps the identity entities as temporal tables, the way the template's DbContext (UseTemporal) does.</summary>
+    public bool Temporal { get; init; }
     public ShiftSoftware.ShiftIdentity.Core.Models.FactorProtectionSettings FactorProtection { get; } = new()
     {
         ActiveKeyId = "fixture-key",
@@ -102,7 +104,7 @@ public class SqlIdentityFixture : IAsyncLifetime
         using var rsa = RSA.Create(2048);
         Options = new("https://identity.invalid", "identity-refresh", rsa.ExportRSAPrivateKey(),
             RandomNumberGenerator.GetBytes(64), RandomNumberGenerator.GetBytes(32));
-        await using var legacy = new LegacyIdentityTestDbContext(BuildOptions());
+        await using LegacyIdentityTestDbContext legacy = Temporal ? new TemporalLegacyIdentityTestDbContext(BuildOptions()) : new LegacyIdentityTestDbContext(BuildOptions());
         await legacy.GetService<IRelationalDatabaseCreator>().CreateTablesAsync();
         var hash = HashService.GenerateHash(Password);
         var country = new Country { Name = "Synthetic Country", CallingCode = "+1" };
@@ -137,15 +139,19 @@ public class SqlIdentityFixture : IAsyncLifetime
     }
 
     public DbContextOptions BuildOptions(params Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor[] interceptors) =>
-        new DbContextOptionsBuilder().UseSqlServer(connectionString).AddInterceptors(interceptors).Options;
+        new DbContextOptionsBuilder().UseSqlServer(connectionString).UseTemporal(Temporal).AddInterceptors(interceptors).Options;
+
+    // Temporal fixtures use context types of their own: EF caches one model per context type.
+    private ShiftIdentityDbContext DefaultContext(DbContextOptions options) =>
+        Temporal ? new TemporalIdentityTestDbContext(options) : new IdentityTestDbContext(options);
 
     public ShiftIdentityDbContext CreateContext(params Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor[] interceptors) =>
-        ContextFactory?.Invoke(BuildOptions(interceptors)) ?? new IdentityTestDbContext(BuildOptions(interceptors));
+        ContextFactory?.Invoke(BuildOptions(interceptors)) ?? DefaultContext(BuildOptions(interceptors));
 
     public ShiftIdentityDbContext CreateContext(IServiceProvider services, params Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor[] interceptors)
     {
         var options = new DbContextOptionsBuilder(BuildOptions(interceptors)).UseApplicationServiceProvider(services).Options;
-        return ContextFactory?.Invoke(options) ?? new IdentityTestDbContext(options);
+        return ContextFactory?.Invoke(options) ?? DefaultContext(options);
     }
 
     public async Task<long> CreateSyntheticUserAsync(string username, string? accessTree = null, bool mfa = false, string? email = null)

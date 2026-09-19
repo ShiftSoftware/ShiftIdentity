@@ -5,7 +5,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Services;
 
 /// <summary>
 /// The staged v2 authority behind the legacy administrator writers: the attribute-driven User save and delete on
-/// <c>api/IdentityUser</c>, <c>AssignRandomPasswords</c>, <c>VerifyPhones</c> and user import.
+/// <c>api/IdentityUser</c>, <c>AssignRandomPasswords</c>, <c>VerifyPhones</c>, <c>ResetTotp</c> and user import.
 /// <para>
 /// When a host registers this service, those writers no longer change a credential, identifier, contact, status,
 /// permission or deletion flag on their own. They describe the change, and <see cref="Repositories.UserRepository"/>
@@ -99,8 +99,14 @@ public sealed class UserAccountChange
     /// <summary>The row is being soft-deleted; the repository default already set the flag.</summary>
     public bool Delete { get; init; }
 
+    /// <summary>
+    /// Disable the active authenticator and require individual recovery (the bulk <c>ResetTotp</c> route). No recovery
+    /// code is issued here; an account without an active factor is left unchanged.
+    /// </summary>
+    public bool ResetAuthenticator { get; init; }
+
     public bool IsEmpty => Password is null && Username is null && !EmailChanged && !PhoneChanged && IsActive is null &&
-        !PermissionsChanged && !VerifyPhone && !Delete;
+        !PermissionsChanged && !VerifyPhone && !Delete && !ResetAuthenticator;
 }
 
 /// <summary>A user the repository inserted in the current transaction.</summary>

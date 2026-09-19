@@ -115,6 +115,11 @@ internal static partial class AccountSecurityService
                 unit.User.PhoneVerified = true;
                 audits.Add("AdminPhoneVerified");
             }
+            if (change.ResetAuthenticator && ApplyAuthenticatorReset(unit, now))
+            {
+                audits.Add("MfaReset");
+                restrictive = true;
+            }
             if (change.Delete)
             {
                 if (!unit.User.IsDeleted) throw new InvalidOperationException("The repository default must flag the row before admission.");

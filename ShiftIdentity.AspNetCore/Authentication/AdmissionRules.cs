@@ -88,9 +88,12 @@ internal static class AdmissionRules
     internal static AuthOutcome Issue(IdentityAdmissionServices services, IdentitySecurityTransaction unit, SessionProof proof, DateTimeOffset now, bool freshAuthentication = true)
     {
         var user = unit.User;
+        // The subject travels once, as "sub" (the codec writes it with the session's common claims). A deployed
+        // resource server validates with the framework's bearer registration, whose default inbound mapping turns
+        // "sub" into the name-identifier claim, exactly as it turns the legacy token's "nameid"; a second copy here
+        // would reach the deployed profile route as two name identifiers and break its Single read.
         var claims = new List<Claim>
         {
-            new(ClaimTypes.NameIdentifier, services.HashIds.Encode<UserDTO>(user.ID)),
             new(ClaimTypes.Name, user.Username), new(ClaimTypes.GivenName, user.FullName),
             new(ShiftIdentityClaims.ExternalToken, proof.External ? "true" : "false")
         };

@@ -95,7 +95,9 @@ internal static class UserEndpoints
             })
             .RequireTypeAuthWrite(ShiftIdentityActions.Users);
 
-        // POST api/IdentityUser/ResetTotp — Users Write.
+        // POST api/IdentityUser/ResetTotp — Users Write. With the staged authority the reset is admitted in the save
+        // (operator checks, one version increment, operator audit) and leaves individual recovery required; a refusal
+        // returns the envelope message with nothing changed. Without it the previous direct write remains.
         app.MapPost("api/IdentityUser/ResetTotp",
             async (SelectStateDTO<UserListDTO> ids, HttpContext httpContext, UserRepository userRepo) =>
             {
@@ -103,8 +105,26 @@ internal static class UserEndpoints
                 foreach (var user in users)
                     await userRepo.SetTotpSecret(null, user);
 
-                await userRepo.SaveChangesAsync();
-                return Results.Ok(new ShiftEntityResponse<IEnumerable<UserInfoDTO>>(users.ToInfoDTOs()));
+                try
+                {
+                    await userRepo.SaveChangesAsync();
+                }
+                catch (ShiftEntityException ex)
+                {
+                    return Results.Json(new ShiftEntityResponse<IEnumerable<UserInfoDTO>> { Message = ex.Message, Additional = ex.AdditionalData }, statusCode: ex.HttpStatusCode);
+                }
+
+                var infos = users.Select(user =>
+                {
+                    var info = user.ToInfoDTO();
+                    // The retained plaintext column is not the authority in a staged host: the admitted reset cleared
+                    // the protected factor of every selected account that is not built in.
+                    if (userRepo.UsesAuthority && !user.IsProtected)
+                        info.TotpEnabled = false;
+                    return info;
+                }).ToList();
+
+                return Results.Ok(new ShiftEntityResponse<IEnumerable<UserInfoDTO>>(infos));
             })
             .RequireTypeAuthWrite(ShiftIdentityActions.Users);
 

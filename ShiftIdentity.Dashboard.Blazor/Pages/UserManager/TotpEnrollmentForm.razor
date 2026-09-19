@@ -8,8 +8,12 @@
 @inject IdentitySession storageService
 @inject ShiftIdentityLocalizer Loc
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ShiftIdentityDashboardBlazorOptions DashboardOptions
+@inject IServiceProvider Services
+@using Microsoft.Extensions.DependencyInjection
 @using MudBlazor
 @using ShiftSoftware.ShiftIdentity.Core
+@using ShiftSoftware.ShiftIdentity.Core.Enums
 @using ShiftSoftware.ShiftIdentity.Blazor
 @using ShiftSoftware.ShiftIdentity.Core.Authentication
 @using AuthenticationFlow = ShiftSoftware.ShiftIdentity.Blazor.Services.AuthenticationFlow
@@ -18,7 +22,15 @@
 @if (AdmissionFlow is not null)
 {
     <MudPaper Class="pa-5" data-testid="mfa-enrollment-form">
-        @if (AdmissionFlow.Pending is { Step: AuthenticationStep.Password })
+        @if (stagedSelfService && AdmissionFlow.Pending?.Step != AuthenticationStep.NewMfa)
+        {
+            <MudText Typo="Typo.h6" data-testid="mfa-enrollment-title">@(replacing ? Loc["Replace your authenticator"] : Loc["Set up your authenticator"])</MudText>
+        }
+        @if (recoveryRequired)
+        {
+            <MudAlert Severity="Severity.Warning" data-testid="restricted-step">@Loc["Authenticator recovery is required. Contact your administrator."]</MudAlert>
+        }
+        else if (AdmissionFlow.Pending is { Step: AuthenticationStep.Password })
         {
             <MudText Typo="Typo.h6">@Loc["Confirm your current password"]</MudText>
             <EditForm Model="passwordEntry" OnValidSubmit="ProveAdmissionPassword">
@@ -46,6 +58,14 @@
                 <MudButton ButtonType="ButtonType.Submit" Disabled="AdmissionFlow.Busy" Color="Color.Primary">@Loc["Confirm authenticator"]</MudButton>
             </EditForm>
         }
+        else if (AdmissionFlow.Pending is { } pending)
+        {
+            <MudAlert Severity="Severity.Info" data-testid="restricted-step">
+                @(AdmissionFlow.MfaWasChanged ? Loc["Authenticator updated. Additional account verification is required before signing in."]
+                    : Loc["Additional account verification is required before the authenticator can be changed."])
+                @pending.Step
+            </MudAlert>
+        }
         @if (admissionError is not null)
         {
             <MudAlert Severity="Severity.Error" data-testid="mfa-error">@admissionError</MudAlert>
@@ -54,6 +74,18 @@
         {
             <MudButton OnClick="CancelAdmission">@Loc["Cancel setup"]</MudButton>
         }
+        else if (stagedSelfService)
+        {
+            <MudButton OnClick="() => CloseStaged(false)" data-testid="mfa-enrollment-close">@Loc["Close"]</MudButton>
+        }
+    </MudPaper>
+}
+else if (deciding)
+{
+    <MudPaper Class="pa-5" data-testid="mfa-enrollment-loading">
+        <div class="d-flex justify-center pa-8">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        </div>
     </MudPaper>
 }
 else
@@ -139,6 +171,10 @@ else
 @code {
     [CascadingParameter] public ShiftSoftware.ShiftIdentity.Blazor.Services.AdmissionUiContext? AdmissionContext { get; set; }
     private bool routedAdmission;
+    // The identity host's own dashboard on the staged authority: an ordinary session sets up or replaces its
+    // authenticator through the staged flow, which the authoritative state selects between. A mandatory-enrollment
+    // step token from the deployed login keeps the deployed route, which its adapter serves.
+    private bool stagedSelfService, deciding, replacing, recoveryRequired;
     [Parameter] public AuthenticationFlow? AdmissionFlow { get; set; }
     [Parameter] public EventCallback<AuthOutcome> AdmissionCompleted { get; set; }
     private sealed class PasswordEntry { [Required] public string Password { get; set; } = ""; }
@@ -165,8 +201,23 @@ else
             ? Loc["That password or code was not accepted. Try again."]
             : result is AuthenticationRefused ? Loc["Setup could not be confirmed. Sign in again to check which authenticator is active."] : null;
         await AdmissionCompleted.InvokeAsync(result);
-        if (routedAdmission && result is MfaChanged { Continuation: SessionIssued } or OperationCancelled)
+        var finished = result is MfaChanged { Continuation: SessionIssued };
+        if (routedAdmission && (finished || result is OperationCancelled))
             NavManager.NavigateTo("Identity/UserDataForm");
+        if (!stagedSelfService) return;
+        if (finished)
+        {
+            // The flow stored the fresh initiating session; the authentication state and TypeAuth read it from there.
+            await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            CloseStaged(true);
+        }
+        else if (result is OperationCancelled) CloseStaged(false);
+    }
+    private void CloseStaged(bool finished)
+    {
+        if (MudDialog is not null) ShiftModal.Close(MudDialog);
+        else if (finished) NavManager.NavigateTo(ReturnUrl ?? "/", forceLoad: true);
+        else NavManager.NavigateTo("Identity/UserDataForm");
     }
     private enum State { Loading, Ready, LoadFailed }
 
@@ -198,8 +249,32 @@ else
             var access = (await storageService.GetTokenAsync())?.Token;
             if (account is null || access is null) { NavManager.NavigateTo("Identity/login"); return; }
             await HandleAdmission(await AdmissionFlow.BeginMfaAsync(access, account.HasAuthenticator));
+            return;
         }
-        else if (AdmissionFlow is null) await LoadAsync();
+        if (AdmissionFlow is not null) return;
+        if (DashboardOptions.StagedAuthority && await BeginStagedAsync()) return;
+        await LoadAsync();
+    }
+
+    private async Task<bool> BeginStagedAsync()
+    {
+        deciding = true;
+        try
+        {
+            var token = await storageService.GetTokenAsync();
+            if (token is not { Flow: AuthPurpose.None, Token: { Length: > 0 } access }) return false;
+            stagedSelfService = true;
+            AdmissionFlow = Services.GetRequiredService<AuthenticationFlow>();
+            // The authoritative state decides which proof the flow asks for: the password for a first authenticator,
+            // the existing authenticator for its replacement. An account in recovery cannot start either.
+            var status = await AdmissionFlow.ReadAuthenticatorAsync(access);
+            if (status is AuthenticatorStatus { RecoveryRequired: true }) { recoveryRequired = true; return true; }
+            if (status is not AuthenticatorStatus current) { await HandleAdmission(status); return true; }
+            replacing = current.Enrolled;
+            await HandleAdmission(await AdmissionFlow.BeginMfaAsync(access, current.Enrolled));
+            return true;
+        }
+        finally { deciding = false; }
     }
 
     private async Task LoadAsync()

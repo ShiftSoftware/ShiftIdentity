@@ -4,13 +4,16 @@ using ShiftSoftware.ShiftIdentity.Data.Entities;
 namespace ShiftSoftware.ShiftIdentity.Data.Authentication;
 
 /// <summary>
-/// Explicit model configuration for the foundation's isolated hosts. Production contexts do not
-/// call this until every issuer and sensitive writer has adopted the new authority boundary.
+/// The authority's schema: security state, operations, policy, audit and throttle tables in the ShiftIdentity schema.
+/// <see cref="ShiftIdentityDbContext"/> configures it for every host, so a host's next migration carries the additive
+/// expansion whether or not it has enabled the authority; the tables stay empty until it does. Calling this again on a
+/// model that already has the schema is a no-op, so a context that configured it explicitly before keeps working.
 /// </summary>
 public static class IdentitySecurityModel
 {
     public static void ConfigureIdentitySecurity(this ModelBuilder builder)
     {
+        if (builder.Model.FindEntityType(typeof(UserSecurityState)) is not null) return;
         builder.Entity<UserSecurityState>(e =>
         {
             e.ToTable("UserSecurityStates", "ShiftIdentity", t =>

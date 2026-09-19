@@ -6,7 +6,7 @@ using ShiftSoftware.ShiftIdentity.Data.Authentication;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Authentication;
 
-/// <summary>Maintenance for explicitly enabled staged hosts; never registered by production defaults.</summary>
+/// <summary>Maintenance for a host that enabled the authority: expired operations are cleaned up once a minute.</summary>
 internal sealed class AdmissionMaintenance(IServiceScopeFactory scopes, ILogger<AdmissionMaintenance> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

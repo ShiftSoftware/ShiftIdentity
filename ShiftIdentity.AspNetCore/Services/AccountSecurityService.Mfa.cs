@@ -10,6 +10,23 @@ namespace ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 
 internal static partial class AccountSecurityService
 {
+    /// <summary>
+    /// The signed-in account's authenticator state for the account screens, read under the same admission lock and
+    /// current-version, policy, factor and subject checks as every other bearer route. It transitions nothing.
+    /// </summary>
+    internal static Task<AuthOutcome> ReadAuthenticatorAsync(IdentityAdmissionServices services, string? authorization,
+        CancellationToken ct) => AtBoundary(async () =>
+    {
+        var signedIn = ReadSignedIn(services, authorization);
+        if (signedIn is null) return Refuse(AuthenticationFailure.InvalidGrant);
+        return await services.Store.AdmitAsync<AuthOutcome>(signedIn.Proof.UserID, null, services.Client, unit =>
+        {
+            var refusal = SignedInRefusal(services, unit, signedIn);
+            return Task.FromResult<AuthOutcome>(refusal is not null ? refusal :
+                new AuthenticatorStatus(unit.Security.ProtectedTotpSecret is not null, unit.Security.LocalMfaRecoveryRequired));
+        }, ct);
+    });
+
     internal static Task<AuthOutcome> BeginMfaAsync(IdentityAdmissionServices services, string? authorization,
         StartMfaRequest request, CancellationToken ct) => AtBoundary(async () =>
     {

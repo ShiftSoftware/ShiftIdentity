@@ -15,7 +15,7 @@ using static ShiftSoftware.ShiftIdentity.AspNetCore.Authentication.AdmissionRule
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Endpoints;
 
-/// <summary>Adapters for the deployed login's existing restricted-step routes. No registration activates authority.</summary>
+/// <summary>Adapters for the deployed login's existing restricted-step routes, taken when the host has enabled the authority.</summary>
 public static class LegacyLoginEndpoints
 {
     public static bool IsStaged(HttpContext http) => http.RequestServices.GetService<IdentityAdmissionServices>() is not null;

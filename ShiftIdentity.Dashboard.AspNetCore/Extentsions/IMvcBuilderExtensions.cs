@@ -119,6 +119,12 @@ public static class IMvcBuilderExtensions
         // Step-up scheme + policies (shared with the fake host; defined in ShiftIdentity.AspNetCore).
         builder.AddStepUpAuthorization();
 
+        // The identity authority, when this host enables it (ShiftIdentityConfiguration.Authority.Enabled): SQL-admitted
+        // logins, versioned sessions, protected authenticators and the api/identity/v2 account flows, with the deployed
+        // routes served through their adapters. Off, the host keeps the previous issuer and direct writers unchanged.
+        if (shiftIdentityConfiguration.Authority is { Enabled: true })
+            builder.Services.AddShiftIdentityAuthority(shiftIdentityConfiguration);
+
         return builder;
     }
 }

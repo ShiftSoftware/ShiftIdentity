@@ -126,6 +126,8 @@ public sealed partial class SqlIdentitySecurityStore(ShiftIdentityDbContext db) 
         // Actor and target locks have a stable order, including requests that target each other.
         foreach (var userID in userIDs.Distinct().Order())
         {
+            // A missing row refuses; it is never defaulted here. The rows of users that existed before the authority
+            // are created by the authority's startup (UserSecurityExpansion), and every admitted creation records one.
             var security = await Hinted<UserSecurityState>("UPDLOCK, HOLDLOCK", nameof(UserSecurityState.UserID), userID)
                 .SingleOrDefaultAsync(ct)
                 ?? throw new IdentitySecurityUnavailableException("User security state is missing.");
@@ -154,7 +156,10 @@ public sealed partial class SqlIdentitySecurityStore(ShiftIdentityDbContext db) 
 
     /// <summary>
     /// The single place that builds a hinted single-row read. The schema, table, column and index names come from
-    /// the EF model, so a mapping change cannot leave a literal behind; the value is always a parameter.
+    /// the EF model, so a mapping change cannot leave a literal behind; the value is always a parameter. The columns
+    /// are named explicitly rather than read with <c>SELECT *</c>: a host that maps the identity entities as temporal
+    /// tables (the template's <c>UseTemporal</c>) declares their period columns hidden, which <c>SELECT *</c> omits and
+    /// the composed query then cannot find.
     /// </summary>
     private IQueryable<T> Hinted<T>(string hints, string property, object value, string? indexOn = null) where T : class
     {
@@ -164,6 +169,8 @@ public sealed partial class SqlIdentitySecurityStore(ShiftIdentityDbContext db) 
         var table = StoreObjectIdentifier.Table(tableName, entity.GetSchema());
         var column = entity.FindProperty(property)?.GetColumnName(table)
             ?? throw new InvalidOperationException($"{typeof(T).Name}.{property} has no column.");
+        var columns = string.Join(", ", entity.GetProperties().Select(x => x.GetColumnName(table))
+            .Where(x => x is not null).Distinct(StringComparer.Ordinal).Select(x => $"[{x}]"));
         var hint = hints;
         if (indexOn is not null)
         {
@@ -171,7 +178,7 @@ public sealed partial class SqlIdentitySecurityStore(ShiftIdentityDbContext db) 
                 ?? throw new InvalidOperationException($"{typeof(T).Name}.{indexOn} has no single-column index.");
             hint = $"{hints}, INDEX({index})";
         }
-        return db.Set<T>().FromSqlRaw($"SELECT * FROM [{schema}].[{tableName}] WITH ({hint}) WHERE [{column}] = {{0}}", value);
+        return db.Set<T>().FromSqlRaw($"SELECT {columns} FROM [{schema}].[{tableName}] WITH ({hint}) WHERE [{column}] = {{0}}", value);
     }
 
     /// <summary>Clears expired protected payloads under the same user lock; removes old terminal tombstones in bounded batches.</summary>

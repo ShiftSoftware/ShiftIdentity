@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
+using ShiftSoftware.ShiftIdentity.Data.Authentication;
 using ShiftSoftware.ShiftIdentity.Data.Entities;
 using System.Text.Json;
 
@@ -47,6 +48,10 @@ namespace ShiftSoftware.ShiftIdentity.Data
         protected override void OnModelCreating(ModelBuilder b)
         {
             base.OnModelCreating(b);
+
+            // The authority's tables are part of the identity model for every host (see IdentitySecurityModel):
+            // an additive expansion the host's next migration carries, empty until the host enables the authority.
+            b.ConfigureIdentitySecurity();
 
             b.Entity<AccessTree>().HasIndex(x => x.Name).IsUnique().HasFilter($"{nameof(AccessTree.IsDeleted)} = 0");
 

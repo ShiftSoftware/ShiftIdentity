@@ -24,19 +24,12 @@ internal static partial class AccountSecurityService
             refusal ??= CommonRefusal(services, unit, unit.Security.SecurityVersion, unit.Policy.Revision);
             if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
             var now = services.Clock.GetUtcNow();
-            foreach (var previous in unit.RecoveryFamily.Where(x => x.State is AuthenticationOperationState.AwaitingRecoveryProof or AuthenticationOperationState.AwaitingNewFactor))
-            {
-                AdmissionOperations.Finish(previous, now, cancelled: true);
-                previous.State = AuthenticationOperationState.Superseded;
-            }
+            SupersedeRecovery(unit, now);
+            // A code is being issued, so an account that never enrolled enters recovery as well: the code is its way in.
             if (!unit.Security.LocalMfaRecoveryRequired || unit.Security.ProtectedTotpSecret is not null)
             {
-                unit.Security.SecurityVersion = checked(unit.Security.SecurityVersion + 1);
-                unit.Security.FactorGeneration = checked(unit.Security.FactorGeneration + 1);
-                unit.Security.ProtectedTotpSecret = null;
-                unit.Security.LastAcceptedTotpStep = null;
-                unit.Security.TotpProtectionVersion = 0;
-                unit.Security.LocalMfaRecoveryRequired = true;
+                Bump(unit);
+                DisableActiveFactor(unit.Security);
                 unit.Audit("MfaReset", now, actorUserID: actor.User.ID, verificationReference: request.VerificationReference.Trim());
             }
             var credential = MfaRecoveryCredential.Create(services.Options.OperationKey);

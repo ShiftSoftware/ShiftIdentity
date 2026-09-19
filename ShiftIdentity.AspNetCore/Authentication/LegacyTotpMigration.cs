@@ -7,7 +7,11 @@ using ShiftSoftware.ShiftIdentity.Data.Authentication;
 
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Authentication;
 
-/// <summary>Awaited before a staged host starts serving. Production defaults do not register this job.</summary>
+/// <summary>
+/// Awaited before a host that enabled the authority serves: visits every user and copies a legacy plaintext factor into
+/// the protected column. It runs after <see cref="IdentityAuthorityStartup"/>, which has created the security row of
+/// every user that had none; a row still missing here stops the host.
+/// </summary>
 internal sealed class LegacyTotpMigration(IServiceScopeFactory scopes, ILogger<LegacyTotpMigration> logger) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -35,7 +39,7 @@ internal sealed class LegacyTotpMigration(IServiceScopeFactory scopes, ILogger<L
         catch
         {
             // SQL and cryptographic exception payloads must not expose credentials or configured key values.
-            logger.LogError("Identity factor migration failed. Startup stopped; check schema readiness and factor keys.");
+            logger.LogError("Identity factor migration failed after user {Cursor}. Startup stopped; check schema readiness, factor keys and that user's saved identifiers.", cursor);
             throw new InvalidOperationException("Identity factor migration failed. Check schema readiness and factor keys.");
         }
     }
