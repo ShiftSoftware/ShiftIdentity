@@ -22,8 +22,9 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 // THIN(ish) repository (Rung C): User's base CRUD is attribute-driven (the [ShiftEntitySecureEndpoint] on the User
 // entity routes here). The repo SURVIVES because it's IUserRepository and holds the public methods the custom
 // endpoints (UserEndpoints) + auth/account flows call. The heavy upsert moved to the User entity's
-// IUpsertsShiftRepository hook; the mapper config lives in the base-ctor builder below. No UpsertAsync/DeleteAsync
-// overrides — feature-lock + protected guard are central (Phase 0).
+// IUpsertsShiftRepository hook; the mapping customizations are in the mapper class (Mappers/ShiftIdentityMapper.cs),
+// and the base-ctor builder below holds only the Includes. No UpsertAsync/DeleteAsync overrides — feature-lock + protected
+// guard are central (Phase 0).
 //
 // With the staged authority registered (IUserAccountAuthority), every sensitive change collected by the hooks and
 // the bulk methods is admitted inside this repository's save transaction, just before the flush. One transaction
@@ -61,38 +62,6 @@ public class UserRepository :
             x => x.Include(y => y.CompanyBranch),
             x => x.Include(y => y.Company)
         );
-
-        r.Mapping(m =>
-        {
-            // ── VIEW ── (the select convention can't fill CompanyBranchID: the DTO member is already named …ID, so
-            // the convention appends another ID and misses — provide it explicitly, like the old profile map)
-            m.View.ForMember(d => d.CompanyBranchID, opt => opt.MapFrom(e => new ShiftEntitySelectDTO { Value = e.CompanyBranchID.ToString()!, Text = e.CompanyBranch != null ? e.CompanyBranch.Name : null }));
-            m.View.ForMember(d => d.TotpEnabled, opt => opt.MapFrom(e => e.TotpSecret != null));
-            // AccessTrees reads through an explicit junction row, so the element convention does not reach it.
-            m.View.ForMember(d => d.AccessTrees, opt => opt.MapFrom(e => e.AccessTrees.Select(y => new ShiftEntitySelectDTO { Value = y.AccessTreeID.ToString()!, Text = y.AccessTree.Name }).ToList()));
-            m.View.ForMember(d => d.Password, opt => opt.Ignore()); // write-only; no entity source
-            m.View.ForMember(d => d.RequireChangeAtNextLogin, opt => opt.Ignore()); // per-save form choice; no entity source, keeps its default (on)
-            m.View.ForMember(d => d.SendVerification, opt => opt.Ignore()); // per-save form choice; no entity source, keeps its default (on)
-
-            // ── ENTITY (write) ── Base() maps FullName/BirthDate; the hook owns Username/IsActive/Email/Phone/
-            // AccessTree/password/CompanyBranch-derivation/UserAccessTrees (or hands them to the staged authority), so
-            // those are ignored (or customized) here.
-            m.Entity.ForMember(e => e.IntegrationId, opt => opt.MapFrom(dto => string.IsNullOrWhiteSpace(dto.IntegrationId) ? null : dto.IntegrationId));
-            m.Entity.ForMember(e => e.Username, opt => opt.Ignore());
-            m.Entity.ForMember(e => e.IsActive, opt => opt.Ignore());
-            m.Entity.ForMember(e => e.Email, opt => opt.Ignore());
-            m.Entity.ForMember(e => e.Phone, opt => opt.Ignore());
-            m.Entity.ForMember(e => e.AccessTree, opt => opt.Ignore());
-            m.Entity.ForMember(e => e.AccessTrees, opt => opt.Ignore()); // the M:N rows: the hook (or the authority) writes them
-
-            // ── LIST ── flattened CompanyBranch name, TotpEnabled, LastSeen (UserLog fallback), and the
-            // AccessTrees M:N projection. The scope-ids CompanyBranchID/CompanyID need nothing — their names
-            // match the entity's, and long?→string is a standard conversion.
-            m.List.ForMember(d => d.CompanyBranch, opt => opt.MapFrom(e => e.CompanyBranch != null ? e.CompanyBranch.Name : null));
-            m.List.ForMember(d => d.TotpEnabled, opt => opt.MapFrom(e => e.TotpSecret != null));
-            m.List.ForMember(d => d.LastSeen, opt => opt.MapFrom(e => ((e.UserLog == null || e.UserLog.LastSeen == null) ? e.LastSeen : e.UserLog.LastSeen) ?? default));
-            m.List.ForMember(d => d.AccessTrees, opt => opt.MapFrom(e => e.AccessTrees.Select(y => new ShiftEntitySelectDTO { Value = y.AccessTreeID.ToString()!, Text = y.AccessTree.Name }).ToList()));
-        });
     })
     {
         this.typeAuthService = typeAuthService;

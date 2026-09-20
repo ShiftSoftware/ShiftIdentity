@@ -19,9 +19,10 @@ using System.Threading.Tasks;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 
-// Attribute-driven endpoint (Rung B): Team has no controller and no repository class. The Include config + the
-// non-convention mapper members move onto the entity via IConfiguresShiftRepository, and the duplicate-user
-// validation + M:N TeamUsers/TeamCompanyBranches sync via IUpsertsShiftRepository. Feature locking is central.
+// Attribute-driven endpoint (Rung B): Team has no controller and no repository class. The Include config is on the
+// entity via IConfiguresShiftRepository, the non-convention members are in the mapper class
+// (Mappers/ShiftIdentityMapper.cs), and the duplicate-user validation + M:N TeamUsers/TeamCompanyBranches sync via
+// IUpsertsShiftRepository. Feature locking is central.
 [TemporalShiftEntity]
 [Table("Teams", Schema = "ShiftIdentity")]
 [ShiftEntitySecureEndpoint<TeamListDTO, TeamDTO, ShiftIdentityActions>("api/IdentityTeam", nameof(ShiftIdentityActions.Teams))]
@@ -62,22 +63,8 @@ public class Team : ShiftEntity<Team>, IEntityHasCompany<Team>, IEntityHasTeam<T
             s => s.Include(i => i.TeamCompanyBranches).ThenInclude(i => i.CompanyBranch),
             s => s.Include(i => i.Company));
 
-        context.Options.Mapping(m =>
-        {
-            // VIEW — M:N join → List<ShiftEntitySelectDTO>. Not convention: DTO names (Users/CompanyBranches)
-            // don't match the join navigations, and Text reaches through .User/.CompanyBranch.
-            m.View.ForMember(d => d.Users, opt => opt.MapFrom(e => e.TeamUsers
-                .Select(y => new ShiftEntitySelectDTO { Value = y.UserID.ToString(), Text = y.User.Username }).ToList()));
-            m.View.ForMember(d => d.CompanyBranches, opt => opt.MapFrom(e => e.TeamCompanyBranches
-                .Select(y => new ShiftEntitySelectDTO { Value = y.CompanyBranchID.ToString(), Text = y.CompanyBranch.Name }).ToList()));
-            // Tags is IReadOnlyCollection<string> on the DTO and List<string> on the entity. Same element type,
-            // different container, which the collection conversion adapts on both legs.
-            // LIST — the flattened Company name still needs a customization: reaching through a navigation is
-            // not a convention, by design. CompanyId does not — matching ignores case, so it binds to the
-            // entity's CompanyID, and long? -> string is a standard conversion. It is still a LIST FILTER
-            // target, so it must keep being projected; the convention is what projects it.
-            m.List.ForMember(d => d.Company, opt => opt.MapFrom(e => e.Company != null ? e.Company.Name : null));
-        });
+        // The view's Users/CompanyBranches selects and the list's flattened Company name are not convention;
+        // they are written in Mappers/ShiftIdentityMapper.cs, which replaces the automatic view and list maps.
     }
 
     public async ValueTask<Team> UpsertAsync(

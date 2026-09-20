@@ -18,10 +18,11 @@ using ShiftSoftware.ShiftIdentity.Core.Enums;
 namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 
 // Attribute-driven endpoint (Rung B + D): CompanyCalendar has no controller and no repository class. Base CRUD is
-// attribute-driven (built-in repo + generated mapper); the Include + the non-convention mapper config (Branches
-// M:N projection + the hashid-encoded Departments/Brands inside the JSON ShiftGroups/WeekendGroups children) move
-// onto the entity via IConfiguresShiftRepository, and the Branches M:N reconcile via IUpsertsShiftRepository. The
-// one custom endpoint (GetCalendarEvents) becomes a sibling minimal API (see MapShiftIdentityDashboard).
+// attribute-driven (built-in repo + the automatic ShiftMapper maps); the Include is on the entity via
+// IConfiguresShiftRepository, the non-convention mapping (the Branches M:N projection, and the hashid-encoded
+// Departments/Brands inside the JSON ShiftGroups/WeekendGroups children) is in the mapper class
+// (Mappers/ShiftIdentityMapper.cs), and the Branches M:N reconcile via IUpsertsShiftRepository.
+// The one custom endpoint (GetCalendarEvents) becomes a sibling minimal API (see MapShiftIdentityDashboard).
 [TemporalShiftEntity]
 [Table("CompanyCalendars", Schema = "ShiftIdentity")]
 [ShiftEntitySecureEndpoint<CompanyCalendarListDTO, CompanyCalendarDTO, ShiftIdentityActions>("api/IdentityCompanyCalendar", nameof(ShiftIdentityActions.CompanyCalendars))]
@@ -64,18 +65,8 @@ public class CompanyCalendar :
     {
         context.Options.IncludeRelatedEntitiesWithFindAsync(i => i.Include(e => e.Branches));
 
-        context.Options.Mapping(m =>
-        {
-            // VIEW — Branches M:N join → List<ShiftEntitySelectDTO> (raw ids; the DTO's CompanyBranchHashIdConverter
-            // encodes on the wire). The write side is owned by the IUpsertsShiftRepository merge, so ignore it here.
-            m.View.ForMember(v => v.Branches, opt => opt.MapFrom(e => e.Branches
-                .Select(b => new ShiftEntitySelectDTO { Value = b.CompanyBranchID.ToString() }).ToList()));
-            m.Entity.ForMember(e => e.Branches, opt => opt.Ignore());
-
-            // JSON children: ShiftGroups and WeekendGroups nest automatically, structure and trivial grandchildren
-            // alike. Their Departments/Brands are hashid-encoded long lists, which is a customization of the CHILD
-            // pairs — written once, in Mappers/CompanyCalendarGroupMapper.cs, and applied inside every parent.
-        });
+        // The Branches M:N projection (view), its Ignore (write) and the JSON children's hashid-encoded
+        // Departments/Brands are in Mappers/ShiftIdentityMapper.cs.
     }
 
     public async ValueTask<CompanyCalendar> UpsertAsync(

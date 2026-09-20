@@ -14,28 +14,22 @@ namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 // Attribute-driven endpoint (Rung B): Region has no controller and no repository class. The secure CRUD routes
 // come from the attribute (built-in repository + the automatic ShiftMapper maps), gated by ShiftIdentityActions.Regions.
 // The protected-row guard (IsProtected) is enforced by the built-in repository and feature locking by
-// FeatureLockSaveValidator. The only repository shaping Region needs — the Country include and the flattened
-// list columns the old AutoMapper profile projected — moves onto the entity via IConfiguresShiftRepository.
+// FeatureLockSaveValidator. The only repository shaping Region needs — the Country include — is on the entity via
+// IConfiguresShiftRepository; the flattened list columns are in the mapper class (Mappers/ShiftIdentityMapper.cs).
 [TemporalShiftEntity]
 [Table("Regions", Schema = "ShiftIdentity")]
 [ShiftEntitySecureEndpoint<RegionListDTO, RegionDTO, ShiftIdentityActions>("api/IdentityRegion", nameof(ShiftIdentityActions.Regions))]
 public class Region : ShiftEntity<Region>, IEntityHasCountry<Region>, IEntityHasRegion<Region>, IShiftEntityReplication, IShiftEntityProtectable,
     IConfiguresShiftRepository<Region, RegionListDTO, RegionDTO>
 {
-    // Moves the old RegionRepository's constructor config onto the entity: load Country on FindAsync (so the
-    // view DTO's Country ShiftEntitySelectDTO gets its Text = Country.Name — the generated FK convention fills
-    // that when the navigation is loaded), and project the two flattened list columns the AutoMapper profile
-    // used to compute. Country (name) and CountryDisplayOrder are NOT convention-mappable (they reach through the
-    // Country navigation), so they're customized on the LIST map, as expressions spliced into the list SQL.
+    // Shapes the built-in repository: load Country on FindAsync, so the view DTO's Country ShiftEntitySelectDTO
+    // gets its Text = Country.Name (the select convention fills that when the navigation is loaded). The two
+    // flattened LIST columns — Country (name) and CountryDisplayOrder reach through the Country navigation, so
+    // they are not convention-mappable — are written in Mappers/ShiftIdentityMapper.cs, which replaces the
+    // automatic list map.
     public void ConfigureRepository(ShiftRepositoryConfigurationContext<Region, RegionListDTO, RegionDTO> context)
     {
         context.Options.IncludeRelatedEntitiesWithFindAsync(i => i.Include(x => x.Country));
-
-        context.Options.Mapping(m =>
-        {
-            m.List.ForMember(d => d.Country, opt => opt.MapFrom(e => e.Country != null ? e.Country.Name : null));
-            m.List.ForMember(d => d.CountryDisplayOrder, opt => opt.MapFrom(e => e.Country != null ? e.Country.DisplayOrder : null));
-        });
     }
 
     /// <inheritdoc />
