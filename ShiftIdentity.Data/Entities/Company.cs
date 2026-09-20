@@ -21,7 +21,7 @@ using System.Threading.Tasks;
 namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 
 // Attribute-driven endpoint (Rung C): Company's CRUD routes through the THIN CompanyRepository (kept only for
-// ApplyPostODataProcessing) — hence the custom-repository attribute variant (no UseGeneratedMapper flag; the repo
+// ApplyPostODataProcessing) — hence the custom-repository attribute variant (the repo
 // opts into the generated mapper in its own builder). Write logic (phone/circular-ref/CustomFields merge) lives
 // here via IUpsertsShiftRepository, which fires through the non-overridden built-in upsert even with a custom repo.
 // The protected-row guard + feature lock are central.
