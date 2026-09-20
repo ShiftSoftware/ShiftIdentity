@@ -1,0 +1,56 @@
+.identity-login-box { width: min(100%, 560px); margin: 0 auto; background: var(--mud-palette-surface); color: var(--mud-palette-text-primary); border: 1px solid var(--mud-palette-lines-default); border-radius: 5px; box-shadow: 0 2px 3px #00000024; overflow: hidden; }
+.identity-login-header { position: relative; display: flex; align-items: center; justify-content: center; height: clamp(72px, 14dvh, 104px); padding: 16px 58px; }
+.identity-login-logo { width: min(100%, 360px); height: clamp(30px, 6dvh, 40px); object-fit: contain; }
+.identity-login-back { position: absolute; inset-inline-start: 12px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer; transition: opacity 150ms, background 150ms; }
+.identity-login-back:hover { background: var(--mud-palette-action-default-hover); }
+.identity-login-back:disabled { opacity: 0; pointer-events: none; }
+.identity-login-back:focus-visible { outline: 2px solid var(--mud-palette-primary); outline-offset: 2px; }
+.identity-login-viewport { position: relative; overflow: hidden; transition: height 320ms cubic-bezier(.25,.8,.25,1); }
+.identity-login-box.feedback-resizing .identity-login-viewport { transition: none; }
+.identity-login-content { display: flow-root; padding: clamp(4px, 1.5dvh, 12px) clamp(20px, 4vw, 32px) clamp(18px, 4dvh, 30px); }
+.identity-login-outgoing { position: absolute; inset: 0; pointer-events: none; }
+.identity-login-box ::deep .mud-paper { box-shadow: none !important; border: 0; background: transparent; padding: 0 !important; }
+.identity-login-box ::deep .auth-title { font-size: 21px; font-weight: 500; line-height: 1.35; margin: 2px 0 9px; }
+.identity-login-box ::deep .auth-description { color: var(--mud-palette-text-secondary); line-height: 1.6; margin-bottom: 22px; }
+.identity-login-box ::deep .auth-actions { display: flex; justify-content: center; margin-top: clamp(16px, 3.5dvh, 28px); }
+.identity-login-box ::deep .auth-center { text-align: center; }
+.identity-login-box ::deep .auth-inputs .mud-input-control { margin: clamp(4px, 1.5dvh, 12px) 0; }
+.identity-login-box ::deep .auth-help { display: block; margin: clamp(12px, 3dvh, 24px) auto 0; padding: 6px; border: 0; background: transparent; color: var(--mud-palette-text-secondary); cursor: pointer; font: inherit; font-size: 14px; }
+.identity-login-box ::deep .auth-help:hover { color: var(--mud-palette-primary); text-decoration: underline; }
+.identity-login-box ::deep .auth-choices { margin-top: 27px; }
+.identity-login-box ::deep .auth-choice { display: flex; align-items: center; gap: 17px; width: 100%; padding: 23px 7px; border: 0; border-top: 1px solid var(--mud-palette-lines-default); background: transparent; color: inherit; cursor: pointer; text-align: start; font: inherit; }
+.identity-login-box ::deep .auth-choice:hover { background: var(--mud-palette-primary-hover); }
+.identity-login-box ::deep .auth-choice .mud-icon-root { color: var(--mud-palette-primary); flex-shrink: 0; }
+.identity-login-box ::deep .auth-choice .auth-chevron { margin-inline-start: auto; }
+.identity-login-box ::deep .auth-choice strong { display: block; font-size: 16px; font-weight: 500; margin-bottom: 5px; }
+.identity-login-box ::deep .auth-choice small { display: block; font-size: 13px; color: var(--mud-palette-text-secondary); line-height: 1.5; }
+.identity-login-box ::deep .auth-feedback-slot { display: grid; grid-template-rows: 0fr; opacity: 0; transform: translateY(-8px); transition: grid-template-rows 320ms cubic-bezier(.25,.8,.25,1), opacity 200ms ease, transform 320ms cubic-bezier(.25,.8,.25,1); }
+.identity-login-box ::deep .auth-feedback-slot[data-open="true"] { grid-template-rows: 1fr; opacity: 1; transform: translateY(0); transition-delay: 0ms, 60ms, 0ms; }
+.identity-login-box ::deep .auth-feedback-clip { min-height: 0; overflow: clip; overflow-clip-margin: 12px; }
+.identity-login-box ::deep .auth-feedback-content { display: flow-root; }
+.identity-login-box ::deep .auth-failure { margin-top: 12px; padding: 15px 17px; color: #b3261e; background: #fff5f3; border: 1px solid #e6b5af; border-inline-start: 3px solid #cf4940; border-radius: 3px; }
+.identity-login-box ::deep .auth-failure-message { display: flex; gap: 11px; align-items: flex-start; font-size: 14px; line-height: 1.5; }
+.identity-login-box ::deep .auth-failure-message .mud-icon-root { flex-shrink: 0; margin-top: 1px; }
+.identity-login-box ::deep .auth-failure strong { display: block; font-weight: 600; }
+.identity-login-box ::deep .auth-failure p { margin-top: 3px; font-size: 13px; color: #805a59; }
+.identity-login-box ::deep .auth-failure .auth-help { display: inline-flex; align-items: center; gap: 8px; margin: 13px 0 0; padding: 0; color: var(--mud-palette-primary); font-weight: 600; }
+.identity-login-box ::deep .auth-reference { display: block; margin-top: 8px; font-size: 11px; color: #805a59; }
+.identity-login-box ::deep .auth-notice { margin-top: 18px; }
+.identity-login-box ::deep [data-login-error]:focus-visible { outline: 2px solid #df9d98; outline-offset: 3px; }
+.identity-login-box ::deep button:focus-visible { outline: 2px solid var(--mud-palette-primary); outline-offset: 3px; }
+@media (max-width: 540px) {
+    .identity-login-back { inset-inline-start: 8px; }
+}
+@media (max-height: 600px) {
+    .identity-login-header { height: 64px; padding-block: 12px; }
+    .identity-login-content { padding-top: 4px; padding-bottom: 18px; }
+    .identity-login-box ::deep .auth-inputs .mud-input-control { margin-block: 4px; }
+    .identity-login-box ::deep .auth-failure { padding-block: 11px; }
+    .identity-login-box ::deep .auth-actions { margin-top: 16px; }
+    .identity-login-box ::deep .auth-help { margin-top: 12px; }
+    .identity-login-box ::deep .auth-choices { margin-top: 16px; }
+    .identity-login-box ::deep .auth-choice { padding-block: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .identity-login-viewport, .identity-login-box ::deep .auth-feedback-slot { transition: none; }
+}

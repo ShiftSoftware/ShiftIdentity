@@ -30,7 +30,7 @@ public sealed class LoginComponentTests
         Assert.Equal("text", cut.Find("input").GetAttribute("type"));
         Assert.Equal("numeric", cut.Find("input").GetAttribute("inputmode"));
         Assert.Equal("one-time-code", cut.Find("input").GetAttribute("autocomplete"));
-        Assert.Equal("http://localhost/", context.Services.GetRequiredService<NavigationManager>().Uri);
+        Assert.Contains("view=challenge", context.Services.GetRequiredService<NavigationManager>().Uri);
         cut.Find("input").Input("012345");
         await Submit(cut);
         Assert.Single(store.Writes);
@@ -46,7 +46,7 @@ public sealed class LoginComponentTests
         await Login(cut);
         Assert.Single(cut.FindAll("[data-testid=restricted-step]"));
         Assert.Empty(store.Writes);
-        cut.FindAll("button").Single(x => x.TextContent.Contains("Start again")).Click();
+        context.Services.GetRequiredService<NavigationManager>().NavigateTo("/");
         Assert.Null(flow.Pending);
         Assert.Single(cut.FindAll("form"));
     }

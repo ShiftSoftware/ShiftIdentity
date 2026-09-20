@@ -1,0 +1,47 @@
+@implements IDisposable
+@inject HttpClient Http
+@inject ShiftIdentityLocalizer Loc
+
+@if (requested)
+{
+    <div class="auth-center" data-testid="delivery-requested" role="status">
+        <h1 class="auth-title" tabindex="-1">@Loc["Check your inbox"]</h1>
+        <p class="auth-description">@Loc["Look for a password reset email in your inbox. It may take a few minutes to arrive. Check your spam folder too."]</p>
+        <div class="auth-actions"><MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ReturnToLogin">@Loc["Back to login"]</MudButton></div>
+    </div>
+}
+else
+{
+    <h1 class="auth-title" tabindex="-1">@Loc["Reset your password"]</h1>
+    <p class="auth-description">@Loc["Enter your saved email address."]</p>
+    <EditForm Model="entry" OnValidSubmit="Send" class="auth-inputs">
+        <DataAnnotationsValidator />
+        <MudTextField T="string" Label="@Loc["Email"]" @bind-Value="entry.Email" For="@(() => entry.Email)" Immediate="true" Disabled="busy" autocomplete="email" />
+        <div class="auth-actions"><MudButton Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit" Disabled="busy">@Loc["Send reset link"]</MudButton></div>
+    </EditForm>
+    @if (error is not null) { <MudAlert Class="auth-notice" Severity="Severity.Error">@error</MudAlert> }
+}
+
+@code {
+    [Parameter] public EventCallback ReturnToLogin { get; set; }
+    [Parameter] public EventCallback RequestCompleted { get; set; }
+    private readonly SendEmailResetPasswordLinkDTO entry = new();
+    private bool busy, requested, disposed;
+    private string? error;
+    public void Dispose() => disposed = true;
+    private async Task Send()
+    {
+        if (busy || disposed) return;
+        busy = true; error = null;
+        try
+        {
+            using var response = await Http.GetAsync($"usermanager/SendPasswordResetLink?email={Uri.EscapeDataString(entry.Email ?? "")}");
+            if (disposed) return;
+            if (response.IsSuccessStatusCode) { requested = true; await RequestCompleted.InvokeAsync(); }
+            else error = Loc["The request could not be completed. Please try again."];
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
+        { if (!disposed) error = Loc["Email requests are unavailable right now. Please wait and try again."]; }
+        finally { busy = false; }
+    }
+}

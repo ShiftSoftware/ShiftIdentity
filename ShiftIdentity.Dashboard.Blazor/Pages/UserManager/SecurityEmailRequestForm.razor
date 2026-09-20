@@ -1,40 +1,62 @@
+@implements IDisposable
 @using System.ComponentModel.DataAnnotations
 @using ShiftSoftware.ShiftIdentity.Blazor.Services
 @using ShiftSoftware.ShiftIdentity.Core.Authentication
+@inject ShiftIdentityLocalizer Loc
 
-<MudPaper Class="pa-5" data-testid="security-email-request">
-    <MudText Typo="Typo.h5">@(Verification ? "Verify your email" : "Reset your password")</MudText>
-    <MudText>Enter your username or saved email address.</MudText>
-    <EditForm Model="entry" OnValidSubmit="Send">
-        <DataAnnotationsValidator />
-        <MudTextField T="string" Label="Username or email" @bind-Value="entry.Identifier" For="@(() => entry.Identifier)" Immediate="true" Disabled="CurrentFlow.Busy" autocomplete="username" />
-        <MudButton Color="Color.Primary" ButtonType="ButtonType.Submit" Disabled="CurrentFlow.Busy">@(CurrentFlow.Busy ? "Sending request…" : Verification ? "Send verification link" : "Send reset link")</MudButton>
-    </EditForm>
+<div data-testid="security-email-request" class="auth-inputs">
     @if (requested)
     {
-        <MudAlert Severity="Severity.Info" data-testid="delivery-requested">If an eligible account matches, check its saved email inbox. If no link arrives, wait before trying again.</MudAlert>
+        <div class="auth-center" data-testid="delivery-requested" role="status">
+            <MudIcon Icon="@Icons.Material.Outlined.MarkEmailRead" Size="Size.Large" Color="Color.Primary" Class="mb-4" />
+            <h1 class="auth-title" tabindex="-1">@Loc["Check your inbox"]</h1>
+            <p class="auth-description">@Loc[Verification
+                ? "Look for a verification email in your inbox. It may take a few minutes to arrive. Check your spam folder too."
+                : "Look for a password reset email in your inbox. It may take a few minutes to arrive. Check your spam folder too."]</p>
+            <div class="auth-actions">
+                @if (ReturnToLogin.HasDelegate) { <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ReturnToLogin">@Loc["Back to login"]</MudButton> }
+                else { <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="@SecurityLinkNavigation.LoginAfterCancel">@Loc["Back to login"]</MudButton> }
+            </div>
+        </div>
     }
-    @if (error is not null) { <MudAlert Severity="Severity.Error" data-testid="delivery-error">@error</MudAlert> }
-    <MudButton Href="@SecurityLinkNavigation.LoginAfterCancel">Back to login</MudButton>
-</MudPaper>
+    else
+    {
+        <h1 class="auth-title" tabindex="-1">@Loc[Verification ? "Verify your email" : "Reset your password"]</h1>
+        <p class="auth-description">@Loc["Enter your username or saved email address."]</p>
+        <EditForm Model="entry" OnValidSubmit="Send">
+            <DataAnnotationsValidator />
+            <MudTextField T="string" Label="@Loc["Username or email"]" @bind-Value="entry.Identifier" For="@(() => entry.Identifier)" Immediate="true" Disabled="CurrentFlow.Busy" autocomplete="username" />
+            <div class="auth-actions"><MudButton Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit" Disabled="CurrentFlow.Busy">@Loc[CurrentFlow.Busy ? "Sending request…" : Verification ? "Send verification link" : "Send reset link"]</MudButton></div>
+        </EditForm>
+        @if (error is not null) { <MudAlert Class="auth-notice" Severity="Severity.Error" data-testid="delivery-error">@error</MudAlert> }
+        @if (!Embedded) { <MudButton Class="mt-4" Href="@SecurityLinkNavigation.LoginAfterCancel">@Loc["Back to login"]</MudButton> }
+    }
+</div>
 
 @code {
     [Parameter] public AdmissionUiContext? Context { get; set; }
     [Parameter] public AuthenticationFlow? Flow { get; set; }
-    private AuthenticationFlow CurrentFlow => Flow ?? Context!.Flow;
     [Parameter] public bool Verification { get; set; }
+    [Parameter] public bool Embedded { get; set; }
+    [Parameter] public EventCallback ReturnToLogin { get; set; }
+    [Parameter] public EventCallback RequestCompleted { get; set; }
+    private AuthenticationFlow CurrentFlow => Flow ?? Context!.Flow;
     private readonly Entry entry = new();
-    private bool requested;
+    private bool requested, disposed;
     private string? error;
     private sealed class Entry { [Required, MaxLength(255)] public string Identifier { get; set; } = ""; }
+    public void Dispose() => disposed = true;
     private async Task Send()
     {
-        requested = false; error = null;
+        if (CurrentFlow.Busy || disposed) return;
+        error = null;
         var result = Verification ? await CurrentFlow.RequestEmailVerificationAsync(entry.Identifier)
             : await CurrentFlow.RequestPasswordResetAsync(entry.Identifier);
+        if (disposed) return;
         requested = result is SecurityDeliveryRequested;
-        if (!requested) error = result is AuthenticationRefused { Code: AuthenticationFailure.Unavailable }
-            ? "Email requests are unavailable right now. Please wait and try again."
-            : "The request could not be completed. Please try again.";
+        if (requested) await RequestCompleted.InvokeAsync();
+        else error = result is AuthenticationRefused { Code: AuthenticationFailure.Unavailable }
+            ? Loc["Email requests are unavailable right now. Please wait and try again."]
+            : Loc["The request could not be completed. Please try again."];
     }
 }

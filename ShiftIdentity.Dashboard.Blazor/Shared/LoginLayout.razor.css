@@ -1,0 +1,9 @@
+.identity-login-page {
+    min-block-size: 100vh;
+    min-block-size: 100dvh;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-content: center;
+    justify-items: center;
+    padding: clamp(12px, 3dvh, 32px) clamp(12px, 3vw, 32px);
+}

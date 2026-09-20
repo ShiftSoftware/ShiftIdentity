@@ -3,18 +3,18 @@
 @using AuthenticationFlow = ShiftSoftware.ShiftIdentity.Blazor.Services.AuthenticationFlow
 @inject ShiftIdentityLocalizer Loc
 
-<MudPaper Class="pa-5" data-testid="mfa-recovery-form">
-    <MudText Typo="Typo.h6">@Loc["Recover your authenticator"]</MudText>
-    <MudText>@Loc["Ask an authorized administrator to verify your identity and provide a recovery code. Enter it with your current password to set up a new authenticator."]</MudText>
-    <EditForm Model="entry" OnValidSubmit="Recover">
+<div data-testid="mfa-recovery-form">
+    <h1 class="auth-title" tabindex="-1">@Loc["Recover your authenticator app"]</h1>
+    <p class="auth-description">@Loc["Ask your administrator for a recovery code, then enter it with your current password to set up a new authenticator app for two-factor authentication (MFA). This does not reset your password."]</p>
+    <EditForm Model="entry" OnValidSubmit="Recover" class="auth-inputs">
         <DataAnnotationsValidator />
         <MudTextField T="string" Label="@Loc["Username"]" @bind-Value="entry.Username" For="@(() => entry.Username)" Immediate="true" autocomplete="username" />
         <PasswordField Label="@Loc["Current Password"]" @bind-Value="entry.Password" For="@(() => entry.Password)" Immediate="true" autocomplete="current-password" />
         <MudTextField T="string" Label="@Loc["Recovery code"]" @bind-Value="entry.Code" For="@(() => entry.Code)" Immediate="true" autocomplete="off" />
-        <MudButton ButtonType="ButtonType.Submit" Disabled="AdmissionFlow.Busy" Color="Color.Primary">@Loc["Continue recovery"]</MudButton>
+        <div class="auth-actions"><MudButton ButtonType="ButtonType.Submit" Disabled="AdmissionFlow.Busy" Color="Color.Primary" Variant="Variant.Filled">@Loc["Continue recovery"]</MudButton></div>
     </EditForm>
     @if (error is not null) { <MudAlert Severity="Severity.Error" data-testid="recovery-error">@error</MudAlert> }
-</MudPaper>
+</div>
 
 @code {
     [Parameter, EditorRequired] public AuthenticationFlow AdmissionFlow { get; set; } = null!;

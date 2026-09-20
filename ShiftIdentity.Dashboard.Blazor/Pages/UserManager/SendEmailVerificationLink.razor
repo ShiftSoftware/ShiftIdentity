@@ -1,14 +1,20 @@
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(SendEmailVerificationLink)}")]
-@layout Shared.EmptyLayout
+@layout Shared.LoginLayout
 @using ShiftSoftware.ShiftIdentity.Blazor.Services
 @inject ShiftIdentityDashboardBlazorOptions DashboardOptions
 @using Microsoft.Extensions.DependencyInjection
 @inject IServiceProvider Services
+@inject NavigationManager NavManager
+@inject ShiftIdentityLocalizer Loc
 
-@if (LinkFlow is not null) { <SecurityEmailRequestForm Flow="LinkFlow" Verification="true" /> }
-else { <MudAlert Severity="Severity.Info">Email verification is unavailable here.</MudAlert> }
+<LoginBox ViewKey="@(requested ? "verification:sent" : "verification")" CanGoBack="true" Back="Back">
+    @if (LinkFlow is not null) { <SecurityEmailRequestForm Flow="LinkFlow" Verification="true" Embedded="true" ReturnToLogin="Back" RequestCompleted="() => requested = true" /> }
+    else { <MudAlert Severity="Severity.Info">@Loc["Email verification is unavailable here."]</MudAlert> }
+</LoginBox>
 
 @code {
     [CascadingParameter] public AdmissionUiContext? AdmissionContext { get; set; }
     private AuthenticationFlow? LinkFlow => AdmissionContext?.Flow ?? (DashboardOptions.StagedAuthority ? Services.GetRequiredService<AuthenticationFlow>() : null);
+    private bool requested;
+    private void Back() => NavManager.NavigateTo($"{Constants.IdentityRoutePreifix}/login");
 }

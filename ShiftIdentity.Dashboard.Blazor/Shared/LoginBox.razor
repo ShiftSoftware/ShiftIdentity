@@ -1,0 +1,61 @@
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+@inject ShiftIdentityDashboardBlazorOptions Options
+@inject ShiftIdentityLocalizer Loc
+
+<div class="identity-login-box" @ref="root">
+    <header class="identity-login-header">
+        <button type="button" class="identity-login-back" disabled="@(!CanGoBack)" aria-label="@Loc["Back"]" title="@Loc["Back"]" @onclick="Back">
+            <MudIcon Icon="@Icons.Material.Filled.ArrowBack" />
+        </button>
+        <img class="identity-login-logo" src="@Options.LogoPath" alt="@Loc["Logo"]" />
+    </header>
+    <div class="identity-login-viewport">
+        <div class="identity-login-content">
+            <CascadingValue Name="InLoginBox" Value="true" IsFixed="true">@ChildContent</CascadingValue>
+        </div>
+        <div class="identity-login-outgoing" aria-hidden="true"></div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string ViewKey { get; set; } = "login";
+    [Parameter] public int Direction { get; set; } = 1;
+    [Parameter] public bool CanGoBack { get; set; }
+    [Parameter] public bool TrackHistory { get; set; }
+    [Parameter] public EventCallback Back { get; set; }
+    private ElementReference root;
+    private IJSObjectReference? module;
+    private string? previousView;
+    private bool disposed;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (module is not null && previousView is not null && previousView != ViewKey)
+            await module.InvokeVoidAsync("prepare", root);
+        previousView = ViewKey;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (disposed) return;
+        if (firstRender) module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/ShiftSoftware.ShiftIdentity.Dashboard.Blazor/login-box.js");
+        if (module is not null) await module.InvokeVoidAsync("sync", root, ViewKey, Direction, TrackHistory);
+    }
+
+    public async Task<bool> TryHistoryBackAsync() => module is not null && await module.InvokeAsync<bool>("tryHistoryBack");
+
+    public async Task WaitForFeedbackExitAsync()
+    {
+        if (!disposed && module is not null) await module.InvokeVoidAsync("waitForFeedbackExit", root);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        disposed = true;
+        if (module is null) return;
+        try { await module.InvokeVoidAsync("dispose", root); await module.DisposeAsync(); }
+        catch (JSDisconnectedException) { }
+    }
+}

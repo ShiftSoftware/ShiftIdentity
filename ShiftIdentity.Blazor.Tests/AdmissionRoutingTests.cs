@@ -187,7 +187,7 @@ public sealed class AdmissionRoutingTests
         if (challenge)
         {
             Assert.Empty(store.Writes);
-            Assert.EndsWith("Identity/login", navigation.Uri);
+            Assert.EndsWith("Identity/login?view=challenge", navigation.Uri);
             Assert.Single(cut.FindComponents<MfaForm>());
         }
         else
