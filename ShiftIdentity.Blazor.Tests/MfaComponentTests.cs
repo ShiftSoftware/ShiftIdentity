@@ -81,7 +81,8 @@ public sealed class MfaComponentTests
         using var context = Context(store, transport, out var flow);
         var cut = context.Render<LoginForm>(p => p.Add(x => x.AdmissionFlow, flow));
         cut.FindAll("input")[0].Input("synthetic");
-        cut.FindAll("button").Single(x => x.TextContent.Contains("Use an admin recovery code")).Click();
+        cut.Find("[data-testid=login-help]").Click();
+        cut.WaitForElement("[data-testid=login-recovery-choice]").Click();
         Assert.Equal("synthetic", cut.FindAll("input")[0].GetAttribute("value"));
         for (var i = 0; i < 2; i++)
         {
@@ -93,6 +94,31 @@ public sealed class MfaComponentTests
         cut.Find("input").Input("123456"); await Submit(cut);
         Assert.Single(cut.FindAll("[data-testid=recovery-completed]")); Assert.True(flow.ReturnToLoginRequired);
         Assert.Empty(store.Writes); Assert.Null(flow.Pending);
+    }
+
+    [Fact]
+    public async Task Leaving_a_challenge_ignores_its_late_component_feedback()
+    {
+        var store = new RecordingStore();
+        var response = new TaskCompletionSource<AuthOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var transport = new ScriptedHttp(request => request.RequestUri!.AbsolutePath.EndsWith("/login")
+            ? Task.FromResult<AuthOutcome>(Pending(AuthenticationStep.ExistingMfa, AuthenticationOperationPurpose.Login))
+            : request.RequestUri.AbsolutePath.EndsWith("/cancel")
+                ? Task.FromResult<AuthOutcome>(new OperationCancelled()) : response.Task);
+        using var context = Context(store, transport, out var flow);
+        var cut = context.Render<LoginForm>(p => p.Add(x => x.AdmissionFlow, flow));
+        cut.FindAll("input")[0].Input("synthetic"); cut.FindAll("input")[1].Input("password");
+        await Submit(cut);
+        cut.Find("input").Input("123456");
+        var proving = Submit(cut);
+        cut.WaitForAssertion(() => Assert.Equal(2, transport.Requests.Count));
+        context.Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo("/?view=access");
+        cut.WaitForElement("[data-testid=login-reset-choice]");
+        await cut.InvokeAsync(() => response.SetResult(new AuthenticationRefused(AuthenticationFailure.InvalidProof)));
+        await proving;
+        Assert.Null(flow.Pending);
+        Assert.Empty(store.Writes);
+        Assert.Empty(cut.FindAll("[data-testid=admission-error]"));
     }
 
     [Fact]

@@ -76,7 +76,7 @@ public sealed class SecurityEmailDeliveryComponentTests
         cut.WaitForAssertion(() => Assert.Contains("Email requests are unavailable right now", cut.Find("[data-testid=delivery-error]").TextContent));
         Assert.Single(handler.Posts); Assert.False(ui.Flow.Busy);
         cut.Find("form").Submit();
-        cut.WaitForAssertion(() => Assert.Contains("If an eligible account matches, check its saved email inbox. If no link arrives, wait before trying again.",
+        cut.WaitForAssertion(() => Assert.Contains("Check your spam folder too.",
             cut.Find("[data-testid=delivery-requested]").TextContent));
         Assert.Empty(cut.FindAll("[data-testid=delivery-error]")); Assert.Equal(2, handler.Posts.Count);
         Assert.Same(previous, Assert.Single(context.Services.GetRequiredService<RecordingStore>().Writes));

@@ -37,7 +37,8 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services
 
         public async Task<HttpResponse<ShiftEntityResponse<TokenDTO>>> LoginAsync(LoginDTO loginDto)
         {
-            return await httpService.PostAsync<ShiftEntityResponse<TokenDTO>, LoginDTO>(url + "login", loginDto);
+            return await httpService.PostAsync<ShiftEntityResponse<TokenDTO>, LoginDTO>(url + "login",
+                new LoginDTO { Username = loginDto.Username?.Trim()!, Password = loginDto.Password });
         }
 
         public async Task<HttpResponse<ShiftEntityResponse<TokenDTO>>> VerifyMfaAsync(MfaDTO mfaDto)

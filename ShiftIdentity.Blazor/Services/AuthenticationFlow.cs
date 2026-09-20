@@ -28,7 +28,7 @@ public sealed partial class AuthenticationFlow(HttpClient http, IdentitySession 
     public Task<AuthOutcome> LoginAsync(string username, string password) => SendAsync(() =>
     {
         Start();
-        return Request("login", new PasswordLoginRequest(username, password, Challenge()));
+        return Request("login", new PasswordLoginRequest(username?.Trim()!, password, Challenge()));
     });
 
     public Task<AuthOutcome> BeginPasswordChangeAsync(string access) => SendAsync(() =>

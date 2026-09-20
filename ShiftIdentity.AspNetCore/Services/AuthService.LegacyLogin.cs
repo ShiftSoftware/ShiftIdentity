@@ -18,11 +18,12 @@ public partial class AuthService
     internal static Task<AuthOutcome> BeginCompatibleLoginAsync(IdentityAdmissionServices services, LoginDTO request,
         ShiftIdentityConfiguration configuration, CancellationToken ct) => AtBoundary(async () =>
     {
-        if (services.Client.External || request?.Username is not { Length: > 0 and <= 255 } ||
+        if (request is null) return Refuse(AuthenticationFailure.InvalidRequest);
+        var username = request.Username?.Trim();
+        if (services.Client.External || username is not { Length: > 0 and <= 255 } ||
             request.Password is not { Length: > 0 and <= 255 }) return Refuse(AuthenticationFailure.InvalidRequest);
         var started = services.Clock.GetUtcNow();
-        // Preserve the deployed lookup. Username trimming remains the staged UI/endpoint's separate contract.
-        var snapshot = await services.Store.ReadProofAsync(request.Username, services.Client, ct);
+        var snapshot = await services.Store.ReadProofAsync(username, services.Client, ct);
         if (snapshot is null || snapshot.User.IsDeleted) return Refuse(AuthenticationFailure.InvalidProof);
         var valid = HashService.VerifyVersionedPassword(request.Password, snapshot.User.Salt, snapshot.User.PasswordHash);
         var provenAt = services.Clock.GetUtcNow();

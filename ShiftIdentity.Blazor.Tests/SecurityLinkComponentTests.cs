@@ -186,7 +186,7 @@ public sealed class SecurityLinkComponentTests
         using var context = Setup(AuthenticationOperationPurpose.EmailVerify, out var ui, out var transport);
         var cut = context.Render<SecurityEmailRequestForm>(p => p.Add(x => x.Context, ui).Add(x => x.Verification, verification));
         cut.Find("input").Input("unknown@example.invalid"); cut.Find("form").Submit();
-        cut.WaitForAssertion(() => Assert.Contains("If an eligible account matches", cut.Markup));
+        cut.WaitForAssertion(() => Assert.Contains("Check your inbox", cut.Markup));
         Assert.Contains("unknown@example.invalid", Assert.Single(transport.Requests).Body);
         Assert.Empty(context.Services.GetRequiredService<RecordingStore>().Writes);
     }
@@ -212,7 +212,7 @@ public sealed class SecurityLinkComponentTests
         var cut = context.Render<LoginForm>(p => p.Add(x => x.AdmissionFlow, ui.Flow));
         cut.FindAll("input")[0].Input("synthetic"); cut.FindAll("input")[1].Input("password");
         cut.Find("form").Submit();
-        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("a[href='Identity/SendEmailVerificationLink']")));
+        cut.WaitForAssertion(() => Assert.Contains("Send email verification link", cut.Markup));
         Assert.Contains("Verify your saved email address before signing in.", cut.Markup);
         Assert.Empty(context.Services.GetRequiredService<RecordingStore>().Writes);
     }

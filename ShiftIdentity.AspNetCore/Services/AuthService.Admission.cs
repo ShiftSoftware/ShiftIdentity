@@ -28,9 +28,11 @@ public partial class AuthService
         AtBoundary(async () =>
         {
             var startedAt = services.Clock.GetUtcNow();
+            if (request is null) return Refuse(AuthenticationFailure.InvalidRequest);
+            request = request with { Username = request.Username?.Trim()! };
             if (!Valid(request) || !OperationCredential.IsChallenge(request.CodeChallenge))
                 return Refuse(AuthenticationFailure.InvalidRequest);
-            var snapshot = await services.Store.ReadProofAsync(request.Username.Trim(), services.Client, ct);
+            var snapshot = await services.Store.ReadProofAsync(request.Username, services.Client, ct);
             if (snapshot is null) return Refuse(AuthenticationFailure.InvalidProof);
             var validPassword = HashService.VerifyVersionedPassword(request.Password, snapshot.User.Salt, snapshot.User.PasswordHash);
             var provenAt = services.Clock.GetUtcNow();

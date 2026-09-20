@@ -1,206 +1,302 @@
 @attribute [Route($"{Constants.IdentityRoutePreifix}/login")]
-@layout Shared.EmptyLayout
+@layout Shared.LoginLayout
 @implements IDisposable
-
-@using System.Text.RegularExpressions
-@using System.ComponentModel.DataAnnotations
-@using Microsoft.AspNetCore.Components.Authorization;
+@using Microsoft.Extensions.DependencyInjection
 @using ShiftSoftware.ShiftIdentity.Blazor
-@using ShiftSoftware.ShiftIdentity.Core.DTOs
-@using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.UserManager;
-@using AuthenticationFlow = ShiftSoftware.ShiftIdentity.Blazor.Services.AuthenticationFlow
 @using ShiftSoftware.ShiftIdentity.Core.Authentication
-
+@using AuthenticationFlow = ShiftSoftware.ShiftIdentity.Blazor.Services.AuthenticationFlow
 @inject ShiftIdentityDashboardBlazorOptions ShiftIdentityDashboardBlazorOptions
 @inject Services.AuthService AuthService
-@inject MessageService msgService
+@inject IServiceProvider Services
 @inject IdentitySession storageService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavManager
+@inject IJSRuntime JS
 @inject ShiftIdentityLocalizer Loc
 
-@*@inject Services.AuthService authService
-@inject MessageService msgService
-@inject Services.StorageService storageService
-@inject TypeAuth.Blazor.Services.TypeAuthService TypeAuth*@
-
-<MudGrid Justify="Justify.Center">
-    <MudItem xs="12" sm="10" md="8" lg="6" xl="6">
-        <MudPaper Class="pa-4">
-
-            <br />
-            <MudGrid Justify="Justify.Center">
-                <MudItem xs="11" sm="11" md="10" lg="8" xl=6>
-                    <MudImage Src="@ShiftIdentityDashboardBlazorOptions.LogoPath" Style="width:100%;" />
-                </MudItem>
-            </MudGrid>
-            <br />
-            <br />
-
-            @if (recoveryMode && AdmissionFlow is not null)
-            {
-                <MfaRecoveryForm AdmissionFlow="AdmissionFlow" Username="@loginDto.Username" AdmissionCompleted="HandleAdmission" />
-                <MudButton OnClick="RestartAdmission">@Loc["Back to login"]</MudButton>
-            }
-            else if (AdmissionFlow?.Pending is { } challenge)
-            {
-                @if (challenge.Step == AuthenticationStep.NewMfa)
-                {
-                    <TotpEnrollmentForm AdmissionFlow="AdmissionFlow" AdmissionCompleted="HandleAdmission" />
-                }
-                else if (challenge.Step == AuthenticationStep.EmailVerification)
-                {
-                    <MudAlert Severity="Severity.Info" data-testid="restricted-step">Verify your saved email address before signing in.</MudAlert>
-                    <MudButton Href="Identity/SendEmailVerificationLink">Send email verification link</MudButton>
-                }
-                else if (challenge.Purpose == AuthenticationOperationPurpose.PasswordChange)
-                {
-                    <ChangePasswordForm AdmissionFlow="AdmissionFlow" AdmissionCompleted="HandleAdmission" />
-                }
-                else if (challenge.Step == AuthenticationStep.ExistingMfa)
-                {
-                    <MfaForm AdmissionFlow="AdmissionFlow" AdmissionCompleted="HandleAdmission" />
-                }
-                else
-                {
-                    <MudAlert Severity="Severity.Info" data-testid="restricted-step">@Loc["Additional account verification is required before signing in."]</MudAlert>
-                }
-                <MudButton OnClick="RestartAdmission">@Loc["Start again"]</MudButton>
-                @if (challenge.Step is AuthenticationStep.PasswordChange or AuthenticationStep.MfaRecovery)
-                {
-                    <MudButton OnClick="() => recoveryMode = true">@Loc["Use an admin recovery code"]</MudButton>
-                }
-            }
-            else
-            {
-            <EditForm Model="@loginDto" OnValidSubmit="Login">
-                <DataAnnotationsValidator />
-                <MudTextField T="string" Label="@Loc["Username"]" @bind-Value="loginDto.Username" For="@(() => loginDto.Username)" Immediate="@(AdmissionFlow is not null)" />
-
-                <PasswordField Label="@Loc["Password"]" @bind-Value="loginDto.Password"
-                              Immediate="@(AdmissionFlow is not null)"
-                              For="@(() => loginDto.Password)" autocomplete="current-password" />
-
-                <br />
-                <MudButton Size="Size.Small"
-                           Color="Color.Warning"
-                           Href="@($"{Constants.IdentityRoutePreifix}/{nameof(SendResetPasswordLink)}")"
-                           Variant="Variant.Text">
-                    @Loc["Forgot Password?"]
-                </MudButton>
-                @if (AdmissionFlow is not null)
-                {
-                    <MudButton Href="Identity/SendEmailVerificationLink">Verify email</MudButton>
-                }
-
-                <br />
-                <br />
-
-                <MudGrid Justify="Justify.Center">
-                    <MudButton Disabled="@(AdmissionFlow?.Busy ?? false)" Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit">@Loc["Login"]</MudButton>
-                </MudGrid>
-            </EditForm>
+<LoginBox @ref="loginBox" ViewKey="@ViewKey" Direction="@direction" CanGoBack="@(view != "login")" TrackHistory="@(NavManager.HistoryEntryState == "shift-identity-login")" Back="Back">
+    @{ var admissionNavigation = navigationAttempt; }
+    @if (view == "access")
+    {
+        <h1 class="auth-title" tabindex="-1">@Loc["Can't access your account?"]</h1>
+        <p class="auth-description">@Loc["Choose how you'd like to get back in."]</p>
+        <div class="auth-choices">
+            <button class="auth-choice" type="button" data-testid="login-reset-choice" @onclick="OpenReset">
+                <MudIcon Icon="@Icons.Material.Outlined.Email" />
+                <span><strong>@Loc["Forgot password"]</strong><small>@Loc["Get a password reset link by email."]</small></span>
+                <MudIcon Class="auth-chevron" Icon="@Icons.Material.Filled.ChevronRight" />
+            </button>
             @if (AdmissionFlow is not null)
             {
-                <MudButton OnClick="() => recoveryMode = true">@Loc["Use an admin recovery code"]</MudButton>
+                <button class="auth-choice" type="button" data-testid="login-recovery-choice" @onclick="OpenRecovery">
+                    <MudIcon Icon="@Icons.Material.Outlined.Security" />
+                    <span><strong>@Loc["Recover your authenticator app"]</strong><small>@Loc["Restore two-factor authentication (MFA) using your current password and an admin recovery code."]</small></span>
+                    <MudIcon Class="auth-chevron" Icon="@Icons.Material.Filled.ChevronRight" />
+                </button>
             }
-            }
-            @if (AdmissionFlow?.ReturnToLoginRequired == true)
-            {
-                <MudAlert Severity="Severity.Success" data-testid="recovery-completed">@Loc["Authenticator recovery completed. Sign in with your password and a new code from your authenticator."]</MudAlert>
-            }
-            @if ((AdmissionContext is not null || ShiftIdentityDashboardBlazorOptions.StagedAuthority) && SecurityLink == "reset")
-            {
-                <MudAlert Severity="Severity.Success">Password reset. Sign in with your new password.</MudAlert>
-            }
-            @if (admissionError is not null)
-            {
-                <MudAlert Severity="Severity.Error" data-testid="admission-error">@admissionError</MudAlert>
-            }
-
-            <br />
-        </MudPaper>
-    </MudItem>
-</MudGrid>
+        </div>
+    }
+    else if (view is "reset" or "verification")
+    {
+        @if (AdmissionFlow is not null)
+        {
+            <SecurityEmailRequestForm @key="view" Flow="AdmissionFlow" Verification="@(view == "verification")" Embedded="true" ReturnToLogin="ReturnToLogin" RequestCompleted="RequestCompleted" />
+        }
+        else if (view == "reset") { <LegacyResetRequestForm ReturnToLogin="ReturnToLogin" RequestCompleted="RequestCompleted" /> }
+    }
+    else if (view == "recovery" && AdmissionFlow is not null)
+    {
+        <MfaRecoveryForm AdmissionFlow="AdmissionFlow" Username="@loginDto.Username" AdmissionCompleted="outcome => HandleContinuation(outcome, admissionNavigation)" />
+    }
+    else if (AdmissionFlow?.Pending is { } challenge)
+    {
+        @if (challenge.Step == AuthenticationStep.NewMfa)
+        { <TotpEnrollmentForm AdmissionFlow="AdmissionFlow" AdmissionCompleted="outcome => HandleContinuation(outcome, admissionNavigation)" /> }
+        else if (challenge.Step == AuthenticationStep.EmailVerification)
+        {
+            <h1 class="auth-title" tabindex="-1">@Loc["Verify your email"]</h1>
+            <MudAlert Severity="Severity.Info" data-testid="restricted-step">@Loc["Verify your saved email address before signing in."]</MudAlert>
+            <div class="auth-actions"><MudButton OnClick="OpenVerification" Variant="Variant.Filled" Color="Color.Primary">@Loc["Send email verification link"]</MudButton></div>
+        }
+        else if (challenge.Purpose == AuthenticationOperationPurpose.PasswordChange)
+        { <ChangePasswordForm AdmissionFlow="AdmissionFlow" AdmissionCompleted="outcome => HandleContinuation(outcome, admissionNavigation)" /> }
+        else if (challenge.Step == AuthenticationStep.ExistingMfa)
+        { <MfaForm AdmissionFlow="AdmissionFlow" AdmissionCompleted="outcome => HandleContinuation(outcome, admissionNavigation)" /> }
+        else
+        { <MudAlert Severity="Severity.Info" data-testid="restricted-step">@Loc["Additional account verification is required before signing in."]</MudAlert> }
+        @if (challenge.Step is AuthenticationStep.PasswordChange or AuthenticationStep.MfaRecovery)
+        { <button type="button" class="auth-help" @onclick="OpenRecovery">@Loc["Recover your authenticator app"]</button> }
+    }
+    else
+    {
+        <EditForm Model="@loginDto" OnValidSubmit="Login" class="auth-inputs" aria-busy="@(loginInProgress ? "true" : "false")">
+            <DataAnnotationsValidator />
+            <MudTextField T="string" Label="@Loc["Username"]" @bind-Value="loginDto.Username" For="@(() => loginDto.Username)" Immediate="true" Disabled="loginInProgress" autocomplete="username" />
+            <PasswordField Label="@Loc["Password"]" @bind-Value="loginDto.Password" Immediate="true" For="@(() => loginDto.Password)" Disabled="loginInProgress" autocomplete="current-password" />
+            <div class="auth-feedback-slot" data-open="@(loginFailure is not null ? "true" : "false")" aria-hidden="@(loginFailure is null ? "true" : "false")" inert="@(loginFailure is null)">
+                <div class="auth-feedback-clip"><div class="auth-feedback-content">
+                    <div class="auth-failure" data-login-failure>
+                        <div class="auth-failure-message" role="alert" tabindex="-1" data-login-error data-testid="login-failure-message">
+                            <MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" />
+                            <div><strong>@Loc[FailureMessage]</strong><p>@Loc[FailureHint]</p></div>
+                        </div>
+                        <button type="button" class="auth-help" data-testid="login-failure-help" @onclick="OpenAccess">@Loc["Can't access your account?"] <MudIcon Icon="@Icons.Material.Filled.ChevronRight" /></button>
+                        @if (lastFailure is not AuthenticationFailure.InvalidProof and not AuthenticationFailure.AccountUnavailable)
+                        { <span class="auth-reference" data-testid="login-failure-reference">@Loc["Error reference"]: @FailureReference</span> }
+                    </div>
+                </div></div>
+            </div>
+            <div class="auth-actions"><MudButton Disabled="@(loginInProgress || (AdmissionFlow?.Busy ?? false))" Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit">@Loc[loginInProgress ? "Signing in…" : "Login"]</MudButton></div>
+            <div class="auth-feedback-slot" data-open="@(loginFailure is null ? "true" : "false")" aria-hidden="@(loginFailure is not null ? "true" : "false")" inert="@(loginFailure is not null)">
+                <div class="auth-feedback-clip"><div class="auth-feedback-content">
+                    <button type="button" class="auth-help" data-testid="login-help" @onclick="OpenAccess">@Loc["Can't access your account?"]</button>
+                </div></div>
+            </div>
+        </EditForm>
+        @if (AdmissionFlow?.ReturnToLoginRequired == true)
+        { <MudAlert Class="auth-notice" Severity="Severity.Success" data-testid="recovery-completed">@Loc["Authenticator recovery completed. Sign in with your password and a new code from your authenticator."]</MudAlert> }
+        @if ((AdmissionContext is not null || ShiftIdentityDashboardBlazorOptions.StagedAuthority) && SecurityLink == "reset")
+        { <MudAlert Class="auth-notice" Severity="Severity.Success">@Loc["Password reset. Sign in with your new password."]</MudAlert> }
+    }
+    @if (admissionError is not null)
+    { <MudAlert Class="auth-notice" Severity="Severity.Error" data-testid="admission-error">@admissionError</MudAlert> }
+</LoginBox>
 
 @code {
     [CascadingParameter] public ShiftSoftware.ShiftIdentity.Blazor.Services.AdmissionUiContext? AdmissionContext { get; set; }
     [Parameter] public AuthenticationFlow? AdmissionFlow { get; set; }
     [Parameter] public EventCallback<SessionIssued> SessionCompleted { get; set; }
+    [CascadingParameter] private Task<AuthenticationState>? authenticationStateTask { get; set; }
+    [Parameter, SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "securityLink")] public string? SecurityLink { get; set; }
+    private readonly LoginDTO loginDto = new();
+    private string view = "login", loginPath = "";
     private string? admissionError;
-    private bool recoveryMode;
-    public void Dispose() => AdmissionFlow?.Restart();
-
-    private async Task RestartAdmission()
+    private AuthenticationFailure? loginFailure;
+    private AuthenticationFailure lastFailure = AuthenticationFailure.InvalidProof;
+    private int direction = 1, loginAttempt, navigationAttempt;
+    private bool loginInProgress, disposed, requestCompleted;
+    private LoginBox? loginBox;
+    private TaskCompletionSource? feedbackExit;
+    private string ViewKey => view == "challenge" ? $"challenge:{AdmissionFlow?.Pending?.Step}" : requestCompleted ? $"{view}:sent" : view;
+    private void RequestCompleted() => requestCompleted = true;
+    private string FailureMessage => lastFailure switch
     {
-        var result = AdmissionFlow is null ? null : await AdmissionFlow.CancelAsync();
-        recoveryMode = false;
-        loginDto.Password = string.Empty;
-        admissionError = result is AuthenticationRefused
-            ? Loc["Cancellation could not be confirmed. Sign in again to check whether the security change completed."] : null;
+        AuthenticationFailure.Unavailable => "We couldn't reach the sign-in service.",
+        AuthenticationFailure.InvalidProof or AuthenticationFailure.AccountUnavailable => "Username or password is incorrect.",
+        _ => "We couldn't sign you in."
+    };
+    private string FailureHint => lastFailure switch
+    {
+        AuthenticationFailure.Unavailable => "Check your connection and try again in a moment.",
+        AuthenticationFailure.InvalidProof or AuthenticationFailure.AccountUnavailable => "Try again, or get help accessing your account.",
+        _ => "Try again in a moment. If the problem continues, share this error reference with your administrator."
+    };
+    private string FailureReference => lastFailure == AuthenticationFailure.Unavailable ? "LOGIN-SERVICE" : "LOGIN-REFUSED";
+    private static int Depth(string value) => value switch { "access" or "challenge" => 1, "reset" or "recovery" or "verification" => 2, _ => 0 };
+    private string ReadView(string uri)
+    {
+        var value = System.Web.HttpUtility.ParseQueryString(NavManager.ToAbsoluteUri(uri).Query)["view"];
+        return value switch
+        {
+            "access" or "reset" => value,
+            "recovery" or "verification" when AdmissionFlow is not null => value,
+            "challenge" when AdmissionFlow?.Pending is not null => value,
+            _ => "login"
+        };
     }
-
+    private void NavigateView(string next, bool replace = false, bool trackHistory = true) => NavManager.NavigateTo(
+        NavManager.GetUriWithQueryParameter("view", next == "login" ? null : next),
+        new NavigationOptions { ReplaceHistoryEntry = replace, HistoryEntryState = trackHistory ? "shift-identity-login" : null });
+    private void OpenAccess() => NavigateView("access");
+    private void OpenReset() => NavigateView("reset");
+    private void OpenRecovery() => NavigateView("recovery");
+    private void OpenVerification() => NavigateView("verification");
+    private void ReturnToLogin() => NavigateView("login", true);
+    private async Task Back()
+    {
+        if (NavManager.HistoryEntryState == "shift-identity-login") await JS.InvokeVoidAsync("history.back");
+        else if (loginBox is not null && await loginBox.TryHistoryBackAsync()) return;
+        else NavigateView(view is "reset" or "recovery" ? "access" : "login", replace: true, trackHistory: false);
+    }
+    private void LocationChanged(object? sender, LocationChangedEventArgs args)
+    {
+        if (disposed || NavManager.ToAbsoluteUri(args.Location).AbsolutePath != loginPath) return;
+        _ = InvokeAsync(async () =>
+        {
+            var next = ReadView(args.Location);
+            if (next == view) return;
+            var navigation = ++navigationAttempt;
+            ++loginAttempt;
+            direction = Depth(next) < Depth(view) ? -1 : 1;
+            view = next;
+            requestCompleted = false;
+            loginFailure = null;
+            loginDto.Password = string.Empty;
+            admissionError = null;
+            if (AdmissionFlow is not null && (AdmissionFlow.Pending is not null || AdmissionFlow.Busy))
+            {
+                var result = await AdmissionFlow.CancelAsync();
+                if (disposed || navigation != navigationAttempt) return;
+                if (result is AuthenticationRefused) admissionError = Loc["Cancellation could not be confirmed. Sign in again to check whether the security change completed."];
+            }
+            StateHasChanged();
+        });
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        AdmissionFlow ??= AdmissionContext?.Flow ?? (ShiftIdentityDashboardBlazorOptions.StagedAuthority ? Services.GetRequiredService<AuthenticationFlow>() : null);
+        loginPath = NavManager.ToAbsoluteUri(NavManager.Uri).AbsolutePath;
+        view = ReadView(NavManager.Uri);
+        NavManager.LocationChanged += LocationChanged;
+        if (authenticationStateTask is not null)
+        {
+            var authState = await authenticationStateTask;
+            if ((authState.User.Identity?.IsAuthenticated ?? false) &&
+                !((AdmissionContext is not null || ShiftIdentityDashboardBlazorOptions.StagedAuthority) && SecurityLink is "reset" or "verification" or "cancelled")) NavManager.NavigateTo("/");
+        }
+    }
+    public void Dispose()
+    {
+        disposed = true;
+        ++loginAttempt; ++navigationAttempt;
+        feedbackExit?.TrySetResult();
+        NavManager.LocationChanged -= LocationChanged;
+        AdmissionFlow?.Restart();
+    }
+    private Task HandleContinuation(AuthOutcome outcome, int navigation) =>
+        navigation == navigationAttempt ? HandleAdmission(outcome) : Task.CompletedTask;
     private async Task HandleAdmission(AuthOutcome outcome)
     {
+        if (disposed) return;
         admissionError = outcome is AuthenticationRefused && AdmissionFlow?.Pending?.Purpose != AuthenticationOperationPurpose.PasswordChange
             ? Loc["Sign-in could not be completed. Try again."] : null;
-        if (outcome is ChallengeRequired { Challenge.Step: AuthenticationStep.MfaRecovery }) recoveryMode = true;
-        if (outcome is ChallengeRequired { Challenge.Step: AuthenticationStep.NewMfa } or MfaChanged) recoveryMode = false;
+        if (outcome is ChallengeRequired required)
+        {
+            direction = 1;
+            view = required.Challenge.Step == AuthenticationStep.MfaRecovery ? "recovery" : "challenge";
+            NavigateView(view);
+        }
         var completed = outcome switch { PasswordChanged changed => changed.Continuation, MfaChanged changed => changed.Continuation, _ => outcome };
+        if (completed is ReturnToLogin) { view = "login"; direction = -1; NavigateView("login", true); }
         if (completed is SessionIssued session)
         {
+            view = "login"; loginFailure = null;
             await AuthenticationStateProvider.GetAuthenticationStateAsync();
             await SessionCompleted.InvokeAsync(session);
-            if (AdmissionContext is not null)
-                // Reload after storing the completed session so the router starts with its new authentication state.
+            if (AdmissionContext is not null || ShiftIdentityDashboardBlazorOptions.StagedAuthority)
                 NavManager.NavigateTo(ShiftSoftware.ShiftIdentity.Blazor.Services.AdmissionNavigation.LocalReturnPath(ReturnUrl), forceLoad: true);
         }
     }
-
-    LoginDTO loginDto { get; set; } = new LoginDTO();
-
-    [CascadingParameter]
-    private Task<AuthenticationState>? authenticationStateTask { get; set; }
-
-    [Parameter]
-    [SupplyParameterFromQuery]
-    public string? ReturnUrl { get; set; }
-
-    [Parameter, SupplyParameterFromQuery(Name = "securityLink")]
-    public string? SecurityLink { get; set; }
-
-    protected override async Task OnInitializedAsync()
+    private async Task Login()
     {
-        AdmissionFlow ??= AdmissionContext?.Flow;
-        if (authenticationStateTask != null)
+        if (loginInProgress || disposed || (AdmissionFlow?.Busy ?? false)) return;
+        var attempt = ++loginAttempt;
+        var waitForExit = loginFailure is not null;
+        loginInProgress = true; admissionError = null; loginFailure = null;
+        loginDto.Username = loginDto.Username?.Trim()!;
+        try
         {
-            var authState = await authenticationStateTask;
-
-            //Return to home if user already loged-in
-            if ((authState?.User?.Identity?.IsAuthenticated ?? false) &&
-                !((AdmissionContext is not null || ShiftIdentityDashboardBlazorOptions.StagedAuthority) && SecurityLink is "reset" or "verification" or "cancelled"))
-                NavManager.NavigateTo("/");
+            if (waitForExit)
+            {
+                feedbackExit = new(TaskCreationOptions.RunContinuationsAsynchronously);
+                var completed = feedbackExit.Task;
+                StateHasChanged();
+                await completed;
+            }
+            if (!disposed && attempt == loginAttempt) await SubmitLogin(attempt);
         }
-
+        finally { loginInProgress = false; }
     }
 
-    private async Task Login()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (feedbackExit is not { } completed) return;
+        feedbackExit = null;
+        try
+        {
+            if (!disposed && loginBox is not null) await loginBox.WaitForFeedbackExitAsync();
+        }
+        finally { completed.TrySetResult(); }
+    }
+    private Task ShowLoginFailure(AuthenticationFailure failure)
+    {
+        if (!disposed) { admissionError = null; loginDto.Password = string.Empty; loginFailure = lastFailure = failure; }
+        return Task.CompletedTask;
+    }
+
+    private async Task SubmitLogin(int attempt)
     {
         if (AdmissionFlow is not null)
         {
             var outcome = await AdmissionFlow.LoginAsync(loginDto.Username, loginDto.Password);
             loginDto.Password = string.Empty;
+            if (disposed || attempt != loginAttempt) return;
+            if (outcome is AuthenticationRefused refused)
+            {
+                await ShowLoginFailure(refused.Code);
+                return;
+            }
             await HandleAdmission(outcome);
             return;
         }
-        var loginResult = await this.AuthService.LoginAsync(loginDto);
+        HttpResponse<ShiftEntityResponse<TokenDTO>> loginResult;
+        try { loginResult = await this.AuthService.LoginAsync(loginDto); }
+        catch (Exception error) when (error is HttpRequestException or System.Text.Json.JsonException or NotSupportedException or TaskCanceledException)
+        {
+            if (!disposed && attempt == loginAttempt) await ShowLoginFailure(AuthenticationFailure.Unavailable);
+            return;
+        }
+        if (disposed || attempt != loginAttempt) return;
 
         if (!loginResult.IsSuccess)
         {
-            msgService.Error(loginResult?.Data?.Message?.Body!, loginResult?.Data?.Message?.Title);
-
+            await ShowLoginFailure(loginResult.StatusCode is System.Net.HttpStatusCode.BadRequest or System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden
+                ? AuthenticationFailure.InvalidProof : AuthenticationFailure.Unavailable);
             return;
         }
+
+        loginDto.Password = string.Empty;
 
         await storageService.StoreTokenAsync(loginResult?.Data?.Entity!);
 

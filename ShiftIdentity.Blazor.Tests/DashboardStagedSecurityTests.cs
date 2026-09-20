@@ -322,7 +322,7 @@ public sealed class DashboardStagedSecurityTests
         var cut = context.Render(builder => { builder.OpenComponent(0, verification ? typeof(SendEmailVerificationLink) : typeof(SendResetPasswordLink)); builder.CloseComponent(); });
         cut.Find("input").Input("saved-user");
         await cut.InvokeAsync(() => cut.FindComponent<EditForm>().Instance.OnValidSubmit.InvokeAsync(new EditContext(new object())));
-        cut.WaitForAssertion(() => Assert.Contains("If an eligible account matches", cut.Markup));
+        cut.WaitForAssertion(() => Assert.Contains("Check your inbox", cut.Markup));
         var request = Assert.Single(transport.Requests);
         Assert.Equal("/api/identity/v2/" + (verification ? "email-verification" : "password-reset") + "/request", request.Path);
         Assert.Null(request.Scheme); Assert.Contains("saved-user", request.Body);

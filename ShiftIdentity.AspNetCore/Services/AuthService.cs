@@ -52,7 +52,10 @@ public partial class AuthService
     {
         if (services?.GetService<IdentityAdmissionServices>() is { } admission)
             return CompatibleLoginResult(await BeginCompatibleLoginAsync(admission, loginDto, shiftIdentityConfigurations, CancellationToken.None));
-        var user = await userRepo.GetUserByUsernameAsync(loginDto.Username);
+        var username = loginDto.Username?.Trim();
+        if (string.IsNullOrEmpty(username))
+            return new LoginResultModel(LoginResultEnum.UsernameIncorrect, Loc["Username or password is incorrect"]);
+        var user = await userRepo.GetUserByUsernameAsync(username);
 
         if (user is null)
             return new LoginResultModel(LoginResultEnum.UsernameIncorrect, Loc["Username or password is incorrect"]);
