@@ -13,13 +13,13 @@ public static class IdentitySecurityModel
 {
     public static void ConfigureIdentitySecurity(this ModelBuilder builder)
     {
-        if (builder.Model.FindEntityType(typeof(UserSecurityState)) is not null) return;
+        if (builder.Model.FindEntityType(typeof(UserSecurityState))?.FindPrimaryKey() is not null) return;
         builder.Entity<UserSecurityState>(e =>
         {
             e.ToTable("UserSecurityStates", "ShiftIdentity", t =>
                 t.HasCheckConstraint("CK_UserSecurityState_Version", "[SecurityVersion] >= 1 AND [FactorGeneration] >= 1 AND [FailedProofs] >= 0 AND [TotpProtectionVersion] IN (0,1)"));
             e.HasKey(x => x.UserID);
-            e.HasOne<User>().WithOne().HasForeignKey<UserSecurityState>(x => x.UserID).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithOne(x => x.SecurityState).HasForeignKey<UserSecurityState>(x => x.UserID).OnDelete(DeleteBehavior.Restrict);
             e.Property(x => x.RowVersion).IsRowVersion();
             e.Property(x => x.TotpProtectionVersion).HasDefaultValue(0);
             e.Property(x => x.ContactRevision).HasDefaultValue(1L);

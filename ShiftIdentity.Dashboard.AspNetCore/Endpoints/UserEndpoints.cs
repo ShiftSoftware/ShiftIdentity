@@ -2,6 +2,8 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Core.Services;
 using ShiftSoftware.ShiftEntity.Model;
@@ -10,6 +12,7 @@ using ShiftSoftware.ShiftEntity.Web;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 using ShiftSoftware.ShiftIdentity.Data.Entities;
+using ShiftSoftware.ShiftIdentity.Data;
 using ShiftSoftware.ShiftIdentity.Data.Repositories;
 using ShiftSoftware.TypeAuth.AspNetCore.EndpointFilters;
 using ShiftSoftware.TypeAuth.Core;
@@ -262,6 +265,16 @@ internal static class UserEndpoints
     // Selected-entity resolution ported from ShiftEntitySecureControllerAsync.GetSelectedEntitiesAsync — the CRUD
     // handler is new()-able and resolves the repository (same request scope, so same tracked DbContext as the
     // injected UserRepository).
-    private static Task<List<User>> GetSelectedUsersAsync(HttpContext httpContext, SelectStateDTO<UserListDTO> ids)
-        => new ShiftEntityCrudHandler<UserRepository, User, UserListDTO, UserDTO>().GetSelectedEntitiesAsync(httpContext, ids);
+    private static async Task<List<User>> GetSelectedUsersAsync(HttpContext httpContext, SelectStateDTO<UserListDTO> ids)
+    {
+        var users = await new ShiftEntityCrudHandler<UserRepository, User, UserListDTO, UserDTO>().GetSelectedEntitiesAsync(httpContext, ids);
+        if (!httpContext.RequestServices.GetRequiredService<UserRepository>().UsesAuthority) return users;
+        var db = httpContext.RequestServices.GetRequiredService<ShiftIdentityDbContext>();
+        var userIds = users.Select(x => x.ID).ToArray();
+        var states = await db.Set<Data.Authentication.UserSecurityState>().Where(x => userIds.Contains(x.UserID))
+            .ToDictionaryAsync(x => x.UserID, httpContext.RequestAborted);
+        foreach (var user in users)
+            user.SecurityState = states.GetValueOrDefault(user.ID);
+        return users;
+    }
 }

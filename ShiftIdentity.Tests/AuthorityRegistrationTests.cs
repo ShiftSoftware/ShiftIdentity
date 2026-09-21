@@ -107,7 +107,8 @@ public sealed class AuthorityRegistrationTests
     {
         { "Authority.ClientId", c => c.Authority.ClientId = " " },
         { "Authority.RefreshKey", c => c.Authority.RefreshKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(63)) },
-        { "Authority.RefreshKey", c => c.Authority.RefreshKey = c.RefreshToken.Key },
+        { "RefreshToken.Key", c => { c.Authority.RefreshKey = null; c.RefreshToken.Key = "short"; } },
+        { "RefreshToken.Key", c => { c.Authority.RefreshKey = null; c.RefreshToken.Key = " "; } },
         { "Authority.OperationKey", c => c.Authority.OperationKey = "short" },
         { "Authority.AccessLifetimeSeconds", c => c.Token.ExpireSeconds = 3600 },
         { "Authority.AccessLifetimeSeconds", c => c.Authority.AccessLifetimeSeconds = 901 },
@@ -130,6 +131,35 @@ public sealed class AuthorityRegistrationTests
         corrupt(configuration);
         var error = Assert.Throws<InvalidOperationException>(() => IdentityAuthorityRegistration.Create(configuration));
         Assert.Contains("ShiftIdentityConfiguration." + setting, error.Message);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Omitted_authority_refresh_key_reuses_the_exact_existing_utf8_bytes(bool base64Text)
+    {
+        var configuration = Valid();
+        configuration.Authority.RefreshKey = null;
+        configuration.RefreshToken.Key = base64Text
+            ? Convert.ToBase64String(RandomNumberGenerator.GetBytes(64))
+            : "  existing-refresh-secret:" + new string('x', 64) + "  ";
+        var options = IdentityAuthorityRegistration.Create(configuration).Options;
+        Assert.Equal(Encoding.UTF8.GetBytes(configuration.RefreshToken.Key), options.RefreshKey);
+        Assert.Equal(Convert.FromBase64String(OperationKey), options.OperationKey);
+    }
+
+    [Fact]
+    public void An_explicit_refresh_key_may_match_the_existing_issuer()
+    {
+        var configuration = Valid();
+        var shared = new RefreshTokenSettingsModel
+        {
+            Issuer = configuration.RefreshToken.Issuer, Audience = "shared-key-refresh",
+            Key = "shared-refresh-secret:" + new string('s', 64), ExpireSeconds = 3600
+        };
+        configuration.RefreshToken = shared;
+        configuration.Authority.RefreshKey = Convert.ToBase64String(Encoding.UTF8.GetBytes(shared.Key));
+        Assert.Equal(Encoding.UTF8.GetBytes(shared.Key), IdentityAuthorityRegistration.Create(configuration).Options.RefreshKey);
     }
 
     [Fact]

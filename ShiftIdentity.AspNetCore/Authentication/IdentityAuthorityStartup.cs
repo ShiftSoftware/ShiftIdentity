@@ -70,17 +70,25 @@ internal sealed class IdentityAuthorityStartup(IServiceScopeFactory scopes, Iden
             {
                 if (policy is null)
                 {
-                    policy = new() { MfaEnabled = registration.MfaEnabled, MfaMandatory = registration.MfaMandatory, RequireVerifiedEmail = registration.RequireVerifiedEmail };
+                    policy = new() { MfaEnabled = registration.MfaEnabled, MfaMandatory = registration.MfaMandatory, RequireVerifiedEmail = registration.RequireVerifiedEmail,
+                        TotpDigits = registration.Totp.Digits, TotpPeriodSeconds = registration.Totp.Period,
+                        TotpWindowPast = registration.Totp.VerificationWindowPast, TotpWindowFuture = registration.Totp.VerificationWindowFuture };
                     db.Add(policy);
                     await db.SaveChangesAsync(ct);
                     return policy.Revision;
                 }
                 if (policy.MfaEnabled == registration.MfaEnabled && policy.MfaMandatory == registration.MfaMandatory &&
-                    policy.RequireVerifiedEmail == registration.RequireVerifiedEmail)
+                    policy.RequireVerifiedEmail == registration.RequireVerifiedEmail && policy.TotpDigits == registration.Totp.Digits &&
+                    policy.TotpPeriodSeconds == registration.Totp.Period && policy.TotpWindowPast == registration.Totp.VerificationWindowPast &&
+                    policy.TotpWindowFuture == registration.Totp.VerificationWindowFuture)
                     return policy.Revision;
                 policy.MfaEnabled = registration.MfaEnabled;
                 policy.MfaMandatory = registration.MfaMandatory;
                 policy.RequireVerifiedEmail = registration.RequireVerifiedEmail;
+                policy.TotpDigits = registration.Totp.Digits;
+                policy.TotpPeriodSeconds = registration.Totp.Period;
+                policy.TotpWindowPast = registration.Totp.VerificationWindowPast;
+                policy.TotpWindowFuture = registration.Totp.VerificationWindowFuture;
                 policy.Revision = checked(policy.Revision + 1);
                 await db.SaveChangesAsync(ct);
                 return policy.Revision;

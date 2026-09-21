@@ -123,7 +123,7 @@ public static class UserProjections
         dto.Email = user.Email;
         dto.EmailVerified = user.EmailVerified;
         dto.IsActive = user.IsActive;
-        dto.TotpEnabled = user.TotpSecret != null;
+        dto.TotpEnabled = user.SecurityState is { } security ? security.ProtectedTotpSecret is not null : user.TotpSecret is not null;
 
         // UserLog is the authoritative LastSeen when it has one; the column on User is the fallback.
         dto.LastSeen = (user.UserLog?.LastSeen ?? user.LastSeen) ?? default;

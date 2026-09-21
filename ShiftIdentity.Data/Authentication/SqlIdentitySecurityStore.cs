@@ -131,6 +131,10 @@ public sealed partial class SqlIdentitySecurityStore(ShiftIdentityDbContext db) 
             var security = await Hinted<UserSecurityState>("UPDLOCK, HOLDLOCK", nameof(UserSecurityState.UserID), userID)
                 .SingleOrDefaultAsync(ct)
                 ?? throw new IdentitySecurityUnavailableException("User security state is missing.");
+            // A dashboard read may already track the factor-status navigation. The locked query acquires the
+            // row lock, but EF identity resolution keeps that earlier snapshot. Reload under this lock before
+            // admitting a write; user edits remain tracked separately and are not overwritten.
+            if (reuseTracked) await db.Entry(security).ReloadAsync(ct);
             var user = reuseTracked ? db.ChangeTracker.Entries<User>().FirstOrDefault(x => x.Entity.ID == userID)?.Entity : null;
             user ??= await db.Users.IgnoreQueryFilters()
                 .Include(x => x.Company).Include(x => x.CompanyBranch).Include(x => x.UserLog)

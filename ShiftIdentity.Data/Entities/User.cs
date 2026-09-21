@@ -80,6 +80,11 @@ public class User : ShiftEntity<User>,
 
     public byte[]? TotpSecret { get; set; }
 
+    /// <summary>Navigation through the existing UserSecurityStates.UserID foreign key; no column on Users.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    [Newtonsoft.Json.JsonIgnore]
+    public Authentication.UserSecurityState? SecurityState { get; set; }
+
     #endregion
 
     #region Contacts

@@ -33,5 +33,6 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\ShiftIdentity.Core\ShiftIdentity.Core.csproj" />
+		<InternalsVisibleTo Include="ShiftSoftware.ShiftIdentity.Dashboard.Blazor" />
 	</ItemGroup>
 </Project>

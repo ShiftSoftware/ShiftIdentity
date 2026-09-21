@@ -41,7 +41,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 {
                     EmailSink = sp.GetService<ISecurityEmailSink>(),
                     EmailVerificationRedirectUrl = configuration.EmailVerificationRedirectUrl,
-                    LegacyRefreshTokens = LegacyRefreshTokenCodec.TryCreate(configuration.RefreshToken, clock),
+                    LegacyRefreshTokens = new LegacyRefreshTokenCodec(configuration.RefreshToken, clock),
                     LegacyTemporaryTokens = LegacyTemporaryTokenCodec.TryCreate(configuration.TemporaryTokenSettings, clock)
                 };
             });

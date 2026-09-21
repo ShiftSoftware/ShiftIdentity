@@ -217,7 +217,7 @@ public class ShiftIdentityMapper : ShiftMapperBase
         // ────────────────────────────────────────────────────────────────────────────────────────────────────
         CreateMap<User, UserDTO>()
             .ForMember(d => d.CompanyBranchID, opt => opt.MapFrom(e => new ShiftEntitySelectDTO { Value = e.CompanyBranchID.ToString()!, Text = e.CompanyBranch != null ? e.CompanyBranch.Name : null }))
-            .ForMember(d => d.TotpEnabled, opt => opt.MapFrom(e => e.TotpSecret != null))
+            .ForMember(d => d.TotpEnabled, opt => opt.MapFrom(e => e.SecurityState != null ? e.SecurityState.ProtectedTotpSecret != null : e.TotpSecret != null))
             .ForMember(d => d.AccessTrees, opt => opt.MapFrom(e => e.AccessTrees.Select(y => new ShiftEntitySelectDTO { Value = y.AccessTreeID.ToString()!, Text = y.AccessTree.Name }).ToList()))
             .ForMember(d => d.Password, opt => opt.Ignore())
             .ForMember(d => d.RequireChangeAtNextLogin, opt => opt.Ignore())
@@ -229,6 +229,7 @@ public class ShiftIdentityMapper : ShiftMapperBase
             .ForMember(e => e.Email, opt => opt.Ignore())
             .ForMember(e => e.Phone, opt => opt.Ignore())
             .ForMember(e => e.AccessTree, opt => opt.Ignore())
+            .ForMember(e => e.SecurityState, opt => opt.Ignore())
             .ForMember(e => e.AccessTrees, opt => opt.Ignore()); // the M:N rows: the hook (or the authority) writes them
 
         // User — LIST: the flattened CompanyBranch name, TotpEnabled, LastSeen (UserLog fallback), and the
@@ -236,7 +237,7 @@ public class ShiftIdentityMapper : ShiftMapperBase
         // the entity's, and long? → string is a standard conversion.
         CreateMap<User, UserListDTO>()
             .ForMember(d => d.CompanyBranch, opt => opt.MapFrom(e => e.CompanyBranch != null ? e.CompanyBranch.Name : null))
-            .ForMember(d => d.TotpEnabled, opt => opt.MapFrom(e => e.TotpSecret != null))
+            .ForMember(d => d.TotpEnabled, opt => opt.MapFrom(e => e.SecurityState != null ? e.SecurityState.ProtectedTotpSecret != null : e.TotpSecret != null))
             .ForMember(d => d.LastSeen, opt => opt.MapFrom(e => ((e.UserLog == null || e.UserLog.LastSeen == null) ? e.LastSeen : e.UserLog.LastSeen) ?? default))
             .ForMember(d => d.AccessTrees, opt => opt.MapFrom(e => e.AccessTrees.Select(y => new ShiftEntitySelectDTO { Value = y.AccessTreeID.ToString()!, Text = y.AccessTree.Name }).ToList()));
     }

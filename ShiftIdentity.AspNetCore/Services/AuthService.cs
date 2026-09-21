@@ -79,14 +79,18 @@ public partial class AuthService
             return new LoginResultModel(LoginResultEnum.PasswordIncorrect, Loc["Username or password is incorrect"]);
         }
 
-        //If user deactive
-        if (!user.IsActive)
+        // The built-in username lookup already excludes deleted users; keep eligibility explicit here too.
+        if (!user.IsActive || user.IsDeleted)
             return new LoginResultModel(LoginResultEnum.UserDeactive, Loc["The user is deactivated"]);
 
         //If user is lockdown
         var lockdownUntil = user.LockDownUntil ?? new DateTime(0);
         if (lockdownUntil > DateTime.UtcNow)
             return new LoginResultModel(LoginResultEnum.UserLockDown, Loc["User is lockdown for {0} minutes", shiftIdentityConfigurations.Security.LockDownInMinutes]);
+
+        if (PasswordOnlyRefusal(user))
+            return new LoginResultModel(LoginResultEnum.PasswordIncorrect,
+                "This account requires an interactive sign-in. Contact your administrator.");
 
         //If user credentials are correct, then reset loginattempt and lockdownuntil
         user.LoginAttempts = 0;
@@ -113,7 +117,7 @@ public partial class AuthService
     {
         // A bare user/Boolean is not a staged proof. Compatibility completions carry their SQL operation instead.
         if (services?.GetService<IdentityAdmissionServices>() is not null) return null;
-        if (user is null || !user.IsActive || user.IsDeleted)
+        if (user is null || !user.IsActive || user.IsDeleted || PasswordOnlyRefusal(user))
             return null;
 
         return tokenService.IssueLoginToken(user, mfaSatisfiedThisSession);
@@ -170,6 +174,13 @@ public partial class AuthService
         return null;
     }
 
+    private bool PasswordOnlyRefusal(User user) => shiftIdentityConfigurations.Security.PasswordOnly &&
+        (user.RequireChangePassword || shiftIdentityConfigurations.MfaSettings.Mandatory ||
+         (user.SecurityState is { } state
+             ? state.ProtectedTotpSecret is not null || state.LocalMfaRecoveryRequired ||
+               (state.FactorGeneration <= 1 && user.TotpSecret is not null)
+             : user.TotpSecret is not null));
+
     public async Task<TokenDTO?> RefreshAsync(string refreshToken)
     {
         if (services?.GetService<IdentityAdmissionServices>() is { } admission)
@@ -190,7 +201,7 @@ public partial class AuthService
                 decodedUserId = rawUserId;
 
             var user = await userRepo.FindAsync(decodedUserId, disableDefaultDataLevelAccess: true, disableGlobalFilters: true);
-            if(user is null || !user.IsActive || user.IsDeleted)
+            if(user is null || !user.IsActive || user.IsDeleted || PasswordOnlyRefusal(user))
                 return null;
 
             var token = tokenService.GenerateToken(user);

@@ -83,7 +83,7 @@ public sealed class IdentitySession
         Notify();
     }
 
-    // The development timer and its manual renewal control use the same single-flight policy.
+    /// <summary>Renews through the same single-flight and storage-generation checks as refresh on read.</summary>
     internal async Task<bool> RenewAsync() => (await ReadOrRenewAsync(true)).Renewed;
 
     private async Task<SessionRead> ReadOrRenewAsync(bool force)

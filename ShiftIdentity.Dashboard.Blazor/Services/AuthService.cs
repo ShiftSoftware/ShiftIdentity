@@ -18,6 +18,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services
         private readonly AuthenticationStateProvider? authStateProvider;
         private readonly HttpClient http;
         private readonly NavigationManager navManager;
+        private readonly ShiftIdentityDashboardBlazorOptions? options;
         private const string url = "auth/";
 
         public AuthService(
@@ -26,8 +27,10 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services
             
             AuthenticationStateProvider? authStateProvider,
             NavigationManager navManager,
-            HttpClient http)
+            HttpClient http,
+            ShiftIdentityDashboardBlazorOptions? options = null)
         {
+            this.options = options;
             this.httpService = httpService;
             this.storageService = storageService;
             this.authStateProvider = authStateProvider;
@@ -48,7 +51,20 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services
 
         public async Task<HttpResponse<ShiftEntityResponse<AuthCodeModel>>> GenerateAuthCodeAsync(GenerateAuthCodeDTO dto)
         {
+            if (options?.StagedAuthority == true)
+            {
+                var current = await storageService.GetTokenAsync();
+                if (current is { Flow: ShiftSoftware.ShiftIdentity.Core.Enums.AuthPurpose.None } &&
+                    !string.IsNullOrWhiteSpace(current.RefreshToken) && !IsAuthorityToken(current.Token))
+                    await storageService.RenewAsync();
+            }
             return await httpService.PostAsync<ShiftEntityResponse<AuthCodeModel>, GenerateAuthCodeDTO>(url + "AuthCode", dto);
+        }
+
+        private static bool IsAuthorityToken(string? token)
+        {
+            try { return new Microsoft.IdentityModel.JsonWebTokens.JsonWebToken(token).GetClaim("shift_schema").Value == "2"; }
+            catch (Exception e) when (e is ArgumentException or InvalidOperationException) { return false; }
         }
 
         public async Task LogOutAsync()

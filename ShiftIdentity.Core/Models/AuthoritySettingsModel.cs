@@ -30,10 +30,12 @@ public sealed class AuthoritySettingsModel
     public string? RefreshAudience { get; set; }
 
     /// <summary>
-    /// Signs the authority's refresh tokens: Base64 or plain text, at least 64 bytes. Keep it different from the
-    /// previous refresh-token key.
+    /// Optional override for hosts that already configured a separate authority key. When omitted, refresh tokens
+    /// use the existing RefreshToken.Key with its original UTF-8 encoding. Token schema and purpose distinguish
+    /// new credentials from legacy credentials; a separate secret is not required.
+    /// An explicit override remains Base64 or plain text, at least 64 bytes.
     /// </summary>
-    public string RefreshKey { get; set; } = default!;
+    public string? RefreshKey { get; set; }
 
     /// <summary>Keys the authority's operation handles and throttle digests: Base64 or plain text, at least 32 bytes.</summary>
     public string OperationKey { get; set; } = default!;
