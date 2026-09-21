@@ -27,10 +27,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.10" />
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.12" />
 		<!-- 10.0.11, not 10.0.10: ShiftMapper (reached through ShiftIdentity.Data) pins 10.0.11, and a direct reference below a transitive one is NU1605. -->
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.11" />
-		<PackageReference Include="Net.Codecrete.QrCodeGenerator" Version="3.0.0" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.12" />
+		<PackageReference Include="Net.Codecrete.QrCodeGenerator" Version="3.2.1" />
 		<PackageReference Include="Otp.NET" Version="1.4.1" />
 		<PackageReference Include="ShiftSoftware.ShiftEntity.Web" Version="$(ShiftFrameworkVersion)" Condition="!Exists('..\..\ShiftEntity\ShiftEntity.Web\ShiftEntity.Web.csproj')" />
 		<PackageReference Include="ShiftSoftware.TypeAuth.Core" Version="$(TypeAuthVersion)" Condition="!Exists('..\..\TypeAuth\TypeAuth.Core\TypeAuth.Core.csproj')" />
