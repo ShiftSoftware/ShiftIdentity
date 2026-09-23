@@ -105,11 +105,18 @@ public class ShiftIdentityMapper : ShiftMapperBase
         // grandchildren alike; what convention cannot do is their Departments/Brands, which are hashid-ENCODED
         // select lists over plain long id lists on the entity side — so the four child pairs are declared here
         // with that one customization each, and ShiftMapper uses them wherever a parent map reaches them.
-        CreateMap<CompanyCalendarShiftGroup, CompanyCalendarShiftGroupDTO>()
+        //
+        // The two shift-group pairs keep a null list as null (AllowNullCollections), in both directions. In a
+        // shift group, Days = null means "every day" and an empty list means "no day". CalendarService reads it
+        // that way, and so do the readers of the replicated calendar documents. The default option turns null
+        // into an empty list, so a plain read or an unchanged save would stop the group from applying on any
+        // day. The other lists in these pairs are not null in stored data: DepartmentIds, BrandIds and Shifts
+        // start as empty lists, and Departments/Brands are built by the MapFrom lines below.
+        CreateMap<CompanyCalendarShiftGroup, CompanyCalendarShiftGroupDTO>(o => o.AllowNullCollections = true)
             .ForMember(d => d.Departments, opt => opt.MapFrom(sg => sg.DepartmentIds.Select(id => new ShiftEntitySelectDTO { Value = hashIds.Value.Encode<DepartmentListDTO>(id) }).ToList()))
             .ForMember(d => d.Brands, opt => opt.MapFrom(sg => sg.BrandIds.Select(id => new ShiftEntitySelectDTO { Value = hashIds.Value.Encode<BrandListDTO>(id) }).ToList()));
 
-        CreateMap<CompanyCalendarShiftGroupDTO, CompanyCalendarShiftGroup>()
+        CreateMap<CompanyCalendarShiftGroupDTO, CompanyCalendarShiftGroup>(o => o.AllowNullCollections = true)
             .ForMember(sg => sg.DepartmentIds, opt => opt.MapFrom(d => d.Departments.Where(x => x.Value != null).Select(x => hashIds.Value.Decode<DepartmentListDTO>(x.Value!)).ToList()))
             .ForMember(sg => sg.BrandIds, opt => opt.MapFrom(d => d.Brands.Where(x => x.Value != null).Select(x => hashIds.Value.Decode<BrandListDTO>(x.Value!)).ToList()));
 
