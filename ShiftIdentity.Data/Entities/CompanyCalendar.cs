@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.EFCore;
+using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Model.Flags;
 using ShiftSoftware.ShiftEntity.Model.Replication;
@@ -14,6 +15,7 @@ using ShiftSoftware.ShiftIdentity.Core.DTOs.Brand;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyCalendar;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Department;
 using ShiftSoftware.ShiftIdentity.Core.Enums;
+using ShiftSoftware.ShiftIdentity.Core.Localization;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 
@@ -79,6 +81,26 @@ public class CompanyCalendar :
         bool disableGlobalFilters,
         ShiftRepositoryUpsertContext<CompanyCalendar, CompanyCalendarListDTO, CompanyCalendarDTO> context)
     {
+        // The dashboard form runs this validator too. Running it here gives API clients the same rules and
+        // messages, in the shape the DataAnnotations check uses: "Model Validation Error" with one sub-message
+        // per property path (for example "ShiftGroups[0].Days"), which the form shows on the matching line.
+        var localizer = context.Services.GetRequiredService<ShiftIdentityLocalizer>();
+        var validation = await new CompanyCalendarValidator(localizer).ValidateAsync(dto);
+        if (!validation.IsValid)
+            throw new ShiftEntityException(new Message
+            {
+                Title = "Model Validation Error",
+                SubMessages = validation.Errors
+                    .GroupBy(error => error.PropertyName)
+                    .Select(errors => new Message
+                    {
+                        Title = errors.Key,
+                        For = errors.Key,
+                        SubMessages = errors.Select(error => new Message { Title = error.ErrorMessage }).ToList(),
+                    })
+                    .ToList(),
+            });
+
         // Base() maps scalars + JSON children + the Company FK (Branches is IgnoreEntity'd), audit-stamps, and runs
         // the company-scoped data-level write check. Then reconcile the Branches M:N join rows (merge-by-key, not
         // replace-with-new) — ported from the old AutoMapper AfterMap. On update the existing rows are loaded via

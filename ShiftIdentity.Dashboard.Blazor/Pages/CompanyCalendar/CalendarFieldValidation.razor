@@ -1,0 +1,61 @@
+@typeparam TValue
+@implements IDisposable
+@using System.Linq.Expressions
+
+@*
+    Shows the form's validation message for one field inside the calendar's group lines, and lets the field
+    report a change. The inputs there cannot bind to their field with For: a multi-select holds a list, and the
+    shift times are shown as TimeSpan but stored as ticks. So the input reads HasError and Error from the context,
+    and calls Changed() after it writes the model, which runs the field's rules again.
+
+    It re-renders itself when the validation state changes. The line it sits in is inside a MultiItemField, which
+    re-renders only when its list changes, so the input would not otherwise see a new message.
+*@
+@ChildContent(this)
+
+@code {
+    [CascadingParameter]
+    private EditContext? EditContext { get; set; }
+
+    /// <summary>The field whose messages are shown, for example <c>() => group.Days</c>.</summary>
+    [Parameter, EditorRequired]
+    public Expression<Func<TValue>> For { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public RenderFragment<CalendarFieldValidation<TValue>> ChildContent { get; set; } = default!;
+
+    private FieldIdentifier fieldIdentifier;
+    private EditContext? subscribedTo;
+
+    /// <summary>The field's first validation message, or null when it has none.</summary>
+    public string? Error => EditContext?.GetValidationMessages(fieldIdentifier).FirstOrDefault();
+
+    public bool HasError => Error is not null;
+
+    /// <summary>Tells the form that the field changed, so its rules run again and the message updates.</summary>
+    public void Changed() => EditContext?.NotifyFieldChanged(fieldIdentifier);
+
+    protected override void OnParametersSet()
+    {
+        fieldIdentifier = FieldIdentifier.Create(For);
+
+        if (!ReferenceEquals(subscribedTo, EditContext))
+        {
+            if (subscribedTo is not null)
+                subscribedTo.OnValidationStateChanged -= ValidationStateChanged;
+
+            subscribedTo = EditContext;
+
+            if (subscribedTo is not null)
+                subscribedTo.OnValidationStateChanged += ValidationStateChanged;
+        }
+    }
+
+    private void ValidationStateChanged(object? sender, ValidationStateChangedEventArgs e) => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        if (subscribedTo is not null)
+            subscribedTo.OnValidationStateChanged -= ValidationStateChanged;
+    }
+}

@@ -1,58 +1,161 @@
 @attribute [Authorize]
 @layout Shared.DefaultLayout
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(CompanyCalendarPage)}")]
+@* The page's earlier name, kept so bookmarks and links to it still open the calendar. *@
+@attribute [Route($"{Constants.IdentityRoutePreifix}/CompanyCalendarMudPage")]
+@using ShiftSoftware.ShiftEntity.Model.Dtos
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyCalendar
+@using ShiftSoftware.ShiftIdentity.Core.Enums
 @inject ShiftIdentityLocalizer Loc
 
-<MudPaper Elevation="0" Class="pa-4" Style="height: calc(100vh - 64px); display: flex; flex-direction: column;">
+<div class="calendar-layout">
 
-    @* Filter Bar *@
-    <MudStack Row AlignItems="AlignItems.Center" Class="mb-3" Spacing="3">
-        <MudItem Style="min-width: 280px;">
-            <ShiftAutocomplete Label="@Loc["Company"]"
-                               TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Company.CompanyListDTO"
-                               EntitySet="@($"{Constants.IdentityRoutePreifix}Company")"
-                               Value="_selectedCompany"
-                               ValueChanged="OnCompanyChanged" />
-        </MudItem>
-
-        <MudItem Style="min-width: 280px;">
-            <ShiftAutocomplete Label="@Loc["Branch"]"
-                               TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO"
-                               EntitySet="@($"{Constants.IdentityRoutePreifix}CompanyBranch")"
-                               Disabled="_selectedCompany?.Value is null"
-                               Filter="x => x.Add(f => { f.Field = nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO.CompanyId); f.Value = _selectedCompany?.Value; })"
-                               Value="_selectedBranch"
-                               ValueChanged="OnBranchChanged" />
-        </MudItem>
-
-        <MudItem Style="min-width: 280px;">
-            <ShiftAutocomplete Label="@Loc["Department"]"
-                               TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentListDTO"
-                               EntitySet="@($"{Constants.IdentityRoutePreifix}Department")"
-                               Disabled="_selectedCompany?.Value is null"
-                               Value="_selectedDepartment"
-                               ValueChanged="OnDepartmentChanged" />
-        </MudItem>
-    </MudStack>
-
-    @* Calendar *@
-    <div style="flex: 1; position: relative; min-height: 0;">
-        @if (_loading)
-        {
-            <MudProgressLinear Indeterminate Color="Color.Primary" Style="position: absolute; top: 0; left: 0; right: 0; z-index: 10;" />
-        }
-
-        @if (_selectedCompany?.Value is null)
-        {
-            <MudStack Justify="Justify.Center" AlignItems="AlignItems.Center" Style="height: 100%;">
-                <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Large" Color="Color.Default" />
-                <MudText Typo="Typo.h6" Color="Color.Default">@Loc["Select a company to view the calendar"]</MudText>
+    @* ── Top toolbar: Company, Branch, Month navigation ── *@
+    <div class="calendar-top-bar">
+        <MudStack Row AlignItems="AlignItems.End" Justify="Justify.SpaceBetween" Class="flex-wrap" Spacing="10">
+            <MudStack Row Spacing="4" Style="flex: 1;">
+                <ShiftAutocomplete Label="@Loc["Company"]"
+                                   Placeholder="@Loc["Company"]"
+                                   InputStyle="color:var(--mud-palette-primary);"
+                                   AdornmentColor="Color.Primary"
+                                   Clearable
+                                   AdornmentIcon="@Icons.Material.Filled.Business"
+                                   Adornment="Adornment.Start"
+                                   AdornmentSize="Size.Small"
+                                   TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Company.CompanyListDTO"
+                                   EntitySet="@($"{Constants.IdentityRoutePreifix}Company")"
+                                   Value="_selectedCompany"
+                                   ValueChanged="OnCompanyChanged" />
+                
+                <ShiftAutocomplete Label="@Loc["Branch"]"
+                                   Placeholder="@Loc["Branch"]"
+                                   InputStyle="color:var(--mud-palette-primary);"
+                                   AdornmentColor="Color.Primary"
+                                   Clearable
+                                   AdornmentIcon="@Icons.Material.Filled.AddBusiness"
+                                   Adornment="Adornment.Start"
+                                   AdornmentSize="Size.Small"
+                                   TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO"
+                                   EntitySet="@($"{Constants.IdentityRoutePreifix}CompanyBranch")"
+                                   Disabled="_selectedCompany?.Value is null"
+                                   Filter="x => x.Add(f => { f.Field = nameof(ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO.CompanyId); f.Value = _selectedCompany?.Value; })"
+                                   Value="_selectedBranch"
+                                   ValueChanged="OnBranchChanged" />
             </MudStack>
-        }
-        else
-        {
-            <div id="fc-company-calendar" style="height: 100%;"></div>
-        }
+
+            <MudStack Row>
+                <MudButton StartIcon="@Icons.Material.Filled.Today"
+                           Color="Color.Primary"
+                           Variant="Variant.Outlined"
+                           OnClick="GoToToday"
+                           Size="Size.Small">
+                    @Loc["Today"]
+                </MudButton>
+
+                <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
+                               OnClick="PreviousMonth"
+                               Variant="Variant.Filled"
+                               Size="Size.Small"
+                               Color="Color.Primary" />
+                <MudText Typo="Typo.subtitle1" Style="min-width: 120px; text-align: center;">
+                    @_currentMonth.ToString("MMMM yyyy")
+                </MudText>
+                <MudIconButton Icon="@Icons.Material.Filled.ChevronRight"
+                               Size="Size.Small"
+                               OnClick="NextMonth"
+                               Variant="Variant.Filled"
+                               Color="Color.Primary" />
+            </MudStack>
+        </MudStack>
+
     </div>
 
-</MudPaper>
+    @* ── Calendar grid (fills remaining space, scrolls if needed) ── *@
+    <div class="calendar-body @(_isDragging ? "is-dragging" : "")" style="--week-count: @_weeks.Count;"
+         @onpointerleave="CancelDrag">
+        <MudSimpleTable Dense Style="width: 100%; table-layout: fixed; background-color: #f3f3f382;">
+            <thead>
+                <tr>
+                    @foreach (var dayName in _dayHeaders)
+                    {
+                        <th class="text-center" style="width: 14.28%; padding: 6px 4px; font-weight: 600;">@dayName</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var week in _weeks)
+                {
+                    <tr>
+                        @foreach (var day in week)
+                        {
+                            <td class="calendar-cell @(day.IsCurrentMonth ? "" : "other-month") @(day.IsToday ? "today-cell" : "") @(IsInDragRange(day.Date) ? "drag-selected" : "")"
+                                @onpointerdown="() => OnCellPointerDown(day.Date)"
+                                @onpointerenter="() => OnCellPointerEnter(day.Date)"
+                                @onpointerup="() => OnCellPointerUp(day.Date)">
+                                <div class="day-number">
+                                    @day.Date.Day
+                                </div>
+                                <div class="events-container">
+                                    @if (_showSkeleton && day.IsCurrentMonth)
+                                    {
+                                        <div class="skeleton-bar" style="width: 100%;"></div>
+                                        <div class="skeleton-bar" style="width: 100%;"></div>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var evt in day.Events.Take(3))
+                                        {
+                                            <MudTooltip Text="@evt.ExtendedProps?.CalendarTitle">
+                                                <div class="event-chip @GetEventCssClass(evt)"
+                                                     @onclick="() => OnEventClicked(evt.Id)"
+                                                     @onclick:stopPropagation="true"
+                                                     @onpointerdown:stopPropagation="true">
+                                                    @evt.Title
+                                                </div>
+                                            </MudTooltip>
+                                        }
+                                        @if (day.Events.Count > 3)
+                                        {
+                                            <div class="more-label">+@(day.Events.Count - 3) @Loc["more"]</div>
+                                        }
+                                    }
+                                </div>
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    </div>
+
+    @* ── Bottom toolbar: Department toggle group ── *@
+    <div class="calendar-bottom-bar">
+        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.End" Spacing="20">
+            <ShiftAutocomplete Label="@Loc["Department"]"
+                               Placeholder="@Loc["Department"]"
+                               InputStyle="color:var(--mud-palette-primary);"
+                               AdornmentColor="Color.Primary"
+                               Clearable
+                               AdornmentIcon="@Icons.Material.Filled.Dashboard"
+                               Adornment="Adornment.Start"
+                               AdornmentSize="Size.Small"
+                               TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentListDTO"
+                               EntitySet="@($"{Constants.IdentityRoutePreifix}Department")"
+                               Value="_selectedDepartment"
+                               ValueChanged="OnDepartmentChanged" />
+
+            <ShiftAutocomplete Label="@Loc["Brand"]"
+                               Placeholder="@Loc["Brand"]"
+                               InputStyle="color:var(--mud-palette-primary);"
+                               AdornmentColor="Color.Primary"
+                               Clearable
+                               AdornmentIcon="@Icons.Material.Filled.LocalMall"
+                               Adornment="Adornment.Start"
+                               AdornmentSize="Size.Small"
+                               TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Brand.BrandListDTO"
+                               EntitySet="@($"{Constants.IdentityRoutePreifix}Brand")"
+                               Value="_selectedBrand"
+                               ValueChanged="OnBrandhChanged" />
+        </MudStack>
+    </div>
+</div>

@@ -12,6 +12,7 @@
                  Endpoint="@($"{Constants.IdentityRoutePreifix}CompanyCalendar")"
                  Title="@Loc["Company Calendar Entry"]"
                  TypeAuthAction="ShiftIdentityActions.CompanyCalendars"
+                 OnSubmit="PrepareForSave"
                  @bind-Key="@Key">
 
     <MudCard Elevation="3">
@@ -31,7 +32,8 @@
                 <MudItem xs="12" md="6">
                     <MudSelect T="CalendarEntryType?"
                                Label="@Loc["Entry Type"]"
-                               @bind-Value="context.Item.EntryType"
+                               Value="context.Item.EntryType"
+                               ValueChanged="type => ChangeEntryType(context, type)"
                                For="@(() => context.Item.EntryType)"
                                Variant="Variant.Text">
                         <MudSelectItem T="CalendarEntryType?" Value="CalendarEntryType.Workday">@Loc["Workday"]</MudSelectItem>
@@ -68,11 +70,16 @@
                 </MudItem>
 
                 <MudItem xs="12" md="6">
-                    <ShiftAutocomplete Label="@Loc["Branches"]"
-                                       TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO"
-                                       EntitySet="@($"{Constants.IdentityRoutePreifix}CompanyBranch")"
-                                       MultiSelect
-                                       @bind-SelectedValues="context.Item.Branches" />
+                    <CalendarFieldValidation For="() => context.Item.Branches" Context="validation">
+                        <ShiftAutocomplete Label="@Loc["Branches"]"
+                                           TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyBranch.CompanyBranchListDTO"
+                                           EntitySet="@($"{Constants.IdentityRoutePreifix}CompanyBranch")"
+                                           MultiSelect
+                                           SelectedValues="context.Item.Branches"
+                                           SelectedValuesChanged="branches => { context.Item.Branches = branches; validation.Changed(); }"
+                                           Error="validation.HasError"
+                                           ErrorText="@validation.Error" />
+                    </CalendarFieldValidation>
                 </MudItem>
             </MudGrid>
         </MudCardContent>
@@ -82,7 +89,7 @@
     {
         <MudDivider Class="my-4" />
 
-        <MultiItemField DisableCounter DisableDragAndDrop="false" DisableReorder ControlVariant="Variant.Filled" @bind-Value="context.Item.ShiftGroups" T="CompanyCalendarShiftGroupDTO">
+        <MultiItemField Class="calendar-shift-groups" DisableCounter DisableDragAndDrop="false" DisableReorder ControlVariant="Variant.Filled" @bind-Value="context.Item.ShiftGroups" T="CompanyCalendarShiftGroupDTO">
             <FieldHeader Context="HeaderContext">
                 <MudText Typo="Typo.h6" Class="mb-2">@Loc["Shift Groups"]</MudText>
             </FieldHeader>
@@ -90,62 +97,42 @@
             <FieldBody Context="shiftGroup">
                 <MudStack Class="pa-1" Spacing="0">
                     <MudPaper Elevation="2" Class="pa-3" Style="background-color: #f2f2f2a1;">
-                        <MudGrid Spacing="2">
-                            <MudItem xs="12">
-                                <ShiftAutocomplete Label="@Loc["Department"]"
-                                                   TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentListDTO"
-                                                   EntitySet="@($"{Constants.IdentityRoutePreifix}Department")"
-                                                   MultiSelect
-                                                   @bind-SelectedValues="shiftGroup.Departments" />
-                            </MudItem>
-                    
-                            <MudItem xs="12" md="6">
-                                <MudSelect T="int"
-                                           Label="@Loc["Days of Week"]"
-                                           MultiSelection
-                                           SelectedValues="shiftGroup.Days ?? new List<int>()"
-                                           SelectedValuesChanged="v => shiftGroup.Days = v?.ToList()"
-                                           ToStringFunc="DayOfWeekToString"
-                                           Variant="Variant.Text">
-                                    @foreach (var d in _orderedDays)
-                                    {
-                                        <MudSelectItem T="int" Value="d">@DayOfWeekToString(d)</MudSelectItem>
-                                    }
-                                </MudSelect>
-                            </MudItem>
-
-                            <MudItem xs="12" md="6">
-                                <ShiftAutocomplete Label="@Loc["Brand"]"
-                                                   TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Brand.BrandListDTO"
-                                                   EntitySet="@($"{Constants.IdentityRoutePreifix}Brand")"
-                                                   MultiSelect
-                                                   @bind-SelectedValues="shiftGroup.Brands" />
-                            </MudItem>
-                        </MudGrid>
+                        <CompanyCalendarShiftGroupFields Group="shiftGroup" />
                     </MudPaper>
 
-                    <MultiItemField @ref="_shiftsField" DisableCounter Style="background-color:#f2f2f2a1;" DisableDragAndDrop="false" DisableReorder ControlVariant="Variant.Filled" Title="@Loc["Shifts"]" @bind-Value="shiftGroup.Shifts" T="CompanyCalendarShiftItemDTO">
+                    <MultiItemField DisableCounter Style="background-color:#f2f2f2a1;" DisableDragAndDrop="false" DisableReorder ControlVariant="Variant.Filled" Title="@Loc["Shifts"]" @bind-Value="shiftGroup.Shifts" T="CompanyCalendarShiftItemDTO">
                         <FieldBody Context="shift">
                             <MudGrid Spacing="2" Class="mb-1" Style="align-items: baseline;">
-                                <MudItem xs="4">
+                                <MudItem xs="12" md="4">
                                     <MudTextFieldExtended Label="@Loc["Shift Title"]"
                                                           @bind-Value="shift.Title"
                                                           Variant="Variant.Outlined"
                                                           Margin="Margin.Dense" />
                                 </MudItem>
-                                <MudItem xs="4">
-                                    <MudTimePicker Label="@Loc["Start Time"]"
-                                                   Time="shift.StartTime"
-                                                   TimeChanged="@(t => HandleTimeChange(shift, t, isStart: true))"
-                                                   Variant="Variant.Outlined"
-                                                   Margin="Margin.Dense" />
+                                <MudItem xs="12" md="4">
+                                    <CalendarFieldValidation For="() => shift.StartTimeTicks" Context="validation">
+                                        <MudTimePicker Class="calendar-shift-start"
+                                                       Label="@Loc["Start Time"]"
+                                                       Time="shift.StartTime"
+                                                       TimeChanged="@(time => { shift.StartTime = time; validation.Changed(); })"
+                                                       Error="validation.HasError"
+                                                       ErrorText="@validation.Error"
+                                                       Variant="Variant.Outlined"
+                                                       Margin="Margin.Dense" />
+                                    </CalendarFieldValidation>
                                 </MudItem>
-                                <MudItem xs="4">
-                                    <MudTimePicker Label="@Loc["End Time"]"
-                                                   Time="shift.EndTime"
-                                                   TimeChanged="@(t => HandleTimeChange(shift, t, isStart: false))"
-                                                   Variant="Variant.Outlined"
-                                                   Margin="Margin.Dense" />
+                                <MudItem xs="12" md="4">
+                                    <CalendarFieldValidation For="() => shift.EndTimeTicks" Context="validation">
+                                        <MudTimePicker Class="calendar-shift-end"
+                                                       Label="@Loc["End Time"]"
+                                                       Time="shift.EndTime"
+                                                       TimeChanged="@(time => { shift.EndTime = time; validation.Changed(); })"
+                                                       HelperText="@(shift.EndsNextDay ? Loc["Ends the next day"].Value : null)"
+                                                       Error="validation.HasError"
+                                                       ErrorText="@validation.Error"
+                                                       Variant="Variant.Outlined"
+                                                       Margin="Margin.Dense" />
+                                    </CalendarFieldValidation>
                                 </MudItem>
                             </MudGrid>
                         </FieldBody>
@@ -153,12 +140,36 @@
                 </MudStack>
             </FieldBody>
         </MultiItemField>
-
-
-        @* ── Workday-specific: Weekend Groups ── *@
+    }
+    else if (context.Item.EntryType == CalendarEntryType.Holiday)
+    {
         <MudDivider Class="my-4" />
 
-        <MultiItemField DisableCounter DisableDragAndDrop="false" DisableReorder ControlVariant="Variant.Filled" @bind-Value="context.Item.WeekendGroups" T="CompanyCalendarWeekendGroupDTO">
+        @* A holiday with no group applies to the whole branch. A group limits it to the departments, brands and
+           days it names. Each group needs one line with no times to apply; PrepareForSave adds it. *@
+        <MultiItemField Class="calendar-holiday-scope" DisableCounter DisableDragAndDrop="false" DisableReorder ControlVariant="Variant.Filled" @bind-Value="context.Item.ShiftGroups" T="CompanyCalendarShiftGroupDTO">
+            <FieldHeader Context="HeaderContext">
+                <MudText Typo="Typo.h6">@Loc["Applies to"]</MudText>
+                <MudText Typo="Typo.body2" Class="mb-2">@Loc["Leave this list empty to make the holiday apply to the whole branch. Add a group to limit it to some departments and brands."]</MudText>
+            </FieldHeader>
+
+            <FieldBody Context="scope">
+                <MudStack Class="pa-1" Spacing="0">
+                    <MudPaper Elevation="2" Class="pa-3" Style="background-color: #f2f2f2a1;">
+                        <CompanyCalendarShiftGroupFields Group="scope" />
+                    </MudPaper>
+                </MudStack>
+            </FieldBody>
+        </MultiItemField>
+    }
+
+    @* Weekend groups belong to workdays. A holiday that still carries some (from the API or from older data) shows
+       them too, so nothing that is saved or checked is hidden. *@
+    @if (context.Item.EntryType == CalendarEntryType.Workday || context.Item.WeekendGroups.Count > 0)
+    {
+        <MudDivider Class="my-4" />
+
+        <MultiItemField Class="calendar-weekend-groups" DisableCounter DisableDragAndDrop="false" DisableReorder ControlVariant="Variant.Filled" @bind-Value="context.Item.WeekendGroups" T="CompanyCalendarWeekendGroupDTO">
             <FieldHeader Context="HeaderContext">
                 <MudText Typo="Typo.h6" Class="mb-2">@Loc["Weekend Groups"]</MudText>
             </FieldHeader>
@@ -168,19 +179,29 @@
                     <MudPaper Elevation="2" Class="pa-3" Style="background-color: #f2f2f2a1;">
                         <MudGrid Spacing="2">
                             <MudItem xs="12" md="6">
-                                <ShiftAutocomplete Label="@Loc["Department"]"
-                                                   TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentListDTO"
-                                                   EntitySet="@($"{Constants.IdentityRoutePreifix}Department")"
-                                                   MultiSelect
-                                                   @bind-SelectedValues="weekendGroup.Departments" />
+                                <CalendarFieldValidation For="() => weekendGroup.Departments" Context="validation">
+                                    <ShiftAutocomplete Label="@Loc["Department"]"
+                                                       TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentListDTO"
+                                                       EntitySet="@($"{Constants.IdentityRoutePreifix}Department")"
+                                                       MultiSelect
+                                                       SelectedValues="weekendGroup.Departments"
+                                                       SelectedValuesChanged="departments => { weekendGroup.Departments = departments; validation.Changed(); }"
+                                                       Error="validation.HasError"
+                                                       ErrorText="@validation.Error" />
+                                </CalendarFieldValidation>
                             </MudItem>
 
                             <MudItem xs="12" md="6">
-                                <ShiftAutocomplete Label="@Loc["Brand"]"
-                                                   TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Brand.BrandListDTO"
-                                                   EntitySet="@($"{Constants.IdentityRoutePreifix}Brand")"
-                                                   MultiSelect
-                                                   @bind-SelectedValues="weekendGroup.Brands" />
+                                <CalendarFieldValidation For="() => weekendGroup.Brands" Context="validation">
+                                    <ShiftAutocomplete Label="@Loc["Brand"]"
+                                                       TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Brand.BrandListDTO"
+                                                       EntitySet="@($"{Constants.IdentityRoutePreifix}Brand")"
+                                                       MultiSelect
+                                                       SelectedValues="weekendGroup.Brands"
+                                                       SelectedValuesChanged="brands => { weekendGroup.Brands = brands; validation.Changed(); }"
+                                                       Error="validation.HasError"
+                                                       ErrorText="@validation.Error" />
+                                </CalendarFieldValidation>
                             </MudItem>
                         </MudGrid>
                     </MudPaper>
@@ -188,10 +209,11 @@
                     <MultiItemField DisableCounter Style="background-color:#f2f2f2a1;" DisableDragAndDrop="false" DisableReorder ControlVariant="Variant.Filled" Title="@Loc["Weekend Rules"]" @bind-Value="weekendGroup.Weekends" T="CompanyCalendarWeekendRuleItemDTO">
                         <FieldBody Context="rule">
                             <MudGrid Spacing="2" Class="mb-1" Style="align-items: baseline;">
-                                <MudItem xs="4">
+                                <MudItem xs="12" md="4">
                                     <MudSelect T="int"
                                                Label="@Loc["Day"]"
                                                @bind-Value="rule.Day"
+                                               For="@(() => rule.Day)"
                                                Variant="Variant.Outlined"
                                                Margin="Margin.Dense">
                                         @foreach (var d in _orderedDays)
@@ -200,18 +222,20 @@
                                         }
                                     </MudSelect>
                                 </MudItem>
-                                <MudItem xs="4">
+                                <MudItem xs="12" md="4">
                                     <MudNumericFieldExtended T="int"
                                                              Label="@Loc["Repeat Every N Weeks"]"
                                                              @bind-Value="rule.Repeat"
+                                                             For="@(() => rule.Repeat)"
                                                              Variant="Variant.Outlined"
                                                              Margin="Margin.Dense"
                                                              Min="1" />
                                 </MudItem>
-                                <MudItem xs="4">
+                                <MudItem xs="12" md="4">
                                     <MudNumericFieldExtended T="int"
                                                              Label="@Loc["Skip Cycles"]"
                                                              @bind-Value="rule.Skip"
+                                                             For="@(() => rule.Skip)"
                                                              Variant="Variant.Outlined"
                                                              Margin="Margin.Dense"
                                                              Min="0" />
@@ -239,15 +263,12 @@
 
     private int[] _orderedDays = Array.Empty<int>();
 
-    private MultiItemField<CompanyCalendarShiftItemDTO>? _shiftsField;
-
-    private void HandleTimeChange(CompanyCalendarShiftItemDTO shift, TimeSpan? value, bool isStart)
-    {
-        if (isStart) shift.StartTime = value;
-        else         shift.EndTime   = value;
-
-        _shiftsField?.ForceRender();
-    }
+    // The groups of an entry type while the other type is picked. Workday groups do not apply to a holiday, and a
+    // holiday's groups do not apply to a workday, so changing the type clears them. They are kept here, so
+    // changing the type back before saving brings them back. Nothing kept here is saved. They belong to the item
+    // in _groupsOwner; when the form holds another item (it loaded or saved one), they are dropped.
+    private readonly Dictionary<CalendarEntryType, (List<CompanyCalendarShiftGroupDTO> ShiftGroups, List<CompanyCalendarWeekendGroupDTO> WeekendGroups)> _groupsByType = new();
+    private CompanyCalendarDTO? _groupsOwner;
 
     protected override void OnInitialized()
     {
@@ -266,6 +287,46 @@
 
         if (InitialBranches is not null)
             _theItem.Branches = InitialBranches;
+    }
+
+    private void ChangeEntryType(FormChildContext<CompanyCalendarDTO> form, CalendarEntryType? type)
+    {
+        var item = form.Item;
+
+        if (item.EntryType == type)
+            return;
+
+        if (!ReferenceEquals(_groupsOwner, item))
+        {
+            _groupsByType.Clear();
+            _groupsOwner = item;
+        }
+
+        if (item.EntryType is { } previous)
+            _groupsByType[previous] = (item.ShiftGroups, item.WeekendGroups);
+
+        (item.ShiftGroups, item.WeekendGroups) = type is { } next && _groupsByType.Remove(next, out var kept)
+            ? kept
+            : ([], []);
+
+        item.EntryType = type;
+
+        // A message on the group list (for example "Add at least one shift group") belongs to the list of the
+        // previous type. When there is one, check the list again, so the new list does not show it.
+        var groups = FieldIdentifier.Create(() => item.ShiftGroups);
+        if (form.Self.EditContext.GetValidationMessages(groups).Any())
+            form.Self.EditContext.NotifyFieldChanged(groups);
+    }
+
+    // Runs before the form validates and saves. A holiday group applies only through its lines, so a group that has
+    // none gets the one line with no times that a holiday group carries.
+    private void PrepareForSave(ShiftEvent<EditContext> _)
+    {
+        if (_theItem.EntryType != CalendarEntryType.Holiday)
+            return;
+
+        foreach (var group in _theItem.ShiftGroups.Where(group => group.Shifts is not { Count: > 0 }))
+            group.Shifts = [new CompanyCalendarShiftItemDTO { Title = _theItem.Title ?? "" }];
     }
 
     private string DayOfWeekToString(int day) => day switch

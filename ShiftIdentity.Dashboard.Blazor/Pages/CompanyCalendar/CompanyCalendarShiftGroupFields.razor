@@ -1,0 +1,103 @@
+@using ShiftSoftware.ShiftEntity.Model.Dtos
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.CompanyCalendar
+
+@inject ShiftIdentityLocalizer Loc
+@inject ShiftIdentityDashboardBlazorOptions Options
+
+@*
+    The departments, days and brands of one shift group. Workday shift groups and the groups that limit a holiday
+    use the same fields, so both lists render this.
+*@
+<MudGrid Spacing="2">
+    <MudItem xs="12">
+        <div data-testid="calendar-group-departments">
+            <CalendarFieldValidation For="() => Group.Departments" Context="validation">
+                <ShiftAutocomplete Label="@Loc["Department"]"
+                                   TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Department.DepartmentListDTO"
+                                   EntitySet="@($"{Constants.IdentityRoutePreifix}Department")"
+                                   MultiSelect
+                                   SelectedValues="Group.Departments"
+                                   SelectedValuesChanged="departments => { Group.Departments = departments; validation.Changed(); }"
+                                   Error="validation.HasError"
+                                   ErrorText="@validation.Error" />
+            </CalendarFieldValidation>
+        </div>
+    </MudItem>
+
+    <MudItem xs="12" md="6">
+        <div data-testid="calendar-group-days">
+            <CalendarFieldValidation For="() => Group.Days" Context="validation">
+                <MudSelect T="int"
+                           Label="@Loc["Days of Week"]"
+                           MultiSelection
+                           SelectedValues="SelectedDays"
+                           SelectedValuesChanged="days => { SetDays(days); validation.Changed(); }"
+                           ToStringFunc="DayName"
+                           MultiSelectionTextFunc="DaysText"
+                           Error="validation.HasError"
+                           ErrorText="@validation.Error"
+                           Variant="Variant.Text">
+                    @foreach (var day in orderedDays)
+                    {
+                        <MudSelectItem T="int" Value="day">@DayName(day)</MudSelectItem>
+                    }
+                </MudSelect>
+            </CalendarFieldValidation>
+        </div>
+    </MudItem>
+
+    <MudItem xs="12" md="6">
+        <div data-testid="calendar-group-brands">
+            <CalendarFieldValidation For="() => Group.Brands" Context="validation">
+                <ShiftAutocomplete Label="@Loc["Brand"]"
+                                   TEntitySet="ShiftSoftware.ShiftIdentity.Core.DTOs.Brand.BrandListDTO"
+                                   EntitySet="@($"{Constants.IdentityRoutePreifix}Brand")"
+                                   MultiSelect
+                                   SelectedValues="Group.Brands"
+                                   SelectedValuesChanged="brands => { Group.Brands = brands; validation.Changed(); }"
+                                   Error="validation.HasError"
+                                   ErrorText="@validation.Error" />
+            </CalendarFieldValidation>
+        </div>
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter, EditorRequired]
+    public CompanyCalendarShiftGroupDTO Group { get; set; } = default!;
+
+    private static readonly int[] allDays = [0, 1, 2, 3, 4, 5, 6];
+
+    private int[] orderedDays = allDays;
+
+    protected override void OnInitialized()
+    {
+        orderedDays = allDays.Select(i => ((int)Options.WeekStart + i) % 7).ToArray();
+    }
+
+    // Days = null means every day, so it shows as all seven days picked.
+    private IReadOnlyCollection<int> SelectedDays => (IReadOnlyCollection<int>?)Group.Days ?? allDays;
+
+    // All seven days picked is stored as null, the value that means "every day", so a group that applies every
+    // day has one stored form. No day picked is stored as an empty list, which the validator rejects.
+    private void SetDays(IEnumerable<int>? days)
+    {
+        var picked = (days ?? []).Distinct().Order().ToList();
+        Group.Days = picked.Count == allDays.Length ? null : picked;
+    }
+
+    private string DaysText(IReadOnlyList<string> names) =>
+        names.Count == allDays.Length ? Loc["Every day"] : string.Join(", ", names);
+
+    private string DayName(int day) => day switch
+    {
+        0 => Loc["Sun"],
+        1 => Loc["Mon"],
+        2 => Loc["Tue"],
+        3 => Loc["Wed"],
+        4 => Loc["Thu"],
+        5 => Loc["Fri"],
+        6 => Loc["Sat"],
+        _ => day.ToString()
+    };
+}
