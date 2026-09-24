@@ -177,23 +177,53 @@ public sealed class LegacyTotpMigrationSqlTests(SqlIdentityFixture fixture) : IC
     }
 
     [Fact]
-    public async Task Bounded_batches_advance_past_users_without_factors_and_resume_after_partial_progress()
+    public async Task Bounded_batches_visit_only_users_whose_factor_needs_a_copy_and_resume_after_partial_progress()
     {
         var second = await fixture.CreateSyntheticUserAsync("migration-second-" + Guid.NewGuid().ToString("N"));
         var third = await fixture.CreateSyntheticUserAsync("migration-third-" + Guid.NewGuid().ToString("N"));
+        var fourth = await fixture.CreateSyntheticUserAsync("migration-fourth-" + Guid.NewGuid().ToString("N"));
         await using var db = fixture.CreateContext();
-        await db.Users.Where(x => x.ID == third).ExecuteUpdateAsync(x => x.SetProperty(u => u.TotpSecret, fixture.FactorSecret));
+        await db.Users.Where(x => x.ID == third || x.ID == fourth).ExecuteUpdateAsync(x => x.SetProperty(u => u.TotpSecret, fixture.FactorSecret));
         var store = new SqlIdentitySecurityStore(db);
+        // The user without a factor is not visited: a batch of one goes straight to the next user with one.
         var firstBatch = await store.MigrateLegacyTotpBatchAsync(second - 1, 1,
             (state, secret) => LegacyTotpMigration.CopyOrVerify(fixture.Protection, state, secret));
-        Assert.Equal(second, firstBatch.LastUserID); Assert.Equal(1, firstBatch.Examined); Assert.Equal(0, firstBatch.Copied);
+        Assert.Equal(third, firstBatch.LastUserID); Assert.Equal(1, firstBatch.Examined); Assert.Equal(1, firstBatch.Copied);
         var next = await store.MigrateLegacyTotpBatchAsync(firstBatch.LastUserID, 1,
             (state, secret) => LegacyTotpMigration.CopyOrVerify(fixture.Protection, state, secret));
-        Assert.Equal(third, next.LastUserID); Assert.Equal(1, next.Examined); Assert.Equal(1, next.Copied);
+        Assert.Equal(fourth, next.LastUserID); Assert.Equal(1, next.Examined); Assert.Equal(1, next.Copied);
         var done = await store.MigrateLegacyTotpBatchAsync(next.LastUserID, 1,
             (state, secret) => LegacyTotpMigration.CopyOrVerify(fixture.Protection, state, secret));
-        Assert.Equal(0, done.Examined); Assert.Equal(third, done.LastUserID);
-        Assert.Equal(0, (await Batch()).Copied);
+        Assert.Equal(0, done.Examined); Assert.Equal(fourth, done.LastUserID);
+        // Copied factors are not visited again.
+        Assert.Equal(0, (await Batch()).Examined);
+    }
+
+    [Fact]
+    public async Task A_start_with_nothing_left_to_copy_locks_no_user()
+    {
+        await SeedLegacy();
+        await Batch();
+        var locks = new SqlCommandSignal("UPDLOCK");
+        using var host = new HostBuilder().ConfigureServices(s => IdentityHttpHost.AddAdmissionServices(s, fixture, interceptors: [locks])).Build();
+        await host.StartAsync();
+        Assert.False(locks.Entered.IsCompleted);
+        await host.StopAsync();
+    }
+
+    [Fact]
+    public async Task Protected_factor_pages_advance_in_user_order_and_skip_users_without_one()
+    {
+        var first = await fixture.CreateSyntheticUserAsync("migration-page-a-" + Guid.NewGuid().ToString("N"), mfa: true);
+        _ = await fixture.CreateSyntheticUserAsync("migration-page-b-" + Guid.NewGuid().ToString("N"));
+        var last = await fixture.CreateSyntheticUserAsync("migration-page-c-" + Guid.NewGuid().ToString("N"), mfa: true);
+        await using var db = fixture.CreateContext();
+        var store = new SqlIdentitySecurityStore(db);
+        Assert.Equal(first, Assert.Single(await store.ReadProtectedFactorsAsync(first - 1, 1)).UserID);
+        var page = Assert.Single(await store.ReadProtectedFactorsAsync(first, 1));
+        Assert.Equal(last, page.UserID);
+        Assert.Equal(fixture.FactorSecret, fixture.ReadSyntheticFactor(page));
+        Assert.Empty(await store.ReadProtectedFactorsAsync(last, 1000));
     }
 
     private sealed class FactorSaveFault(bool afterSave) : SaveChangesInterceptor

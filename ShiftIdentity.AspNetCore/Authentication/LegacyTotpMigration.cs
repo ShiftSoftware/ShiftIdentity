@@ -8,9 +8,11 @@ using ShiftSoftware.ShiftIdentity.Data.Authentication;
 namespace ShiftSoftware.ShiftIdentity.AspNetCore.Authentication;
 
 /// <summary>
-/// Awaited before a host that enabled the authority serves: visits every user and copies a legacy plaintext factor into
-/// the protected column. It runs after <see cref="IdentityAuthorityStartup"/>, which has created the security row of
-/// every user that had none; a row still missing here stops the host.
+/// Awaited before a host that enabled the authority serves. It runs after <see cref="IdentityAuthorityStartup"/>, which has
+/// created the security row of every user that had none; a row still missing here stops the host. It copies each legacy
+/// plaintext factor that has no protected copy into the protected column, in a locked transaction per such user, then checks
+/// that every protected factor decrypts with the configured keys. Users with nothing to copy get no transaction, so once the
+/// copy is done a start reads the protected factors in pages instead of visiting every user.
 /// </summary>
 internal sealed class LegacyTotpMigration(IServiceScopeFactory scopes, ILogger<LegacyTotpMigration> logger) : IHostedService
 {
@@ -19,8 +21,15 @@ internal sealed class LegacyTotpMigration(IServiceScopeFactory scopes, ILogger<L
         long cursor = 0;
         var examined = 0;
         var copied = 0;
+        var verified = 0;
         try
         {
+            await using (var scope = scopes.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<ShiftIdentityDbContext>();
+                if (await new SqlIdentitySecurityStore(db).AnyUserWithoutSecurityStateAsync(cancellationToken))
+                    throw new InvalidOperationException("A user has no security row.");
+            }
             while (true)
             {
                 await using var scope = scopes.CreateAsyncScope();
@@ -33,7 +42,24 @@ internal sealed class LegacyTotpMigration(IServiceScopeFactory scopes, ILogger<L
                 cursor = batch.LastUserID;
                 if (batch.Examined == 0) break;
             }
-            logger.LogInformation("Identity factor migration completed: {Examined} users examined, {Copied} factors copied.", examined, copied);
+            // Every protected factor, copied now or enrolled earlier, must decrypt with the configured keys.
+            cursor = 0;
+            while (true)
+            {
+                await using var scope = scopes.CreateAsyncScope();
+                var protector = scope.ServiceProvider.GetRequiredService<IdentityMaterialProtector>();
+                var db = scope.ServiceProvider.GetRequiredService<ShiftIdentityDbContext>();
+                var factors = await new SqlIdentitySecurityStore(db).ReadProtectedFactorsAsync(cursor, 1000, cancellationToken);
+                if (factors.Count == 0) break;
+                foreach (var state in factors)
+                {
+                    Verify(protector, state);
+                    cursor = state.UserID;
+                    verified++;
+                }
+            }
+            logger.LogInformation("Identity factor migration completed: {Examined} legacy factors examined, {Copied} copied, {Verified} protected factors verified.",
+                examined, copied, verified);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch
@@ -49,8 +75,7 @@ internal sealed class LegacyTotpMigration(IServiceScopeFactory scopes, ILogger<L
         if (state.ProtectedTotpSecret is not null)
         {
             // A newer enrolled factor can differ from the legacy column. Never overwrite it from that column.
-            var existing = MfaMaterial.ReadActive(protector, state);
-            CryptographicOperations.ZeroMemory(existing);
+            Verify(protector, state);
             return;
         }
         // Recovery deliberately removed the factor. The retained legacy column must not restore it.
@@ -64,6 +89,12 @@ internal sealed class LegacyTotpMigration(IServiceScopeFactory scopes, ILogger<L
                 throw new CryptographicException("Factor copy verification failed.");
         }
         finally { CryptographicOperations.ZeroMemory(verified); }
+    }
+
+    internal static void Verify(IdentityMaterialProtector protector, UserSecurityState state)
+    {
+        var existing = MfaMaterial.ReadActive(protector, state);
+        CryptographicOperations.ZeroMemory(existing);
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
