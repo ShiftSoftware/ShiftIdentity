@@ -135,13 +135,46 @@ public sealed class DashboardLinkSqlTests(SqlIdentityFixture fixture) : IClassFi
         Assert.True(HashService.VerifyVersionedPassword(fixture.Password, user.Salt, user.PasswordHash));
     }
 
-    [Theory]
-    [InlineData(typeof(IUserAccountAuthority))]
-    [InlineData(typeof(ISecurityEmailSink))]
-    public void Configured_host_refuses_to_start_when_an_adapter_is_removed(Type missing)
+    [Fact]
+    public void Configured_host_refuses_to_start_when_the_account_authority_is_removed()
     {
         var error = Assert.Throws<InvalidOperationException>(() => new ConfiguredIdentityHttpHost<IdentityTestDbContext>(fixture,
-            configureServices: services => services.RemoveAll(missing)));
-        Assert.Contains(missing.Name, error.Message);
+            configureServices: services => services.RemoveAll<IUserAccountAuthority>()));
+        Assert.Contains(nameof(IUserAccountAuthority), error.Message);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Configured_host_starts_when_email_cannot_be_sent_and_only_the_send_fails(bool senderCannotBeBuilt)
+    {
+        // Owner rule, 24 September 2026: identity never refuses to start because email cannot be sent.
+        using var host = new ConfiguredIdentityHttpHost<IdentityTestDbContext>(fixture,
+            c => c.FrontEndUrl = "https://dashboard.example.invalid/",
+            configureServices: services =>
+            {
+                services.RemoveAll<ISecurityEmailSink>();
+                if (!senderCannotBeBuilt) return;
+                services.AddScoped<ISecurityEmailSink, HostSecurityEmailSink>();
+                services.AddScoped<ISecurityEmailSender>(_ => throw new InvalidOperationException("Synthetic: the queue connection is not configured."));
+            });
+        using var login = await host.Client.PostAsJsonAsync("api/Auth/Login", new { fixture.Username, fixture.Password });
+        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
+
+        using var request = await host.Client.PostAsJsonAsync("api/identity/v2/password-reset/request", new RequestSecurityEmail(fixture.Username));
+        await using var db = fixture.CreateContext();
+        var operations = await db.Set<AuthenticationOperation>().Where(x => x.Purpose == AuthenticationOperationPurpose.PasswordResetEmail).ToListAsync();
+        if (senderCannotBeBuilt)
+        {
+            // The public answer never says whether a send happened; the grant it prepared is cancelled.
+            Assert.Equal(HttpStatusCode.Accepted, request.StatusCode);
+            Assert.Equal(AuthenticationOperationState.Cancelled, Assert.Single(operations).State);
+        }
+        else
+        {
+            // No sink at all is a global outage, answered before any account is looked up.
+            Assert.Equal(HttpStatusCode.ServiceUnavailable, request.StatusCode);
+            Assert.Empty(operations);
+        }
     }
 }

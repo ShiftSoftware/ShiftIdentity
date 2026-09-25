@@ -72,11 +72,28 @@ public sealed class HostSecurityEmailSinkTests
     [InlineData("https://user:password@example.invalid")]
     [InlineData("https://dashboard.example.invalid/?return=evil")]
     [InlineData("https://dashboard.example.invalid/#fragment")]
-    public void Startup_refuses_invalid_dashboard_addresses(string? address)
+    public async Task An_invalid_dashboard_address_fails_each_send_and_is_only_reported_at_startup(string? address)
     {
         var provider = new Provider(); var settings = Settings; settings.FrontEndUrl = address;
-        Assert.Contains("FrontEndUrl", Assert.Throws<InvalidOperationException>(() =>
-            new HostSecurityEmailSink(settings, [provider], [provider]).CheckReady()).Message);
+        var sink = new HostSecurityEmailSink(settings, [provider], [provider]);
+        Assert.Contains("FrontEndUrl", sink.Problem());
+        Assert.Contains("FrontEndUrl", StartupReport(sink));
+        Assert.Contains("FrontEndUrl", (await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            sink.DeliverAsync(Message(AuthenticationOperationPurpose.EmailVerify), TestContext.Current.CancellationToken))).Message);
+        Assert.Empty(provider.Deliveries);
+    }
+
+    /// <summary>What the authority's startup logs for a host whose only sink is <paramref name="sink"/>; startup never throws for it.</summary>
+    private static string? StartupReport(ISecurityEmailSink sink)
+    {
+        var services = new ServiceCollection();
+        services.AddScoped<IUserAccountAuthority, AdmissionUserAccountAuthority>();
+        services.AddScoped<IIdentitySecurityStore, SqlIdentitySecurityStore>();
+        services.AddScoped<IdentityAdmissionServices>(_ => throw new InvalidOperationException("Must not resolve at startup"));
+        services.AddSingleton(sink);
+        using var container = services.BuildServiceProvider();
+        IdentityAuthorityStartup.CheckAdapters(container);
+        return IdentityAuthorityStartup.CheckEmail(container);
     }
 
     [Fact]
@@ -135,17 +152,50 @@ public sealed class HostSecurityEmailSinkTests
     [Theory]
     [InlineData(true, false, "ISendEmailResetPassword")]
     [InlineData(false, true, "ISendEmailVerification")]
-    public void Startup_names_the_missing_provider(bool verify, bool reset, string missing)
+    public void A_send_names_the_missing_provider_and_startup_only_reports_it(bool verify, bool reset, string missing)
     {
         var provider = new Provider();
         var sink = new HostSecurityEmailSink(Settings, verify ? [provider] : [], reset ? [provider] : []);
         Assert.Contains(missing, Assert.Throws<InvalidOperationException>(sink.CheckReady).Message);
+        Assert.Contains(missing, StartupReport(sink));
+    }
+
+    [Fact]
+    public void Startup_reports_email_that_cannot_be_sent_and_starts_anyway()
+    {
+        // Owner rule, 24 September 2026: identity never refuses to start because email cannot be sent.
+        var services = new ServiceCollection();
+        services.AddScoped<IUserAccountAuthority, AdmissionUserAccountAuthority>();
+        services.AddScoped<IIdentitySecurityStore, SqlIdentitySecurityStore>();
+        services.AddScoped<IdentityAdmissionServices>(_ => throw new InvalidOperationException("Must not resolve at startup"));
+        using (var none = services.BuildServiceProvider())
+        {
+            IdentityAuthorityStartup.CheckAdapters(none);
+            Assert.Contains("no ISecurityEmailSink", IdentityAuthorityStartup.CheckEmail(none));
+        }
+
+        // A host sender that needs a connection the host does not have yet cannot even be built.
+        services.AddSingleton(Settings);
+        services.AddScoped<ISecurityEmailSink, HostSecurityEmailSink>();
+        services.AddScoped<ISecurityEmailSender>(_ => throw new InvalidOperationException("Synthetic: the queue connection is not configured."));
+        using (var unbuildable = services.BuildServiceProvider())
+        {
+            IdentityAuthorityStartup.CheckAdapters(unbuildable);
+            var report = IdentityAuthorityStartup.CheckEmail(unbuildable);
+            Assert.Contains("cannot be built", report);
+            Assert.Contains("Synthetic: the queue connection is not configured.", report);
+        }
+
+        services.RemoveAll<ISecurityEmailSender>();
+        services.AddScoped<ISecurityEmailSender, StagedProvider>();
+        using (var ready = services.BuildServiceProvider())
+            Assert.Null(IdentityAuthorityStartup.CheckEmail(ready));
+        Assert.Null(StartupReport(new LocalSecurityInbox()));
     }
 
     [Theory]
     [InlineData(typeof(IUserAccountAuthority))]
     [InlineData(typeof(IIdentitySecurityStore))]
-    [InlineData(typeof(ISecurityEmailSink))]
     public void Startup_names_a_missing_adapter_before_resolving_dependencies(Type missing)
     {
         var services = new ServiceCollection();

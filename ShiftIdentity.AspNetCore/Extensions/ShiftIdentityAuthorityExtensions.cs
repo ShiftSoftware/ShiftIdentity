@@ -39,7 +39,10 @@ namespace Microsoft.Extensions.DependencyInjection
                     sp.GetRequiredService<IHashIdService>(), sp.GetRequiredService<IdentityMaterialProtector>(),
                     new AdmissionTokenCodec(options, clock))
                 {
-                    EmailSink = sp.GetService<ISecurityEmailSink>(),
+                    // Resolved when a security email is sent, not here: a host sender that cannot be built without a
+                    // connection or setting must fail that send only, never sign-in or anything else these services run.
+                    EmailSink = sp.GetRequiredService<IServiceProviderIsService>().IsService(typeof(ISecurityEmailSink))
+                        ? new DeferredSecurityEmailSink(sp) : null,
                     EmailVerificationRedirectUrl = configuration.EmailVerificationRedirectUrl,
                     LegacyRefreshTokens = new LegacyRefreshTokenCodec(configuration.RefreshToken, clock),
                     LegacyTemporaryTokens = LegacyTemporaryTokenCodec.TryCreate(configuration.TemporaryTokenSettings, clock)

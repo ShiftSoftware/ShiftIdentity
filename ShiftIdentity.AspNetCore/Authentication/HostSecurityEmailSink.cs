@@ -13,14 +13,23 @@ internal sealed class HostSecurityEmailSink(ShiftIdentityConfiguration configura
     IEnumerable<ISecurityEmailSender>? senders = null) : ISecurityEmailSink
 {
     private readonly ISecurityEmailSender[] staged = senders?.ToArray() ?? [];
-    internal void CheckReady()
+
+    /// <summary>Why this adapter cannot send, or null when it can. A send refuses with it; startup only logs it.</summary>
+    internal string? Problem()
     {
         var missing = new List<string>();
         if (staged.Length == 0 && !verification.Any()) missing.Add(nameof(ISendEmailVerification));
         if (staged.Length == 0 && !reset.Any()) missing.Add(nameof(ISendEmailResetPassword));
         if (missing.Count > 0)
-            throw new InvalidOperationException("The identity authority requires an ISecurityEmailSink or its host sender adapters. Missing: " + string.Join(", ", missing) + ".");
-        SecurityEmailTemplate.ValidateFrontEndUrl(configuration.FrontEndUrl);
+            return "The identity authority requires an ISecurityEmailSink or its host sender adapters. Missing: " + string.Join(", ", missing) + ".";
+        try { SecurityEmailTemplate.ValidateFrontEndUrl(configuration.FrontEndUrl); }
+        catch (InvalidOperationException e) { return e.Message; }
+        return null;
+    }
+
+    internal void CheckReady()
+    {
+        if (Problem() is { } problem) throw new InvalidOperationException(problem);
     }
 
     public async Task DeliverAsync(SecurityEmail message, CancellationToken cancellationToken)

@@ -231,6 +231,34 @@ public sealed class AuthorityRegistrationTests
         Assert.Same(inbox, provider.GetRequiredService<ISecurityEmailSink>());
         // A custom sink does not need any legacy provider or a front-end URL.
         IdentityAuthorityStartup.CheckAdapters(provider);
+        Assert.Null(IdentityAuthorityStartup.CheckEmail(provider));
+    }
+
+    [Fact]
+    public async Task A_sender_that_cannot_be_built_fails_its_send_and_nothing_else()
+    {
+        // Sign-in, refresh and every other flow resolve the admission services; they must not build the host's
+        // senders, so a missing email connection or setting stays the failure of the send that needs it.
+        var configuration = Valid();
+        configuration.FrontEndUrl = "https://identity.invalid/app/";
+        var services = new ServiceCollection();
+        services.AddSingleton<IHashIdService>(new HashIdService(Options.Create(new ShiftEntityOptions())));
+        services.AddDbContext<IdentityTestDbContext>(o => o.UseSqlServer("Server=(none);Connect Timeout=1"));
+        services.AddScoped<ShiftSoftware.ShiftIdentity.Data.ShiftIdentityDbContext>(sp => sp.GetRequiredService<IdentityTestDbContext>());
+        services.AddShiftIdentityAuthority(configuration);
+        services.AddScoped<ISecurityEmailSender>(_ => throw new InvalidOperationException("Synthetic: the queue connection is not configured."));
+        using var provider = services.BuildServiceProvider();
+        await using var scope = provider.CreateAsyncScope();
+
+        var admission = scope.ServiceProvider.GetRequiredService<IdentityAdmissionServices>();
+        Assert.NotNull(admission.EmailSink);
+        IdentityAuthorityStartup.CheckAdapters(scope.ServiceProvider);
+        Assert.Contains("Synthetic: the queue connection is not configured.", IdentityAuthorityStartup.CheckEmail(scope.ServiceProvider));
+        var message = new SecurityEmail(Guid.NewGuid(), "saved@example.invalid", "Security message", "grant",
+            ShiftSoftware.ShiftIdentity.Core.Authentication.AuthenticationOperationPurpose.PasswordResetEmail, DateTimeOffset.UtcNow.AddMinutes(30));
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            admission.EmailSink!.DeliverAsync(message, TestContext.Current.CancellationToken));
+        Assert.Equal("Synthetic: the queue connection is not configured.", error.Message);
     }
 
     private static ServiceCollection Dashboard(ShiftIdentityConfiguration configuration)

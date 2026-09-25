@@ -15,7 +15,8 @@ namespace ShiftSoftware.ShiftIdentity.AspNetCore.Authentication;
 /// advancing its revision when the configured MFA or verified-email policy changed since the last start), creates the
 /// App row of the host's own client when it is missing, creates the security row of every user that has none (the
 /// expansion of the users that existed before the authority), and hands the policy revision the database holds to
-/// the issuance options. A host whose migration is pending stops here with a message that says so.
+/// the issuance options. A host whose migration is pending stops here with a message that says so. Email never stops
+/// it: a host that cannot send security email yet starts with a warning that says why.
 /// </summary>
 internal sealed class IdentityAuthorityStartup(IServiceScopeFactory scopes, IdentityAuthorityRegistration registration,
     ILogger<IdentityAuthorityStartup> logger) : IHostedService
@@ -26,6 +27,8 @@ internal sealed class IdentityAuthorityStartup(IServiceScopeFactory scopes, Iden
         {
             await using var scope = scopes.CreateAsyncScope();
             CheckAdapters(scope.ServiceProvider);
+            if (CheckEmail(scope.ServiceProvider) is { } problem)
+                logger.LogWarning("Security emails cannot be sent: {Problem} The identity authority starts anyway, and each security email fails until this is fixed.", problem);
             var db = scope.ServiceProvider.GetRequiredService<ShiftIdentityDbContext>();
             var revision = await EnsurePolicyAsync(db, registration, cancellationToken);
             var created = await EnsureClientAsync(db, registration, cancellationToken);
@@ -53,10 +56,23 @@ internal sealed class IdentityAuthorityStartup(IServiceScopeFactory scopes, Iden
         if (!registered.IsService(typeof(Data.Services.IUserAccountAuthority))) missing.Add("IUserAccountAuthority (administrator writers and verification delivery)");
         if (!registered.IsService(typeof(IIdentitySecurityStore))) missing.Add(nameof(IIdentitySecurityStore));
         if (!registered.IsService(typeof(IdentityAdmissionServices))) missing.Add(nameof(IdentityAdmissionServices));
-        if (!registered.IsService(typeof(ISecurityEmailSink))) missing.Add(nameof(ISecurityEmailSink));
         if (missing.Count > 0)
             throw new InvalidOperationException("The identity authority cannot start. Missing adapter: " + string.Join(", ", missing) + ".");
-        if (services.GetRequiredService<ISecurityEmailSink>() is HostSecurityEmailSink adapter) adapter.CheckReady();
+    }
+
+    /// <summary>
+    /// Why security emails cannot be sent, or null when nothing stops them. Email never stops the authority from
+    /// starting: a missing sender, a sender that cannot be built without a connection or setting, or an invalid
+    /// dashboard address is logged at startup, and each send that needs it fails and cancels its grant.
+    /// </summary>
+    internal static string? CheckEmail(IServiceProvider services)
+    {
+        if (!services.GetRequiredService<IServiceProviderIsService>().IsService(typeof(ISecurityEmailSink)))
+            return "no ISecurityEmailSink is registered.";
+        ISecurityEmailSink sink;
+        try { sink = services.GetRequiredService<ISecurityEmailSink>(); }
+        catch (Exception e) { return $"the email sink or one of its senders cannot be built ({e.GetType().Name}: {e.Message})"; }
+        return sink is HostSecurityEmailSink adapter ? adapter.Problem() : null;
     }
 
     /// <summary>The single policy row follows configuration; a change advances the revision, which ends every session bound to the old one.</summary>
