@@ -42,7 +42,8 @@ public sealed class IssuedSessionClaimsTests
     {
         var hashIds = new HashIdService(Options.Create(new ShiftEntityOptions()));
         var services = new IdentityAdmissionServices(null!, client, options, clock, hashIds, null!, new AdmissionTokenCodec(options, clock));
-        var user = new User { ID = 42, Username = "synthetic", FullName = "Synthetic User", IsActive = true, Email = "person@example.invalid", Phone = "+12025550123" };
+        var user = new User { ID = 42, Username = "synthetic", FullName = "Synthetic User", IsActive = true, Email = "person@example.invalid", Phone = "+12025550123",
+            RegionID = 1, CompanyID = 2, CompanyBranchID = 3 };
         var unit = new IdentitySecurityTransaction(user, new UserSecurityState { UserID = 42 }, new AuthenticationPolicyState(), null, _ => { }, _ => { });
         var now = clock.GetUtcNow();
         var session = Assert.IsType<SessionIssued>(AdmissionRules.Issue(services, unit, AdmissionRules.Proof(unit, services, false, now), now)).Session;
@@ -72,5 +73,39 @@ public sealed class IssuedSessionClaimsTests
         Assert.Empty(principal.FindAll("sub").Where(x => x.Value != subject));
         // The staged validator still reads the subject it needs.
         Assert.Equal(subject, services.Tokens.ValidateAccess(session.Token, client)!.Proof.Subject);
+    }
+
+    /// <summary>
+    /// Region, company and branch drive data-level access downstream, and the application never saves a user without
+    /// them. As with the legacy token, a missing one fails the issue (the admission transaction then rolls back)
+    /// instead of yielding a session without that claim. The country is optional; the branch's city is not.
+    /// </summary>
+    [Theory]
+    [InlineData("region")]
+    [InlineData("company")]
+    [InlineData("branch")]
+    [InlineData("branch city")]
+    public void A_user_without_a_region_company_or_branch_gets_no_session(string missing)
+    {
+        var services = new IdentityAdmissionServices(null!, client, options, clock,
+            new HashIdService(Options.Create(new ShiftEntityOptions())), null!, new AdmissionTokenCodec(options, clock));
+        var user = new User { ID = 42, Username = "synthetic", FullName = "Synthetic User", IsActive = true,
+            RegionID = 1, CompanyID = 2, CompanyBranchID = 3, CompanyBranch = new CompanyBranch { CityID = 4 } };
+        var now = clock.GetUtcNow();
+        AuthOutcome IssueFor(User subject)
+        {
+            var unit = new IdentitySecurityTransaction(subject, new UserSecurityState { UserID = 42 }, new AuthenticationPolicyState(), null, _ => { }, _ => { });
+            return AdmissionRules.Issue(services, unit, AdmissionRules.Proof(unit, services, false, now), now);
+        }
+
+        Assert.IsType<SessionIssued>(IssueFor(user));
+        switch (missing)
+        {
+            case "region": user.RegionID = null; break;
+            case "company": user.CompanyID = null; break;
+            case "branch": user.CompanyBranchID = null; break;
+            default: user.CompanyBranch.CityID = null; break;
+        }
+        Assert.Throws<InvalidOperationException>(() => IssueFor(user));
     }
 }

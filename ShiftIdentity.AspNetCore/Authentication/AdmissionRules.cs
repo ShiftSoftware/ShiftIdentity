@@ -97,11 +97,15 @@ internal static class AdmissionRules
             new(ClaimTypes.Name, user.Username), new(ClaimTypes.GivenName, user.FullName),
             new(ShiftIdentityClaims.ExternalToken, proof.External ? "true" : "false")
         };
-        if (user.CompanyID is { } company) claims.Add(new(ShiftEntity.Core.Constants.CompanyIdClaim, services.HashIds.Encode<CompanyDTO>(company)));
-        if (user.RegionID is { } region) claims.Add(new(ShiftEntity.Core.Constants.RegionIdClaim, services.HashIds.Encode<RegionDTO>(region)));
-        if (user.CompanyBranchID is { } branch) claims.Add(new(ShiftEntity.Core.Constants.CompanyBranchIdClaim, services.HashIds.Encode<CompanyBranchDTO>(branch)));
+        // Required as in the legacy token: region, company and branch drive data-level access downstream (some host
+        // filters are skipped when a claim is absent), and the application never saves a user without them. A missing
+        // one throws here and the admission transaction rolls back, so the user gets no session. The country is
+        // optional; the loaded branch's city is not.
+        claims.Add(new(ShiftEntity.Core.Constants.CompanyIdClaim, services.HashIds.Encode<CompanyDTO>(user.CompanyID!.Value)));
+        claims.Add(new(ShiftEntity.Core.Constants.RegionIdClaim, services.HashIds.Encode<RegionDTO>(user.RegionID!.Value)));
+        claims.Add(new(ShiftEntity.Core.Constants.CompanyBranchIdClaim, services.HashIds.Encode<CompanyBranchDTO>(user.CompanyBranchID!.Value)));
         if (user.CountryID is { } country) claims.Add(new(ShiftEntity.Core.Constants.CountryIdClaim, services.HashIds.Encode<CountryDTO>(country)));
-        if (user.CompanyBranch?.CityID is { } city) claims.Add(new(ShiftEntity.Core.Constants.CityIdClaim, services.HashIds.Encode<CityDTO>(city)));
+        if (user.CompanyBranch is { } companyBranch) claims.Add(new(ShiftEntity.Core.Constants.CityIdClaim, services.HashIds.Encode<CityDTO>(companyBranch.CityID!.Value)));
         claims.Add(new(ShiftEntity.Core.Constants.CompanyTypeClaim, user.Company?.CompanyType.ToString() ?? ""));
         foreach (var team in user.TeamUsers) claims.Add(new(ShiftEntity.Core.Constants.TeamIdsClaim, services.HashIds.Encode<TeamDTO>(team.TeamID)));
         if (user.Email is not null) claims.Add(new(ClaimTypes.Email, user.Email));
