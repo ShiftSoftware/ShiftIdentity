@@ -25,6 +25,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShiftIdentity.Data.Tests", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShiftIdentity.Tests.LongRunning", "ShiftIdentity.Tests.LongRunning\ShiftIdentity.Tests.LongRunning.csproj", "{927A32EC-E480-4F65-89D4-9E823DF0827D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShiftIdentity.Tests.PlainHost", "ShiftIdentity.Tests.PlainHost\ShiftIdentity.Tests.PlainHost.csproj", "{BE828346-006B-4185-8ECF-5520C86211E4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -75,6 +77,10 @@ Global
 		{927A32EC-E480-4F65-89D4-9E823DF0827D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{927A32EC-E480-4F65-89D4-9E823DF0827D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{927A32EC-E480-4F65-89D4-9E823DF0827D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BE828346-006B-4185-8ECF-5520C86211E4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BE828346-006B-4185-8ECF-5520C86211E4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BE828346-006B-4185-8ECF-5520C86211E4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BE828346-006B-4185-8ECF-5520C86211E4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

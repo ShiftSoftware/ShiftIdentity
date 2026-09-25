@@ -4,6 +4,7 @@ using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using ShiftMapper;
 using ShiftSoftware.ShiftEntity.Core;
+using ShiftSoftware.ShiftEntity.Core.Mapping;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.Brand;
@@ -52,6 +53,12 @@ public class ShiftIdentityMapper : ShiftMapperBase
 {
     public ShiftIdentityMapper()
     {
+        // ShiftMapper also generates these maps inside every project that references this package, and most of those
+        // projects close no ShiftRepository<,,,> and never call AddShiftMapper(). This line gives the maps the
+        // framework's rules (the select convention, the file conversions, the members a map must not write) wherever
+        // they are generated. Without it, those projects fail to build with SM0011.
+        AddConversions<ShiftEntityConversions>();
+
         var hashIds = new Lazy<IHashIdService>(() => Services.GetRequiredService<IHashIdService>());
 
         // ────────────────────────────────────────────────────────────────────────────────────────────────────

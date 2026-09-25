@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<Import Project="..\..\ShiftTemplates\ShiftFrameworkGlobalSettings.props" Condition="Exists('..\..\ShiftTemplates\ShiftFrameworkGlobalSettings.props')" />
+
+	<!--The Azure Pipeline clones ShiftTemplates into a directory called 's' by default-->
+	<Import Project="..\..\s\ShiftFrameworkGlobalSettings.props" Condition="Exists('..\..\s\ShiftFrameworkGlobalSettings.props')" />
+
+	<!-- A stand-in for a plain host, built only to prove that it compiles. Like many hosts, it references the identity
+	     dashboard and has one DbContext, and nothing else: no repository, no mapper class and no AddShiftMapper() call.
+	     ShiftMapper's generator runs here as it runs in a host that references the packages, so it generates the maps
+	     of ShiftIdentity's mapper classes again, in this project. A plain host gets the framework's rules pack
+	     (ShiftEntityConversions) only from those mapper classes, through AddConversions in their constructors. If one
+	     of them loses that line, this build fails, for example with SM0011.
+	     ShiftIdentity.Tests references this project, so the pipeline's fast tier builds it with the tests. Nothing
+	     runs it and nothing loads it. -->
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IsPackable>false</IsPackable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\ShiftIdentity.Dashboard.AspNetCore\ShiftIdentity.Dashboard.AspNetCore.csproj" />
+
+		<!-- The generator. A host gets it from the ShiftSoftware.ShiftMapper package. Dev mode wires it as a project,
+		     as ShiftIdentity.Data does, because a generator referenced as a project does not reach the projects that
+		     reference ShiftIdentity.Data. -->
+		<ProjectReference Include="..\..\ShiftMapper\ShiftMapper.Generator\ShiftMapper.Generator.csproj" Condition="Exists('..\..\ShiftMapper\ShiftMapper.Generator\ShiftMapper.Generator.csproj')" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+		<PackageReference Include="ShiftSoftware.ShiftMapper" Version="$(ShiftMapperVersion)" Condition="!Exists('..\..\ShiftMapper\ShiftMapper\ShiftMapper.csproj')" />
+	</ItemGroup>
+
+</Project>

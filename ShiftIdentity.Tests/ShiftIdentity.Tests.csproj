@@ -15,6 +15,10 @@
     <ProjectReference Include="..\ShiftIdentity.Dashboard.AspNetCore\ShiftIdentity.Dashboard.AspNetCore.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Built with the tests but not referenced by them: a plain host must compile. That project file says why. -->
+    <ProjectReference Include="..\ShiftIdentity.Tests.PlainHost\ShiftIdentity.Tests.PlainHost.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+  <ItemGroup>
     <!-- The SQL-backed and real-clock tests build on the fixtures in this project. -->
     <InternalsVisibleTo Include="ShiftIdentity.Tests.LongRunning" />
   </ItemGroup>
