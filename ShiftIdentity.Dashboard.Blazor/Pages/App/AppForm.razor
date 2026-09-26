@@ -3,6 +3,7 @@
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(AppForm)}/{{Key?}}")]
 @inject HttpClient Http
 @inject ShiftIdentityLocalizer Loc
+@using ShiftSoftware.ShiftIdentity.Core.DTOs.App
 
 
 <ShiftEntityForm Endpoint="@($"{Constants.IdentityRoutePreifix}App")"
@@ -10,6 +11,8 @@
                  @bind-Key="@Key"
                  AllowSaveAsNew
                  TypeAuthAction="ShiftIdentityActions.Apps"
+                 Validator="validator"
+                 OnResult="Loaded"
                  T="ShiftSoftware.ShiftIdentity.Core.DTOs.App.AppDTO">
 
     <MudTextField ReadOnly="@context.ReadOnly"
@@ -43,7 +46,7 @@
                   <br/>
     @if (!string.IsNullOrWhiteSpace(context.Item.RedirectUri))
     {
-        <MudAlert Severity="Severity.Warning">@Loc["The user will be redirected to"] @($"{context.Item.RedirectUri}/Auth/Token")</MudAlert>
+        <MudAlert Severity="Severity.Warning">@Loc["The user will be redirected to"] @AppTokenCallback.For(context.Item.RedirectUri)</MudAlert>
     }
 
     @*    <MudTextField ReadOnly="@context.ReadOnly"
@@ -57,4 +60,18 @@
 @code {
     [Parameter]
     public object? Key { get; set; }
+
+    private AppValidator validator = default!;
+    // The RedirectUri the server last returned for this row. The validator refuses a trailing "/" only in a new or
+    // changed value, so an existing row that has one still saves unchanged (FE-2026-09-25-02).
+    private string? registeredRedirectUri;
+
+    protected override void OnInitialized() => validator = new AppValidator(Loc, () => registeredRedirectUri);
+
+    private ValueTask<bool> Loaded(ShiftEntityResponse<AppDTO>? result)
+    {
+        if (result?.Entity is { } app)
+            registeredRedirectUri = app.RedirectUri;
+        return ValueTask.FromResult(true);
+    }
 }

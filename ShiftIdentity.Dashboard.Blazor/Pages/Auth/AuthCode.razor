@@ -133,7 +133,7 @@ else
         queryStrings.Add("AuthCode", authCode.Code);
         queryStrings.Add("ReturnUrl", ReturnUrl);
 
-        var uri = NavManager.GetUriWithQueryParameters($"{authCode.RedirectUri}/Auth/Token", queryStrings);
+        var uri = NavManager.GetUriWithQueryParameters(AppTokenCallback.For(authCode.RedirectUri), queryStrings);
         NavManager.NavigateTo(uri);
     }
 

@@ -1,4 +1,5 @@
-﻿using ShiftSoftware.ShiftEntity.Model.Dtos;
+﻿using System;
+using ShiftSoftware.ShiftEntity.Model.Dtos;
 using System.ComponentModel.DataAnnotations;
 using ShiftSoftware.ShiftEntity.Model.HashIds;
 using ShiftSoftwareLocalization.Identity;
@@ -30,7 +31,9 @@ public class AppDTO : ShiftEntityMixedDTO
 
 public class AppValidator : AbstractValidator<AppDTO>
 {
-    public AppValidator(ShiftIdentityLocalizer localizer)
+    /// <param name="registeredRedirectUri">The RedirectUri the row already has, or null for a new app. The App form
+    /// passes it so that an existing row can be saved unchanged.</param>
+    public AppValidator(ShiftIdentityLocalizer localizer, Func<string?>? registeredRedirectUri = null)
     {
         RuleFor(x => x.DisplayName)
             .NotEmpty().WithMessage(localizer["Please enter a name"])
@@ -47,5 +50,12 @@ public class AppValidator : AbstractValidator<AppDTO>
             .NotEmpty().WithMessage(localizer["Please provide", localizer["Redirect Uri"]])
             .MaximumLength(4000).WithMessage(localizer["Your input cannot be more than 4000 characters"]);
 
+        // The sign-in page appends "/Auth/Token", so a value ending in "/" or in that route is a typo. The page trims a
+        // trailing slash itself, so a row that already has one keeps working. Only a new or changed value is refused:
+        // the app-code binding hashes the stored RedirectUri, and forcing a fix would end the app's live sessions.
+        RuleFor(x => x.RedirectUri)
+            .Must(x => !x.TrimEnd().EndsWith('/') && !x.TrimEnd().EndsWith("/Auth/Token", StringComparison.OrdinalIgnoreCase))
+            .When(x => !string.IsNullOrEmpty(x.RedirectUri) && x.RedirectUri != registeredRedirectUri?.Invoke())
+            .WithMessage(localizer["The Redirect URI cannot end with / or /Auth/Token"]);
     }
 }
