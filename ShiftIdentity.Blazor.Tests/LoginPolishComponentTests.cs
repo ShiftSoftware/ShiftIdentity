@@ -295,6 +295,39 @@ public sealed class LoginPolishComponentTests
         Assert.Empty(store.Writes);
     }
 
+    // A host whose scoped styles did not load shows everything in the markup, so the failure text must not be there
+    // before a sign-in attempt, and must be gone again once a retry has succeeded.
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Failure_text_is_rendered_only_after_a_failed_attempt(bool staged)
+    {
+        using var transport = new Transport(staged);
+        await using var context = Context(transport, out _);
+        var cut = context.Render<LoginForm>();
+        Assert.Empty(cut.FindAll("[data-testid=login-failure-message]"));
+        Assert.DoesNotContain("Username or password is incorrect", cut.Markup);
+        await Login(cut);
+        Assert.Contains("Username or password is incorrect", cut.Find("[data-testid=login-failure-message]").TextContent);
+        transport.Success = true;
+        await Login(cut);
+        Assert.Empty(cut.FindAll("[data-testid=login-failure-message]"));
+    }
+
+    [Theory]
+    [InlineData(null, false)]
+    [InlineData(" ", false)]
+    [InlineData("/images/logo.png", true)]
+    public async Task Logo_is_rendered_only_when_a_logo_path_is_set(string? logoPath, bool rendered)
+    {
+        using var transport = new Transport(false);
+        await using var context = Context(transport, out _);
+        context.Services.GetRequiredService<ShiftSoftware.ShiftIdentity.Dashboard.Blazor.ShiftIdentityDashboardBlazorOptions>().LogoPath = logoPath!;
+        var cut = context.Render<LoginForm>();
+        Assert.Equal(rendered, cut.FindAll("img.identity-login-logo").Count == 1);
+        if (rendered) Assert.Equal(logoPath, cut.Find("img.identity-login-logo").GetAttribute("src"));
+    }
+
     private static Task Login(IRenderedComponent<LoginForm> cut, string username = " \tSynthetic  User  ")
     {
         cut.FindAll("input")[0].Input(username);

@@ -76,13 +76,17 @@
             <div class="auth-feedback-slot" data-open="@(loginFailure is not null ? "true" : "false")" aria-hidden="@(loginFailure is null ? "true" : "false")" inert="@(loginFailure is null)">
                 <div class="auth-feedback-clip"><div class="auth-feedback-content">
                     <div class="auth-failure" data-login-failure>
-                        <div class="auth-failure-message" role="alert" tabindex="-1" data-login-error data-testid="login-failure-message">
-                            <MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" />
-                            <div><strong>@Loc[FailureMessage]</strong><p>@Loc[FailureHint]</p></div>
-                        </div>
-                        <button type="button" class="auth-help" data-testid="login-failure-help" @onclick="OpenAccess">@Loc["Can't access your account?"] <MudIcon Icon="@Icons.Material.Filled.ChevronRight" /></button>
-                        @if (lastFailure is not AuthenticationFailure.InvalidProof and not AuthenticationFailure.AccountUnavailable)
-                        { <span class="auth-reference" data-testid="login-failure-reference">@Loc["Error reference"]: @FailureReference</span> }
+                        @* Rendered only while a failure is shown or its panel is closing, so a host whose styles did not load shows no error before a sign-in attempt. *@
+                        @if (lastFailure is not null)
+                        {
+                            <div class="auth-failure-message" role="alert" tabindex="-1" data-login-error data-testid="login-failure-message">
+                                <MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" />
+                                <div><strong>@Loc[FailureMessage]</strong><p>@Loc[FailureHint]</p></div>
+                            </div>
+                            <button type="button" class="auth-help" data-testid="login-failure-help" @onclick="OpenAccess">@Loc["Can't access your account?"] <MudIcon Icon="@Icons.Material.Filled.ChevronRight" /></button>
+                            @if (lastFailure is not AuthenticationFailure.InvalidProof and not AuthenticationFailure.AccountUnavailable)
+                            { <span class="auth-reference" data-testid="login-failure-reference">@Loc["Error reference"]: @FailureReference</span> }
+                        }
                     </div>
                 </div></div>
             </div>
@@ -113,7 +117,9 @@
     private string view = "login", loginPath = "";
     private string? admissionError;
     private AuthenticationFailure? loginFailure;
-    private AuthenticationFailure lastFailure = AuthenticationFailure.InvalidProof;
+    // The failure the panel shows. It stays set while the panel closes after a retry, so the panel does not empty
+    // before it has closed, and is cleared once it has closed or the view changes.
+    private AuthenticationFailure? lastFailure;
     private int direction = 1, loginAttempt, navigationAttempt;
     private bool loginInProgress, disposed, requestCompleted;
     private LoginBox? loginBox;
@@ -171,7 +177,7 @@
             direction = Depth(next) < Depth(view) ? -1 : 1;
             view = next;
             requestCompleted = false;
-            loginFailure = null;
+            loginFailure = lastFailure = null;
             loginDto.Password = string.Empty;
             admissionError = null;
             if (AdmissionFlow is not null && (AdmissionFlow.Pending is not null || AdmissionFlow.Busy))
@@ -243,6 +249,7 @@
                 var completed = feedbackExit.Task;
                 StateHasChanged();
                 await completed;
+                lastFailure = null;
             }
             if (!disposed && attempt == loginAttempt) await SubmitLogin(attempt);
         }

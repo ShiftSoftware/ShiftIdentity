@@ -8,7 +8,8 @@
         <button type="button" class="identity-login-back" disabled="@(!CanGoBack)" aria-label="@Loc["Back"]" title="@Loc["Back"]" @onclick="Back">
             <MudIcon Icon="@Icons.Material.Filled.ArrowBack" />
         </button>
-        <img class="identity-login-logo" src="@Options.LogoPath" alt="@Loc["Logo"]" />
+        @if (!string.IsNullOrWhiteSpace(Options.LogoPath))
+        { <img class="identity-login-logo" src="@Options.LogoPath" alt="@Loc["Logo"]" /> }
     </header>
     <div class="identity-login-viewport">
         <div class="identity-login-content">

@@ -14,14 +14,16 @@
         <MudText Typo="Typo.h6">@selectedFile.Name</MudText>
     }
 
+    @* MudBlazor 9 has no ActivatorContent. CustomContent is the upload UI, and its button opens the file picker itself. *@
     <MudFileUpload T="IBrowserFile" FilesChanged="SelectFile" Accept=".csv" MaximumFileCount="1">
-        <ActivatorContent>
+        <CustomContent Context="upload">
             <MudButton Variant="Variant.Filled"
                        Color="Color.Primary"
-                       StartIcon="@Icons.Material.Filled.CloudUpload">
+                       StartIcon="@Icons.Material.Filled.CloudUpload"
+                       OnClick="@upload.OpenFilePickerAsync">
                 @Loc["Select CSV File"]
             </MudButton>
-        </ActivatorContent>
+        </CustomContent>
     </MudFileUpload>
 
     <MudCheckBoxExtended Label="@Loc["Send login info to the user"]"
