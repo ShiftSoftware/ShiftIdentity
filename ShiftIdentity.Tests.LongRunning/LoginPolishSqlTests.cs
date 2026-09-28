@@ -49,6 +49,41 @@ public sealed class LoginPolishSqlTests(SqlIdentityFixture fixture)
     }
 
     [Theory]
+    [InlineData("legacy")]
+    [InlineData("adapter")]
+    [InlineData("staged")]
+    public async Task A_deleted_account_with_the_same_username_does_not_block_sign_in(string route)
+    {
+        // Deleting a user and adding it again leaves two rows with one username. The deployed login skips the
+        // deleted row; the authority must too, instead of refusing the correct password as InvalidProof.
+        await fixture.ResetAsync();
+        var twinName = "deleted-twin-" + Guid.NewGuid().ToString("N");
+        var twinID = await fixture.CreateSyntheticUserAsync(twinName);
+        try
+        {
+            await using (var db = fixture.CreateContext())
+            {
+                var twin = await db.Users.IgnoreQueryFilters().SingleAsync(x => x.ID == twinID, TestContext.Current.CancellationToken);
+                twin.Username = fixture.Username; twin.IsDeleted = true;
+                // A deleted user never holds lookup keys (RecoveryContact.InitializeLookup skips it).
+                var state = await db.Set<UserSecurityState>().SingleAsync(x => x.UserID == twinID, TestContext.Current.CancellationToken);
+                state.UsernameLookupKey = null; state.EmailLookupKey = null;
+                await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+            using var host = new LegacyIdentityHttpHost<IdentityTestDbContext>(fixture, authority: route != "legacy");
+            Assert.True(await Accepted(host.Client, route, fixture.Username, fixture.Password));
+        }
+        finally
+        {
+            // The collection's other tests expect the fixture's single account and security row: remove the twin.
+            await fixture.ResetAsync();
+            await using var db = fixture.CreateContext();
+            await db.Set<UserSecurityState>().Where(x => x.UserID == twinID).ExecuteDeleteAsync(CancellationToken.None);
+            await db.Users.IgnoreQueryFilters().Where(x => x.ID == twinID).ExecuteDeleteAsync(CancellationToken.None);
+        }
+    }
+
+    [Theory]
     [InlineData("legacy", "")]
     [InlineData("legacy", " \t\r\n")]
     [InlineData("adapter", "")]

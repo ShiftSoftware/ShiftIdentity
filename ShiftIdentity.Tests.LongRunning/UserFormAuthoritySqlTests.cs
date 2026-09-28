@@ -369,7 +369,8 @@ public sealed class UserFormAuthoritySqlTests(SqlIdentityFixture fixture) : ICla
         Assert.True(user.IsDeleted); Assert.Equal(2, state.SecurityVersion);
         Assert.Equal(("AccountDeleted", adminID, 2L), Assert.Single(await AuditsAsync(id, "AccountCreated")));
         Assert.Equal(AuthenticationFailure.AccountUnavailable, Assert.IsType<AuthenticationRefused>(await RefreshAsync(host, session.Session.RefreshToken)).Code);
-        Assert.Equal(AuthenticationFailure.AccountUnavailable, Assert.IsType<AuthenticationRefused>(await LoginAsync(host, username, Password)).Code);
+        // A deleted account is not found by its username, as in the deployed login.
+        Assert.Equal(AuthenticationFailure.InvalidProof, Assert.IsType<AuthenticationRefused>(await LoginAsync(host, username, Password)).Code);
     }
 
     [Theory]

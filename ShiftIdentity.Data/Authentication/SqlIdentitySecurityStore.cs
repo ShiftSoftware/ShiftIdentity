@@ -20,8 +20,10 @@ public sealed partial class SqlIdentitySecurityStore(ShiftIdentityDbContext db) 
     {
         try
         {
+            // A deleted row never answers or blocks a sign-in, as in the deployed login: deleting a user and adding
+            // it again leaves two rows with one username, and the active one must still sign in.
             var ids = await db.Users.IgnoreQueryFilters().AsNoTracking()
-                .Where(x => x.Username == username).Select(x => x.ID).Take(2).ToListAsync(ct);
+                .Where(x => x.Username == username && !x.IsDeleted).Select(x => x.ID).Take(2).ToListAsync(ct);
             if (ids.Count != 1) return null;
             return await AdmitAsync(ids[0], null, client, unit =>
                 Task.FromResult(new IdentityProofSnapshot(unit.User, unit.Security, unit.Policy)), ct);

@@ -13,7 +13,8 @@ public sealed class AuthenticationRefusalSqlTests(SqlIdentityFixture fixture)
 {
     [Theory]
     [InlineData("inactive", null, AuthenticationFailure.AccountUnavailable)]
-    [InlineData("deleted", null, AuthenticationFailure.AccountUnavailable)]
+    // A deleted account is not found, as in the deployed login: it never answers a sign-in.
+    [InlineData("deleted", null, AuthenticationFailure.InvalidProof)]
     [InlineData("forced", AuthenticationStep.PasswordChange, null)]
     [InlineData("mandatory", AuthenticationStep.NewMfa, null)]
     [InlineData("recovery", AuthenticationStep.MfaRecovery, null)]
