@@ -27,7 +27,6 @@ public class ShiftIdentityConfiguration
 
     public SASTokenModel SASToken { get; set; } = default!;
 
-    internal bool IsFakeIdentity { get; set; }
     public ShiftIdentityHostingTypes ShiftIdentityHostingType { get; set; }
     public string? FrontEndUrl { get; set; } = default!;
     /// <summary>The absolute HTTP(S) destination after an explicit email verification succeeds. Never supplied by a link or caller.</summary>

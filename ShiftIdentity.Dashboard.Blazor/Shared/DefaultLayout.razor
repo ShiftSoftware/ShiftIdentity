@@ -1,14 +1,6 @@
-﻿@using Microsoft.Extensions.Configuration
-
 @inherits LayoutBase
 @inject SettingManager SettingManager
 @inject ShiftIdentityDashboardBlazorOptions ShiftIdentityDashboardBlazorOptions
-
-@inject HttpClient HttpClient
-@inject ISnackbar Snackbar
-@inject ShiftIdentityLocalizer Loc
-
-@inject IConfiguration Configuration
 
 <MudRTLProvider RightToLeft="SettingManager.GetLanguage().RTL">
 
@@ -22,31 +14,7 @@
 
             <MudSpacer />
 
-            @if (_isStaging || _isDevelopment)
-            {
-                <UserAvatar>
-                    <MenuItemsTemplate>
-                        <MudListItem OnClick="PullData" T="string">
-                            <MudStack Row Style="gap: 15px; white-space: nowrap;">
-                                @if (_pullingData)
-                                {
-                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
-                                }
-                                else
-                                {
-                                    <MudIcon Style="opacity: 0.75;" Icon="@Icons.Material.Filled.Download" />
-                                }
-
-                                <MudText>@Loc["Pull Live Data"]</MudText>
-                            </MudStack>
-                        </MudListItem>
-                    </MenuItemsTemplate>
-                </UserAvatar>
-            }
-            else
-            {
-                <UserAvatar />
-            }
+            <UserAvatar />
         </MudAppBar>
 
         <MudDrawer @bind-Open="@_drawerOpen" ClipMode="DrawerClipMode.Docked" Elevation="1" Variant="@DrawerVariant.Mini" Breakpoint="Breakpoint.Lg" OpenMiniOnHover="true">
@@ -65,57 +33,9 @@
 
 @code {
     bool _drawerOpen = false;
-    bool _pullingData = false;
-
-    bool _isDevelopment;
-    bool _isStaging;
 
     void DrawerToggle()
     {
         _drawerOpen = !_drawerOpen;
-    }
-
-    protected override void OnInitialized()
-    {
-        var env = this.Configuration.GetValue<string>("Environment");
-
-        if (!string.IsNullOrWhiteSpace(env))
-        {
-            _isDevelopment = env.Equals("Development", StringComparison.InvariantCultureIgnoreCase);
-            _isStaging = env.Equals("Staging", StringComparison.InvariantCultureIgnoreCase);
-        }
-
-        base.OnInitialized();
-    }
-
-    async Task PullData()
-    {
-        if (this._pullingData)
-            return;
-
-        this._pullingData = true;
-
-        StateHasChanged();
-
-        try
-        {
-            var response = await HttpClient.GetAsync("IdentitySync/pull-live-db-data");
-
-            response.EnsureSuccessStatusCode();
-
-            this._pullingData = false;
-
-            StateHasChanged();
-
-            Snackbar.Add(message: "Successfully Pulled Live Data", severity: Severity.Success);
-        }
-        catch (Exception ex)
-        {
-            this._pullingData = false;
-
-            StateHasChanged();
-
-            Snackbar.Add(message: ex.Message, severity: Severity.Error);
-        }
     }
 }

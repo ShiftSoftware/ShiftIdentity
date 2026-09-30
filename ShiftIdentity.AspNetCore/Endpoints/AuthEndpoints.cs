@@ -88,8 +88,8 @@ public static class ShiftIdentityAuthEndpoints
             return Results.Ok(new ShiftEntityResponse<TokenDTO>(tokenDto));
         }).RequireAuthorization(StepUpPolicy.For(AuthPurpose.Mfa, allowAccessToken: false));
 
-        // POST api/Auth/AuthCode — anonymous route, but requires an authenticated user (unless fake identity).
-        app.MapPost("api/Auth/AuthCode", async (GenerateAuthCodeDTO generateAuthCodeDto, HttpContext httpContext, AuthCodeService authCodeService, IClaimService claimService, ShiftIdentityConfiguration shiftIdentityConfiguration, ShiftIdentityLocalizer Loc) =>
+        // POST api/Auth/AuthCode — anonymous route, but requires an authenticated user.
+        app.MapPost("api/Auth/AuthCode", async (GenerateAuthCodeDTO generateAuthCodeDto, HttpContext httpContext, AuthCodeService authCodeService, IClaimService claimService, ShiftIdentityLocalizer Loc) =>
         {
             if (httpContext.RequestServices.GetService<IdentityAdmissionServices>() is { } admission)
             {
@@ -103,7 +103,7 @@ public static class ShiftIdentityAuthEndpoints
                     { Message = new Message { Body = Loc["Failed to genearate auth-code"] } },
                     statusCode: outcome is AuthenticationRefused { Code: AuthenticationFailure.Unavailable } ? 503 : 400);
             }
-            if (!shiftIdentityConfiguration.IsFakeIdentity && !httpContext.User!.Identity!.IsAuthenticated)
+            if (!httpContext.User!.Identity!.IsAuthenticated)
                 return Results.Unauthorized();
 
             var loginUser = claimService.GetUser();
@@ -143,39 +143,18 @@ public static class ShiftIdentityAuthEndpoints
         }).AllowAnonymous();
 
         // GET Auth/AuthCode — anonymous server-side redirect, ported from the MVC AuthController (route + verb
-        // byte-identical; a pure redirect, no view). Real identity: bounce back to ReturnUrl/base. Fake identity:
-        // fetch an auth-code from api/Auth/AuthCode and redirect to the app's RedirectUri carrying the code. The
-        // DTO binds from the query string ([AsParameters] mirrors the controller's [FromQuery]).
+        // byte-identical; a pure redirect, no view): bounce back to ReturnUrl, or the host's base URL. The DTO binds
+        // from the query string ([AsParameters] mirrors the controller's [FromQuery]).
         app.MapGet("Auth/AuthCode",
-            async ([AsParameters] GenerateAuthCodeDTO generateAuthCodeDto, HttpContext httpContext, ShiftIdentityConfiguration shiftIdentityConfiguration) =>
+            ([AsParameters] GenerateAuthCodeDTO generateAuthCodeDto, HttpContext httpContext) =>
             {
-                string GetBaseUri()
-                {
-                    var b = new UriBuilder(httpContext.Request.Scheme, httpContext.Request.Host.Host, httpContext.Request.Host.Port ?? -1);
-                    if (b.Uri.IsDefaultPort)
-                        b.Port = -1;
-                    return b.Uri.AbsoluteUri;
-                }
+                if (generateAuthCodeDto.ReturnUrl is not null)
+                    return Results.Redirect(generateAuthCodeDto.ReturnUrl);
 
-                if (!shiftIdentityConfiguration.IsFakeIdentity)
-                    return Results.Redirect(generateAuthCodeDto.ReturnUrl ?? GetBaseUri());
-
-                var http = new HttpClient();
-
-                using var response = await http.PostAsJsonAsync(GetBaseUri() + "Api/Auth/AuthCode", generateAuthCodeDto);
-
-                if (!response.IsSuccessStatusCode)
-                    return Results.Redirect(generateAuthCodeDto.ReturnUrl ?? GetBaseUri());
-
-                var result = await response.Content.ReadFromJsonAsync<ShiftEntityResponse<AuthCodeModel>>();
-
-                var uriBuilder = new UriBuilder(result!.Entity!.RedirectUri);
-                var query = HttpUtility.ParseQueryString(uriBuilder.Query);
-                query["AuthCode"] = result.Entity.Code.ToString();
-                query["ReturnUrl"] = result.Entity.ReturnUrl;
-                uriBuilder.Query = query.ToString();
-
-                return Results.Redirect(uriBuilder.ToString());
+                var b = new UriBuilder(httpContext.Request.Scheme, httpContext.Request.Host.Host, httpContext.Request.Host.Port ?? -1);
+                if (b.Uri.IsDefaultPort)
+                    b.Port = -1;
+                return Results.Redirect(b.Uri.AbsoluteUri);
             }).AllowAnonymous();
 
         return app;

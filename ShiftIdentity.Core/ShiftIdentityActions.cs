@@ -22,8 +22,6 @@ public class ShiftIdentityActions
     public readonly static ReadWriteDeleteAction CompanyBranches = new ReadWriteDeleteAction("Company Branches");
     public readonly static ReadWriteDeleteAction CompanyCalendars = new ReadWriteDeleteAction("Company Calendars");
 
-    public readonly static BooleanAction PullLiveData = new BooleanAction("Pull Live Data");
-
     [ActionTree("Data Level Access", "Data Level or Row-Level Access")]
     public class DataLevelAccess
     {

@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using ShiftSoftware.ShiftIdentity.AspNetCore;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Authorization;
-using ShiftSoftware.ShiftIdentity.AspNetCore.Fakes;
 using ShiftSoftware.ShiftIdentity.Core.Models;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Services.Interfaces;
@@ -142,10 +141,8 @@ public static class IMvcBuilderExtensions
 
     /// <summary>
     /// Registers <see cref="AuthService"/> and the services it composes — token issuance, auth codes,
-    /// password hashing, and TOTP. Both the identity-server host (<c>AddShiftIdentityDashboard</c>) and the
-    /// dev-only fake host (<see cref="AddFakeIdentityEndPoints"/>) call this, so a dependency added to
-    /// <see cref="AuthService"/>'s constructor only needs registering in one place — the two hosts can no
-    /// longer drift and leave the graph unsatisfiable (which is what broke consumers when TOTP was added).
+    /// password hashing, and TOTP. The identity-server host (<c>AddShiftIdentityDashboard</c>) calls this, so a
+    /// dependency added to <see cref="AuthService"/>'s constructor is registered in one place.
     /// </summary>
     public static IServiceCollection AddShiftIdentityAuthCoreServices(this IServiceCollection services)
     {
@@ -157,62 +154,5 @@ public static class IMvcBuilderExtensions
         services.AddScoped<HashService>();
 
         return services;
-    }
-
-    public static IMvcBuilder AddFakeIdentityEndPoints(this IMvcBuilder builder, TokenSettingsModel tokenConfiguration, TokenUserDataDTO userData, AppDTO app, string? userPassword, params string[] accessTrees)
-    {
-        builder.Services.AddShiftIdentityAuthCoreServices();
-
-        //Fixed configurations
-        var configuration = new ShiftIdentityConfiguration
-        {
-            Token = tokenConfiguration,
-            RefreshToken = new RefreshTokenSettingsModel
-            {
-                Audience = "Shift-FakeIdentity",
-                Key = "VeryStrongKeyRequiredForThisEncryption-VeryStrongKeyRequiredForThisEncryption",
-                Issuer = "Shift-FakeIdentity",
-                ExpireSeconds = 31557600
-            },
-            TemporaryTokenSettings = new TemporaryTokenSettingsModel
-            {
-                Audience = "Shift-FakeIdentity-temp",
-                Key = "VeryStrongKeyRequiredForThisEncryption-VeryStrongKeyRequiredForThisEncryptionTemp",
-                Issuer = "Shift-FakeIdentity-Temp",
-                ExpireSeconds = 3000
-            },
-            MfaSettings = new MfaSettingsModel
-            {
-                Enabled = false,
-            },
-            Security = new SecuritySettingsModel
-            {
-                LockDownInMinutes = 0,
-                LoginAttemptsForLockDown = 1000000,
-                RequirePasswordChange = false,
-            },
-            HashIdSettings = new HashIdSettings
-            {
-                AcceptUnencodedIds = true,
-                UserIdsSalt = "k02iUHSb2ier9fiui02349AbfJEI",
-                UserIdsMinHashLength = 5
-            },
-            IsFakeIdentity = true,
-        };
-
-        builder.Services.AddSingleton(configuration);
-        builder.Services.AddSingleton(new ShiftIdentityOptions(userData, app, accessTrees, configuration, userPassword));
-
-        //builder.AddApplicationPart(Assembly.GetExecutingAssembly());
-
-        builder.Services.AddScoped<IUserRepository, FakeUserRepository>();
-        builder.Services.AddScoped<IAppRepository, FakeAppRepository>();
-        builder.Services.AddScoped<IClaimService, FakeClaimService>();
-
-        // AuthController (incl. Login/mfa) is auto-discovered here too, so the step-up scheme/policies
-        // it depends on must be registered on the fake host as well.
-        builder.AddStepUpAuthorization();
-
-        return builder;
     }
 }

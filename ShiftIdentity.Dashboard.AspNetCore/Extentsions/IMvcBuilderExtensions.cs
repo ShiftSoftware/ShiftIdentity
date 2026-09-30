@@ -116,7 +116,7 @@ public static class IMvcBuilderExtensions
         // calls AddShiftIdentityReplicationMapper() itself does not end up with two.
         builder.Services.AddShiftIdentityReplicationMapper();
 
-        // Step-up scheme + policies (shared with the fake host; defined in ShiftIdentity.AspNetCore).
+        // Step-up scheme + policies (defined in ShiftIdentity.AspNetCore).
         builder.AddStepUpAuthorization();
 
         // The identity authority, when this host enables it (ShiftIdentityConfiguration.Authority.Enabled): SQL-admitted

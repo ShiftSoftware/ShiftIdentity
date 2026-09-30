@@ -29,7 +29,6 @@ public static class EndpointRouteBuilderExtensions
         app.MapReverseTypeAuthLookupEndpoints();
         app.MapIdentityPublicUserEndpoints();
         app.MapUserManagerEndpoints();
-        app.MapIdentitySyncEndpoints();
         return app;
     }
 }
