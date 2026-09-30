@@ -1,0 +1,83 @@
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.Extensions.DependencyInjection
+@using ShiftSoftware.ShiftIdentity.Blazor
+@using ShiftSoftware.ShiftIdentity.Core.Authentication
+@using ShiftSoftware.ShiftIdentity.Core.Enums
+@using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Shared
+@using AuthenticationFlow = ShiftSoftware.ShiftIdentity.Blazor.Services.AuthenticationFlow
+@inject ShiftIdentityLocalizer Loc
+@inject IServiceProvider Services
+@inject IdentitySession Session
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+@* The signed-in user turns off their own MFA where it is optional, with a code from the authenticator they use now.
+   The profile opens it in a narrow dialog, in the login-box look. Nothing is pending on the server between the
+   steps, so closing needs no cancellation. *@
+<SecurityStepBox Boxed="true" ViewKey="@(done ? "done" : "code")" Caption="@Loc["Opt out of MFA"]"
+                 Close="Close" CloseDisabled="@Flow.Busy">
+    <div data-testid="mfa-opt-out-form">
+        @if (!done)
+        {
+            <h1 class="auth-title" tabindex="-1">@Loc["Confirm your current authenticator"]</h1>
+            <p class="auth-description">@Loc["Enter a code from your authenticator app. After that you sign in with your password only, and you are signed out on your other devices."]</p>
+            <AuthForm Model="entry" Submit="OptOut" class="auth-inputs" Context="attempting">
+                <MudTextField T="string" Label="@Loc["Code"]" @bind-Value="entry.Code" For="@(() => entry.Code)" Immediate="true"
+                              InputType="InputType.Text" InputMode="InputMode.numeric" autocomplete="one-time-code" spellcheck="false" />
+                <div class="auth-actions">
+                    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Error" Disabled="@(attempting || Flow.Busy)">@Loc["Opt out"]</MudButton>
+                </div>
+            </AuthForm>
+        }
+        else
+        {
+            <div class="auth-center" role="status" data-testid="mfa-opt-out-done">
+                <MudIcon Icon="@Icons.Material.Outlined.LockOpen" Color="Color.Primary" Size="Size.Large" Class="auth-done-icon" />
+                <h1 class="auth-title" tabindex="-1">@Loc["MFA is off"]</h1>
+                <p class="auth-description">@Loc[signInAgain ? "Sign in again with your password to continue."
+                    : "You now sign in with your password only. To use an authenticator again, choose Set up authenticator on your profile."]</p>
+                <div class="auth-actions">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Close" data-testid="mfa-opt-out-finish">@Loc["Done"]</MudButton>
+                </div>
+            </div>
+        }
+        <AuthError @bind-Message="error" TestId="mfa-opt-out-error" />
+    </div>
+</SecurityStepBox>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
+    private sealed class CodeEntry { [Required, RegularExpression(@"^[0-9]{6,8}$", ErrorMessage = "Enter the code the app shows, using digits only.")] public string Code { get; set; } = ""; }
+    private CodeEntry entry = new();
+    private bool done, signInAgain;
+    private string? error;
+    private AuthenticationFlow? flow;
+    private AuthenticationFlow Flow => flow ??= Services.GetRequiredService<AuthenticationFlow>();
+
+    // AuthForm closes a shown error before each press and runs one attempt at a time.
+    private async Task OptOut()
+    {
+        var access = await Session.GetTokenAsync() is { Flow: AuthPurpose.None, Token: { Length: > 0 } token } ? token : null;
+        var result = access is null ? new AuthenticationRefused(AuthenticationFailure.InvalidGrant) : await Flow.TurnOffMfaAsync(access, entry.Code);
+        entry = new();
+        if (result is MfaChanged changed)
+        {
+            // The flow stored this device's fresh session; the authentication state and TypeAuth read it from there.
+            // Without one (a further step is required), the old session has ended and the user signs in again.
+            signInAgain = changed.Continuation is not SessionIssued;
+            if (!signInAgain) await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            done = true;
+        }
+        else error = RefusalMessage(result);
+    }
+
+    private string RefusalMessage(AuthOutcome result) => result switch
+    {
+        AuthenticationRefused { Code: AuthenticationFailure.InvalidProof } => Loc["That code was not accepted. Wait for a new code and try again."],
+        AuthenticationRefused { Code: AuthenticationFailure.AttemptsExhausted } => Loc["Too many attempts. Wait a few minutes and try again."],
+        AuthenticationRefused { Code: AuthenticationFailure.ClientDenied } => Loc["MFA is required on this system, so it cannot be turned off."],
+        AuthenticationRefused { Code: AuthenticationFailure.Unavailable } => Loc["The service is unavailable. Wait a moment and try again."],
+        _ => Loc["Opting out could not be confirmed. Sign in again to check whether MFA is still on."]
+    };
+
+    private void Close() => MudDialog?.Close(DialogResult.Ok(done));
+}

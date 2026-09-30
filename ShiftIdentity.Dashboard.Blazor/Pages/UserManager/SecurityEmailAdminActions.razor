@@ -4,18 +4,26 @@
 @using ShiftSoftware.ShiftIdentity.Core.Enums
 @inject AuthenticationFlow Flow
 @inject IdentitySession Session
+@inject ShiftIdentityLocalizer Loc
 
-<MudStack data-testid="security-email-admin">
-    <MudStack Row Wrap="Wrap.Wrap">
-        <MudButton Disabled="@(Disabled || Flow.Busy)" OnClick="() => Send(false)">Send password reset link</MudButton>
-        <MudButton Disabled="@(Disabled || Flow.Busy)" OnClick="() => Send(true)">Send email verification link</MudButton>
-    </MudStack>
-    @if (message is not null) { <MudAlert Severity="severity">@message</MudAlert> }
-</MudStack>
+@* Each send answers in the same place. As with a security step's error, the answer closes before the next send and
+   opens again with its result, so a repeated send is seen. *@
+<CascadingValue Value="feedback" IsFixed="true">
+    <div data-testid="security-email-admin">
+        <MudStack Row Wrap="Wrap.Wrap">
+            <MudButton Disabled="@(Disabled || Flow.Busy || feedback.Attempting)" OnClick="() => feedback.AttemptAsync(() => Send(false))">@Loc["Send password reset link"]</MudButton>
+            <MudButton Disabled="@(Disabled || Flow.Busy || feedback.Attempting)" OnClick="() => feedback.AttemptAsync(() => Send(true))">@Loc["Send email verification link"]</MudButton>
+        </MudStack>
+        <AuthError @bind-Message="message" Context="text">
+            <MudAlert Severity="severity" Class="mt-3" data-testid="security-email-admin-result">@text</MudAlert>
+        </AuthError>
+    </div>
+</CascadingValue>
 
 @code {
     [Parameter, EditorRequired] public string UserKey { get; set; } = "";
     [Parameter] public bool Disabled { get; set; }
+    private readonly AuthFeedback feedback = new();
     private string? message;
     private Severity severity;
     private string? previousKey;
@@ -26,17 +34,16 @@
     private async Task Send(bool verification)
     {
         var target = UserKey;
-        message = null;
         var access = await Session.GetTokenAsync() is { Flow: AuthPurpose.None, Token: { Length: > 0 } token } ? token : null;
         var result = access is null ? new AuthenticationRefused(AuthenticationFailure.InvalidGrant)
             : verification ? await Flow.RequestAdminEmailVerificationAsync(access, target)
             : await Flow.RequestAdminPasswordResetAsync(access, target);
         if (target != UserKey) return;
         severity = result is SecurityDeliveryRequested ? Severity.Info : Severity.Error;
-        message = result is SecurityDeliveryRequested
+        message = Loc[result is SecurityDeliveryRequested
             ? "If the saved address is eligible, check its inbox. Wait before requesting another link."
             : result is AuthenticationRefused { Code: AuthenticationFailure.Unavailable }
                 ? "The send could not be confirmed. Check the recipient's inbox, wait and request a fresh link."
-                : "The request could not be completed. Check your session and Users write permission before sending links.";
+                : "The request could not be completed. Check your session and Users write permission before sending links."];
     }
 }

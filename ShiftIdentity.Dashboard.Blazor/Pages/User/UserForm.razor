@@ -7,7 +7,10 @@
 @inject IDialogService DialogService
 @inject ShiftIdentityLocalizer Loc
 @inject ShiftIdentityDashboardBlazorOptions DashboardOptions
+@inject ITypeAuthService TypeAuthService
+@inject IServiceProvider Services
 
+@using Microsoft.Extensions.DependencyInjection
 @using ShiftSoftware.ShiftEntity.Model.Dtos
 @using ShiftSoftware.ShiftBlazor.Enums
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree
@@ -39,7 +42,7 @@ else
     <MudStack Spacing="4">
         @if (verificationSendUnconfirmed)
         {
-            <MudAlert Severity="Severity.Warning" data-testid="user-verification-unconfirmed">The user was saved, but the verification send could not be confirmed. Check the recipient's inbox, wait and request a fresh link.</MudAlert>
+            <MudAlert Severity="Severity.Warning" data-testid="user-verification-unconfirmed">@Loc["The user was saved, but the verification send could not be confirmed. Check the recipient's inbox, wait and request a fresh link."]</MudAlert>
         }
 
         <FormSectionCard Title="@Loc["Profile"]" Icon="@Icons.Material.Filled.Person" data-testid="user-section-profile">
@@ -74,7 +77,7 @@ else
                     <MudTextField ReadOnly="@context.ReadOnly"
                                   Disabled="@context.Disabled"
                                   OnlyValidateIfDirty="true"
-                                  Label="@Loc["Integration Id"]"
+                                  Label="@Loc["Integration ID"]"
                                   @bind-Value="context.Item.IntegrationId"
                                   For="@(() => context.Item.IntegrationId)" />
                 </MudItem>
@@ -133,15 +136,38 @@ else
                 {
                     <MudItem xs="12" md="6">
                         <MudField Label="@Loc["Authenticator App (TOTP)"]" Variant="Variant.Text">
-                            @if (context.Item.TotpEnabled)
-                            {
-                                <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.Lock">@Loc["Enabled"]</MudChip>
-                            }
-                            else
-                            {
-                                <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.LockOpen">@Loc["Not set up"]</MudChip>
-                            }
+                            <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="2">
+                                @* Recovery required is its own state: a recovery code turned the authenticator off, and the user cannot sign in until they recover it. *@
+                                @if (context.Item.MfaRecoveryRequired)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Icon="@Icons.Material.Filled.LockReset" data-testid="user-authenticator-status">@Loc["Recovery required"]</MudChip>
+                                }
+                                else if (context.Item.TotpEnabled)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.Lock" data-testid="user-authenticator-status">@Loc["Enabled"]</MudChip>
+                                }
+                                else
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.LockOpen" data-testid="user-authenticator-status">@Loc["Not set up"]</MudChip>
+                                }
+                                @if (CanRecoverAuthenticator(context.Mode))
+                                {
+                                    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Warning" StartIcon="@Icons.Material.Filled.LockReset"
+                                               Disabled="@context.Disabled" OnClick="RecoverAuthenticator" data-testid="user-recover-authenticator">@Loc["Recover authenticator"]</MudButton>
+                                }
+                                @if (CanTurnOffMfa(context.Mode, context.Item))
+                                {
+                                    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Error" StartIcon="@Icons.Material.Filled.LockOpen"
+                                               Disabled="@context.Disabled" OnClick="TurnOffMfa" data-testid="user-turn-off-mfa">@Loc["Turn off MFA"]</MudButton>
+                                }
+                            </MudStack>
                         </MudField>
+                        @if (context.Item.MfaRecoveryRequired)
+                        {
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary" data-testid="user-authenticator-recovery-help">
+                                @Loc["This user cannot sign in until they recover their authenticator app with a recovery code from an administrator."]
+                            </MudText>
+                        }
                     </MudItem>
                 }
 
@@ -284,6 +310,95 @@ else
     {
         if (_theItem.ID == default)
             _theItem.AccessTree = "{}";
+    }
+
+    [CascadingParameter] private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    // The signed-in operator's encoded user ID, the same form as this form's key. An operator cannot issue a recovery
+    // code for their own account (the authority refuses it), so the action is not offered on their own user.
+    private string? operatorKey;
+
+    // The host's MFA policy, read with the operator's own authenticator status: false where MFA is optional, true
+    // where it is mandatory, and null until it is read or when it cannot be read.
+    private bool? mfaMandatory;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthenticationStateTask is null) return;
+        var user = (await AuthenticationStateTask).User;
+        operatorKey = user.FindFirst("sub")?.Value ?? user.FindFirst("nameid")?.Value
+            ?? user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (DashboardOptions.StagedAuthority && TypeAuthService.CanAccess(ShiftIdentityActions.ManageMfaRecovery))
+            mfaMandatory = await ReadMfaMandatoryAsync();
+    }
+
+    // A flow of its own, so this read never makes a dialog's request wait for the shared flow.
+    private async Task<bool?> ReadMfaMandatoryAsync()
+    {
+        var session = Services.GetRequiredService<ShiftSoftware.ShiftIdentity.Blazor.IdentitySession>();
+        if (await session.GetTokenAsync() is not { Flow: ShiftSoftware.ShiftIdentity.Core.Enums.AuthPurpose.None, Token: { Length: > 0 } access })
+            return null;
+        var flow = new ShiftSoftware.ShiftIdentity.Blazor.Services.AuthenticationFlow(
+            Services.GetRequiredService<ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services.StagedAuthorityHttpClient>(), session);
+        return await flow.ReadAuthenticatorAsync(access) is ShiftSoftware.ShiftIdentity.Core.Authentication.AuthenticatorStatus status
+            ? status.Mandatory : null;
+    }
+
+    // Issuing a recovery code is an identity authority action with its own permission, separate from Users write.
+    private bool CanRecoverAuthenticator(FormModes mode) =>
+        DashboardOptions.StagedAuthority && mode == FormModes.View && !string.IsNullOrEmpty(Key?.ToString()) &&
+        !string.Equals(operatorKey, Key?.ToString(), StringComparison.Ordinal) &&
+        TypeAuthService.CanAccess(ShiftIdentityActions.ManageMfaRecovery);
+
+    // Turning MFA off has the same guard as a recovery code, applies only where MFA is optional, and only to a user
+    // who has an authenticator or waits for recovery.
+    private bool CanTurnOffMfa(FormModes mode, UserDTO item) =>
+        CanRecoverAuthenticator(mode) && mfaMandatory == false && (item.TotpEnabled || item.MfaRecoveryRequired);
+
+    private async Task TurnOffMfa()
+    {
+        var key = Key?.ToString();
+        if (string.IsNullOrEmpty(key)) return;
+        var parameters = new DialogParameters<ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.UserManager.MfaTurnOffAdminForm>
+        {
+            { x => x.UserKey, key },
+            { x => x.UserName, string.IsNullOrWhiteSpace(_theItem.FullName) ? _theItem.Username : $"{_theItem.FullName} ({_theItem.Username})" },
+            { x => x.RecoveryRequired, _theItem.MfaRecoveryRequired }
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, NoHeader = true, CloseButton = false,
+            BackdropClick = false, CloseOnEscapeKey = false };
+        var dialog = await DialogService.ShowAsync<ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.UserManager.MfaTurnOffAdminForm>("", parameters, options);
+        var result = await dialog.Result;
+        // MFA is off: show the saved state now; the next load of the user reads the same state from the server.
+        if (result is { Canceled: false, Data: true } && Key?.ToString() == key)
+        {
+            _theItem.TotpEnabled = false;
+            _theItem.MfaRecoveryRequired = false;
+        }
+    }
+
+    private async Task RecoverAuthenticator()
+    {
+        var key = Key?.ToString();
+        if (string.IsNullOrEmpty(key)) return;
+        var parameters = new DialogParameters<ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.UserManager.MfaRecoveryAdminForm>
+        {
+            { x => x.Dialog, true },
+            { x => x.UserKey, key },
+            { x => x.UserName, string.IsNullOrWhiteSpace(_theItem.FullName) ? _theItem.Username : $"{_theItem.FullName} ({_theItem.Username})" }
+        };
+        // A narrow dialog that stays open on a backdrop click or Escape, so a shown code is not lost by accident.
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, NoHeader = true, CloseButton = false,
+            BackdropClick = false, CloseOnEscapeKey = false };
+        var dialog = await DialogService.ShowAsync<ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.UserManager.MfaRecoveryAdminForm>("", parameters, options);
+        var result = await dialog.Result;
+        // A code was issued, so the authority has turned the authenticator off and requires recovery. Show that
+        // saved state now; the next load of the user reads the same state from the server.
+        if (result is { Canceled: false, Data: true } && Key?.ToString() == key)
+        {
+            _theItem.MfaRecoveryRequired = true;
+            _theItem.TotpEnabled = false;
+        }
     }
 
     private void ModeChanged(FormModes mode)

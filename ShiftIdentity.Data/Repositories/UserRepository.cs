@@ -203,16 +203,10 @@ public class UserRepository :
             return Task.FromResult<User?>(user);
         }
 
-        // The staged authority owns the protected factor. A new factor is activated only by the staged enrollment
-        // flows, after the proofs they require; a reset is admitted in this save (operator checks, one version
-        // increment, operator audit) and never touches the retained plaintext column.
-        if (secret is not null)
-            throw new InvalidOperationException("A host with the staged authority activates authenticators only through the admission flows.");
-
-        if (!user.IsProtected)
-            RequireAdmission(new UserAccountChange { User = user, ResetAuthenticator = true });
-
-        return Task.FromResult<User?>(user);
+        // The staged authority owns the factor. It is set up and replaced by the staged enrollment flows, after the
+        // proofs they require, and removed by Turn off MFA or replaced through Recover authenticator, each with its
+        // own permission and identity-check note. No repository write changes it.
+        throw new InvalidOperationException("A host with the staged authority changes authenticators only through the admission flows.");
     }
 
     public async Task<User?> UpdateUserDataAsync(UserDataDTO dto, long userId)

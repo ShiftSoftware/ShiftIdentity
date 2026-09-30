@@ -1,31 +1,35 @@
 @using ShiftSoftware.ShiftIdentity.Blazor.Services
 @using ShiftSoftware.ShiftIdentity.Core.Authentication
+@inject ShiftIdentityLocalizer Loc
 
 <MudDialog>
     <DialogContent>
-        <MudText Class="mb-3">Confirm your current administrator account to continue. Your edits and selection will stay here.</MudText>
-        @if (Flow.Pending?.Step is AuthenticationStep.Password or AuthenticationStep.ExistingMfa)
-        {
-            <form @onsubmit="Submit" @onsubmit:preventDefault data-testid="administrator-confirmation-form">
-                @if (Flow.Pending.Step == AuthenticationStep.Password)
-                {
-                    <MudTextField T="string" Label="Your password" InputType="InputType.Password" @bind-Value="password"
-                                  Immediate="true" Disabled="Flow.Busy" AutoFocus="true" autocomplete="current-password" />
-                }
-                else
-                {
-                    <MudTextField T="string" Label="Authenticator code" @bind-Value="code" Immediate="true"
-                                  Disabled="Flow.Busy" AutoFocus="true" autocomplete="one-time-code" />
-                }
-                <MudButton ButtonType="ButtonType.Submit" Color="Color.Primary" Variant="Variant.Filled" Disabled="Flow.Busy"
-                           Class="mt-3" data-testid="administrator-confirmation-submit">Confirm and continue</MudButton>
-            </form>
-        }
-        else if (Flow.Busy) { <MudProgressCircular Indeterminate="true" /> }
-        @if (error is not null) { <MudAlert Severity="Severity.Error" Class="mt-3" data-testid="administrator-confirmation-error">@error</MudAlert> }
+        @* The same attempts as every security step: a shown error closes before each password or code is sent. *@
+        <AuthFeedbackScope>
+            <MudText Class="mb-3">@Loc["Confirm your current administrator account to continue. Your edits and selection will stay here."]</MudText>
+            @if (Flow.Pending?.Step is AuthenticationStep.Password or AuthenticationStep.ExistingMfa)
+            {
+                <AuthForm Model="entry" Submit="Submit" data-testid="administrator-confirmation-form" Context="attempting">
+                    @if (Flow.Pending?.Step == AuthenticationStep.Password)
+                    {
+                        <MudTextField T="string" Label="@Loc["Your password"]" InputType="InputType.Password" @bind-Value="entry.Password"
+                                      Immediate="true" Disabled="Flow.Busy" AutoFocus="true" autocomplete="current-password" />
+                    }
+                    else
+                    {
+                        <MudTextField T="string" Label="@Loc["Authenticator code"]" @bind-Value="entry.Code" Immediate="true"
+                                      Disabled="Flow.Busy" AutoFocus="true" autocomplete="one-time-code" />
+                    }
+                    <MudButton ButtonType="ButtonType.Submit" Color="Color.Primary" Variant="Variant.Filled" Disabled="@(attempting || Flow.Busy)"
+                               Class="mt-3" data-testid="administrator-confirmation-submit">@Loc["Confirm and continue"]</MudButton>
+                </AuthForm>
+            }
+            else if (Flow.Busy) { <MudProgressCircular Indeterminate="true" /> }
+            <AuthError @bind-Message="error" TestId="administrator-confirmation-error" />
+        </AuthFeedbackScope>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel" data-testid="administrator-confirmation-cancel">Cancel</MudButton>
+        <MudButton OnClick="Cancel" data-testid="administrator-confirmation-cancel">@Loc["Cancel"]</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -33,19 +37,20 @@
     [Parameter, EditorRequired] public AuthenticationFlow Flow { get; set; } = null!;
     [Parameter, EditorRequired] public string CurrentAccess { get; set; } = "";
     [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = null!;
-    private string password = "", code = "";
+    private sealed class Entry { public string Password { get; set; } = ""; public string Code { get; set; } = ""; }
+    private Entry entry = new();
     private string? error;
     private bool cancelled;
 
     protected override async Task OnInitializedAsync() => Show(await Flow.BeginAdministratorConfirmationAsync(CurrentAccess));
 
+    // AuthForm closes a shown error before each press and runs one attempt at a time.
     private async Task Submit()
     {
         if (Flow.Busy || cancelled) return;
-        error = null;
         var result = Flow.Pending?.Step == AuthenticationStep.Password
-            ? await Flow.ConfirmAdministratorPasswordAsync(password) : await Flow.ConfirmAdministratorMfaAsync(code);
-        password = ""; code = "";
+            ? await Flow.ConfirmAdministratorPasswordAsync(entry.Password) : await Flow.ConfirmAdministratorMfaAsync(entry.Code);
+        entry = new();
         if (!cancelled) Show(result);
     }
 
@@ -56,16 +61,16 @@
         error = result switch
         {
             ChallengeRequired { Challenge.Step: AuthenticationStep.Password or AuthenticationStep.ExistingMfa } => null,
-            AuthenticationRefused { Code: AuthenticationFailure.InvalidProof } => "The password or authenticator code was not accepted. Check it and try again.",
-            AuthenticationRefused { Code: AuthenticationFailure.AttemptsExhausted } => "Too many attempts. Cancel and try again later.",
-            AuthenticationRefused { Code: AuthenticationFailure.Unavailable } => "Confirmation could not be completed. Your action has not been retried. Cancel and try again later.",
-            _ => "Your session or account changed, or confirmation expired. Cancel and review your session before trying again."
+            AuthenticationRefused { Code: AuthenticationFailure.InvalidProof } => Loc["The password or authenticator code was not accepted. Check it and try again."],
+            AuthenticationRefused { Code: AuthenticationFailure.AttemptsExhausted } => Loc["Too many attempts. Cancel and try again later."],
+            AuthenticationRefused { Code: AuthenticationFailure.Unavailable } => Loc["Confirmation could not be completed. Your action has not been retried. Cancel and try again later."],
+            _ => Loc["Your session or account changed, or confirmation expired. Cancel and review your session before trying again."]
         };
     }
 
     private async Task Cancel()
     {
-        cancelled = true; password = ""; code = "";
+        cancelled = true; entry = new();
         await Flow.CancelAsync();
         Dialog.Cancel();
     }

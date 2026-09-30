@@ -1,0 +1,61 @@
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+@* The form of every security step. Each press is an attempt of the screen's AuthFeedback, so the error on screen slides
+   closed first. A press that the form's own checks refuse ends there: the fields say what to fix, and the first of them
+   gets the focus. Otherwise the attempt runs, and a failure opens its error again. One attempt at a time. *@
+<EditForm Model="Model" OnSubmit="PressAsync" id="@id" @attributes="Attributes">
+    <LocalizedValidator />
+    @ChildContent?.Invoke(Feedback?.Attempting == true)
+</EditForm>
+
+@code {
+    [CascadingParameter] private AuthFeedback? Feedback { get; set; }
+    [Parameter, EditorRequired] public object Model { get; set; } = null!;
+    /// <summary>The attempt. It runs only for a press whose input passes the form's checks.</summary>
+    [Parameter] public EventCallback Submit { get; set; }
+    /// <summary>The fields and buttons. The argument is true while an attempt of the screen is under way.</summary>
+    [Parameter] public RenderFragment<bool>? ChildContent { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? Attributes { get; set; }
+    private readonly string id = "auth-form-" + Guid.NewGuid().ToString("N");
+    private AuthFeedback? subscribed;
+    private IJSObjectReference? module;
+
+    protected override void OnParametersSet()
+    {
+        if (Feedback is null)
+            throw new InvalidOperationException($"An {nameof(AuthForm)} must be inside a {nameof(LoginBox)}, a {nameof(SecurityStepBox)} or an {nameof(AuthFeedbackScope)}.");
+        if (ReferenceEquals(subscribed, Feedback)) return;
+        if (subscribed is not null) subscribed.Changed -= Refresh;
+        Feedback.Changed += Refresh;
+        subscribed = Feedback;
+    }
+
+    // Another form of the same screen can start an attempt, so the buttons follow the shared state.
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+
+    private Task PressAsync(EditContext context) => Feedback!.AttemptAsync(async () =>
+    {
+        if (context.Validate()) await Submit.InvokeAsync();
+        else await FocusInvalidAsync();
+    });
+
+    private async Task FocusInvalidAsync()
+    {
+        try
+        {
+            module ??= await JS.InvokeAsync<IJSObjectReference>("import", "./_content/ShiftSoftware.ShiftIdentity.Dashboard.Blazor/auth-feedback.js");
+            await module.InvokeVoidAsync("focusInvalid", id);
+        }
+        // The focus is a convenience: the fields show what to fix either way.
+        catch (Exception error) when (error is JSException or JSDisconnectedException) { }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (subscribed is not null) subscribed.Changed -= Refresh;
+        if (module is null) return;
+        try { await module.DisposeAsync(); }
+        catch (JSDisconnectedException) { }
+    }
+}

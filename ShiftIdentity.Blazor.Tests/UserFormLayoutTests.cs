@@ -25,7 +25,7 @@ public sealed class UserFormLayoutTests
         Assert.Equal(SectionOrder, cut.FindAll("[data-testid^=user-section-]").Select(x => x.GetAttribute("data-testid")));
 
         var profile = cut.Find("[data-testid=user-section-profile]");
-        foreach (var label in new[] { "Full Name", "Company Branch", "Birth Date", "Integration Id" })
+        foreach (var label in new[] { "Full Name", "Company Branch", "Birth Date", "Integration ID" })
             Assert.Contains(label, profile.TextContent);
 
         // The password, its generator and its next-login choice are one cluster inside Security, with the username and status.

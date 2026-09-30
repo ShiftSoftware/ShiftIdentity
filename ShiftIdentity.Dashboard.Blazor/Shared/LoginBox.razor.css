@@ -36,6 +36,26 @@
 .identity-login-box ::deep .auth-failure .auth-help { display: inline-flex; align-items: center; gap: 8px; margin: 13px 0 0; padding: 0; color: var(--mud-palette-primary); font-weight: 600; }
 .identity-login-box ::deep .auth-reference { display: block; margin-top: 8px; font-size: 11px; color: #805a59; }
 .identity-login-box ::deep .auth-notice { margin-top: 18px; }
+.identity-login-box ::deep .auth-done-icon { display: block; margin: 4px auto 14px; }
+/* A QR code must stay dark on light to scan, so its tile keeps a white background in every theme. */
+.identity-login-box ::deep .auth-qr { width: min(100%, 184px); margin: 4px auto 14px; padding: 8px; background: #fff; border: 1px solid var(--mud-palette-lines-default); border-radius: 4px; }
+.identity-login-box ::deep .auth-qr svg { display: block; width: 100%; height: auto; }
+.identity-login-box ::deep .auth-key { display: flex; align-items: center; justify-content: center; gap: 4px; margin-bottom: 4px; }
+.identity-login-box ::deep .auth-key-value { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 15px; letter-spacing: .08em; word-break: break-all; user-select: all; }
+.identity-login-box ::deep .auth-key-label { display: block; text-align: center; font-size: 13px; color: var(--mud-palette-text-secondary); }
+.identity-login-box ::deep .auth-code { margin: 8px 0 4px; padding: 14px 12px; text-align: center; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 20px; letter-spacing: .12em; word-break: break-all; user-select: all; border: 1px dashed var(--mud-palette-primary); border-radius: 4px; background: var(--mud-palette-background-gray); }
+.identity-login-box ::deep .auth-steps { margin: 12px 0 0; padding-inline-start: 20px; color: var(--mud-palette-text-secondary); font-size: 14px; line-height: 1.6; }
+.identity-login-box ::deep .auth-warning { margin: 0 0 12px; }
+
+/* The box as the body of a security dialog: the dialog draws the surface, the box keeps a readable column. */
+.identity-login-box.dialog { width: min(100%, 560px); border: 0; border-radius: 0; box-shadow: none; background: transparent; }
+.identity-dialog-header { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 8px 8px 0 clamp(20px, 4vw, 32px); }
+.identity-dialog-caption { flex: 1 1 auto; min-width: 0; font-size: 12px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--mud-palette-text-secondary); }
+.identity-dialog-close { display: grid; place-items: center; flex-shrink: 0; width: 40px; height: 40px; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer; transition: background 150ms; }
+.identity-dialog-close:hover { background: var(--mud-palette-action-default-hover); }
+.identity-dialog-close:disabled { opacity: .38; pointer-events: none; }
+.identity-dialog-close:focus-visible { outline: 2px solid var(--mud-palette-primary); outline-offset: 2px; }
+.identity-login-box.dialog .identity-login-content { padding-top: 2px; }
 .identity-login-box ::deep [data-login-error]:focus-visible { outline: 2px solid #df9d98; outline-offset: 3px; }
 .identity-login-box ::deep button:focus-visible { outline: 2px solid var(--mud-palette-primary); outline-offset: 3px; }
 @media (max-width: 540px) {

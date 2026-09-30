@@ -1,0 +1,16 @@
+@* Gives its content the AuthFeedback that its forms and error panels share. Inside another screen's box or scope it adds
+   nothing, so a step drawn inside a sign-in or a password change belongs to that screen. *@
+@if (Outer is not null)
+{
+    @ChildContent
+}
+else
+{
+    <CascadingValue Value="feedback" IsFixed="true">@ChildContent</CascadingValue>
+}
+
+@code {
+    [CascadingParameter] private AuthFeedback? Outer { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    private readonly AuthFeedback feedback = new();
+}

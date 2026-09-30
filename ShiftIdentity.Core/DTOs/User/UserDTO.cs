@@ -36,6 +36,12 @@ public class UserDTO : ShiftEntityViewAndUpsertDTO
 
     public bool TotpEnabled { get; set; }
 
+    /// <summary>
+    /// An administrator issued a recovery code, which turned the authenticator off. The user cannot sign in with a
+    /// password until they recover it with that code. Always false on a host without the identity authority.
+    /// </summary>
+    public bool MfaRecoveryRequired { get; set; }
+
     #endregion
 
     #region Contacts

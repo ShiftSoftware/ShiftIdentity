@@ -69,8 +69,7 @@
     }
     else
     {
-        <EditForm Model="@loginDto" OnValidSubmit="Login" class="auth-inputs" aria-busy="@(loginInProgress ? "true" : "false")">
-            <DataAnnotationsValidator />
+        <AuthForm Model="loginDto" Submit="Login" class="auth-inputs" aria-busy="@(loginInProgress ? "true" : "false")" Context="attempting">
             <MudTextField T="string" Label="@Loc["Username"]" @bind-Value="loginDto.Username" For="@(() => loginDto.Username)" Immediate="true" Disabled="loginInProgress" autocomplete="username" />
             <PasswordField Label="@Loc["Password"]" @bind-Value="loginDto.Password" Immediate="true" For="@(() => loginDto.Password)" Disabled="loginInProgress" autocomplete="current-password" />
             <div class="auth-feedback-slot" data-open="@(loginFailure is not null ? "true" : "false")" aria-hidden="@(loginFailure is null ? "true" : "false")" inert="@(loginFailure is null)">
@@ -96,14 +95,13 @@
                     <button type="button" class="auth-help" data-testid="login-help" @onclick="OpenAccess">@Loc["Can't access your account?"]</button>
                 </div></div>
             </div>
-        </EditForm>
+        </AuthForm>
         @if (AdmissionFlow?.ReturnToLoginRequired == true)
         { <MudAlert Class="auth-notice" Severity="Severity.Success" data-testid="recovery-completed">@Loc["Authenticator recovery completed. Sign in with your password and a new code from your authenticator."]</MudAlert> }
         @if ((AdmissionContext is not null || ShiftIdentityDashboardBlazorOptions.StagedAuthority) && SecurityLink == "reset")
         { <MudAlert Class="auth-notice" Severity="Severity.Success">@Loc["Password reset. Sign in with your new password."]</MudAlert> }
     }
-    @if (admissionError is not null)
-    { <MudAlert Class="auth-notice" Severity="Severity.Error" data-testid="admission-error">@admissionError</MudAlert> }
+    <AuthError @bind-Message="admissionError" TestId="admission-error" />
 </LoginBox>
 
 @code {
@@ -215,7 +213,10 @@
     private async Task HandleAdmission(AuthOutcome outcome)
     {
         if (disposed) return;
-        admissionError = outcome is AuthenticationRefused && AdmissionFlow?.Pending?.Purpose != AuthenticationOperationPurpose.PasswordChange
+        // A step that stays on screen shows its own error: the password change, the new authenticator's setup and the
+        // recovery form. This panel shows the rest, and every failure that ends the step.
+        admissionError = outcome is AuthenticationRefused && view != "recovery" &&
+            AdmissionFlow?.Pending is not ({ Purpose: AuthenticationOperationPurpose.PasswordChange } or { Step: AuthenticationStep.NewMfa })
             ? Loc["Sign-in could not be completed. Try again."] : null;
         if (outcome is ChallengeRequired required)
         {

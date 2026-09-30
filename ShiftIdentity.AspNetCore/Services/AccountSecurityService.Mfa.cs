@@ -23,7 +23,7 @@ internal static partial class AccountSecurityService
         {
             var refusal = SignedInRefusal(services, unit, signedIn);
             return Task.FromResult<AuthOutcome>(refusal is not null ? refusal :
-                new AuthenticatorStatus(unit.Security.ProtectedTotpSecret is not null, unit.Security.LocalMfaRecoveryRequired));
+                new AuthenticatorStatus(unit.Security.ProtectedTotpSecret is not null, unit.Security.LocalMfaRecoveryRequired, MfaMandatory(unit)));
         }, ct);
     });
 

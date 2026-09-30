@@ -4,9 +4,10 @@
 @inject ShiftIdentityDashboardBlazorOptions DashboardOptions
 @using Microsoft.Extensions.DependencyInjection
 @inject IServiceProvider Services
+@inject ShiftIdentityLocalizer Loc
 
 @if (LinkFlow is not null) { <SecurityLinkForm Flow="LinkFlow" Verification="true" /> }
-else { <MudAlert Severity="Severity.Info">Email verification is unavailable here.</MudAlert> }
+else { <MudAlert Severity="Severity.Info">@Loc["Email verification is unavailable here."]</MudAlert> }
 
 @code {
     [CascadingParameter] public AdmissionUiContext? AdmissionContext { get; set; }

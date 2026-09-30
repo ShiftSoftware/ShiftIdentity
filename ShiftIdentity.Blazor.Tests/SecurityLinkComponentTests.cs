@@ -154,6 +154,35 @@ public sealed class SecurityLinkComponentTests
         Assert.Same(previous, Assert.Single(context.Services.GetRequiredService<RecordingStore>().Writes));
     }
 
+    // A second refused new password used to leave the first refusal's alert as it was.
+    [Fact]
+    public async Task A_second_refused_new_password_closes_the_error_before_it_is_sent_again()
+    {
+        using var context = Setup(AuthenticationOperationPurpose.PasswordResetEmail, out var ui, out var transport, respond: request =>
+            Task.FromResult<AuthOutcome>(request.RequestUri!.AbsolutePath.EndsWith("/open")
+                ? Page(AuthenticationOperationPurpose.PasswordResetEmail, "target")
+                : new AuthenticationRefused(AuthenticationFailure.InvalidNewPassword)));
+        var close = context.JSInterop.SetupModule("./_content/ShiftSoftware.ShiftIdentity.Dashboard.Blazor/auth-feedback.js").SetupVoid("waitForClose", _ => true);
+        var cut = context.Render<SecurityLinkForm>(p => p.Add(x => x.Context, ui));
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("form")));
+        const string shown = ".auth-feedback-slot[data-open=true] [data-testid=security-link-error]";
+        foreach (var input in cut.FindAll("input")) input.Input("Synthetic new password!");
+        await cut.Find("form").SubmitAsync();
+        cut.WaitForAssertion(() => Assert.Contains("meets the password requirements", cut.Find(shown).TextContent));
+        Assert.Empty(close.Invocations);
+
+        foreach (var input in cut.FindAll("input")) input.Input("Another synthetic password!");
+        var retry = cut.Find("form").SubmitAsync();
+        cut.WaitForAssertion(() => Assert.Single(close.Invocations));
+        Assert.Empty(cut.FindAll(shown));
+        Assert.Equal(2, transport.Requests.Count);
+        close.SetVoidResult();
+        await retry;
+        Assert.Equal(3, transport.Requests.Count);
+        Assert.Contains("Another synthetic password!", transport.Requests[^1].Body);
+        cut.WaitForAssertion(() => Assert.Contains("meets the password requirements", cut.Find(shown).TextContent));
+    }
+
     [Fact]
     public void Cancel_discards_page_context_without_completing_the_grant()
     {

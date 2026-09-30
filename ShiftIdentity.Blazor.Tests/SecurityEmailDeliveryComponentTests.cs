@@ -82,6 +82,39 @@ public sealed class SecurityEmailDeliveryComponentTests
         Assert.Same(previous, Assert.Single(context.Services.GetRequiredService<RecordingStore>().Writes));
     }
 
+    // A request that fails again used to leave the first failure's alert in place.
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_request_that_fails_again_closes_the_error_before_it_is_sent_again(bool deployed)
+    {
+        using var context = Context(out var ui, out var handler, _ => Task.FromResult<AuthOutcome>(new AuthenticationRefused(AuthenticationFailure.Unavailable)));
+        var legacy = new FailingResetLinks();
+        context.Services.AddSingleton(new HttpClient(legacy) { BaseAddress = new Uri("https://identity.invalid/api/") });
+        var close = context.JSInterop.SetupModule("./_content/ShiftSoftware.ShiftIdentity.Dashboard.Blazor/auth-feedback.js").SetupVoid("waitForClose", _ => true);
+        var cut = context.Render(builder =>
+        {
+            builder.OpenComponent(0, deployed ? typeof(LegacyResetRequestForm) : typeof(SecurityEmailRequestForm));
+            if (!deployed) builder.AddAttribute(1, nameof(SecurityEmailRequestForm.Context), ui);
+            builder.CloseComponent();
+        });
+        int Sent() => deployed ? legacy.Requests : handler.Posts.Count;
+        const string shown = ".auth-feedback-slot[data-open=true] [data-testid=delivery-error]";
+        cut.Find("input").Input("saved@example.invalid");
+        await cut.Find("form").SubmitAsync();
+        cut.WaitForAssertion(() => Assert.Contains(deployed ? "The request could not be completed" : "Email requests are unavailable right now", cut.Find(shown).TextContent));
+        Assert.Empty(close.Invocations);
+
+        var retry = cut.Find("form").SubmitAsync();
+        cut.WaitForAssertion(() => Assert.Single(close.Invocations));
+        Assert.Empty(cut.FindAll(shown));
+        Assert.Equal(1, Sent());
+        close.SetVoidResult();
+        await retry;
+        Assert.Equal(2, Sent());
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll(shown)));
+    }
+
     [Fact]
     public async Task Authenticated_permission_refusal_remains_distinct_from_delivery_failure()
     {
@@ -103,6 +136,17 @@ public sealed class SecurityEmailDeliveryComponentTests
         context.Services.AddTransient(sp => new ShiftIdentityLocalizer(sp, typeof(ShiftSoftwareLocalization.Identity.Resource)));
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         return context;
+    }
+
+    /// <summary>The deployed reset-link request, refused every time.</summary>
+    private sealed class FailingResetLinks : HttpMessageHandler
+    {
+        public int Requests { get; private set; }
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Requests++;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest));
+        }
     }
 
     private sealed class DeliveryResponses(Func<int, Task<AuthOutcome>> respond) : HttpMessageHandler

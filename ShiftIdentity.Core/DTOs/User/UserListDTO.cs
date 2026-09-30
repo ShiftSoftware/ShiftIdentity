@@ -30,6 +30,8 @@ public class UserListDTO : ShiftEntityListDTO
     public bool EmailVerified { get; set; }
     public bool IsActive { get; set; }
     public bool TotpEnabled { get; set; }
+    /// <summary>See <see cref="UserDTO.MfaRecoveryRequired"/>.</summary>
+    public bool MfaRecoveryRequired { get; set; }
     public DateTimeOffset LastSeen { get; set; }
 
     [AccessTreeHashIdConverter]

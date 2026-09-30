@@ -3,17 +3,35 @@
 @inject ShiftIdentityDashboardBlazorOptions Options
 @inject ShiftIdentityLocalizer Loc
 
-<div class="identity-login-box" @ref="root">
-    <header class="identity-login-header">
-        <button type="button" class="identity-login-back" disabled="@(!CanGoBack)" aria-label="@Loc["Back"]" title="@Loc["Back"]" @onclick="Back">
-            <MudIcon Icon="@Icons.Material.Filled.ArrowBack" />
-        </button>
-        @if (!string.IsNullOrWhiteSpace(Options.LogoPath))
-        { <img class="identity-login-logo" src="@Options.LogoPath" alt="@Loc["Logo"]" /> }
-    </header>
+<div class="identity-login-box @(Dialog ? "dialog" : null)" @ref="root">
+    @if (Dialog)
+    {
+        @* A security dialog opened from the profile or a user form: the step shows the action's name, and the close
+           button ends the action. There is no logo, and no Back, because each step is a server step. *@
+        <header class="identity-dialog-header">
+            <span class="identity-dialog-caption" data-testid="security-dialog-caption">@Caption</span>
+            <button type="button" class="identity-dialog-close" disabled="@(CloseDisabled || feedback.Attempting)" aria-label="@Loc["Close"]" title="@Loc["Close"]"
+                    data-testid="security-dialog-close" @onclick="CloseAsync">
+                <MudIcon Icon="@Icons.Material.Filled.Close" />
+            </button>
+        </header>
+    }
+    else
+    {
+        <header class="identity-login-header">
+            <button type="button" class="identity-login-back" disabled="@(!CanGoBack)" aria-label="@Loc["Back"]" title="@Loc["Back"]" @onclick="Back">
+                <MudIcon Icon="@Icons.Material.Filled.ArrowBack" />
+            </button>
+            @if (!string.IsNullOrWhiteSpace(Options.LogoPath))
+            { <img class="identity-login-logo" src="@Options.LogoPath" alt="@Loc["Logo"]" /> }
+        </header>
+    }
     <div class="identity-login-viewport">
         <div class="identity-login-content">
-            <CascadingValue Name="InLoginBox" Value="true" IsFixed="true">@ChildContent</CascadingValue>
+            @* The screen's attempts and error panels: every press in the box closes the errors on screen first. *@
+            <CascadingValue Value="feedback" IsFixed="true">
+                <CascadingValue Name="InLoginBox" Value="true" IsFixed="true">@ChildContent</CascadingValue>
+            </CascadingValue>
         </div>
         <div class="identity-login-outgoing" aria-hidden="true"></div>
     </div>
@@ -26,16 +44,34 @@
     [Parameter] public bool CanGoBack { get; set; }
     [Parameter] public bool TrackHistory { get; set; }
     [Parameter] public EventCallback Back { get; set; }
+    /// <summary>Shows the box as the body of a security dialog: a caption and a close button instead of the logo and Back.</summary>
+    [Parameter] public bool Dialog { get; set; }
+    [Parameter] public string? Caption { get; set; }
+    [Parameter] public EventCallback Close { get; set; }
+    [Parameter] public bool CloseDisabled { get; set; }
+    private readonly AuthFeedback feedback = new();
     private ElementReference root;
     private IJSObjectReference? module;
     private string? previousView;
     private bool disposed;
 
+    protected override void OnInitialized() => feedback.Changed += Refresh;
+
+    // The close button is disabled while an attempt is under way.
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+
+    // Closing is a press too: an error on screen closes first, and a failure to close (a cancellation the server did
+    // not confirm) shows again.
+    private Task CloseAsync() => feedback.AttemptAsync(() => Close.InvokeAsync());
+
     protected override async Task OnParametersSetAsync()
     {
-        if (module is not null && previousView is not null && previousView != ViewKey)
-            await module.InvokeVoidAsync("prepare", root);
+        // Record the new view before the call. The parent can render again while the call runs (a navigation and
+        // the end of an event handler both render it). By then the new view is on the page, so a second call
+        // would copy the new view as the outgoing one, and that copy would stay behind the live form.
+        var changed = previousView is not null && previousView != ViewKey;
         previousView = ViewKey;
+        if (changed && module is not null) await module.InvokeVoidAsync("prepare", root);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -55,6 +91,7 @@
     public async ValueTask DisposeAsync()
     {
         disposed = true;
+        feedback.Changed -= Refresh;
         if (module is null) return;
         try { await module.InvokeVoidAsync("dispose", root); await module.DisposeAsync(); }
         catch (JSDisconnectedException) { }

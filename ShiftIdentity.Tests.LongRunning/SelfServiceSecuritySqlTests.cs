@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
 using OtpNet;
 using ShiftIdentity.Tests.Infrastructure;
 using ShiftSoftware.ShiftEntity.Model;
@@ -12,6 +13,7 @@ using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.UserManager;
 using ShiftSoftware.ShiftIdentity.Core.Enums;
+using ShiftSoftware.ShiftIdentity.Core.Models;
 using ShiftSoftware.ShiftIdentity.Data.Authentication;
 using ShiftSoftware.ShiftIdentity.Data.Entities;
 using Xunit;
@@ -22,10 +24,11 @@ namespace ShiftIdentity.Tests;
 /// <summary>
 /// Self-service security on the staged authority, the way the identity host's own dashboard runs it after cutover:
 /// a session from the deployed login route changes its password, sets up and replaces its authenticator through the
-/// staged flows, an administrator resets an authenticator through the deployed bulk route, and the deployed profile
-/// route keeps its request and response shapes. Real dashboard registration with the staged authority on the same
-/// scoped context, an owned fixture database and synthetic accounts only. The class owns its database: it adds an
-/// operator account, and the shared "Identity SQL" database is assumed by its classes to hold exactly one user.
+/// staged flows, an administrator turns MFA off by the user form's key while the deployed bulk reset refuses, and
+/// the deployed profile route keeps its request and response shapes. Real dashboard registration with the staged
+/// authority on the same scoped context, an owned fixture database and synthetic accounts only. The class owns its
+/// database: it adds an operator account, and the shared "Identity SQL" database is assumed by its classes to hold
+/// exactly one user.
 /// </summary>
 [Trait("Category", "Sql")]
 [Trait("Category", "Http")]
@@ -303,120 +306,119 @@ public sealed class SelfServiceSecuritySqlTests(SqlIdentityFixture fixture) : IC
         Assert.Equal(1, (await State()).SecurityVersion);
     }
 
-    // ── the deployed bulk ResetTotp route on the staged boundary ────────────────────────────────────────────────
+    // ── turning MFA off on the staged boundary, and the retired bulk reset ──────────────────────────────────────
 
+    // The bulk reset locked every selected user out of password sign-in until a recovery code, with neither the
+    // recovery permission nor a note behind it. Under the authority it refuses and changes nothing.
     [Fact]
-    public async Task Bulk_reset_through_the_deployed_route_clears_the_staged_factor_and_requires_recovery()
+    public async Task The_bulk_reset_route_refuses_under_the_authority_and_changes_nothing()
     {
         await PrepareAsync(mfa: true);
-        // A migrated legacy row still carries the plaintext copy; the staged reset must not touch it.
+        await SetPlaintextFactorAsync(fixture.FactorSecret);
+        await AdminAsync();
+        using var host = Host();
+        var target = await SessionAsync(host, mfa: true);
+        var admin = await AdminSessionAsync(host);
+        using (var response = await ResetTotp(host, admin.Token, fixture.UserID))
+        {
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            var message = (await response.Content.ReadFromJsonAsync<ShiftEntityResponse<IEnumerable<UserInfoDTO>>>())!.Message!;
+            Assert.Contains("Turn off MFA", message.Body);
+        }
+        var state = await State();
+        Assert.NotNull(state.ProtectedTotpSecret); Assert.False(state.LocalMfaRecoveryRequired);
+        Assert.Equal(1, state.SecurityVersion); Assert.Equal(1, state.FactorGeneration);
+        Assert.Equal(fixture.FactorSecret, (await UserRow()).TotpSecret);
+        Assert.Empty(await Audits("MfaReset", "MfaTurnedOff"));
+        await Entity<TokenDTO>(await RefreshDeployed(host, target.RefreshToken));
+    }
+
+    [Fact]
+    public async Task Turning_off_MFA_by_the_form_key_leaves_password_only_sign_in_on_every_contract()
+    {
+        await PrepareAsync(mfa: true);
+        // A migrated legacy row still carries the plaintext copy that the startup copy would otherwise bring back.
         await SetPlaintextFactorAsync(fixture.FactorSecret);
         var adminID = await AdminAsync();
         using var host = Host();
         var target = await SessionAsync(host, mfa: true);
         var admin = await AdminSessionAsync(host);
+        // The mobile password-only contract refuses an account with an authenticator.
+        Assert.NotEqual(LoginResultEnum.Success, await MobileLoginAsync());
 
-        using (var response = await ResetTotp(host, admin.Token, fixture.UserID))
+        // Naming the target twice, or by a key that does not decode, is refused before anything is written.
+        foreach (var request in new[]
         {
-            Assert.True(response.StatusCode == HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
-            var envelope = (await response.Content.ReadFromJsonAsync<ShiftEntityResponse<IEnumerable<UserInfoDTO>>>())!;
-            var info = Assert.Single(envelope.Entity!);
-            Assert.Equal(fixture.Username, info.Username); Assert.False(info.TotpEnabled);
-        }
+            new AdminMfaTurnOffRequest(fixture.UserID, "Synthetic check", EncodedID(fixture.UserID)),
+            new AdminMfaTurnOffRequest(0, "Synthetic check", "not-an-encoded-key"),
+            new AdminMfaTurnOffRequest(0, "Synthetic check")
+        })
+            Assert.Equal(AuthenticationFailure.InvalidRequest,
+                Assert.IsType<AuthenticationRefused>(await Staged(host, HttpMethod.Post, "admin/mfa/turn-off", "Bearer", admin.Token, request)).Code);
+        Assert.NotNull((await State()).ProtectedTotpSecret);
+
+        var changed = Assert.IsType<AdminAccountChanged>(await Staged(host, HttpMethod.Post, "admin/mfa/turn-off", "Bearer", admin.Token,
+            new AdminMfaTurnOffRequest(0, "Synthetic check: the user asked by phone", EncodedID(fixture.UserID))));
+        Assert.Equal((AdminAccountChange.Mfa, true), (changed.Change, changed.Applied));
         var state = await State();
-        Assert.Null(state.ProtectedTotpSecret); Assert.Equal(0, state.TotpProtectionVersion); Assert.Null(state.LastAcceptedTotpStep);
-        Assert.True(state.LocalMfaRecoveryRequired); Assert.Null(state.MfaRecoveryOperationID);
+        Assert.Null(state.ProtectedTotpSecret); Assert.False(state.LocalMfaRecoveryRequired);
         Assert.Equal(2, state.FactorGeneration); Assert.Equal(2, state.SecurityVersion);
-        Assert.Equal(fixture.FactorSecret, (await UserRow()).TotpSecret);
-        var audit = Assert.Single(await Audits("MfaReset"));
-        Assert.Equal(adminID, audit.ActorUserID); Assert.Equal(2, audit.SecurityVersion);
+        var audit = Assert.Single(await Audits("MfaTurnedOff"));
+        Assert.Equal((adminID, "Synthetic check: the user asked by phone"), (audit.ActorUserID!.Value, audit.VerificationReference));
+        // The retained plaintext copy goes too, so the startup copy has nothing to bring back.
+        Assert.Null((await UserRow()).TotpSecret);
+        var visited = new List<long>();
+        await using (var db = fixture.CreateContext())
+            await new SqlIdentitySecurityStore(db).MigrateLegacyTotpBatchAsync(0, 1000, (security, _) => visited.Add(security.UserID));
+        Assert.DoesNotContain(fixture.UserID, visited);
+        Assert.Null((await State()).ProtectedTotpSecret);
 
-        // The account's sessions end at renewal and a password alone opens no ordinary session, on either contract.
+        // The user form reads the new state.
+        var view = await Entity<UserDTO>(await Send(host.Client, HttpMethod.Get, "/api/IdentityUser/" + EncodedID(fixture.UserID), admin.Token));
+        Assert.False(view.TotpEnabled); Assert.False(view.MfaRecoveryRequired);
+
+        // The account's sessions end at renewal, and the password alone signs in, on each contract.
         Assert.Equal(HttpStatusCode.BadRequest, (await RefreshDeployed(host, target.RefreshToken)).StatusCode);
-        using (var login = await Login(host))
-        {
-            Assert.Equal(HttpStatusCode.BadRequest, login.StatusCode);
-            var body = (await login.Content.ReadFromJsonAsync<ShiftEntityResponse<TokenDTO>>())!;
-            Assert.Null(body.Entity); Assert.Contains("recovery", body.Message!.Body, StringComparison.OrdinalIgnoreCase);
-        }
-        var pkce = IdentityHttpHost.Pkce();
-        Assert.Equal(AuthenticationStep.MfaRecovery, Assert.IsType<ChallengeRequired>(await Staged(host, HttpMethod.Post, "login", null, null,
-            new PasswordLoginRequest(fixture.Username, fixture.Password, pkce.Challenge))).Challenge.Step);
-        Assert.False(await Staged(host, HttpMethod.Post, "login", null, null, new PasswordLoginRequest(fixture.Username, fixture.Password, pkce.Challenge)) is SessionIssued);
-
-        // A second reset changes nothing more.
-        using (var again = await ResetTotp(host, admin.Token, fixture.UserID))
-            Assert.Equal(HttpStatusCode.OK, again.StatusCode);
-        Assert.Equal(2, (await State()).SecurityVersion);
-        Assert.Single(await Audits("MfaReset"));
-
-        // Individual recovery remains the way back: the dedicated permission issues a code, the user proves the
-        // password and the code, confirms a new authenticator and signs in again with both.
-        var issued = Assert.IsType<MfaRecoveryCodeIssued>(await Staged(host, HttpMethod.Post, "mfa/recovery-code", "Bearer", admin.Token,
-            new IssueMfaRecoveryRequest(fixture.UserID, "Synthetic check after bulk reset")));
-        Assert.Equal(2, (await State()).SecurityVersion);
-        var recovery = IdentityHttpHost.Pkce();
-        Assert.IsType<AuthenticationRefused>(await Staged(host, HttpMethod.Post, "mfa/recover", null, null, new RecoverMfaRequest(fixture.Username, "wrong password", issued.Code, recovery.Challenge)));
-        var setup = Challenge(await Staged(host, HttpMethod.Post, "mfa/recover", null, null, new RecoverMfaRequest(fixture.Username, fixture.Password, issued.Code, recovery.Challenge)), AuthenticationStep.NewMfa);
-        var recovered = Assert.IsType<MfaChanged>(await Staged(host, HttpMethod.Post, "mfa/confirm", "Operation", setup.Handle!, new CompleteMfaRequest(Code(setup), recovery.Verifier)));
-        Assert.IsType<ReturnToLogin>(recovered.Continuation);
-        state = await State();
-        Assert.False(state.LocalMfaRecoveryRequired); Assert.Equal(3, state.SecurityVersion); Assert.Equal(3, state.FactorGeneration);
-        clock.Advance(TimeSpan.FromSeconds(30));
-        var step = await Entity<TokenDTO>(await Login(host));
-        Assert.Equal(AuthPurpose.Mfa, step.Flow);
-        Assert.Equal(HttpStatusCode.BadRequest, (await Mfa(host, step.Token, ActiveCode())).StatusCode);
-        await Entity<TokenDTO>(await Mfa(host, step.Token, Code(setup)));
+        Assert.Equal(AuthPurpose.None, (await Entity<TokenDTO>(await Login(host))).Flow);
+        Assert.IsType<SessionIssued>(await Staged(host, HttpMethod.Post, "login", null, null,
+            new PasswordLoginRequest(fixture.Username, fixture.Password, IdentityHttpHost.Pkce().Challenge)));
+        Assert.Equal(LoginResultEnum.Success, await MobileLoginAsync());
     }
 
-    [Theory]
-    [InlineData("self")]
-    [InlineData("stale-proof")]
-    [InlineData("permission")]
-    [InlineData("protected")]
-    [InlineData("no-factor")]
-    public async Task Bulk_reset_refusals_and_no_ops_change_nothing(string scenario)
+    [Fact]
+    public async Task A_recovery_code_names_its_target_by_the_encoded_key_that_the_user_form_holds()
     {
-        await PrepareAsync(mfa: scenario != "no-factor");
-        var adminID = await AdminAsync(scenario == "permission" ? ReadOnlyTree : AdminTree);
+        await PrepareAsync(mfa: true);
+        await AdminAsync();
         using var host = Host();
         var admin = await AdminSessionAsync(host);
-        var targetID = scenario == "self" ? adminID : fixture.UserID;
-        var before = await State(targetID);
-        try
+        var before = await State();
+
+        // Naming the target twice, or by a key that does not decode, is refused before anything is written.
+        foreach (var request in new object[]
         {
-            if (scenario == "protected")
-                await using (var db = fixture.CreateContext())
-                    await db.Users.Where(x => x.ID == fixture.UserID).ExecuteUpdateAsync(x => x.SetProperty(u => u.IsProtected, true));
-            if (scenario == "stale-proof")
-            {
-                clock.Advance(TimeSpan.FromHours(20));
-                admin = Assert.IsType<SessionIssued>(await IdentityHttpHost.Read(await host.Client.PostAsJsonAsync(
-                    "/api/identity/v2/refresh", new RenewSessionRequest(admin.RefreshToken)))).Session;
-            }
-            using var response = await ResetTotp(host, admin.Token, targetID);
-            switch (scenario)
-            {
-                case "self":
-                case "stale-proof":
-                case "permission":
-                    Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-                    break;
-                default:
-                    Assert.True(response.StatusCode == HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
-                    break;
-            }
-            var state = await State(targetID);
-            Assert.Equal(before.SecurityVersion, state.SecurityVersion); Assert.Equal(before.FactorGeneration, state.FactorGeneration);
-            Assert.Equal(before.ProtectedTotpSecret, state.ProtectedTotpSecret); Assert.Equal(before.LocalMfaRecoveryRequired, state.LocalMfaRecoveryRequired);
-            await using var verify = fixture.CreateContext();
-            Assert.False(await verify.Set<AuthenticationAuditEvent>().AnyAsync(x => x.UserID == targetID && x.Outcome == "MfaReset"));
-        }
-        finally
+            new IssueMfaRecoveryRequest(fixture.UserID, "Synthetic check", EncodedID(fixture.UserID)),
+            new IssueMfaRecoveryRequest(0, "Synthetic check", "not-an-encoded-key"),
+            new IssueMfaRecoveryRequest(0, "Synthetic check")
+        })
         {
-            await using var restore = fixture.CreateContext();
-            await restore.Users.Where(x => x.ID == fixture.UserID).ExecuteUpdateAsync(x => x.SetProperty(u => u.IsProtected, false));
+            Assert.Equal(AuthenticationFailure.InvalidRequest,
+                Assert.IsType<AuthenticationRefused>(await Staged(host, HttpMethod.Post, "mfa/recovery-code", "Bearer", admin.Token, request)).Code);
+            var unchanged = await State();
+            Assert.Equal(before.SecurityVersion, unchanged.SecurityVersion); Assert.False(unchanged.LocalMfaRecoveryRequired);
+            Assert.Null(unchanged.MfaRecoveryOperationID);
         }
+
+        var issued = Assert.IsType<MfaRecoveryCodeIssued>(await Staged(host, HttpMethod.Post, "mfa/recovery-code", "Bearer", admin.Token,
+            new IssueMfaRecoveryRequest(0, "Synthetic check by encoded key", EncodedID(fixture.UserID))));
+        var state = await State();
+        Assert.True(state.LocalMfaRecoveryRequired); Assert.Null(state.ProtectedTotpSecret); Assert.NotNull(state.MfaRecoveryOperationID);
+        Assert.Equal("Synthetic check by encoded key", Assert.Single(await Audits("MfaRecoveryIssued")).VerificationReference);
+
+        // The code works as one issued by numeric ID: the password and the code open the new-authenticator step.
+        var recovery = IdentityHttpHost.Pkce();
+        Challenge(await Staged(host, HttpMethod.Post, "mfa/recover", null, null,
+            new RecoverMfaRequest(fixture.Username, fixture.Password, issued.Code, recovery.Challenge)), AuthenticationStep.NewMfa);
     }
 
     [Fact]
@@ -443,7 +445,7 @@ public sealed class SelfServiceSecuritySqlTests(SqlIdentityFixture fixture) : IC
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public async Task Bulk_reset_and_a_pending_deployed_MFA_login_serialize_in_both_lock_orders(bool resetFirst)
+    public async Task Turning_off_MFA_and_a_pending_deployed_MFA_login_serialize_in_both_lock_orders(bool turnOffFirst)
     {
         await PrepareAsync(mfa: true);
         await AdminAsync();
@@ -453,27 +455,29 @@ public sealed class SelfServiceSecuritySqlTests(SqlIdentityFixture fixture) : IC
         Assert.Equal(AuthPurpose.Mfa, step.Flow);
         using var gate = new AdmissionGate("AdmissionLock");
         var signal = new SqlCommandSignal("UPDLOCK");
-        using var resetHost = Host(resetFirst ? gate.Observe : null, resetFirst ? [] : [signal]);
-        using var mfaHost = Host(resetFirst ? null : gate.Observe, resetFirst ? [signal] : []);
-        Task<HttpResponseMessage>? reset = null, mfa = null;
+        using var turnOffHost = Host(turnOffFirst ? gate.Observe : null, turnOffFirst ? [] : [signal]);
+        using var mfaHost = Host(turnOffFirst ? null : gate.Observe, turnOffFirst ? [signal] : []);
+        Task<AuthOutcome>? turnOff = null;
+        Task<HttpResponseMessage>? mfa = null;
         var code = ActiveCode();
-        if (resetFirst) reset = ResetTotp(resetHost, admin.Token, fixture.UserID);
+        Task<AuthOutcome> TurnOff() => Staged(turnOffHost, HttpMethod.Post, "admin/mfa/turn-off", "Bearer", admin.Token,
+            new AdminMfaTurnOffRequest(fixture.UserID, "Synthetic check under contention"));
+        if (turnOffFirst) turnOff = TurnOff();
         else mfa = Mfa(mfaHost, step.Token, code);
         try
         {
             await gate.Entered.WaitAsync(TimeSpan.FromSeconds(10));
-            if (resetFirst) mfa = Mfa(mfaHost, step.Token, code);
-            else reset = ResetTotp(resetHost, admin.Token, fixture.UserID);
+            if (turnOffFirst) mfa = Mfa(mfaHost, step.Token, code);
+            else turnOff = TurnOff();
             await signal.Entered.WaitAsync(TimeSpan.FromSeconds(10));
-            Assert.False(resetFirst ? mfa!.IsCompleted : reset!.IsCompleted);
+            Assert.False(turnOffFirst ? mfa!.IsCompleted : turnOff!.IsCompleted);
         }
         finally { gate.Release(); }
-        using var resetResponse = await reset!;
-        Assert.True(resetResponse.StatusCode == HttpStatusCode.OK, await resetResponse.Content.ReadAsStringAsync());
+        Assert.True(Assert.IsType<AdminAccountChanged>(await turnOff!).Applied);
         using var mfaResponse = await mfa!;
         var state = await State();
-        Assert.Null(state.ProtectedTotpSecret); Assert.True(state.LocalMfaRecoveryRequired); Assert.Equal(2, state.SecurityVersion);
-        if (resetFirst)
+        Assert.Null(state.ProtectedTotpSecret); Assert.False(state.LocalMfaRecoveryRequired); Assert.Equal(2, state.SecurityVersion);
+        if (turnOffFirst)
         {
             // The pending login's factor generation is gone: no session from the removed authenticator.
             Assert.Equal(HttpStatusCode.BadRequest, mfaResponse.StatusCode);
@@ -481,7 +485,7 @@ public sealed class SelfServiceSecuritySqlTests(SqlIdentityFixture fixture) : IC
         }
         else
         {
-            // The login admitted first issues its session at the old version; the reset then ends it at renewal.
+            // The login admitted first issues its session at the old version; the turn-off then ends it at renewal.
             var session = await Entity<TokenDTO>(mfaResponse);
             Assert.Equal("1", Jwt(session.Token)["shift_sv"]);
             Assert.Equal(HttpStatusCode.BadRequest, (await RefreshDeployed(setup, session.RefreshToken)).StatusCode);
@@ -489,26 +493,25 @@ public sealed class SelfServiceSecuritySqlTests(SqlIdentityFixture fixture) : IC
     }
 
     [Fact]
-    public async Task A_save_failure_after_the_admitted_reset_leaves_the_authenticator_active()
+    public async Task A_save_failure_after_the_admitted_turn_off_leaves_the_authenticator_active()
     {
         await PrepareAsync(mfa: true);
+        await SetPlaintextFactorAsync(fixture.FactorSecret);
         await AdminAsync();
         using var healthy = Host();
         var admin = await AdminSessionAsync(healthy);
         using var faulty = Host(null, new SecurityStateSaveFault());
-        HttpResponseMessage? response = null;
-        try { response = await ResetTotp(faulty, admin.Token, fixture.UserID); }
-        catch (Exception error) when (error is not Xunit.Sdk.XunitException) { }
-        Assert.True(response is null || response.StatusCode == HttpStatusCode.InternalServerError);
-        response?.Dispose();
+        var request = new AdminMfaTurnOffRequest(fixture.UserID, "Synthetic check before a failed save");
+        Assert.Equal(AuthenticationFailure.Unavailable,
+            Assert.IsType<AuthenticationRefused>(await Staged(faulty, HttpMethod.Post, "admin/mfa/turn-off", "Bearer", admin.Token, request)).Code);
         var state = await State();
         Assert.NotNull(state.ProtectedTotpSecret); Assert.False(state.LocalMfaRecoveryRequired);
         Assert.Equal(1, state.SecurityVersion); Assert.Equal(1, state.FactorGeneration);
-        Assert.Empty(await Audits("MfaReset"));
+        Assert.Equal(fixture.FactorSecret, (await UserRow()).TotpSecret);
+        Assert.Empty(await Audits("MfaTurnedOff"));
         // The row is fully usable afterwards.
-        using var retry = await ResetTotp(healthy, admin.Token, fixture.UserID);
-        Assert.True(retry.StatusCode == HttpStatusCode.OK, await retry.Content.ReadAsStringAsync());
-        Assert.True((await State()).LocalMfaRecoveryRequired);
+        Assert.True(Assert.IsType<AdminAccountChanged>(await Staged(healthy, HttpMethod.Post, "admin/mfa/turn-off", "Bearer", admin.Token, request)).Applied);
+        Assert.Null((await State()).ProtectedTotpSecret);
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────────────────────────────────────────
@@ -575,6 +578,21 @@ public sealed class SelfServiceSecuritySqlTests(SqlIdentityFixture fixture) : IC
         if (scheme is not null) request.Headers.Authorization = new(scheme, credential);
         if (body is not null) request.Content = JsonContent.Create(body);
         return await IdentityHttpHost.Read(await host.Client.SendAsync(request));
+    }
+
+    // The test hosts register the default hash-ID settings, so this encodes a user ID exactly as the host does.
+    private static string EncodedID(long id) =>
+        new ShiftSoftware.ShiftEntity.Core.HashIdService(Microsoft.Extensions.Options.Options.Create(new ShiftSoftware.ShiftEntity.Core.ShiftEntityOptions()))
+            .Encode<UserDTO>(id);
+
+    // The TIQ mobile contract: the opt-in password-only issuer refuses an account with an authenticator or recovery.
+    private async Task<LoginResultEnum> MobileLoginAsync()
+    {
+        using var mobile = new ConfiguredIdentityHttpHost<IdentityTestDbContext>(fixture, c => c.Security.PasswordOnly = true, enabled: false);
+        using var scope = mobile.Services.CreateScope();
+        var login = await scope.ServiceProvider.GetRequiredService<ShiftSoftware.ShiftIdentity.AspNetCore.Services.AuthService>()
+            .LoginAsync(new LoginDTO { Username = fixture.Username, Password = fixture.Password });
+        return login.Result;
     }
 
     private static Task<HttpResponseMessage> ResetTotp(LegacyIdentityHttpHost<IdentityTestDbContext> host, string token, params long[] ids) =>

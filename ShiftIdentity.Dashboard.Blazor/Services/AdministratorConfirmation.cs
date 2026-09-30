@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using ShiftSoftware.ShiftIdentity.Blazor;
 using ShiftSoftware.ShiftIdentity.Blazor.Services;
+using ShiftSoftware.ShiftIdentity.Core.Localization;
 using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.UserManager;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services;
@@ -16,7 +17,8 @@ internal sealed class AdministratorConfirmation(IdentitySession session, IServic
         var navigation = services.GetRequiredService<NavigationManager>();
         // A separate flow keeps the original form's pending HTTP request and staged flow intact.
         var flow = new AuthenticationFlow(services.GetRequiredService<StagedAuthorityHttpClient>(), session);
-        var dialog = await dialogs.ShowAsync<AdministratorConfirmationDialog>("Confirm your identity",
+        var title = services.GetRequiredService<ShiftIdentityLocalizer>()["Confirm your identity"];
+        var dialog = await dialogs.ShowAsync<AdministratorConfirmationDialog>(title,
             new DialogParameters<AdministratorConfirmationDialog>
             {
                 { x => x.Flow, flow }, { x => x.CurrentAccess, currentAccess }

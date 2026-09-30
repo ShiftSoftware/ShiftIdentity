@@ -37,12 +37,13 @@ public sealed record ManualPasswordResetIssued(string Grant, string MaskedTarget
 public sealed record EmailVerificationCompleted(string? RedirectUrl = null) : AuthOutcome;
 /// <summary>An administrator mutation committed, or was already in effect. It never carries a session.</summary>
 public sealed record AdminAccountChanged(AdminAccountChange Change, bool Applied, long SecurityVersion, AuthOutcome? Delivery = null) : AuthOutcome;
-public enum AdminAccountChange { Password = 1, Username = 2, Email = 3, Active = 4 }
+public enum AdminAccountChange { Password = 1, Username = 2, Email = 3, Active = 4, Mfa = 5 }
 /// <summary>
 /// The signed-in account's own authenticator state, read from the authoritative security state. It is a read for
-/// the account screens: it proves nothing, issues nothing and never carries a session.
+/// the account screens: it proves nothing, issues nothing and never carries a session. <see cref="Mandatory"/> is
+/// the host's policy: every account must have an authenticator, so no screen offers to turn one off.
 /// </summary>
-public sealed record AuthenticatorStatus(bool Enrolled, bool RecoveryRequired) : AuthOutcome;
+public sealed record AuthenticatorStatus(bool Enrolled, bool RecoveryRequired, bool Mandatory = false) : AuthOutcome;
 
 public enum AuthenticationStep { ExistingMfa, PasswordChange, MfaRecovery, NewMfa, EmailVerification, Password }
 public enum AuthenticationFailure
@@ -79,14 +80,25 @@ public sealed record NewAuthenticatorSetup(string Secret, string Uri, string Svg
 public sealed record StartMfaRequest(
     [property: Required, StringLength(43, MinimumLength = 43)] string CodeChallenge,
     bool Replace = false);
+/// <summary>
+/// The signed-in account turns off its own authenticator, where MFA is optional, with a current code from it. The
+/// answer carries a fresh session for this device; every other session of the account ends.
+/// </summary>
+public sealed record TurnOffMfaRequest(
+    [property: Required, RegularExpression(@"^[0-9]{6,8}$")] string Code);
 public sealed record RecoverMfaRequest(
     [property: Required, MaxLength(255)] string Username,
     [property: Required, MaxLength(1024)] string CurrentPassword,
     [property: Required, MaxLength(64)] string RecoveryCode,
     [property: Required, StringLength(43, MinimumLength = 43)] string CodeChallenge);
+/// <summary>
+/// Names the target by its numeric ID or by the encoded key a dashboard form holds, not both. The endpoint decodes
+/// the key before the request is validated, so a request that names neither, or both, is refused.
+/// </summary>
 public sealed record IssueMfaRecoveryRequest(
     [property: Range(1, long.MaxValue)] long UserID,
-    [property: Required, StringLength(200, MinimumLength = 3)] string VerificationReference);
+    [property: Required, StringLength(200, MinimumLength = 3)] string VerificationReference,
+    string? UserKey = null);
 
 public sealed record PasswordLoginRequest(
     [property: Required, MaxLength(255)] string Username,

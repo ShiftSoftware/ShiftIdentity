@@ -10,6 +10,7 @@
 @inject HttpClient Http
 @inject MessageService MessageService
 @inject ShiftIdentityLocalizer Loc
+@inject ShiftIdentityDashboardBlazorOptions DashboardOptions
 
 @if (AdmissionContext is not null)
 {
@@ -58,16 +59,20 @@ else
                 </ChildContent>
             </ActionButton>
 
-            <ActionButton Color="Color.Error"
-                          Variant="Variant.Outlined"
-                          Size="Size.Small"
-                          StartIcon="@Icons.Material.Filled.LockReset"
-                          Confirm
-                          OnResult="ResetTotpResponse"
-                          T="UserListDTO"
-                          Endpoint="@($"{Constants.IdentityRoutePreifix}User/ResetTotp")">
-                @Loc["Reset TOTP"]
-            </ActionButton>
+            @* With the identity authority, MFA is turned off or recovered per user, from the user form. *@
+            @if (!DashboardOptions.StagedAuthority)
+            {
+                <ActionButton Color="Color.Error"
+                              Variant="Variant.Outlined"
+                              Size="Size.Small"
+                              StartIcon="@Icons.Material.Filled.LockReset"
+                              Confirm
+                              OnResult="ResetTotpResponse"
+                              T="UserListDTO"
+                              Endpoint="@($"{Constants.IdentityRoutePreifix}User/ResetTotp")">
+                    @Loc["Reset TOTP"]
+                </ActionButton>
+            }
 
             <ActionButton Color="Color.Error"
                           Variant="Variant.Outlined"
@@ -107,7 +112,7 @@ else
 
         <StringFilter Property="x => x.FullName" Label="@Loc["Name"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" md="6" sm="12" xs="12" />
         <StringFilter Property="x => x.Username" Label="@Loc["Username"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" md="6" sm="12" xs="12" />
-        <StringFilter Property="x => x.IntegrationId" Label="@Loc["Integration Id"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" md="6" sm="12" xs="12" />
+        <StringFilter Property="x => x.IntegrationId" Label="@Loc["Integration ID"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" md="6" sm="12" xs="12" />
         <StringFilter Property="x => x.Phone" Label="@Loc["Phone"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" md="6" sm="12" xs="12" />
         <StringFilter Property="x => x.Email" Label="@Loc["Email"]" Operator="ShiftBlazor.Enums.ODataOperator.Contains" lg="4" md="6" sm="12" xs="12" />
         <ForeignFilter AdditionalParameters='new() { ["GroupSelectedValues"] = false }' @ref="CompanyFilter" Property="x => x.CompanyID" Label="@Loc["Company"]" DTOType="typeof(CompanyListDTO)" EntitySet="@($"{Constants.IdentityRoutePreifix}Company")" lg="4" md="6" sm="12" xs="12" />
@@ -118,7 +123,7 @@ else
 
         <PropertyColumnExtended Title="@Loc["Name"]" Property="x => x.FullName" />
         <PropertyColumnExtended Title="@Loc["Username"]" Property="x => x.Username" />
-        <PropertyColumnExtended Title="@Loc["Integration Id"]" Property="x => x.IntegrationId" />
+        <PropertyColumnExtended Title="@Loc["Integration ID"]" Property="x => x.IntegrationId" />
         <PropertyColumnExtended Title="@Loc["Phone"]" Property="x => x.Phone">
             <CellTemplate Context="cel">
                 <MudPaper Elevation="0" Class="d-flex align-items-center p-2">
@@ -153,7 +158,14 @@ else
         </PropertyColumnExtended>
         <PropertyColumnExtended Filterable="false" Sortable="false" Title="@Loc["TOTP"]" Property="x => x.TotpEnabled">
             <CellTemplate Context="cel">
-                @if (cel?.Item?.TotpEnabled == true)
+                @if (cel?.Item?.MfaRecoveryRequired == true)
+                {
+                    <MudIcon Size="@Size.Small"
+                             Icon="@Icons.Material.Filled.LockReset"
+                             Color="Color.Warning"
+                             Title="@Loc["Recovery required: this user cannot sign in until they recover their authenticator app"]" />
+                }
+                else if (cel?.Item?.TotpEnabled == true)
                 {
                     <MudIcon Size="@Size.Small"
                              Icon="@Icons.Material.Filled.Lock"
@@ -274,7 +286,7 @@ else
 
             if (SharePasswordWithUser)
             {
-                this.MessageService.Success($"The Password for ({users.Count()}) users has been reseted.");
+                this.MessageService.Success(Loc["The Password for ({0}) users has been reseted.", users.Count()]);
             }
             else
             {
@@ -282,12 +294,12 @@ else
 
                 parameters.Add(x => x.Users, users);
 
-                await this.DialogService.ShowAsync<ResetPasswordResultDialog>("Password Reset Results", parameters);
+                await this.DialogService.ShowAsync<ResetPasswordResultDialog>(Loc["Password Reset Results"], parameters);
             }
         }
         else
         {
-            this.MessageService.Error("An error occurred while resetting the password.", res.Message?.Title, res.Message?.Body);
+            this.MessageService.Error(Loc["An error occurred while resetting the password."], res.Message?.Title, res.Message?.Body);
         }
 
         return false;
@@ -297,10 +309,10 @@ else
     {
         if (res.Message == null && res.Entity?.Count > 0)
         {
-            this.MessageService.Success($"TOTP Authentication was reset for ({res.Entity.Count}) users.");
+            this.MessageService.Success(Loc["TOTP Authentication was reset for ({0}) users.", res.Entity.Count]);
             return ValueTask.FromResult(true);
         }
-        this.MessageService.Error("An error occurred while resetting TOTP Authentication.", res.Message?.Title, res.Message?.Body);
+        this.MessageService.Error(Loc["An error occurred while resetting TOTP Authentication."], res.Message?.Title, res.Message?.Body);
         return ValueTask.FromResult(false);
     }
 
@@ -310,16 +322,16 @@ else
         if (res.Additional?.ContainsKey("EmailVerification") == true)
         {
             if (res.Message is not null) this.MessageService.Error(res.Message.Body!);
-            else this.MessageService.Success("Verification links requested. Eligible recipients should check their saved email inboxes.");
+            else this.MessageService.Success(Loc["Verification links requested. Eligible recipients should check their saved email inboxes."]);
             return ValueTask.FromResult(false);
         }
         if (res.Message == null && res.Entity?.Count > 0)
         {
-            this.MessageService.Success($"The verification link send throw email for ({res.Entity.Count}) users.");
+            this.MessageService.Success(Loc["The verification link send throw email for ({0}) users.", res.Entity.Count]);
         }
         else
         {
-            this.MessageService.Error("An error occurred while verifying the email.", res.Message?.Title, res.Message?.Body);
+            this.MessageService.Error(Loc["An error occurred while verifying the email."], res.Message?.Title, res.Message?.Body);
         }
 
         return ValueTask.FromResult(false);
@@ -329,11 +341,11 @@ else
     {
         if (res.Message == null && res.Entity?.Count > 0)
         {
-            this.MessageService.Success($"The Phone for ({res.Entity.Count}) users has been verified.");
+            this.MessageService.Success(Loc["The Phone for ({0}) users has been verified.", res.Entity.Count]);
         }
         else
         {
-            this.MessageService.Error("An error occurred while verifying the phone.", res.Message?.Title, res.Message?.Body);
+            this.MessageService.Error(Loc["An error occurred while verifying the phone."], res.Message?.Title, res.Message?.Body);
         }
 
         return ValueTask.FromResult(false);

@@ -143,6 +143,16 @@ public sealed class IdentityHttpHost : IDisposable
         SendAsync("mfa/confirm", "Operation", handle, new CompleteMfaRequest(code, verifier));
     public Task<AuthOutcome> IssueRecoveryAsync(string access, long userID, string reference) =>
         SendAsync("mfa/recovery-code", "Bearer", access, new IssueMfaRecoveryRequest(userID, reference));
+    public Task<AuthOutcome> TurnOffAccountMfaAsync(string access, long userID, string reference) =>
+        SendAsync("admin/mfa/turn-off", "Bearer", access, new AdminMfaTurnOffRequest(userID, reference));
+    public Task<AuthOutcome> TurnOffMfaAsync(string access, string code) =>
+        SendAsync("mfa/turn-off", "Bearer", access, new TurnOffMfaRequest(code));
+    public async Task<AuthOutcome> ReadAuthenticatorAsync(string access)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/identity/v2/mfa");
+        request.Headers.Authorization = new("Bearer", access);
+        return await Read(await Client.SendAsync(request));
+    }
     public async Task<AuthOutcome> RecoverMfaAsync(string username, string password, string code, string challenge) =>
         await Read(await Client.PostAsJsonAsync("/api/identity/v2/mfa/recover", new RecoverMfaRequest(username, password, code, challenge)));
 

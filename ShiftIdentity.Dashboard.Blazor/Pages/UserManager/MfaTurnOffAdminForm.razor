@@ -1,0 +1,90 @@
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.Extensions.DependencyInjection
+@using ShiftSoftware.ShiftIdentity.Blazor
+@using ShiftSoftware.ShiftIdentity.Core.Authentication
+@using ShiftSoftware.ShiftIdentity.Core.Enums
+@using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Shared
+@using AuthenticationFlow = ShiftSoftware.ShiftIdentity.Blazor.Services.AuthenticationFlow
+@inject ShiftIdentityLocalizer Loc
+@inject IServiceProvider Services
+
+@* An administrator turns off another user's MFA where it is optional, after confirming that the user asked for it.
+   The user then signs in with the password only. A lost or replaced phone is Recover authenticator's case, which
+   keeps MFA on. The user form opens this in a narrow dialog. *@
+<SecurityStepBox Boxed="true" ViewKey="@(done is null ? "note" : "done")" Caption="@Loc["Turn off MFA"]"
+                 Close="CloseDialog" CloseDisabled="@Flow.Busy">
+    <div data-testid="mfa-turn-off-form">
+        @if (done is null)
+        {
+            <MudText Typo="Typo.h6" Class="auth-title" tabindex="-1" data-auth-heading>@Loc["Turn off MFA for this user"]</MudText>
+            @if (!string.IsNullOrWhiteSpace(UserName)) { <p class="auth-description" data-testid="turn-off-target">@UserName</p> }
+            <p class="auth-description">@Loc["The user will sign in with their password only and is signed out on every device. They can set up an authenticator again from their profile."]</p>
+            @if (RecoveryRequired)
+            {
+                <p class="auth-description" data-testid="turn-off-ends-recovery">@Loc["This also ends the recovery the user is waiting for. A recovery code already given to them stops working."]</p>
+            }
+            <MudAlert Severity="Severity.Warning" Dense="true" Class="auth-warning">@Loc["If the user lost or replaced their phone, use Recover authenticator instead: it keeps MFA on. Turn MFA off only when you have confirmed that the user asked for it. Record the support ticket or a short note below; Shift saves it for audit."]</MudAlert>
+            <AuthForm Model="entry" Submit="TurnOff" class="auth-inputs" Context="attempting">
+                <MudTextField T="string" Label="@Loc["Support ticket or identity-check note"]" @bind-Value="entry.Reference" For="@(() => entry.Reference)" Immediate="true" />
+                <div class="auth-actions">
+                    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Error" Disabled="@(attempting || Flow.Busy)">@Loc["Turn off MFA"]</MudButton>
+                </div>
+            </AuthForm>
+        }
+        else
+        {
+            <div class="auth-center" role="status" data-testid="mfa-turn-off-done">
+                <MudIcon Icon="@Icons.Material.Outlined.LockOpen" Color="Color.Primary" Size="Size.Large" Class="auth-done-icon" />
+                <MudText Typo="Typo.h6" Class="auth-title" tabindex="-1" data-auth-heading>@Loc[done.Applied ? "MFA turned off" : "MFA was already off"]</MudText>
+                <p class="auth-description">@Loc["The user now signs in with their password only."]</p>
+                <div class="auth-actions">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CloseDialog" data-testid="mfa-turn-off-finish">@Loc["Done"]</MudButton>
+                </div>
+            </div>
+        }
+        <AuthError @bind-Message="error" TestId="mfa-turn-off-error" />
+    </div>
+</SecurityStepBox>
+
+@code {
+    /// <summary>The target's encoded key, as the user form holds it.</summary>
+    [Parameter, EditorRequired] public string UserKey { get; set; } = "";
+    [Parameter] public string? UserName { get; set; }
+    /// <summary>The user waits for recovery, which turning MFA off ends.</summary>
+    [Parameter] public bool RecoveryRequired { get; set; }
+    [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
+    private sealed class Entry { [Required, StringLength(200, MinimumLength = 3)] public string Reference { get; set; } = ""; }
+    private Entry entry = new();
+    private AdminAccountChanged? done;
+    private string? error;
+    private AuthenticationFlow? flow;
+    private AuthenticationFlow Flow => flow ??= Services.GetRequiredService<AuthenticationFlow>();
+
+    // AuthForm closes a shown error before each press and runs one attempt at a time.
+    private async Task TurnOff()
+    {
+        var access = Services.GetService<IdentitySession>() is { } session &&
+            await session.GetTokenAsync() is { Flow: AuthPurpose.None, Token: { Length: > 0 } token } ? token : null;
+        if (access is null)
+        {
+            error = Loc["Sign in again before turning off MFA."];
+            return;
+        }
+        var result = await Flow.TurnOffAccountMfaAsync(access, UserKey, entry.Reference);
+        done = result as AdminAccountChanged;
+        error = result is AuthenticationRefused refused ? RefusalMessage(refused) : null;
+    }
+
+    private string RefusalMessage(AuthenticationRefused refused) => refused.Code switch
+    {
+        AuthenticationFailure.ClientDenied => Loc["MFA cannot be turned off here. It may be mandatory on this system, or you lack the Manage MFA Recovery permission. For your own account, use your profile."],
+        AuthenticationFailure.AccountUnavailable => Loc["This account is deleted, so its MFA cannot be changed."],
+        AuthenticationFailure.StaleOperation => Loc["This account changed meanwhile. Close this window, open the user again and retry."],
+        AuthenticationFailure.Unavailable => Loc["The service is unavailable. Wait a moment and try again."],
+        AuthenticationFailure.ReauthenticationRequired => Loc["Confirm your password when you are asked, then turn off MFA again."],
+        _ => Loc["Turning off MFA could not be confirmed. Open the user again to see whether it is still on."]
+    };
+
+    // The result says whether MFA is now off, so the user form can show the new state.
+    private void CloseDialog() => MudDialog?.Close(DialogResult.Ok(done is not null));
+}

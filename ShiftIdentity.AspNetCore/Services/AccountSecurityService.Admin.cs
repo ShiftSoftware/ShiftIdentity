@@ -165,7 +165,7 @@ internal static partial class AccountSecurityService
         security.LocalMfaRecoveryRequired = true;
     }
 
-    /// <summary>Ends the outstanding recovery root and its children; a later code or reset starts a new family.</summary>
+    /// <summary>Ends the outstanding recovery root and its children. A reissued code starts a new family; turning MFA off leaves none.</summary>
     internal static void SupersedeRecovery(IdentitySecurityTransaction unit, DateTimeOffset now)
     {
         foreach (var previous in unit.RecoveryFamily.Where(x => x.State is AuthenticationOperationState.AwaitingRecoveryProof or AuthenticationOperationState.AwaitingNewFactor))
@@ -173,21 +173,6 @@ internal static partial class AccountSecurityService
             AdmissionOperations.Finish(previous, now, cancelled: true);
             previous.State = AuthenticationOperationState.Superseded;
         }
-    }
-
-    /// <summary>
-    /// The bulk administrator reset (the deployed <c>ResetTotp</c> route): disables an active authenticator and
-    /// requires individual recovery, without issuing a recovery code. That code, and the independent identity check
-    /// behind it, stay with the dedicated recovery permission. An account with no active factor is left as it is: a
-    /// reset without a code would only lock it out. Returns whether anything changed.
-    /// </summary>
-    internal static bool ApplyAuthenticatorReset(IdentitySecurityTransaction unit, DateTimeOffset now)
-    {
-        if (unit.Security.ProtectedTotpSecret is null) return false;
-        SupersedeRecovery(unit, now);
-        unit.Security.MfaRecoveryOperationID = null;
-        DisableActiveFactor(unit.Security);
-        return true;
     }
 
     /// <summary>Renames the account after a range-locked duplicate check. Returns (refusal, applied).</summary>

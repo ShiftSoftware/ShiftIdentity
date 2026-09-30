@@ -104,6 +104,5 @@ public sealed class LoginComponentTests
         await Submit(cut);
     }
 
-    private static Task Submit(IRenderedComponent<LoginForm> cut) => cut.InvokeAsync(() =>
-        cut.FindComponent<EditForm>().Instance.OnValidSubmit.InvokeAsync(new EditContext(new object())));
+    private static Task Submit(IRenderedComponent<LoginForm> cut) => FormSubmission.SubmitAsync(cut);
 }

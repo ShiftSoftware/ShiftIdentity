@@ -1,0 +1,22 @@
+@* The steps of a security action that its form owns (a profile dialog, a routed page, the administrator's recovery
+   dialog) use the login box's look and slide from step to step. A form that is itself one step of another flow (a
+   sign-in challenge, a proof inside a password change) is already inside that flow's box, so it draws nothing more and
+   shares that box's attempts and errors. Drawn on its own without a box, it still gets them. *@
+@if (Boxed)
+{
+    <LoginBox Dialog="true" Caption="@Caption" ViewKey="@ViewKey" Direction="1" Close="Close" CloseDisabled="@CloseDisabled">@ChildContent</LoginBox>
+}
+else
+{
+    <AuthFeedbackScope>@ChildContent</AuthFeedbackScope>
+}
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public bool Boxed { get; set; }
+    /// <summary>Changes when the step changes; each change slides the new step in.</summary>
+    [Parameter] public string ViewKey { get; set; } = "";
+    [Parameter] public string? Caption { get; set; }
+    [Parameter] public EventCallback Close { get; set; }
+    [Parameter] public bool CloseDisabled { get; set; }
+}

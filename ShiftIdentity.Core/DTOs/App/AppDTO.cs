@@ -47,7 +47,7 @@ public class AppValidator : AbstractValidator<AppDTO>
             .MaximumLength(4000).WithMessage(localizer["Your input cannot be more than 4000 characters"]);
 
         RuleFor(x => x.RedirectUri)
-            .NotEmpty().WithMessage(localizer["Please provide", localizer["Redirect Uri"]])
+            .NotEmpty().WithMessage(localizer["Please provide", localizer["Redirect URI"]])
             .MaximumLength(4000).WithMessage(localizer["Your input cannot be more than 4000 characters"]);
 
         // The sign-in page appends "/Auth/Token", so a value ending in "/" or in that route is a typo. The page trims a

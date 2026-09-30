@@ -125,10 +125,14 @@ public sealed class HostUpgradeCompatibilitySqlTests(SqlIdentityFixture fixture)
         using var scope = host.Services.CreateScope();
         var repository = scope.ServiceProvider.GetRequiredService<UserRepository>();
         var entity = await repository.FindAsync(fixture.UserID, asOf: null, disableDefaultDataLevelAccess: true, disableGlobalFilters: true);
-        Assert.Equal(current, repository.MapToView(entity!).TotpEnabled);
-        // Query projection must translate the protected-factor check to SQL.
+        var view = repository.MapToView(entity!);
+        Assert.Equal(current, view.TotpEnabled);
+        // A reset account is not "Not set up": it waits for a recovery code, and the user form says so.
+        Assert.Equal(!current, view.MfaRecoveryRequired);
+        // Query projection must translate the protected-factor and recovery checks to SQL.
         await using var verify = fixture.CreateContext();
         var list = await repository.MapToList(verify.Users.Where(x => x.ID == fixture.UserID)).SingleAsync();
         Assert.Equal(current, list.TotpEnabled);
+        Assert.Equal(!current, list.MfaRecoveryRequired);
     }
 }

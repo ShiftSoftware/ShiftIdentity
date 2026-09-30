@@ -5,55 +5,56 @@
 @using ShiftSoftware.ShiftIdentity.Core.Authentication
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@inject ShiftIdentityLocalizer Loc
 @implements IDisposable
 
 <HeadContent><meta name="referrer" content="no-referrer" /></HeadContent>
 
+<CascadingValue Value="feedback" IsFixed="true">
 <MudPaper Class="pa-5" data-testid="security-link-form">
-    <MudText Typo="Typo.h5">@(Verification ? "Verify your email" : "Choose a new password")</MudText>
-    @if (loading) { <MudText>Checking your link…</MudText> }
+    <MudText Typo="Typo.h5">@Loc[Verification ? "Verify your email" : "Choose a new password"]</MudText>
+    @if (loading) { <MudText>@Loc["Checking your link…"]</MudText> }
     @if (opened is not null)
     {
-        <MudText data-testid="security-link-target">For @opened.MaskedTarget</MudText>
+        <MudText data-testid="security-link-target">@Loc["For {0}", opened.MaskedTarget]</MudText>
         @if (Verification)
         {
-            <MudText>Opening this page does not verify your email. Confirm that this email address belongs to you.</MudText>
-            <MudButton Color="Color.Primary" Disabled="CurrentFlow.Busy" OnClick="Verify">Verify my email</MudButton>
+            <MudText>@Loc["Opening this page does not verify your email. Confirm that this email address belongs to you."]</MudText>
+            <MudButton Color="Color.Primary" Disabled="@(feedback.Attempting || CurrentFlow.Busy)" OnClick="() => feedback.AttemptAsync(Verify)">@Loc["Verify my email"]</MudButton>
         }
         else
         {
-            <MudText>@NewPasswordPolicy.Guidance</MudText>
-            <EditForm Model="entry" OnValidSubmit="Reset">
-                <DataAnnotationsValidator />
-                <PasswordField Label="New Password" @bind-Value="entry.Password" For="@(() => entry.Password)" Immediate="true" autocomplete="new-password" />
-                <PasswordField Label="Confirm Password" @bind-Value="entry.Confirm" For="@(() => entry.Confirm)" Immediate="true" autocomplete="new-password" />
-                <MudButton Color="Color.Primary" ButtonType="ButtonType.Submit" Disabled="CurrentFlow.Busy">Reset password</MudButton>
-            </EditForm>
-            <MudText>Your authenticator and recovery requirements still apply after resetting your password.</MudText>
+            <MudText>@Loc[NewPasswordPolicy.Guidance]</MudText>
+            <AuthForm Model="entry" Submit="Reset" Context="attempting">
+                <PasswordField Label="@Loc["New Password"]" @bind-Value="entry.Password" For="@(() => entry.Password)" Immediate="true" autocomplete="new-password" />
+                <PasswordField Label="@Loc["Confirm Password"]" @bind-Value="entry.Confirm" For="@(() => entry.Confirm)" Immediate="true" autocomplete="new-password" />
+                <MudButton Color="Color.Primary" ButtonType="ButtonType.Submit" Disabled="@(attempting || CurrentFlow.Busy)">@Loc["Reset Password"]</MudButton>
+            </AuthForm>
+            <MudText>@Loc["Your authenticator and recovery requirements still apply after resetting your password."]</MudText>
         }
-        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton OnClick="Cancel">@Loc["Cancel"]</MudButton>
     }
     @if (verified)
     {
-        <MudAlert Severity="Severity.Success" data-testid="email-verified">Your email is verified. You can now return to login.</MudAlert>
-        <MudButton Href="@SecurityLinkNavigation.LoginAfterVerification">Return to login</MudButton>
+        <MudAlert Severity="Severity.Success" data-testid="email-verified">@Loc["Your email is verified. You can now return to login."]</MudAlert>
+        <MudButton Href="@SecurityLinkNavigation.LoginAfterVerification">@Loc["Return to login"]</MudButton>
     }
-    @if (error is not null)
+    <AuthError @bind-Message="error" TestId="security-link-error" />
+    @if (error is not null && opened is null)
     {
-        <MudAlert Severity="Severity.Error" data-testid="security-link-error">@error</MudAlert>
-        @if (opened is null)
-        {
-            <MudButton Href="@(Verification ? "Identity/SendEmailVerificationLink" : "Identity/SendResetPasswordLink")">Request a new link</MudButton>
-            <MudButton Href="@SecurityLinkNavigation.LoginAfterCancel">Back to login</MudButton>
-        }
+        <MudButton Href="@(Verification ? "Identity/SendEmailVerificationLink" : "Identity/SendResetPasswordLink")">@Loc["Request a new link"]</MudButton>
+        <MudButton Href="@SecurityLinkNavigation.LoginAfterCancel">@Loc["Back to login"]</MudButton>
     }
 </MudPaper>
+</CascadingValue>
 
 @code {
     [Parameter] public AdmissionUiContext? Context { get; set; }
     [Parameter] public AuthenticationFlow? Flow { get; set; }
     private AuthenticationFlow CurrentFlow => Flow ?? Context!.Flow;
     [Parameter] public bool Verification { get; set; }
+    // The page's attempts: a shown error closes before each press, as in every security step.
+    private readonly AuthFeedback feedback = new();
     private SecurityLinkOpened? opened;
     private Entry entry = new();
     private bool loading = true, verified, disposed, processing;
@@ -111,11 +112,11 @@
                         : new AuthenticationRefused(AuthenticationFailure.InvalidGrant);
                     if (disposed || current != pageGeneration) continue;
                     opened = result as SecurityLinkOpened;
-                    if (opened is null) error = "This link is invalid, expired or has been replaced. Request a new link.";
+                    if (opened is null) error = Loc["This link is invalid, expired or has been replaced. Request a new link."];
                 }
                 catch (JSException)
                 {
-                    if (!disposed && current == pageGeneration) error = "The link could not be opened. Please reopen it and try again.";
+                    if (!disposed && current == pageGeneration) error = Loc["The link could not be opened. Please reopen it and try again."];
                 }
                 finally
                 {
@@ -164,13 +165,13 @@
     private void HandleFailure(AuthOutcome result)
     {
         if (result is AuthenticationRefused { Code: AuthenticationFailure.InvalidNewPassword })
-            error = "Choose a password that meets the password requirements and try again.";
+            error = Loc["Choose a password that meets the password requirements and try again."];
         else
         {
             opened = null;
-            error = Verification
+            error = Loc[Verification
                 ? "Verification could not be confirmed. The link may have expired or been replaced. Request a new link."
-                : "The change could not be confirmed. The link may have expired or been replaced. Request a new link; if you just reset your password, try signing in with the new password first.";
+                : "The change could not be confirmed. The link may have expired or been replaced. Request a new link; if you just reset your password, try signing in with the new password first."];
         }
     }
     private void Cancel()

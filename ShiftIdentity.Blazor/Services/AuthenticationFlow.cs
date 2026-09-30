@@ -62,6 +62,18 @@ public sealed partial class AuthenticationFlow(HttpClient http, IdentitySession 
     public Task<AuthOutcome> ConfirmNewFactorAsync(string code) => Continue(AuthenticationStep.NewMfa,
         "mfa/confirm", proof => new CompleteMfaRequest(code, proof));
 
+    /// <summary>
+    /// Turns off the signed-in account's own authenticator with a current code from it. One request, no operation: on
+    /// success the answer's fresh session for this device is stored, and every other session of the account has ended.
+    /// </summary>
+    public Task<AuthOutcome> TurnOffMfaAsync(string access, string code) => SendAsync(() =>
+    {
+        Start();
+        var request = Request("mfa/turn-off", new TurnOffMfaRequest(code));
+        request.Headers.Authorization = new("Bearer", access);
+        return request;
+    });
+
     public Task<AuthOutcome> RecoverMfaAsync(string username, string password, string recoveryCode) => SendAsync(() =>
     {
         Start();
@@ -71,6 +83,14 @@ public sealed partial class AuthenticationFlow(HttpClient http, IdentitySession 
     public Task<AuthOutcome> IssueMfaRecoveryAsync(string access, long userID, string verificationReference) => SendAsync(() =>
     {
         var request = Request("mfa/recovery-code", new IssueMfaRecoveryRequest(userID, verificationReference));
+        request.Headers.Authorization = new("Bearer", access);
+        return request;
+    });
+
+    /// <summary>The same issuance for a dashboard form that holds the target's encoded key instead of its numeric ID.</summary>
+    public Task<AuthOutcome> IssueMfaRecoveryAsync(string access, string userKey, string verificationReference) => SendAsync(() =>
+    {
+        var request = Request("mfa/recovery-code", new IssueMfaRecoveryRequest(0, verificationReference, userKey));
         request.Headers.Authorization = new("Bearer", access);
         return request;
     });

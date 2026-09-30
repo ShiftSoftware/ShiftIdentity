@@ -185,6 +185,5 @@ public sealed class MfaComponentTests
         context.Services.AddTransient(sp => new ShiftIdentityLocalizer(sp, typeof(ShiftSoftwareLocalization.Identity.Resource)));
         context.AddAuthorization(); context.JSInterop.Mode = JSRuntimeMode.Loose; return context;
     }
-    private static Task Submit<T>(IRenderedComponent<T> cut) where T : class, Microsoft.AspNetCore.Components.IComponent =>
-        cut.InvokeAsync(() => cut.FindComponent<EditForm>().Instance.OnValidSubmit.InvokeAsync(new EditContext(new object())));
+    private static Task Submit<T>(IRenderedComponent<T> cut) where T : class, Microsoft.AspNetCore.Components.IComponent => FormSubmission.SubmitAsync(cut);
 }

@@ -10,6 +10,7 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject ShiftIdentityDashboardBlazorOptions DashboardOptions
 @inject IServiceProvider Services
+@inject IJSRuntime JS
 @using Microsoft.Extensions.DependencyInjection
 @using MudBlazor
 @using ShiftSoftware.ShiftIdentity.Core
@@ -19,74 +20,101 @@
 @using AuthenticationFlow = ShiftSoftware.ShiftIdentity.Blazor.Services.AuthenticationFlow
 @using System.ComponentModel.DataAnnotations
 
-@if (AdmissionFlow is not null)
+@if (AdmissionFlow is not null || deciding)
 {
-    <MudPaper Class="pa-5" data-testid="mfa-enrollment-form">
-        @if (stagedSelfService && AdmissionFlow.Pending?.Step != AuthenticationStep.NewMfa)
+    @* Opened from the profile (or its own route), this form owns the setup and shows its steps in the login-box look,
+       sliding from one to the next; the close button cancels the setup. As a step of a sign-in or of a password
+       change it is already inside that flow's box. *@
+    <SecurityStepBox Boxed="@OwnsBox" ViewKey="@StepKey" Caption="@Loc[replacing ? "Replace your authenticator" : "Set up your authenticator"]"
+                     Close="CloseOwned" CloseDisabled="@(deciding || (AdmissionFlow?.Busy ?? true))">
+        @if (deciding || AdmissionFlow is null)
         {
-            <MudText Typo="Typo.h6" data-testid="mfa-enrollment-title">@(replacing ? Loc["Replace your authenticator"] : Loc["Set up your authenticator"])</MudText>
+            <div class="d-flex justify-center pa-8" data-testid="mfa-enrollment-loading">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            </div>
         }
-        @if (recoveryRequired)
+        else
         {
-            <MudAlert Severity="Severity.Warning" data-testid="restricted-step">@Loc["Authenticator recovery is required. Contact your administrator."]</MudAlert>
+            <div data-testid="mfa-enrollment-form">
+                @if (completed)
+                {
+                    <div class="auth-center" role="status" data-testid="mfa-enrollment-done">
+                        <MudIcon Icon="@Icons.Material.Outlined.VerifiedUser" Color="Color.Success" Size="Size.Large" Class="auth-done-icon" />
+                        <h1 class="auth-title" tabindex="-1">@Loc[replacing ? "Authenticator replaced" : "Authenticator set up"]</h1>
+                        <p class="auth-description">@Loc[replacing ? "Your old authenticator no longer works. From now on, use the new app when you sign in."
+                            : "From now on, sign in with your password and a code from this app."]</p>
+                        <div class="auth-actions"><MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="() => CloseStaged(true)" data-testid="mfa-enrollment-finish">@Loc["Done"]</MudButton></div>
+                    </div>
+                }
+                else if (recoveryRequired)
+                {
+                    <div class="auth-center" data-testid="restricted-step">
+                        <MudIcon Icon="@Icons.Material.Outlined.LockReset" Color="Color.Warning" Size="Size.Large" Class="auth-done-icon" />
+                        <h1 class="auth-title" tabindex="-1">@Loc["Authenticator recovery is required"]</h1>
+                        <p class="auth-description">@Loc["An administrator reset your authenticator app. Ask them for a recovery code. The next time you sign in, you enter it with your password and then set up a new authenticator app."]</p>
+                        <div class="auth-actions"><MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="() => CloseStaged(false)" data-testid="mfa-enrollment-close">@Loc["Close"]</MudButton></div>
+                    </div>
+                }
+                else if (AdmissionFlow.Pending is { Step: AuthenticationStep.Password })
+                {
+                    <h1 class="auth-title" tabindex="-1">@Loc["Confirm your current password"]</h1>
+                    <p class="auth-description">@Loc["Enter your password to start setting up an authenticator app."]</p>
+                    <AuthForm Model="passwordEntry" Submit="ProveAdmissionPassword" class="auth-inputs" Context="attempting">
+                        <PasswordField Label="@Loc["Current Password"]" @bind-Value="passwordEntry.Password"
+                                       For="@(() => passwordEntry.Password)" Immediate="true" autocomplete="current-password" />
+                        <div class="auth-actions">
+                            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Disabled="@(attempting || AdmissionFlow.Busy)">@Loc["Continue"]</MudButton>
+                        </div>
+                    </AuthForm>
+                }
+                else if (AdmissionFlow.Pending is { Step: AuthenticationStep.ExistingMfa })
+                {
+                    <MfaForm AdmissionFlow="AdmissionFlow" AdmissionCompleted="HandleAdmission" Title="Confirm your current authenticator"
+                             Description="Enter a code from the authenticator app you use now. It keeps working until the new one is confirmed." />
+                }
+                else if (AdmissionFlow.Pending is { Step: AuthenticationStep.NewMfa, NewAuthenticator: { } setup })
+                {
+                    <h1 class="auth-title" tabindex="-1">@Loc["Scan the QR code"]</h1>
+                    <p class="auth-description">@Loc["Scan this code with your authenticator app, or enter the setup key by hand. Then enter the 6-digit code the app shows."]</p>
+                    <div class="auth-qr" role="img" aria-label="@Loc["Authenticator setup QR code"]">@((MarkupString)PrepareSvg(setup.Svg))</div>
+                    <span class="auth-key-label">@Loc["Setup key"]</span>
+                    <div class="auth-key">
+                        <span class="auth-key-value" data-testid="enrollment-secret">@GroupKey(setup.Secret)</span>
+                        <MudIconButton Icon="@(keyCopied ? Icons.Material.Filled.Check : Icons.Material.Outlined.ContentCopy)" Size="Size.Small"
+                                       aria-label="@Loc["Copy setup key"]" title="@Loc["Copy setup key"]" OnClick="() => CopyKeyAsync(setup.Secret)" />
+                    </div>
+                    <AuthForm Model="codeEntry" Submit="ConfirmAdmissionFactor" class="auth-inputs" Context="attempting">
+                        <MudTextField T="string" Label="@Loc["Code from the new app"]" @bind-Value="codeEntry.Code"
+                                      For="@(() => codeEntry.Code)" Immediate="true" autocomplete="one-time-code" InputMode="InputMode.numeric" spellcheck="false" />
+                        <div class="auth-actions">
+                            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Disabled="@(attempting || AdmissionFlow.Busy)">@Loc["Confirm authenticator"]</MudButton>
+                        </div>
+                    </AuthForm>
+                }
+                else if (AdmissionFlow.Pending is { } pending)
+                {
+                    <MudAlert Severity="Severity.Info" data-testid="restricted-step" data-step="@pending.Step">
+                        @(AdmissionFlow.MfaWasChanged ? Loc["Authenticator updated. Additional account verification is required before signing in."]
+                            : Loc["Additional account verification is required before the authenticator can be changed."])
+                    </MudAlert>
+                }
+                <AuthError @bind-Message="admissionError" TestId="mfa-error" />
+                @if (OwnsBox)
+                {
+                    @if (!completed && !recoveryRequired && AdmissionFlow.Pending is null)
+                    {
+                        @* Nothing is pending after a refusal: the setup has ended, and closing is the only way on. *@
+                        <div class="auth-actions"><MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="() => CloseStaged(false)" data-testid="mfa-enrollment-close">@Loc["Close"]</MudButton></div>
+                    }
+                }
+                else if (AdmissionFlow.Pending?.Handle is not null)
+                {
+                    @* A step of another flow: the sign-in box has Back as well, but a visible way to stop the setup stays here. *@
+                    <button type="button" class="auth-help" disabled="@(Feedback?.Attempting == true)" @onclick="CancelSetup">@Loc["Cancel setup"]</button>
+                }
+            </div>
         }
-        else if (AdmissionFlow.Pending is { Step: AuthenticationStep.Password })
-        {
-            <MudText Typo="Typo.h6">@Loc["Confirm your current password"]</MudText>
-            <EditForm Model="passwordEntry" OnValidSubmit="ProveAdmissionPassword">
-                <DataAnnotationsValidator />
-                <PasswordField Label="@Loc["Current Password"]" @bind-Value="passwordEntry.Password"
-                    For="@(() => passwordEntry.Password)" Immediate="true" autocomplete="current-password" />
-                <MudButton ButtonType="ButtonType.Submit" Disabled="AdmissionFlow.Busy">@Loc["Continue"]</MudButton>
-            </EditForm>
-        }
-        else if (AdmissionFlow.Pending is { Step: AuthenticationStep.ExistingMfa })
-        {
-            <MudText>@Loc["Confirm your existing authenticator before setting up its replacement."]</MudText>
-            <MfaForm AdmissionFlow="AdmissionFlow" AdmissionCompleted="HandleAdmission" />
-        }
-        else if (AdmissionFlow.Pending is { Step: AuthenticationStep.NewMfa, NewAuthenticator: { } setup })
-        {
-            <MudText Typo="Typo.h6">@Loc["Set up your new authenticator"]</MudText>
-            <MudText>@Loc["Scan the QR code, or enter the key manually. Then confirm a code from the new authenticator."]</MudText>
-            <div style="max-width:240px;margin:16px auto" aria-label="@Loc["Authenticator setup QR code"]">@((MarkupString)PrepareSvg(setup.Svg))</div>
-            <MudText Style="font-family:monospace;word-break:break-all" data-testid="enrollment-secret">@setup.Secret</MudText>
-            <EditForm Model="codeEntry" OnValidSubmit="ConfirmAdmissionFactor">
-                <DataAnnotationsValidator />
-                <MudTextField T="string" Label="@Loc["New authenticator code"]" @bind-Value="codeEntry.Code"
-                    For="@(() => codeEntry.Code)" Immediate="true" autocomplete="one-time-code" InputMode="InputMode.numeric" />
-                <MudButton ButtonType="ButtonType.Submit" Disabled="AdmissionFlow.Busy" Color="Color.Primary">@Loc["Confirm authenticator"]</MudButton>
-            </EditForm>
-        }
-        else if (AdmissionFlow.Pending is { } pending)
-        {
-            <MudAlert Severity="Severity.Info" data-testid="restricted-step">
-                @(AdmissionFlow.MfaWasChanged ? Loc["Authenticator updated. Additional account verification is required before signing in."]
-                    : Loc["Additional account verification is required before the authenticator can be changed."])
-                @pending.Step
-            </MudAlert>
-        }
-        @if (admissionError is not null)
-        {
-            <MudAlert Severity="Severity.Error" data-testid="mfa-error">@admissionError</MudAlert>
-        }
-        @if (AdmissionFlow.Pending?.Handle is not null)
-        {
-            <MudButton OnClick="CancelAdmission">@Loc["Cancel setup"]</MudButton>
-        }
-        else if (stagedSelfService)
-        {
-            <MudButton OnClick="() => CloseStaged(false)" data-testid="mfa-enrollment-close">@Loc["Close"]</MudButton>
-        }
-    </MudPaper>
-}
-else if (deciding)
-{
-    <MudPaper Class="pa-5" data-testid="mfa-enrollment-loading">
-        <div class="d-flex justify-center pa-8">
-            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-        </div>
-    </MudPaper>
+    </SecurityStepBox>
 }
 else
 {
@@ -137,7 +165,7 @@ else
         }
 
         <EditForm Model="@dto" OnValidSubmit="VerifyAsync">
-            <DataAnnotationsValidator />
+            <LocalizedValidator />
 
             <MudTextField T="string" Label="@Loc["Code"]" @bind-Value="dto.Code"
                           For="@(() => dto.Code)" InputMode="InputMode.numeric"
@@ -170,18 +198,25 @@ else
 
 @code {
     [CascadingParameter] public ShiftSoftware.ShiftIdentity.Blazor.Services.AdmissionUiContext? AdmissionContext { get; set; }
+    // The attempts of the flow this setup is a step of. A setup that owns its box has its own, inside the box.
+    [CascadingParameter] private AuthFeedback? Feedback { get; set; }
     private bool routedAdmission;
     // The identity host's own dashboard on the staged authority: an ordinary session sets up or replaces its
     // authenticator through the staged flow, which the authoritative state selects between. A mandatory-enrollment
     // step token from the deployed login keeps the deployed route, which its adapter serves.
-    private bool stagedSelfService, deciding, replacing, recoveryRequired;
+    private bool stagedSelfService, deciding, replacing, recoveryRequired, completed, keyCopied;
+    // The form started the setup itself, so it draws the box and owns cancel and close.
+    private bool OwnsBox => deciding || stagedSelfService || routedAdmission;
+    private string StepKey => deciding || AdmissionFlow is null ? "loading" : completed ? "done" : recoveryRequired ? "recovery"
+        : AdmissionFlow.Pending is { } pending ? pending.Step.ToString() : "ended";
     [Parameter] public AuthenticationFlow? AdmissionFlow { get; set; }
     [Parameter] public EventCallback<AuthOutcome> AdmissionCompleted { get; set; }
     private sealed class PasswordEntry { [Required] public string Password { get; set; } = ""; }
-    private sealed class CodeEntry { [Required, RegularExpression(@"^[0-9]{6,8}$")] public string Code { get; set; } = ""; }
+    private sealed class CodeEntry { [Required, RegularExpression(@"^[0-9]{6,8}$", ErrorMessage = "Enter the code the app shows, using digits only.")] public string Code { get; set; } = ""; }
     private PasswordEntry passwordEntry = new();
     private CodeEntry codeEntry = new();
     private string? admissionError;
+    // AuthForm closes a shown error before each press and runs one attempt at a time.
     private async Task ProveAdmissionPassword()
     {
         var result = await AdmissionFlow!.ProvePasswordAsync(passwordEntry.Password);
@@ -194,6 +229,8 @@ else
         codeEntry = new();
         await HandleAdmission(result);
     }
+    // Cancelling is a press of the flow too, so a shown error closes first.
+    private Task CancelSetup() => Feedback is null ? CancelAdmission() : Feedback.AttemptAsync(CancelAdmission);
     private async Task CancelAdmission() => await HandleAdmission(await AdmissionFlow!.CancelAsync());
     private async Task HandleAdmission(AuthOutcome result)
     {
@@ -209,15 +246,37 @@ else
         {
             // The flow stored the fresh initiating session; the authentication state and TypeAuth read it from there.
             await AuthenticationStateProvider.GetAuthenticationStateAsync();
-            CloseStaged(true);
+            // Say that it worked before the dialog goes away. The user closes it.
+            completed = true;
         }
         else if (result is OperationCancelled) CloseStaged(false);
     }
+    // The header's close button: a pending setup is cancelled first, and the cancellation closes the form.
+    private async Task CloseOwned()
+    {
+        if (completed) CloseStaged(true);
+        else if (AdmissionFlow?.Pending?.Handle is not null) await CancelAdmission();
+        else CloseStaged(false);
+    }
     private void CloseStaged(bool finished)
     {
-        if (MudDialog is not null) ShiftModal.Close(MudDialog);
+        if (MudDialog is not null)
+        {
+            // The profile opens this form in a narrow dialog of its own and closes it directly. A dialog that
+            // ShiftModal opened is closed through ShiftModal, which also removes it from the address.
+            if (SecurityDialog) MudDialog.Close(DialogResult.Ok(finished));
+            else ShiftModal.Close(MudDialog);
+        }
         else if (finished) NavManager.NavigateTo(ReturnUrl ?? "/", forceLoad: true);
         else NavManager.NavigateTo("Identity/UserDataForm");
+    }
+    // Groups the key in blocks of four, as authenticator apps show it. The apps ignore the spaces; the copy button
+    // copies the key without them.
+    private static string GroupKey(string key) => string.Join(' ', key.Chunk(4).Select(x => new string(x)));
+    private async Task CopyKeyAsync(string key)
+    {
+        try { await JS.InvokeVoidAsync("navigator.clipboard.writeText", key); keyCopied = true; }
+        catch (JSException) { }
     }
     private enum State { Loading, Ready, LoadFailed }
 
@@ -230,6 +289,9 @@ else
 
     [CascadingParameter]
     protected IMudDialogInstance? MudDialog { get; set; }
+
+    /// <summary>Set by the page that opened this form in its own security dialog, which the form then closes directly.</summary>
+    [Parameter] public bool SecurityDialog { get; set; }
 
     [Parameter]
     [SupplyParameterFromQuery]
@@ -244,11 +306,17 @@ else
         routedAdmission = AdmissionFlow is null && AdmissionContext is not null;
         if (routedAdmission)
         {
-            AdmissionFlow = AdmissionContext!.Flow;
-            var account = await AdmissionContext.AccountAsync();
-            var access = (await storageService.GetTokenAsync())?.Token;
-            if (account is null || access is null) { NavManager.NavigateTo("Identity/login"); return; }
-            await HandleAdmission(await AdmissionFlow.BeginMfaAsync(access, account.HasAuthenticator));
+            deciding = true;
+            try
+            {
+                AdmissionFlow = AdmissionContext!.Flow;
+                var account = await AdmissionContext.AccountAsync();
+                var access = (await storageService.GetTokenAsync())?.Token;
+                if (account is null || access is null) { NavManager.NavigateTo("Identity/login"); return; }
+                replacing = account.HasAuthenticator;
+                await HandleAdmission(await AdmissionFlow.BeginMfaAsync(access, account.HasAuthenticator));
+            }
+            finally { deciding = false; }
             return;
         }
         if (AdmissionFlow is not null) return;

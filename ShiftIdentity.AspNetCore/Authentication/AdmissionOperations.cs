@@ -101,16 +101,7 @@ internal static class AdmissionOperations
         if (unit.Security.ProtectedTotpSecret is null || (requireEnabled && !unit.Policy.MfaEnabled) || unit.Security.LocalMfaRecoveryRequired)
             return Refuse(AuthenticationFailure.StaleOperation);
         var now = services.Clock.GetUtcNow();
-        var secret = MfaMaterial.ReadActive(services, unit.Security);
-        bool valid;
-        long matchedStep;
-        try
-        {
-            valid = new Totp(secret, unit.Policy.TotpPeriodSeconds, totpSize: unit.Policy.TotpDigits)
-                .VerifyTotp(now.UtcDateTime, code, out matchedStep, new VerificationWindow(unit.Policy.TotpWindowPast, unit.Policy.TotpWindowFuture));
-        }
-        finally { CryptographicOperations.ZeroMemory(secret); }
-        if (!valid || matchedStep <= (unit.Security.LastAcceptedTotpStep ?? -1))
+        if (!ActiveFactorAccepts(services, unit, code, now, out var matchedStep))
         {
             FailedAttempt(unit, now, "InvalidMfa", op);
             return Refuse(AuthenticationFailure.InvalidProof);
@@ -119,6 +110,23 @@ internal static class AdmissionOperations
         op.MfaProvenAt = now;
         unit.Audit("MfaCompleted", now, op.ID);
         return null;
+    }
+
+    /// <summary>
+    /// A code from the active authenticator: valid within the policy's window and newer than the last accepted code,
+    /// so each code is accepted once. The caller records the step and the failure.
+    /// </summary>
+    internal static bool ActiveFactorAccepts(IdentityAdmissionServices services, IdentitySecurityTransaction unit, string code,
+        DateTimeOffset now, out long matchedStep)
+    {
+        var secret = MfaMaterial.ReadActive(services, unit.Security);
+        try
+        {
+            return new Totp(secret, unit.Policy.TotpPeriodSeconds, totpSize: unit.Policy.TotpDigits)
+                .VerifyTotp(now.UtcDateTime, code, out matchedStep, new VerificationWindow(unit.Policy.TotpWindowPast, unit.Policy.TotpWindowFuture)) &&
+                matchedStep > (unit.Security.LastAcceptedTotpStep ?? -1);
+        }
+        finally { CryptographicOperations.ZeroMemory(secret); }
     }
 
     internal static void FailedAttempt(IdentitySecurityTransaction unit, DateTimeOffset now, string outcome, AuthenticationOperation? operation = null)

@@ -46,7 +46,7 @@ public sealed class AdministratorConfirmationUiTests
         list.SelectState.Toggle(new UserListDTO { ID = "42" });
         list.SelectState.Toggle(new UserListDTO { ID = "43" });
         cut.Render();
-        var action = cut.FindComponents<ActionButton<UserListDTO>>().Single(x => x.Instance.Endpoint!.EndsWith("ResetTotp"));
+        var action = cut.FindComponents<ActionButton<UserListDTO>>().Single(x => x.Instance.Endpoint!.EndsWith("VerifyPhones"));
         action.Instance.Confirm = false;
         var clicking = cut.InvokeAsync(() => action.Instance.OnClick.InvokeAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs()));
         dialogs.WaitForElement("[data-testid=administrator-confirmation-form] input");
@@ -142,7 +142,7 @@ public sealed class AdministratorConfirmationUiTests
             commits++; return new(HttpStatusCode.OK) { Content = JsonContent.Create(new { }) };
         }
         var selection = new SelectStateDTO<UserListDTO> { Items = [new() { ID = "42" }, new() { ID = "43" }] };
-        using var request = new HttpRequestMessage(HttpMethod.Post, "https://identity.invalid/api/IdentityUser/ResetTotp") { Content = JsonContent.Create(selection) };
+        using var request = new HttpRequestMessage(HttpMethod.Post, "https://identity.invalid/api/IdentityUser/VerifyPhones") { Content = JsonContent.Create(selection) };
         request.Headers.Authorization = new("Bearer", storage.Session.GetToken());
         var pending = continuation.SendAsync(request, Send, CancellationToken.None);
         if (scenario is "success" or "cancel")
@@ -187,6 +187,37 @@ public sealed class AdministratorConfirmationUiTests
         Assert.Equal(before, storage.Session.GetToken());
     }
 
+    // The confirmation popup used to show a plain alert that stayed as it was on a second wrong password.
+    [Fact]
+    public async Task A_second_wrong_password_closes_the_error_before_it_is_sent_again()
+    {
+        var storage = new RecordingStore(); var current = Session(); await storage.Session.StoreTokenAsync(current);
+        var transport = new ConfirmationTransport();
+        await using var context = Context(storage.Session, transport);
+        var close = context.JSInterop.SetupModule("./_content/ShiftSoftware.ShiftIdentity.Dashboard.Blazor/auth-feedback.js").SetupVoid("waitForClose", _ => true);
+        var dialogs = context.Render<MudDialogProvider>();
+        var flow = new AuthenticationFlow(context.Services.GetRequiredService<StagedAuthorityHttpClient>(), storage.Session);
+        await dialogs.InvokeAsync(() => context.Services.GetRequiredService<IDialogService>().ShowAsync<ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.UserManager.AdministratorConfirmationDialog>("Confirm your identity",
+            new DialogParameters<ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.UserManager.AdministratorConfirmationDialog> { { x => x.Flow, flow }, { x => x.CurrentAccess, current.Token } }));
+        const string shown = ".auth-feedback-slot[data-open=true] [data-testid=administrator-confirmation-error]";
+        dialogs.WaitForElement("[data-testid=administrator-confirmation-form] input").Input("wrong");
+        await dialogs.Find("[data-testid=administrator-confirmation-form]").SubmitAsync();
+        dialogs.WaitForAssertion(() => Assert.Contains("not accepted", dialogs.Find(shown).TextContent));
+        Assert.Equal(1, transport.Proofs);
+        Assert.Empty(close.Invocations);
+
+        dialogs.Find("[data-testid=administrator-confirmation-form] input").Input("wrong again");
+        var retry = dialogs.Find("[data-testid=administrator-confirmation-form]").SubmitAsync();
+        dialogs.WaitForAssertion(() => Assert.Single(close.Invocations));
+        Assert.Empty(dialogs.FindAll(shown));
+        Assert.Equal(1, transport.Proofs);
+        close.SetVoidResult();
+        await retry;
+        Assert.Equal(2, transport.Proofs);
+        dialogs.WaitForAssertion(() => Assert.Contains("not accepted", dialogs.Find(shown).TextContent));
+        Assert.Single(storage.Writes);
+    }
+
     private static BunitContext Context(IdentitySession session, ConfirmationTransport transport)
     {
         var context = new BunitContext();
@@ -228,6 +259,8 @@ public sealed class AdministratorConfirmationUiTests
     {
         public bool Mfa { get; init; }
         public List<string> Mutations { get; } = [];
+        /// <summary>Passwords and codes sent to confirm the administrator.</summary>
+        public int Proofs { get; private set; }
         public int Commits { get; private set; }
         private readonly TokenDTO confirmed = Session();
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
@@ -236,6 +269,7 @@ public sealed class AdministratorConfirmationUiTests
             if (path.StartsWith("/api/identity/v2/"))
             {
                 var body = request.Content is null ? "" : await request.Content.ReadAsStringAsync(ct);
+                if (!path.EndsWith("/admin-confirmation") && !path.EndsWith("/cancel")) Proofs++;
                 AuthOutcome outcome = path.EndsWith("/admin-confirmation") ? Challenge(AuthenticationStep.Password)
                     : path.EndsWith("/cancel") ? new OperationCancelled()
                     : body.Contains("wrong") ? new AuthenticationRefused(AuthenticationFailure.InvalidProof)
@@ -255,7 +289,7 @@ public sealed class AdministratorConfirmationUiTests
                 }
                 return new(HttpStatusCode.OK) { Content = JsonContent.Create(new ShiftEntityResponse<UserDTO>(user)) };
             }
-            if (path == "/api/IdentityUser/ResetTotp")
+            if (path == "/api/IdentityUser/VerifyPhones")
             {
                 Mutations.Add(await request.Content!.ReadAsStringAsync(ct));
                 if (request.Headers.Authorization?.Parameter != confirmed.Token) return Required();

@@ -118,7 +118,7 @@ public sealed class AdmissionRoutingTests
         cut.Render();
         Assert.Equal("Synthetic independent verification", cut.Find("input").GetAttribute("value"));
         Assert.Equal(2, handler.Reads);
-        await cut.InvokeAsync(() => cut.FindComponent<EditForm>().Instance.OnValidSubmit.InvokeAsync(new EditContext(new object())));
+        await FormSubmission.SubmitAsync(cut);
         Assert.Contains("Recovery required", cut.Markup);
         cut.Render();
         Assert.Single(cut.FindAll("[data-testid=recovery-code]"));
@@ -182,7 +182,7 @@ public sealed class AdmissionRoutingTests
         navigation.NavigateTo("Identity/login");
         var cut = context.Render<CascadingValue<AdmissionUiContext>>(p => p.Add(x => x.Value, ui).AddChildContent<LoginForm>());
         cut.FindAll("input")[0].Input("synthetic"); cut.FindAll("input")[1].Input("password");
-        await cut.InvokeAsync(() => cut.FindComponent<EditForm>().Instance.OnValidSubmit.InvokeAsync(new EditContext(new object())));
+        await FormSubmission.SubmitAsync(cut);
         Assert.Equal("/api/identity/v2/login", Assert.Single(calls));
         if (challenge)
         {

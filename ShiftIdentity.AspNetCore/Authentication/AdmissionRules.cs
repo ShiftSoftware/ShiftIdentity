@@ -73,6 +73,9 @@ internal static class AdmissionRules
         return null;
     }
 
+    /// <summary>The host requires an authenticator on every account, so none can be turned off.</summary>
+    internal static bool MfaMandatory(IdentitySecurityTransaction unit) => unit.Policy.MfaEnabled && unit.Policy.MfaMandatory;
+
     /// <summary>
     /// A converted legacy session keeps only its former ordinary-session capability until the old credential's
     /// deadline. The marker is not MFA or freshness proof; sensitive flows continue to inspect those claims.

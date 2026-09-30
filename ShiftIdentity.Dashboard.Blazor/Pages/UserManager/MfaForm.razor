@@ -12,15 +12,35 @@
 @using AuthenticationFlow = ShiftSoftware.ShiftIdentity.Blazor.Services.AuthenticationFlow
 @using ShiftSoftware.ShiftIdentity.Core.Authentication
 
+@if (AdmissionFlow is not null)
+{
+    @* One step of a sign-in, a password change or an authenticator replacement. The flow that owns the step draws
+       the box, the way to cancel and the error panel, so this step shows no card, cancel button or error of its own.
+       Its form shares the owner's attempts, so the owner's error closes before each code is sent. *@
+    <AuthFeedbackScope>
+        <div data-testid="mfa-form">
+            <h1 class="auth-title" tabindex="-1">@Loc[Title ?? "Enter your authenticator code"]</h1>
+            <p class="auth-description">@Loc[Description ?? "Open your authenticator app and enter the 6-digit code it shows for this account."]</p>
+            <AuthForm Model="dto" Submit="VerifyMfa" class="auth-inputs" Context="attempting">
+                <MudTextField T="string" Label="@Loc["Code"]" @bind-Value="dto.Code" Immediate="true" For="@(() => dto.Code)"
+                              InputType="InputType.Text" InputMode="InputMode.numeric" autocomplete="one-time-code" spellcheck="false" />
+                <div class="auth-actions">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit" Disabled="@(attempting || AdmissionFlow.Busy)">@Loc[attempting || AdmissionFlow.Busy ? "Verifying…" : "Verify"]</MudButton>
+                </div>
+            </AuthForm>
+        </div>
+    </AuthFeedbackScope>
+}
+else
+{
 <MudPaper Elevation="25" Class="pa-5">
 
     <EditForm Model="@dto" OnValidSubmit="VerifyMfa">
-        <DataAnnotationsValidator />
+        <LocalizedValidator />
 
         <MudText>@Loc["Enter the code from your two-factor authentication app or browser extension below"]</MudText>
 
         <MudTextField T="string" Label="@Loc["Code"]" @bind-Value="dto.Code"
-                      Immediate="@(AdmissionFlow is not null)"
                       For="@(() => dto.Code)" InputType="InputType.Text" InputMode="InputMode.numeric" autocomplete="one-time-code" />
 
         <br />
@@ -32,17 +52,21 @@
                 <MudButton StartIcon="@Icons.Material.Filled.Cancel" OnClick="() => Cancel()">@Loc["Cancel"]</MudButton>
             }
 
-            <MudButton Disabled="@(AdmissionFlow?.Busy ?? false)" Color="Color.Primary" ButtonType="ButtonType.Submit">
+            <MudButton Color="Color.Primary" ButtonType="ButtonType.Submit">
                 <MudIcon Icon="@Icons.Material.Filled.Save" />
                 <MudText Style="padding:0 10px;">@Loc["Verify"]</MudText>
             </MudButton>
         </MudGrid>
     </EditForm>
 </MudPaper>
+}
 
 @code {
     [Parameter] public AuthenticationFlow? AdmissionFlow { get; set; }
     [Parameter] public EventCallback<AuthOutcome> AdmissionCompleted { get; set; }
+    /// <summary>The step's heading and explanation, as localizer keys. The defaults suit a sign-in.</summary>
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public string? Description { get; set; }
     private MfaDTO dto = new ();
 
     [CascadingParameter]

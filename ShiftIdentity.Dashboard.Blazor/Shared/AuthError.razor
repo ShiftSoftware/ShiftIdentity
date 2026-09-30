@@ -1,0 +1,94 @@
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+@* The error of a security step: why the last press failed. A message slides it open. Every press on the same screen
+   (an attempt of its AuthFeedback) first slides it closed and clears the message through the binding, so a repeated
+   failure opens it again instead of leaving the same text in place. Bind the message with @bind-Message. *@
+<div class="auth-feedback-slot" data-open="@(Open ? "true" : "false")" aria-hidden="@(Open ? "false" : "true")" inert="@(!Open)" @ref="slot">
+    <div class="auth-feedback-clip"><div class="auth-feedback-content">
+        @if (Message is not null)
+        {
+            @if (ChildContent is not null)
+            {
+                @ChildContent(Message)
+            }
+            else
+            {
+                <div class="auth-error" role="alert" data-testid="@TestId">
+                    <MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" /><span>@Message</span>
+                </div>
+            }
+        }
+    </div></div>
+</div>
+
+@code {
+    [CascadingParameter] private AuthFeedback? Feedback { get; set; }
+    /// <summary>The error to show, or null for none. Bound with @bind-Message: the panel clears it when it closes.</summary>
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public EventCallback<string?> MessageChanged { get; set; }
+    [Parameter] public string? TestId { get; set; }
+    /// <summary>Shows the message in place of the error panel, for an action whose every answer appears here.</summary>
+    [Parameter] public RenderFragment<string>? ChildContent { get; set; }
+    private ElementReference slot;
+    private IJSObjectReference? module;
+    private AuthFeedback? registered;
+    private TaskCompletionSource? closeRendered;
+    private string? closed;
+    private bool closing, disposed;
+    private bool Open => Message is not null && !closing;
+
+    protected override void OnParametersSet()
+    {
+        if (Feedback is null)
+            throw new InvalidOperationException($"An {nameof(AuthError)} must be inside a {nameof(LoginBox)}, a {nameof(SecurityStepBox)} or an {nameof(AuthFeedbackScope)}.");
+        if (!MessageChanged.HasDelegate)
+            throw new InvalidOperationException($"Bind the message of an {nameof(AuthError)} with @bind-Message, so that closing it before the next attempt clears it.");
+        if (!ReferenceEquals(registered, Feedback))
+        {
+            registered?.Remove(this);
+            Feedback.Add(this);
+            registered = Feedback;
+        }
+        // The owner clears the closed message; any message it sets after that opens the panel again.
+        if (closing && Message != closed) closing = false;
+    }
+
+    /// <summary>Slides the panel closed, waits until it has closed, and clears the message.</summary>
+    internal async Task CloseAsync()
+    {
+        if (!Open || disposed) return;
+        closing = true;
+        closed = Message;
+        closeRendered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var rendered = closeRendered.Task;
+        StateHasChanged();
+        await rendered;
+        if (!disposed) await MessageChanged.InvokeAsync(null);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (closeRendered is not { } rendered) return;
+        closeRendered = null;
+        try
+        {
+            // The panel's real closing transition, including reduced motion, rather than a fixed delay.
+            module ??= await JS.InvokeAsync<IJSObjectReference>("import", "./_content/ShiftSoftware.ShiftIdentity.Dashboard.Blazor/auth-feedback.js");
+            await module.InvokeVoidAsync("waitForClose", slot);
+        }
+        // A panel that cannot be watched has still been rendered closed; the attempt goes on.
+        catch (Exception error) when (error is JSException or JSDisconnectedException) { }
+        finally { rendered.TrySetResult(); }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        disposed = true;
+        registered?.Remove(this);
+        closeRendered?.TrySetResult();
+        if (module is null) return;
+        try { await module.DisposeAsync(); }
+        catch (JSDisconnectedException) { }
+    }
+}

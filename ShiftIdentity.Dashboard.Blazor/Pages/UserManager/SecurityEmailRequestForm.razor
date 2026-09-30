@@ -4,6 +4,7 @@
 @using ShiftSoftware.ShiftIdentity.Core.Authentication
 @inject ShiftIdentityLocalizer Loc
 
+<AuthFeedbackScope>
 <div data-testid="security-email-request" class="auth-inputs">
     @if (requested)
     {
@@ -23,15 +24,15 @@
     {
         <h1 class="auth-title" tabindex="-1">@Loc[Verification ? "Verify your email" : "Reset your password"]</h1>
         <p class="auth-description">@Loc["Enter your username or saved email address."]</p>
-        <EditForm Model="entry" OnValidSubmit="Send">
-            <DataAnnotationsValidator />
+        <AuthForm Model="entry" Submit="Send" Context="attempting">
             <MudTextField T="string" Label="@Loc["Username or email"]" @bind-Value="entry.Identifier" For="@(() => entry.Identifier)" Immediate="true" Disabled="CurrentFlow.Busy" autocomplete="username" />
-            <div class="auth-actions"><MudButton Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit" Disabled="CurrentFlow.Busy">@Loc[CurrentFlow.Busy ? "Sending request…" : Verification ? "Send verification link" : "Send reset link"]</MudButton></div>
-        </EditForm>
-        @if (error is not null) { <MudAlert Class="auth-notice" Severity="Severity.Error" data-testid="delivery-error">@error</MudAlert> }
+            <div class="auth-actions"><MudButton Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit" Disabled="@(attempting || CurrentFlow.Busy)">@Loc[CurrentFlow.Busy ? "Sending request…" : Verification ? "Send verification link" : "Send reset link"]</MudButton></div>
+        </AuthForm>
+        <AuthError @bind-Message="error" TestId="delivery-error" />
         @if (!Embedded) { <MudButton Class="mt-4" Href="@SecurityLinkNavigation.LoginAfterCancel">@Loc["Back to login"]</MudButton> }
     }
 </div>
+</AuthFeedbackScope>
 
 @code {
     [Parameter] public AdmissionUiContext? Context { get; set; }
@@ -46,10 +47,10 @@
     private string? error;
     private sealed class Entry { [Required, MaxLength(255)] public string Identifier { get; set; } = ""; }
     public void Dispose() => disposed = true;
+    // AuthForm closes a shown error before each press and runs one attempt at a time.
     private async Task Send()
     {
         if (CurrentFlow.Busy || disposed) return;
-        error = null;
         var result = Verification ? await CurrentFlow.RequestEmailVerificationAsync(entry.Identifier)
             : await CurrentFlow.RequestPasswordResetAsync(entry.Identifier);
         if (disposed) return;

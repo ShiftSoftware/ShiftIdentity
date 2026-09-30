@@ -221,7 +221,8 @@ public class ShiftIdentityMapper : ShiftMapperBase
 
         // ────────────────────────────────────────────────────────────────────────────────────────────────────
         // User — VIEW: the select convention can't fill CompanyBranchID (the DTO member is already named …ID,
-        // so the convention appends another ID and misses — provide it explicitly); TotpEnabled; AccessTrees
+        // so the convention appends another ID and misses — provide it explicitly); TotpEnabled and
+        // MfaRecoveryRequired (read from the authority's security row when it has one); AccessTrees
         // reads through an explicit junction row, so the element convention does not reach it; Password,
         // RequireChangeAtNextLogin and SendVerification have no entity source (write-only / per-save form
         // choices that keep their defaults).
@@ -232,6 +233,7 @@ public class ShiftIdentityMapper : ShiftMapperBase
         CreateMap<User, UserDTO>()
             .ForMember(d => d.CompanyBranchID, opt => opt.MapFrom(e => new ShiftEntitySelectDTO { Value = e.CompanyBranchID.ToString()!, Text = e.CompanyBranch != null ? e.CompanyBranch.Name : null }))
             .ForMember(d => d.TotpEnabled, opt => opt.MapFrom(e => e.SecurityState != null ? e.SecurityState.ProtectedTotpSecret != null : e.TotpSecret != null))
+            .ForMember(d => d.MfaRecoveryRequired, opt => opt.MapFrom(e => e.SecurityState != null && e.SecurityState.LocalMfaRecoveryRequired))
             .ForMember(d => d.AccessTrees, opt => opt.MapFrom(e => e.AccessTrees.Select(y => new ShiftEntitySelectDTO { Value = y.AccessTreeID.ToString()!, Text = y.AccessTree.Name }).ToList()))
             .ForMember(d => d.Password, opt => opt.Ignore())
             .ForMember(d => d.RequireChangeAtNextLogin, opt => opt.Ignore())
@@ -246,12 +248,13 @@ public class ShiftIdentityMapper : ShiftMapperBase
             .ForMember(e => e.SecurityState, opt => opt.Ignore())
             .ForMember(e => e.AccessTrees, opt => opt.Ignore()); // the M:N rows: the hook (or the authority) writes them
 
-        // User — LIST: the flattened CompanyBranch name, TotpEnabled, LastSeen (UserLog fallback), and the
+        // User — LIST: the flattened CompanyBranch name, TotpEnabled, MfaRecoveryRequired, LastSeen (UserLog fallback), and the
         // AccessTrees M:N projection. The scope ids CompanyBranchID/CompanyID need nothing — their names match
         // the entity's, and long? → string is a standard conversion.
         CreateMap<User, UserListDTO>()
             .ForMember(d => d.CompanyBranch, opt => opt.MapFrom(e => e.CompanyBranch != null ? e.CompanyBranch.Name : null))
             .ForMember(d => d.TotpEnabled, opt => opt.MapFrom(e => e.SecurityState != null ? e.SecurityState.ProtectedTotpSecret != null : e.TotpSecret != null))
+            .ForMember(d => d.MfaRecoveryRequired, opt => opt.MapFrom(e => e.SecurityState != null && e.SecurityState.LocalMfaRecoveryRequired))
             .ForMember(d => d.LastSeen, opt => opt.MapFrom(e => ((e.UserLog == null || e.UserLog.LastSeen == null) ? e.LastSeen : e.UserLog.LastSeen) ?? default))
             .ForMember(d => d.AccessTrees, opt => opt.MapFrom(e => e.AccessTrees.Select(y => new ShiftEntitySelectDTO { Value = y.AccessTreeID.ToString()!, Text = y.AccessTree.Name }).ToList()));
     }

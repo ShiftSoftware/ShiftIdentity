@@ -1,0 +1,11 @@
+/* The panel works in any screen: the login box, a dialog or a page. It slides open and closed with the same timing as
+   the sign-in failure panel, and has that panel's look without its ripple. */
+.auth-feedback-slot { display: grid; grid-template-rows: 0fr; opacity: 0; transform: translateY(-8px); transition: grid-template-rows 320ms cubic-bezier(.25,.8,.25,1), opacity 200ms ease, transform 320ms cubic-bezier(.25,.8,.25,1); }
+.auth-feedback-slot[data-open="true"] { grid-template-rows: 1fr; opacity: 1; transform: translateY(0); transition-delay: 0ms, 60ms, 0ms; }
+.auth-feedback-clip { min-height: 0; overflow: clip; overflow-clip-margin: 12px; }
+.auth-feedback-content { display: flow-root; }
+.auth-error { display: flex; gap: 11px; align-items: flex-start; margin-top: 16px; padding: 13px 15px; font-size: 14px; line-height: 1.5; color: #b3261e; background: #fff5f3; border: 1px solid #e6b5af; border-inline-start: 3px solid #cf4940; border-radius: 3px; }
+.auth-error ::deep .mud-icon-root { flex-shrink: 0; margin-top: 1px; }
+@media (prefers-reduced-motion: reduce) {
+    .auth-feedback-slot { transition: none; }
+}

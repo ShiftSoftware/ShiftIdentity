@@ -314,6 +314,83 @@ public sealed class LoginPolishComponentTests
         Assert.Empty(cut.FindAll("[data-testid=login-failure-message]"));
     }
 
+    // The code step's error used to stay in place on a second wrong code. It now slides closed before the code goes out.
+    [Fact]
+    public async Task A_second_wrong_code_at_sign_in_closes_the_error_before_the_code_is_sent()
+    {
+        using var transport = new Transport(true) { Step = AuthenticationStep.ExistingMfa };
+        await using var context = Context(transport, out _);
+        var exit = context.JSInterop.SetupModule("./_content/ShiftSoftware.ShiftIdentity.Dashboard.Blazor/auth-feedback.js")
+            .SetupVoid("waitForClose", _ => true);
+        var cut = context.Render<LoginForm>();
+        await Login(cut);
+        cut.WaitForElement("[data-testid=mfa-form]");
+        transport.Step = null;
+        const string shown = ".auth-feedback-slot[data-open=true] [data-testid=admission-error]";
+        cut.Find("[data-testid=mfa-form] input").Input("111111");
+        await cut.Find("[data-testid=mfa-form] form").SubmitAsync();
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll(shown)));
+        Assert.Empty(exit.Invocations);
+
+        cut.Find("[data-testid=mfa-form] input").Input("222222");
+        var retry = cut.Find("[data-testid=mfa-form] form").SubmitAsync();
+        cut.WaitForAssertion(() => Assert.Single(exit.Invocations));
+        Assert.Empty(cut.FindAll(shown));
+        Assert.Equal(2, transport.Bodies.Count);
+        Assert.Contains("Verifying", cut.Find("[data-testid=mfa-form] button[type=submit]").TextContent);
+        exit.SetVoidResult();
+        await retry;
+        Assert.Equal(3, transport.Bodies.Count);
+        Assert.Contains("222222", transport.Bodies[^1]);
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll(shown)));
+    }
+
+    // The recovery form shows its own error; the sign-in panel below it used to repeat the failure in other words.
+    [Fact]
+    public async Task A_refused_recovery_shows_one_error_that_closes_before_the_next_attempt()
+    {
+        using var transport = new Transport(true);
+        await using var context = Context(transport, out _);
+        var exit = context.JSInterop.SetupModule("./_content/ShiftSoftware.ShiftIdentity.Dashboard.Blazor/auth-feedback.js")
+            .SetupVoid("waitForClose", _ => true);
+        var cut = context.Render<LoginForm>();
+        cut.Find("[data-testid=login-help]").Click();
+        cut.WaitForElement("[data-testid=login-recovery-choice]").Click();
+        cut.WaitForElement("[data-testid=mfa-recovery-form]");
+        const string shown = ".auth-feedback-slot[data-open=true] [data-testid=recovery-error]";
+        await Recover(cut, "WRONG-CODE-1");
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll(shown)));
+        Assert.Empty(cut.FindAll("[data-testid=admission-error]"));
+        Assert.Single(cut.FindAll(".auth-error"));
+        Assert.Empty(exit.Invocations);
+
+        var retry = Recover(cut, "WRONG-CODE-2");
+        cut.WaitForAssertion(() => Assert.Single(exit.Invocations));
+        Assert.Single(transport.Bodies);
+        exit.SetVoidResult();
+        await retry;
+        Assert.Equal(2, transport.Bodies.Count);
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll(shown)));
+        Assert.Empty(cut.FindAll("[data-testid=admission-error]"));
+    }
+
+    // The setup step shows its own error; the sign-in panel below it used to repeat the failure in other words.
+    [Fact]
+    public async Task A_wrong_code_at_mandatory_setup_during_sign_in_shows_one_error()
+    {
+        using var transport = new Transport(true) { Step = AuthenticationStep.NewMfa };
+        await using var context = Context(transport, out _);
+        var cut = context.Render<LoginForm>();
+        await Login(cut);
+        cut.WaitForElement("[data-testid=enrollment-secret]");
+        transport.Step = null;
+        cut.Find("[data-testid=mfa-enrollment-form] input").Input("123456");
+        await cut.Find("[data-testid=mfa-enrollment-form] form").SubmitAsync();
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".auth-feedback-slot[data-open=true] [data-testid=mfa-error]")));
+        Assert.Empty(cut.FindAll("[data-testid=admission-error]"));
+        Assert.Single(cut.FindAll(".auth-error"));
+    }
+
     [Theory]
     [InlineData(null, false)]
     [InlineData(" ", false)]
@@ -333,6 +410,15 @@ public sealed class LoginPolishComponentTests
         cut.FindAll("input")[0].Input(username);
         cut.FindAll("input")[1].Input("  Synthetic password 39!\t");
         return cut.Find("form").SubmitAsync();
+    }
+
+    private static Task Recover(IRenderedComponent<LoginForm> cut, string code)
+    {
+        var inputs = cut.FindAll("[data-testid=mfa-recovery-form] input");
+        inputs[0].Input("synthetic");
+        inputs[1].Input("Synthetic password 39!");
+        inputs[2].Input(code);
+        return cut.Find("[data-testid=mfa-recovery-form] form").SubmitAsync();
     }
 
     private static BunitContext Context(Transport transport, out RecordingStore store)
@@ -370,7 +456,9 @@ public sealed class LoginPolishComponentTests
                     : Success ? AuthenticationFlowTests.Session() : Step is { } step
                         ? new ChallengeRequired(new(step, step is AuthenticationStep.EmailVerification or AuthenticationStep.MfaRecovery ? null : "synthetic-operation",
                             DateTimeOffset.UtcNow.AddMinutes(5), step == AuthenticationStep.PasswordChange ? AuthenticationOperationPurpose.PasswordChange
-                                : step == AuthenticationStep.NewMfa ? AuthenticationOperationPurpose.MfaEnrollment : AuthenticationOperationPurpose.Login))
+                                : step == AuthenticationStep.NewMfa ? AuthenticationOperationPurpose.MfaEnrollment : AuthenticationOperationPurpose.Login,
+                            step == AuthenticationStep.NewMfa ? new("JBSWY3DPEHPK3PXP", "otpauth://totp/synthetic",
+                                "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\"><path d=\"M0 0h10v10z\"/></svg>") : null))
                         : new AuthenticationRefused(AuthenticationFailure.InvalidProof);
                 return new(status) { Content = JsonContent.Create(outcome) };
             }

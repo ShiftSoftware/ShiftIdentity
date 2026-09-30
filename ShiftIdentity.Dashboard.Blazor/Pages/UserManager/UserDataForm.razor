@@ -2,6 +2,7 @@
 @layout Shared.DefaultLayout
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(UserDataForm)}")]
 @inject ShiftModal ShiftModal
+@inject IDialogService DialogService
 @inject HttpClient Http
 @inject MessageService MessageService
 @inject ShiftIdentityDashboardBlazorOptions DashboardOptions
@@ -46,6 +47,11 @@ else
                 <MudButton OnClick="ManageAuthenticator" Size="Size.Small" Color="Color.Warning" StartIcon="@Icons.Material.Filled.Edit" Variant="Variant.Filled" data-testid="profile-authenticator">
                     @(authenticator is null ? Loc["Authenticator"] : authenticator.Enrolled ? Loc["Replace authenticator"] : Loc["Set up authenticator"])
                 </MudButton>
+                @* Where MFA is optional, an enrolled user can turn it off with a code from the authenticator. *@
+                @if (authenticator is { Enrolled: true, Mandatory: false })
+                {
+                    <MudButton OnClick="OptOut" Size="Size.Small" Color="Color.Error" StartIcon="@Icons.Material.Filled.LockOpen" Variant="Variant.Outlined" data-testid="profile-mfa-opt-out">@Loc["Opt out of MFA"]</MudButton>
+                }
             }
         }
     </ToolbarStartTemplate>
@@ -148,14 +154,43 @@ else
             : await Services.GetRequiredService<AuthenticationFlow>().ReadAuthenticatorAsync(access) as AuthenticatorStatus;
     }
 
-    private async Task ChangePassword() => await ShiftModal.Open<ChangePasswordForm>(null, ModalOpenMode.Popup, null);
+    private async Task ChangePassword()
+    {
+        if (DashboardOptions.StagedAuthority) await OpenSecurityDialogAsync<ChangePasswordForm>(SecurityDialog);
+        else await ShiftModal.Open<ChangePasswordForm>(null, ModalOpenMode.Popup, null);
+    }
 
     private async Task ManageAuthenticator()
     {
-        await ShiftModal.Open<TotpEnrollmentForm>(null, ModalOpenMode.Popup, null);
+        if (!DashboardOptions.StagedAuthority)
+        {
+            await ShiftModal.Open<TotpEnrollmentForm>(null, ModalOpenMode.Popup, null);
+            return;
+        }
+        await OpenSecurityDialogAsync<TotpEnrollmentForm>(SecurityDialog);
         // Show the committed state once the dialog has closed, whichever way it closed.
-        if (DashboardOptions.StagedAuthority) await ReadAuthenticatorAsync();
+        await ReadAuthenticatorAsync();
     }
+
+    private async Task OptOut()
+    {
+        await OpenSecurityDialogAsync<MfaOptOutForm>();
+        await ReadAuthenticatorAsync();
+    }
+
+    // The staged password and authenticator steps are short forms, so they open in a narrow dialog instead of the
+    // wide form size a user may have chosen for record forms. The dialog stays open on a backdrop click or Escape,
+    // because only the form's own close button cancels a started change on the server.
+    private async Task OpenSecurityDialogAsync<TForm>(DialogParameters? parameters = null) where TForm : ComponentBase
+    {
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, NoHeader = true, CloseButton = false,
+            BackdropClick = false, CloseOnEscapeKey = false };
+        var dialog = await DialogService.ShowAsync<TForm>("", parameters ?? new DialogParameters(), options);
+        await dialog.Result;
+    }
+
+    // The password and authenticator forms also open as routed pages and popups; this tells them they are in the dialog.
+    private static DialogParameters SecurityDialog => new() { { nameof(ChangePasswordForm.SecurityDialog), true } };
 
     private async Task SendEmailVerification()
     {
@@ -165,9 +200,9 @@ else
             var result = access is null ? new AuthenticationRefused(AuthenticationFailure.InvalidGrant)
                 : await Services.GetRequiredService<AuthenticationFlow>().RequestCurrentEmailVerificationAsync(access);
             if (result is SecurityDeliveryRequested)
-                MessageService.Success("Check your saved email inbox. Wait before requesting another link.");
+                MessageService.Success(Loc["Check your saved email inbox. Wait before requesting another link."]);
             else
-                MessageService.Error("The send could not be confirmed. Check your inbox, wait and retry; sign in again if your session is no longer accepted.");
+                MessageService.Error(Loc["The send could not be confirmed. Check your inbox, wait and retry; sign in again if your session is no longer accepted."]);
             return;
         }
         var response = await Http.GetAsync("usermanager/SendEmailVerificationLink");

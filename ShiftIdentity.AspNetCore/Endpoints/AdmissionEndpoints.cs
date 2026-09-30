@@ -115,10 +115,13 @@ internal static class AdmissionEndpoints
         group.MapPost("/mfa/confirm", async (CompleteMfaRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
             Result(await AccountSecurityService.ConfirmNewFactorAsync(services, context.Request.Headers.Authorization.ToString()[10..], request, ct)))
             .RequireAuthorization("IdentityNewFactor");
+        group.MapPost("/mfa/turn-off", async (TurnOffMfaRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.TurnOffOwnMfaAsync(services, context.Request.Headers.Authorization.ToString(), request, ct)));
         group.MapPost("/mfa/recover", async (RecoverMfaRequest request, IdentityAdmissionServices services, CancellationToken ct) =>
             Result(await AccountSecurityService.RecoverMfaAsync(services, request, ct)));
         group.MapPost("/mfa/recovery-code", async (IssueMfaRecoveryRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
-            Result(await AccountSecurityService.IssueMfaRecoveryAsync(services, context.Request.Headers.Authorization.ToString(), request, ct)));
+            Result(await AccountSecurityService.IssueMfaRecoveryAsync(services, context.Request.Headers.Authorization.ToString(),
+                request with { UserID = LinkTarget(services, request.UserID, request.UserKey), UserKey = null }, ct)));
         group.MapPost("/password-reset/request", async (RequestSecurityEmail request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
             Result(await AccountSecurityService.RequestSecurityEmailAsync(services, request, false, context.Connection.RemoteIpAddress?.ToString() ?? "unknown", ct)));
         group.MapPost("/email-verification/request", async (RequestSecurityEmail request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
@@ -138,6 +141,9 @@ internal static class AdmissionEndpoints
             Result(await AccountSecurityService.ChangeEmailAsync(services, context.Request.Headers.Authorization.ToString(), request, ct)));
         group.MapPost("/admin/status", async (AdminAccountStatusRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
             Result(await AccountSecurityService.SetActiveAsync(services, context.Request.Headers.Authorization.ToString(), request, ct)));
+        group.MapPost("/admin/mfa/turn-off", async (AdminMfaTurnOffRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.TurnOffAccountMfaAsync(services, context.Request.Headers.Authorization.ToString(),
+                request with { UserID = LinkTarget(services, request.UserID, request.UserKey), UserKey = null }, ct)));
         group.MapPost("/security-link/open", async (OpenSecurityLinkRequest request, IdentityAdmissionServices services, CancellationToken ct) =>
             Result(await AccountSecurityService.OpenSecurityLinkAsync(services, request, ct)));
         group.MapPost("/password-reset/complete", async (CompletePasswordResetRequest request, IdentityAdmissionServices services, CancellationToken ct) =>
