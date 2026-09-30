@@ -10,9 +10,9 @@
    opens again with its result, so a repeated send is seen. *@
 <CascadingValue Value="feedback" IsFixed="true">
     <div data-testid="security-email-admin">
-        <MudStack Row Wrap="Wrap.Wrap">
-            <MudButton Disabled="@(Disabled || Flow.Busy || feedback.Attempting)" OnClick="() => feedback.AttemptAsync(() => Send(false))">@Loc["Send password reset link"]</MudButton>
-            <MudButton Disabled="@(Disabled || Flow.Busy || feedback.Attempting)" OnClick="() => feedback.AttemptAsync(() => Send(true))">@Loc["Send email verification link"]</MudButton>
+        <MudStack Row Wrap="Wrap.Wrap" Spacing="2">
+            <MudButton ButtonType="ButtonType.Button" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.MailOutline" Disabled="@(Disabled || Flow.Busy || feedback.Attempting)" OnClick="() => feedback.AttemptAsync(() => Send(false))">@Loc["Send password reset link"]</MudButton>
+            <MudButton ButtonType="ButtonType.Button" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.MarkEmailRead" Disabled="@(Disabled || Flow.Busy || feedback.Attempting)" OnClick="() => feedback.AttemptAsync(() => Send(true))">@Loc["Send email verification link"]</MudButton>
         </MudStack>
         <AuthError @bind-Message="message" Context="text">
             <MudAlert Severity="severity" Class="mt-3" data-testid="security-email-admin-result">@text</MudAlert>

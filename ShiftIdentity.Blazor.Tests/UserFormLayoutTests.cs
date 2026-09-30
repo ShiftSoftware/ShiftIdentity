@@ -35,13 +35,13 @@ public sealed class UserFormLayoutTests
         Assert.Contains("Username", security.TextContent);
         Assert.Contains("Active", security.TextContent);
         Assert.DoesNotContain("Authenticator App (TOTP)", security.TextContent);
-        // Entering a password adds a full-width notice at the bottom of Security that carries the next-login choice.
+        // The next-login choice stays inside Sign-in details, beside the password it applies to.
         cut.Find("[data-testid=user-password] input").Change("Synthetic password 7");
-        var passwordNotice = cut.WaitForElement("[data-testid=user-section-security] [data-testid=user-password-require-change]");
+        var passwordNotice = cut.WaitForElement("[data-testid=user-security-sign-in] [data-testid=user-password-require-change]");
         Assert.Contains("mud-alert-text-warning", passwordNotice.ClassName);
         Assert.Contains("A new password will be saved for this user.", passwordNotice.TextContent);
         Assert.NotNull(passwordNotice.QuerySelector("input[type=checkbox]"));
-        Assert.Equal("user-password-require-change", cut.Find("[data-testid=user-section-security] .mud-grid > .mud-grid-item:last-child .mud-alert").GetAttribute("data-testid"));
+        Assert.NotNull(security.QuerySelector("[data-testid=user-security-sign-in] [data-testid=user-password]"));
 
         // The email and its verification choice sit together inside Contacts, next to the phone.
         var contacts = cut.Find("[data-testid=user-section-contacts]");
@@ -85,6 +85,6 @@ public sealed class UserFormLayoutTests
         cut.WaitForAssertion(() => Assert.Equal("synthetic-existing", cut.Find("[data-testid=user-section-security] input[type=text]").GetAttribute("value")));
         var security = cut.Find("[data-testid=user-section-security]");
         Assert.Contains("Authenticator App (TOTP)", security.TextContent);
-        Assert.Contains("Enabled", security.TextContent);
+        Assert.Contains("Enabled", security.QuerySelector("[data-testid=user-security-authenticator]")!.TextContent);
     }
 }

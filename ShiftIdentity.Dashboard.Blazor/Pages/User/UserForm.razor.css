@@ -1,0 +1,76 @@
+.user-security-groups {
+    display: grid;
+    gap: 20px;
+}
+
+.user-security-group {
+    min-width: 0;
+    padding: 18px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background-color: var(--mud-palette-surface);
+}
+
+.user-security-group-heading {
+    margin-bottom: 16px;
+}
+
+.user-security-account {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px 24px;
+}
+
+.user-security-password {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.user-security-password-field {
+    flex: 1 1 16rem;
+    min-width: 0;
+}
+
+.user-security-password-generate {
+    padding-top: 6px;
+}
+
+.user-security-authenticator-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+}
+
+.user-security-email {
+    border-color: transparent;
+    background-color: var(--mud-palette-background-gray);
+}
+
+.user-security-group ::deep .mud-button {
+    text-transform: none;
+}
+
+@media (max-width: 599.98px) {
+    .user-security-groups {
+        gap: 16px;
+    }
+
+    .user-security-group {
+        padding: 14px;
+    }
+
+    .user-security-account {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 4px;
+    }
+
+    .user-security-password-generate {
+        padding-top: 0;
+    }
+}

@@ -85,97 +85,56 @@ else
         </FormSectionCard>
 
         <FormSectionCard Title="@Loc["Security"]" Icon="@Icons.Material.Filled.Lock" data-testid="user-section-security">
-            @if (DashboardOptions.StagedAuthority && context.Mode == FormModes.View && !string.IsNullOrEmpty(context.Item.ID))
-            {
-                <ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.UserManager.SecurityEmailAdminActions UserKey="@context.Item.ID" Disabled="@context.Disabled" />
-            }
-            @* Credentials on the first row, account state on the second. *@
-            <MudGrid Spacing="4">
-                <MudItem xs="12" md="6">
-                    <MudTextField ReadOnly="@context.ReadOnly"
-                                  Disabled="@context.Disabled"
-                                  OnlyValidateIfDirty="true"
-                                  Label="@Loc["Username"]"
-                                  @bind-Value="context.Item.Username"
-                                  For="@(() => context.Item.Username)" />
-                </MudItem>
+            <div class="user-security-groups">
+                <section class="user-security-group" aria-label="@Loc["Sign-in details"]" data-testid="user-security-sign-in">
+                    <div class="user-security-group-heading">
+                        <MudText Typo="Typo.subtitle2">@Loc["Sign-in details"]</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@Loc["Username, password and account access"]</MudText>
+                    </div>
 
-                <MudItem xs="12" md="6">
-                    @* The password, its generator and its next-login choice are one cluster. The field keeps a
-                       readable width, so on a phone the generator wraps under it instead of squeezing it. *@
-                    <MudStack Row Wrap="Wrap.Wrap" AlignItems="AlignItems.Baseline" Spacing="2">
-                        <div style="flex: 1 1 16rem;" data-testid="user-password">
+                    <div class="user-security-account">
+                        <MudTextField ReadOnly="@context.ReadOnly"
+                                      Disabled="@context.Disabled"
+                                      OnlyValidateIfDirty="true"
+                                      Variant="Variant.Outlined"
+                                      Margin="Margin.Dense"
+                                      Label="@Loc["Username"]"
+                                      @bind-Value="context.Item.Username"
+                                      For="@(() => context.Item.Username)" />
+                        <MudCheckBox ReadOnly="@context.ReadOnly"
+                                     Disabled="@context.Disabled"
+                                     For="@(() => context.Item.IsActive)"
+                                     Label="@Loc["Active"]"
+                                     @bind-Value="@context.Item.IsActive" />
+                    </div>
+
+                    @* Keep the password, generator and next-sign-in choice together when the controls wrap. *@
+                    <div class="user-security-password">
+                        <div class="user-security-password-field" data-testid="user-password">
                             <PasswordField ReadOnly="@context.ReadOnly"
                                            Disabled="@context.Disabled"
                                            OnlyValidateIfDirty="true"
+                                           Variant="Variant.Outlined"
+                                           Margin="Margin.Dense"
                                            Label="@Loc["Password"]"
                                            @bind-Value="context.Item.Password"
                                            For="@(() => context.Item.Password)"
                                            HelperText="@Loc["Choose a strong password"]"
                                            autocomplete="new-password" />
                         </div>
-                        <MudButton ButtonType="ButtonType.Button"
-                                   Variant="Variant.Text"
-                                   Size="Size.Small"
-                                   Class="flex-shrink-0"
-                                   StartIcon="@Icons.Material.Filled.Autorenew"
-                                   Disabled="@(context.ReadOnly || context.Disabled)"
-                                   OnClick="() => context.Item.Password = PasswordGenerator.GeneratePassword(GeneratedPasswordLength)">@Loc["Generate password"]</MudButton>
-                    </MudStack>
-                </MudItem>
+                        <div class="user-security-password-generate">
+                            <MudButton ButtonType="ButtonType.Button"
+                                       Variant="Variant.Outlined"
+                                       Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.Autorenew"
+                                       Disabled="@(context.ReadOnly || context.Disabled)"
+                                       OnClick="() => context.Item.Password = PasswordGenerator.GeneratePassword(GeneratedPasswordLength)">@Loc["Generate password"]</MudButton>
+                        </div>
+                    </div>
 
-                <MudItem xs="12" md="6" Class="d-flex align-center">
-                    <MudCheckBox ReadOnly="@context.ReadOnly"
-                                 Disabled="@context.Disabled"
-                                 For="@(() => context.Item.IsActive)"
-                                 Label="@Loc["Active"]"
-                                 @bind-Value="@context.Item.IsActive" />
-                </MudItem>
-
-                @if (!string.IsNullOrEmpty(Key?.ToString()))
-                {
-                    <MudItem xs="12" md="6">
-                        <MudField Label="@Loc["Authenticator App (TOTP)"]" Variant="Variant.Text">
-                            <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="2">
-                                @* Recovery required is its own state: a recovery code turned the authenticator off, and the user cannot sign in until they recover it. *@
-                                @if (context.Item.MfaRecoveryRequired)
-                                {
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Icon="@Icons.Material.Filled.LockReset" data-testid="user-authenticator-status">@Loc["Recovery required"]</MudChip>
-                                }
-                                else if (context.Item.TotpEnabled)
-                                {
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.Lock" data-testid="user-authenticator-status">@Loc["Enabled"]</MudChip>
-                                }
-                                else
-                                {
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.LockOpen" data-testid="user-authenticator-status">@Loc["Not set up"]</MudChip>
-                                }
-                                @if (CanRecoverAuthenticator(context.Mode))
-                                {
-                                    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Warning" StartIcon="@Icons.Material.Filled.LockReset"
-                                               Disabled="@context.Disabled" OnClick="RecoverAuthenticator" data-testid="user-recover-authenticator">@Loc["Recover authenticator"]</MudButton>
-                                }
-                                @if (CanTurnOffMfa(context.Mode, context.Item))
-                                {
-                                    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Error" StartIcon="@Icons.Material.Filled.LockOpen"
-                                               Disabled="@context.Disabled" OnClick="TurnOffMfa" data-testid="user-turn-off-mfa">@Loc["Turn off MFA"]</MudButton>
-                                }
-                            </MudStack>
-                        </MudField>
-                        @if (context.Item.MfaRecoveryRequired)
-                        {
-                            <MudText Typo="Typo.caption" Class="mud-text-secondary" data-testid="user-authenticator-recovery-help">
-                                @Loc["This user cannot sign in until they recover their authenticator app with a recovery code from an administrator."]
-                            </MudText>
-                        }
-                    </MudItem>
-                }
-
-                @* A full-width notice while a password is being set: saving without one never touches the forced change. *@
-                @if (PasswordChoiceApplies(context.Item, context.Mode))
-                {
-                    <MudItem xs="12">
-                        <MudAlert Severity="Severity.Warning" Dense="true" Icon="@Icons.Material.Filled.Password" data-testid="user-password-require-change">
+                    @if (PasswordChoiceApplies(context.Item, context.Mode))
+                    {
+                        <MudAlert Severity="Severity.Warning" Dense="true" Icon="@Icons.Material.Filled.Password" Class="mt-3" data-testid="user-password-require-change">
                             <MudStack Row Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="4">
                                 <MudText Typo="Typo.body2">@Loc["A new password will be saved for this user."]</MudText>
                                 <MudCheckBox T="bool"
@@ -185,9 +144,60 @@ else
                                              @bind-Value="context.Item.RequireChangeAtNextLogin" />
                             </MudStack>
                         </MudAlert>
-                    </MudItem>
+                    }
+                </section>
+
+                @if (!string.IsNullOrEmpty(Key?.ToString()))
+                {
+                    <section class="user-security-group" aria-label="@Loc["Authenticator App (TOTP)"]" data-testid="user-security-authenticator">
+                        <div class="user-security-authenticator-heading">
+                            <MudText Typo="Typo.subtitle2">@Loc["Authenticator App (TOTP)"]</MudText>
+                            @* Recovery required is separate from not set up: sign-in is blocked until recovery. *@
+                            @if (context.Item.MfaRecoveryRequired)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Warning" Icon="@Icons.Material.Filled.LockReset" data-testid="user-authenticator-status">@Loc["Recovery required"]</MudChip>
+                            }
+                            else if (context.Item.TotpEnabled)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.Lock" data-testid="user-authenticator-status">@Loc["Enabled"]</MudChip>
+                            }
+                            else
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.LockOpen" data-testid="user-authenticator-status">@Loc["Not set up"]</MudChip>
+                            }
+                        </div>
+                        @if (context.Item.MfaRecoveryRequired)
+                        {
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary" data-testid="user-authenticator-recovery-help">
+                                @Loc["This user cannot sign in until they recover their authenticator app with a recovery code from an administrator."]
+                            </MudText>
+                        }
+                        @if (CanRecoverAuthenticator(context.Mode) || CanTurnOffMfa(context.Mode, context.Item))
+                        {
+                            <MudStack Row Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="2" Class="mt-3">
+                                @if (CanRecoverAuthenticator(context.Mode))
+                                {
+                                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.LockReset"
+                                               Disabled="@context.Disabled" OnClick="RecoverAuthenticator" data-testid="user-recover-authenticator">@Loc["Recover authenticator"]</MudButton>
+                                }
+                                @if (CanTurnOffMfa(context.Mode, context.Item))
+                                {
+                                    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Error" StartIcon="@Icons.Material.Filled.LockOpen"
+                                               Disabled="@context.Disabled" OnClick="TurnOffMfa" data-testid="user-turn-off-mfa">@Loc["Turn off MFA"]</MudButton>
+                                }
+                            </MudStack>
+                        }
+                    </section>
                 }
-            </MudGrid>
+
+                @if (DashboardOptions.StagedAuthority && context.Mode == FormModes.View && !string.IsNullOrEmpty(context.Item.ID))
+                {
+                    <section class="user-security-group user-security-email" aria-label="@Loc["Email actions"]" data-testid="user-security-email">
+                        <MudText Typo="Typo.subtitle2" Class="mb-3">@Loc["Email actions"]</MudText>
+                        <ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.UserManager.SecurityEmailAdminActions UserKey="@context.Item.ID" Disabled="@context.Disabled" />
+                    </section>
+                }
+            </div>
         </FormSectionCard>
 
         <FormSectionCard Title="@Loc["Contacts"]" Icon="@Icons.Material.Filled.ContactMail" data-testid="user-section-contacts">
