@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
+using ShiftSoftware.ShiftEntity.Model.Replication;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.AccessTree;
 using ShiftSoftware.ShiftIdentity.Core.Localization;
@@ -22,8 +23,11 @@ namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 [TemporalShiftEntity]
 [Table("AccessTrees", Schema = "ShiftIdentity")]
 [ShiftEntitySecureEndpoint<AccessTreeListDTO, AccessTreeDTO, ShiftIdentityActions>("api/IdentityAccessTree", nameof(ShiftIdentityActions.AccessTrees))]
-public class AccessTree : ShiftEntity<AccessTree>, IUpsertsShiftRepository<AccessTree, AccessTreeListDTO, AccessTreeDTO>
+public class AccessTree : ShiftEntity<AccessTree>, IShiftEntityReplication, IUpsertsShiftRepository<AccessTree, AccessTreeListDTO, AccessTreeDTO>
 {
+    public DateTimeOffset? LastReplicationDate { get; set; }
+    public string? LastReplicationStamp { get; set; }
+
     [Required]
     [MaxLength(255)]
     public string Name { get; set; } = default!;

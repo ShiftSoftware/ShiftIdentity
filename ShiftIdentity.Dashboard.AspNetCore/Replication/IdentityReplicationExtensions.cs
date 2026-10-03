@@ -41,6 +41,22 @@ public static class IdentityReplicationExtensions
         x.SetUpCompanyReplication<TDbContext>(client, databaseId);
         x.SetUpTeamReplication<TDbContext>(client, databaseId);
         x.SetUpUserReplication<TDbContext>(client, databaseId);
+        x.SetUpAuthorizationReplication<TDbContext>(client, databaseId);
+    }
+
+    /// <summary>
+    /// Replicates named grants and assignments alongside the existing Users collection.
+    /// Provision all three containers with /id as their partition key before enabling this wiring.
+    /// </summary>
+    public static void SetUpAuthorizationReplication<TDbContext>(this ShiftEntityCosmosDbOptions x, CosmosClient client, string databaseId)
+        where TDbContext : ShiftIdentityDbContext
+    {
+        x.SetUpReplication<TDbContext, AccessTree>(client, databaseId)
+            .Replicate<AccessTreeModel>(IdentityDatabaseAndContainerNames.AccessTreeContainerName, m => m.id);
+        x.SetUpReplication<TDbContext, UserAccessTree>(client, databaseId)
+            .Replicate<UserAccessTreeModel>(IdentityDatabaseAndContainerNames.UserAccessTreeContainerName, m => m.id);
+        x.SetUpReplication<TDbContext, TeamUser>(client, databaseId)
+            .Replicate<TeamUserModel>(IdentityDatabaseAndContainerNames.TeamUserContainerName, m => m.id);
     }
 
     public static void SetUpServiceReplication<TDbContext>(this ShiftEntityCosmosDbOptions x, CosmosClient client, string databaseId)

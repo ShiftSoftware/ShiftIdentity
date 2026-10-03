@@ -49,6 +49,24 @@ public static class IdentityCatchUpReplicationExtensions
         await cosmos.ReplicateCompanyAsync<TDbContext>(connectionString, databaseId, updateAll);
         await cosmos.ReplicateTeamAsync<TDbContext>(connectionString, databaseId, updateAll);
         await cosmos.ReplicateUserAsync<TDbContext>(connectionString, databaseId, updateAll);
+        await cosmos.ReplicateAuthorizationAsync<TDbContext>(connectionString, databaseId, updateAll);
+    }
+
+    /// <summary>
+    /// Catches up named grants and assignments using the existing replication watermarks.
+    /// Hard deletes are delivered by the save trigger; this scan cannot recover an already removed SQL row.
+    /// Run alongside user, company and branch catch-up.
+    /// </summary>
+    public static async Task ReplicateAuthorizationAsync<TDbContext>(this CosmosDBReplication cosmos,
+        string connectionString, string databaseId, bool updateAll = false)
+        where TDbContext : ShiftIdentityDbContext
+    {
+        await cosmos.SetUp<TDbContext, AccessTree>(connectionString, databaseId)
+            .Replicate<AccessTreeModel>(IdentityDatabaseAndContainerNames.AccessTreeContainerName).RunAsync(updateAll);
+        await cosmos.SetUp<TDbContext, UserAccessTree>(connectionString, databaseId)
+            .Replicate<UserAccessTreeModel>(IdentityDatabaseAndContainerNames.UserAccessTreeContainerName).RunAsync(updateAll);
+        await cosmos.SetUp<TDbContext, TeamUser>(connectionString, databaseId)
+            .Replicate<TeamUserModel>(IdentityDatabaseAndContainerNames.TeamUserContainerName).RunAsync(updateAll);
     }
 
     public static Task ReplicateServiceAsync<TDbContext>(this CosmosDBReplication cosmos, string connectionString, string databaseId, bool updateAll = false)

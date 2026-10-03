@@ -10,7 +10,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Replication;
 public static class IdentityReplicationMapperServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers THIS ASSEMBLY's generated mapper — the class ShiftMapper's generator wrote holding the 19 pairs
+    /// Registers THIS ASSEMBLY's generated mapper — the class ShiftMapper's generator wrote holding the 22 pairs
     /// <see cref="ShiftIdentityReplicationMapper"/> declares — together with <see cref="Mapper"/> and
     /// <see cref="IMapper"/> over everything registered so far, which is how the replication pipeline finds it.
     /// Nothing is named: <c>AddShiftMapper</c> reads the generated class out of the assembly's own metadata, and the
@@ -26,7 +26,7 @@ public static class IdentityReplicationMapperServiceCollectionExtensions
     /// </para>
     /// <para>
     /// A host with a generator of its own does not need to know about this: its generated mapper already carries
-    /// these 19 pairs, re-baked with the host's rules, because ShiftMapper reads every mapper class of every
+    /// these 22 pairs, re-baked with the host's rules, because ShiftMapper reads every mapper class of every
     /// referenced package into it (<c>MapperDiscovery.All</c>, the default). <see cref="Mapper"/> puts that one
     /// FIRST and this assembly's second, so the host's answers and this registration is the fallback — for a host
     /// with no generator, or one that maps only through <see cref="IMapper"/>. What ShiftMapper refuses (SM0042 at

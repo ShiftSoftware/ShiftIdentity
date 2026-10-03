@@ -195,5 +195,13 @@ public class ShiftIdentityReplicationMapper : ShiftMapperBase
         // ─────────────────────────────── User ───────────────────────────────
         CreateMap<User, UserModel>()
             .ForMember(d => d.ID, o => o.Ignore());
+
+        // Named trees are shared documents; assignments and memberships retain their join row ids.
+        CreateMap<AccessTree, AccessTreeModel>()
+            .ForMember(d => d.ID, o => o.Ignore());
+        CreateMap<UserAccessTree, UserAccessTreeModel>()
+            .ForMember(d => d.ID, o => o.Ignore());
+        CreateMap<TeamUser, TeamUserModel>()
+            .ForMember(d => d.ID, o => o.Ignore());
     }
 }
