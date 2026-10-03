@@ -2,6 +2,7 @@ using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+using ShiftSoftware.ShiftIdentity.Data.Authorization;
 
 namespace ShiftSoftware.ShiftIdentity.Data.IdentityReference.Cosmos;
 
@@ -65,7 +66,7 @@ public static class IdentityReferenceServiceCollectionExtensions
         services.TryAddSingleton(sp => new IdentityReferenceCache(
             sp.GetRequiredService<IOptions<CosmosIdentityReferenceOptions>>().Value.CacheTimeToLive));
 
-        services.TryAddScoped<IIdentityReferenceSource>(sp =>
+        services.TryAddScoped<CosmosIdentityReferenceSource<TCosmosClient>>(sp =>
         {
             var options = sp.GetRequiredService<IOptions<CosmosIdentityReferenceOptions>>();
 
@@ -83,6 +84,27 @@ public static class IdentityReferenceServiceCollectionExtensions
                 sharedCache);
         });
 
+        services.TryAddScoped<IIdentityReferenceSource>(sp => sp.GetRequiredService<CosmosIdentityReferenceSource<TCosmosClient>>());
+
+        return services;
+    }
+
+    /// <summary>
+    /// Enables reverse lookup over the existing Cosmos identity replication. Uses the reference source's
+    /// database/container options and cache lifetime. The publisher must also replicate authorization families.
+    /// </summary>
+    public static IServiceCollection AddIdentityReverseAccessLookup(this IServiceCollection services,
+        Action<CosmosIdentityReferenceOptions>? configure = null)
+        => services.AddIdentityReverseAccessLookup<CosmosClient>(configure);
+
+    /// <summary>Enables reverse lookup using a host's specific Cosmos client registration.</summary>
+    public static IServiceCollection AddIdentityReverseAccessLookup<TCosmosClient>(this IServiceCollection services,
+        Action<CosmosIdentityReferenceOptions>? configure = null)
+        where TCosmosClient : CosmosClient
+    {
+        services.AddIdentityReferenceSource<TCosmosClient>(configure);
+        services.TryAddScoped<IIdentityAuthorizationSource>(sp => sp.GetRequiredService<CosmosIdentityReferenceSource<TCosmosClient>>());
+        services.TryAddScoped<IdentityReverseAccessLookup>();
         return services;
     }
 }

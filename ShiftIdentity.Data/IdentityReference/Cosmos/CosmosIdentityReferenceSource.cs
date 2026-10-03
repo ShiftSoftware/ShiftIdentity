@@ -34,7 +34,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.IdentityReference.Cosmos;
 /// <para>Generic over <typeparamref name="TCosmosClient"/> so a host that keeps more than one client can
 /// say which to read identity through.</para>
 /// </summary>
-public class CosmosIdentityReferenceSource<TCosmosClient> : IIdentityReferenceSource
+public partial class CosmosIdentityReferenceSource<TCosmosClient> : IIdentityReferenceSource
     where TCosmosClient : CosmosClient
 {
     private static readonly ConcurrentDictionary<Type, Func<object, string>> IdValueResolvers = new();

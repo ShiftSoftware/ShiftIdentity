@@ -62,4 +62,7 @@ public class CosmosIdentityReferenceOptions
     public string BrandContainerName { get; set; } = IdentityDatabaseAndContainerNames.BrandContainerName;
 
     public string UserContainerName { get; set; } = IdentityDatabaseAndContainerNames.UserContainerName;
+    public string AccessTreeContainerName { get; set; } = IdentityDatabaseAndContainerNames.AccessTreeContainerName;
+    public string UserAccessTreeContainerName { get; set; } = IdentityDatabaseAndContainerNames.UserAccessTreeContainerName;
+    public string TeamUserContainerName { get; set; } = IdentityDatabaseAndContainerNames.TeamUserContainerName;
 }
