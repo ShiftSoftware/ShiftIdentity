@@ -83,13 +83,22 @@
                                 <div><strong>@Loc[FailureMessage]</strong><p>@Loc[FailureHint]</p></div>
                             </div>
                             <button type="button" class="auth-help" data-testid="login-failure-help" @onclick="OpenAccess">@Loc["Can't access your account?"] <MudIcon Icon="@Icons.Material.Filled.ChevronRight" /></button>
-                            @if (lastFailure is not AuthenticationFailure.InvalidProof and not AuthenticationFailure.AccountUnavailable)
+                            @if (microsoftFailure ? lastFailure is not AuthenticationFailure.ProviderAccountNotFound and not AuthenticationFailure.ProviderEmailUnverified
+                                : lastFailure is not AuthenticationFailure.InvalidProof and not AuthenticationFailure.AccountUnavailable)
                             { <span class="auth-reference" data-testid="login-failure-reference">@Loc["Error reference"]: @FailureReference</span> }
                         }
                     </div>
                 </div></div>
             </div>
             <div class="auth-actions"><MudButton Disabled="@(loginInProgress || (AdmissionFlow?.Busy ?? false))" Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit">@Loc[loginInProgress ? "Signing in…" : "Login"]</MudButton></div>
+            @if (microsoftAvailable)
+            {
+                <div class="auth-divider" aria-hidden="true"><span>@Loc["or"]</span></div>
+                <button type="button" class="auth-provider" data-testid="login-microsoft" disabled="@(loginInProgress || (AdmissionFlow?.Busy ?? false))" @onclick="SignInWithMicrosoft">
+                    <svg width="20" height="20" viewBox="0 0 21 21" aria-hidden="true"><rect x="1" y="1" width="9" height="9" fill="#f25022" /><rect x="11" y="1" width="9" height="9" fill="#7fba00" /><rect x="1" y="11" width="9" height="9" fill="#00a4ef" /><rect x="11" y="11" width="9" height="9" fill="#ffb900" /></svg>
+                    <span>@Loc["Sign in with Microsoft"]</span>
+                </button>
+            }
             <div class="auth-feedback-slot" data-open="@(loginFailure is null ? "true" : "false")" aria-hidden="@(loginFailure is not null ? "true" : "false")" inert="@(loginFailure is not null)">
                 <div class="auth-feedback-clip"><div class="auth-feedback-content">
                     <button type="button" class="auth-help" data-testid="login-help" @onclick="OpenAccess">@Loc["Can't access your account?"]</button>
@@ -127,16 +136,31 @@
     private string FailureMessage => lastFailure switch
     {
         AuthenticationFailure.Unavailable => "We couldn't reach the sign-in service.",
+        AuthenticationFailure.ProviderAccountNotFound => "No account uses this Microsoft account's email.",
+        AuthenticationFailure.ProviderEmailUnverified => "Microsoft didn't confirm this account's email.",
+        AuthenticationFailure.AccountUnavailable when microsoftFailure => "This account can't sign in.",
+        _ when microsoftFailure => "Microsoft sign-in didn't complete.",
         AuthenticationFailure.InvalidProof or AuthenticationFailure.AccountUnavailable => "Username or password is incorrect.",
         _ => "We couldn't sign you in."
     };
     private string FailureHint => lastFailure switch
     {
         AuthenticationFailure.Unavailable => "Check your connection and try again in a moment.",
+        AuthenticationFailure.ProviderAccountNotFound => "Sign in with your username and password, or ask your administrator to put this email on your account.",
+        AuthenticationFailure.ProviderEmailUnverified => "Sign in with your username and password instead.",
+        AuthenticationFailure.AccountUnavailable when microsoftFailure => "Contact your administrator.",
+        _ when microsoftFailure => "Try again. If the problem continues, share this error reference with your administrator.",
         AuthenticationFailure.InvalidProof or AuthenticationFailure.AccountUnavailable => "Try again, or get help accessing your account.",
         _ => "Try again in a moment. If the problem continues, share this error reference with your administrator."
     };
-    private string FailureReference => lastFailure == AuthenticationFailure.Unavailable ? "LOGIN-SERVICE" : "LOGIN-REFUSED";
+    private string FailureReference => lastFailure == AuthenticationFailure.Unavailable ? "LOGIN-SERVICE"
+        : microsoftFailure ? "MICROSOFT-" + lastFailure.ToString()!.ToUpperInvariant() : "LOGIN-REFUSED";
+    // Sign in with Microsoft. The verifier and return path wait in session storage while the browser is at Microsoft.
+    private const string MicrosoftPending = "shift-identity-microsoft";
+    private sealed record PendingMicrosoft(string Verifier, string? ReturnUrl);
+    // microsoftFailure: the failure panel shows a Microsoft sign-in's failure, not a password sign-in's.
+    private bool microsoftAvailable, microsoftFailure;
+    private string? providerReturnUrl;
     private static int Depth(string value) => value switch { "access" or "challenge" => 1, "reset" or "recovery" or "verification" => 2, _ => 0 };
     private string ReadView(string uri)
     {
@@ -199,6 +223,80 @@
             if ((authState.User.Identity?.IsAuthenticated ?? false) &&
                 !((AdmissionContext is not null || ShiftIdentityDashboardBlazorOptions.StagedAuthority) && SecurityLink is "reset" or "verification" or "cancelled")) NavManager.NavigateTo("/");
         }
+        if (AdmissionFlow is not null)
+        {
+            microsoftAvailable = (await AdmissionFlow.ReadProvidersAsync()).Microsoft;
+            await ResumeMicrosoft();
+        }
+    }
+
+    private async Task SignInWithMicrosoft()
+    {
+        if (AdmissionFlow is null || loginInProgress || disposed || AdmissionFlow.Busy) return;
+        var attempt = ++loginAttempt;
+        loginInProgress = true; admissionError = null; loginFailure = null;
+        try
+        {
+            var (outcome, verifier) = await AdmissionFlow.StartMicrosoftAsync();
+            if (disposed || attempt != loginAttempt) return;
+            if (outcome is ProviderRedirect redirect && verifier is not null)
+            {
+                await JS.InvokeVoidAsync("sessionStorage.setItem", MicrosoftPending,
+                    System.Text.Json.JsonSerializer.Serialize(new PendingMicrosoft(verifier, ReturnUrl)));
+                NavManager.NavigateTo(redirect.Url, forceLoad: true);
+                return;
+            }
+            await ShowMicrosoftFailure((outcome as AuthenticationRefused)?.Code ?? AuthenticationFailure.InvalidGrant);
+        }
+        catch (JSException) { await ShowMicrosoftFailure(AuthenticationFailure.Unavailable); }
+        finally { loginInProgress = false; }
+    }
+
+    private Task ShowMicrosoftFailure(AuthenticationFailure failure)
+    {
+        microsoftFailure = true;
+        return ShowLoginFailure(failure);
+    }
+
+    // Microsoft returned to this page: a completion handle, or the reason there is none, waits in the fragment.
+    private async Task ResumeMicrosoft()
+    {
+        var fragment = NavManager.ToAbsoluteUri(NavManager.Uri).Fragment.TrimStart('#');
+        var handle = fragment.StartsWith("microsoft=", StringComparison.Ordinal) ? Uri.UnescapeDataString(fragment["microsoft=".Length..]) : null;
+        var error = fragment.StartsWith("microsoft-error=", StringComparison.Ordinal) ? fragment["microsoft-error=".Length..] : null;
+        if (handle is null && error is null) return;
+        PendingMicrosoft? pending = null;
+        try
+        {
+            var stored = await JS.InvokeAsync<string?>("sessionStorage.getItem", MicrosoftPending);
+            await JS.InvokeVoidAsync("sessionStorage.removeItem", MicrosoftPending);
+            pending = stored is null ? null : System.Text.Json.JsonSerializer.Deserialize<PendingMicrosoft>(stored);
+        }
+        catch (Exception failure) when (failure is JSException or System.Text.Json.JsonException) { }
+        // Take the handle off the address first, so history does not keep it.
+        NavManager.NavigateTo(loginPath, new NavigationOptions { ReplaceHistoryEntry = true });
+        providerReturnUrl = pending?.ReturnUrl;
+        if (error is not null)
+        {
+            await ShowMicrosoftFailure(Enum.TryParse<AuthenticationFailure>(error, out var code) && Enum.IsDefined(code)
+                ? code : AuthenticationFailure.InvalidGrant);
+            return;
+        }
+        if (pending is null || AdmissionFlow is null)
+        {
+            await ShowMicrosoftFailure(AuthenticationFailure.Expired);
+            return;
+        }
+        var attempt = ++loginAttempt;
+        loginInProgress = true;
+        try
+        {
+            var outcome = await AdmissionFlow.CompleteMicrosoftAsync(handle!, pending.Verifier);
+            if (disposed || attempt != loginAttempt) return;
+            if (outcome is AuthenticationRefused refused) await ShowMicrosoftFailure(refused.Code);
+            else await HandleAdmission(outcome);
+        }
+        finally { loginInProgress = false; }
     }
     public void Dispose()
     {
@@ -232,7 +330,7 @@
             await AuthenticationStateProvider.GetAuthenticationStateAsync();
             await SessionCompleted.InvokeAsync(session);
             if (AdmissionContext is not null || ShiftIdentityDashboardBlazorOptions.StagedAuthority)
-                NavManager.NavigateTo(ShiftSoftware.ShiftIdentity.Blazor.Services.AdmissionNavigation.LocalReturnPath(ReturnUrl), forceLoad: true);
+                NavManager.NavigateTo(ShiftSoftware.ShiftIdentity.Blazor.Services.AdmissionNavigation.LocalReturnPath(ReturnUrl ?? providerReturnUrl), forceLoad: true);
         }
     }
     private async Task Login()
@@ -252,6 +350,7 @@
                 await completed;
                 lastFailure = null;
             }
+            microsoftFailure = false;
             if (!disposed && attempt == loginAttempt) await SubmitLogin(attempt);
         }
         finally { loginInProgress = false; }

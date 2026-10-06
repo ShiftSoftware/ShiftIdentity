@@ -22,6 +22,8 @@ internal sealed record IdentityAdmissionServices(
     internal string? EmailVerificationRedirectUrl { get; init; }
     internal LegacyRefreshTokenCodec? LegacyRefreshTokens { get; init; }
     internal LegacyTemporaryTokenCodec? LegacyTemporaryTokens { get; init; }
+    /// <summary>Sign in with Microsoft, when the host turned it on; null otherwise.</summary>
+    internal MicrosoftSignIn? Microsoft { get; init; }
     internal IdentityMaterialProtector LinkProtector => FactorProtector.CreateProtector("SecurityLinks.v1");
 }
 
@@ -38,7 +40,8 @@ internal sealed record IdentityAdmissionOptions(
 internal sealed record SessionProof(
     long UserID, long SecurityVersion, long PolicyRevision, long FactorGeneration,
     bool MfaSatisfied, DateTimeOffset AuthenticatedAt, string ClientID, string Audience, bool External, string Subject,
-    string? AppBinding = null, DateTimeOffset? LegacyCompatibilityExpiresAt = null);
+    string? AppBinding = null, DateTimeOffset? LegacyCompatibilityExpiresAt = null,
+    Core.Authentication.SignInProvider? Provider = null);
 
 internal sealed record SignedInContext(SessionProof Proof, DateTimeOffset ExpiresAt);
 

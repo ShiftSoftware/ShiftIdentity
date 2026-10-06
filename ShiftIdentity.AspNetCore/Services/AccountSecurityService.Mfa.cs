@@ -146,7 +146,7 @@ internal static partial class AccountSecurityService
                     unit.Security.MfaRecoveryOperationID = null;
                     return Task.FromResult<AuthOutcome>(new MfaChanged(new ReturnToLogin()));
                 }
-                var remaining = LocalStep(unit, true);
+                var remaining = SessionStep(services, unit, op.SessionProvider, true);
                 return Task.FromResult<AuthOutcome>(new MfaChanged(remaining is { } next ? Restricted(next, now)
                     : Issue(services, unit, Proof(unit, services, true, authenticatedAt), now)));
             }

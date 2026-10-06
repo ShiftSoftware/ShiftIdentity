@@ -31,6 +31,7 @@ internal static class AdmissionRules
         if (refusal is not null) return refusal;
         if (services.Clock.GetUtcNow() >= signedIn.ExpiresAt) return Refuse(AuthenticationFailure.Expired);
         if (!Services.AuthService.AppSessionIsCurrent(unit, proof)) return Refuse(AuthenticationFailure.ClientDenied);
+        if (ProviderRefusal(services, proof.Provider) is { } providerRefusal) return providerRefusal;
         return unit.Security.FactorGeneration != proof.FactorGeneration || proof.Subject != services.HashIds.Encode<UserDTO>(unit.User.ID)
             ? Refuse(AuthenticationFailure.StaleOperation) : null;
     }
@@ -80,13 +81,36 @@ internal static class AdmissionRules
     /// A converted legacy session keeps only its former ordinary-session capability until the old credential's
     /// deadline. The marker is not MFA or freshness proof; sensitive flows continue to inspect those claims.
     /// </summary>
-    internal static AuthenticationStep? ExistingSessionStep(IdentitySecurityTransaction unit, SessionProof proof,
-        DateTimeOffset now) => proof.LegacyCompatibilityExpiresAt is { } deadline && now < deadline
-            ? null : LocalStep(unit, proof.MfaSatisfied);
+    internal static AuthenticationStep? ExistingSessionStep(IdentityAdmissionServices services, IdentitySecurityTransaction unit,
+        SessionProof proof, DateTimeOffset now) => proof.LegacyCompatibilityExpiresAt is { } deadline && now < deadline
+            ? null : SessionStep(services, unit, proof.Provider, proof.MfaSatisfied);
 
+    /// <summary>
+    /// The step a session's proof still owes. A local proof owes every local step. A provider proof never owes the
+    /// password change or the verified-email gate (the provider verified the email), and owes the authenticator only
+    /// where the host's provider settings ask for Shift MFA.
+    /// </summary>
+    internal static AuthenticationStep? SessionStep(IdentityAdmissionServices services, IdentitySecurityTransaction unit,
+        Core.Authentication.SignInProvider? provider, bool mfaSatisfied)
+    {
+        if (provider is null) return LocalStep(unit, mfaSatisfied);
+        if (services.Microsoft is not { RequireShiftMfa: true }) return null;
+        if (unit.Security.LocalMfaRecoveryRequired) return AuthenticationStep.MfaRecovery;
+        if (!unit.Policy.MfaEnabled) return null;
+        if (unit.Security.ProtectedTotpSecret is null) return unit.Policy.MfaMandatory ? AuthenticationStep.NewMfa : null;
+        return mfaSatisfied ? null : AuthenticationStep.ExistingMfa;
+    }
+
+    /// <summary>A provider session ends when the host turns that provider off.</summary>
+    internal static AuthenticationRefused? ProviderRefusal(IdentityAdmissionServices services, Core.Authentication.SignInProvider? provider) =>
+        provider is null || (provider == Core.Authentication.SignInProvider.Microsoft && services.Microsoft is not null)
+            ? null : Refuse(AuthenticationFailure.ClientDenied);
+
+    // A step that continues a provider sign-in (its operation carries the provider) issues a provider session.
     internal static SessionProof Proof(IdentitySecurityTransaction unit, IdentityAdmissionServices services, bool mfa, DateTimeOffset now) =>
         new(unit.User.ID, unit.Security.SecurityVersion, unit.Policy.Revision, unit.Security.FactorGeneration,
-            mfa, now, services.Client.ID, services.Client.Audience, services.Client.External, services.HashIds.Encode<UserDTO>(unit.User.ID));
+            mfa, now, services.Client.ID, services.Client.Audience, services.Client.External, services.HashIds.Encode<UserDTO>(unit.User.ID),
+            Provider: unit.Operation?.SessionProvider);
 
     internal static AuthOutcome Issue(IdentityAdmissionServices services, IdentitySecurityTransaction unit, SessionProof proof, DateTimeOffset now, bool freshAuthentication = true)
     {

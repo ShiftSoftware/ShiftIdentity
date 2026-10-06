@@ -58,7 +58,9 @@ internal static class AdmissionOperations
         if (purpose == AuthenticationOperationPurpose.MfaRecovery &&
             (!unit.Security.LocalMfaRecoveryRequired || op.ParentID is not { } root || unit.Security.MfaRecoveryOperationID != root))
             return Refuse(AuthenticationFailure.StaleOperation);
-        if (BudgetExhausted(unit.Security, now) || op.FailedAttempts >= 5 || unit.User.LockDownUntil > now.UtcDateTime)
+        // Local password and MFA failures do not block a provider sign-in; its own MFA step, if any, is checked here again.
+        if (purpose != AuthenticationOperationPurpose.ProviderLogin &&
+            (BudgetExhausted(unit.Security, now) || op.FailedAttempts >= 5 || unit.User.LockDownUntil > now.UtcDateTime))
             return Refuse(AuthenticationFailure.AttemptsExhausted);
         return null;
     }
@@ -66,7 +68,8 @@ internal static class AdmissionOperations
     internal static ChallengeRequired Create(IdentityAdmissionServices services, IdentitySecurityTransaction unit,
         AuthenticationOperationPurpose purpose, AuthenticationOperationState state, string codeChallenge,
         DateTimeOffset createdAt, DateTimeOffset expiresAt, PasswordChangeOrigin? origin = null, DateTimeOffset? passwordProvenAt = null,
-        bool prepareNewFactor = false, Guid? parentID = null, int failedAttempts = 0, byte[]? sourceSessionDigest = null)
+        bool prepareNewFactor = false, Guid? parentID = null, int failedAttempts = 0, byte[]? sourceSessionDigest = null,
+        SignInProvider? sessionProvider = null)
     {
         var credential = OperationCredential.Create(services.Options.OperationKey);
         var op = new AuthenticationOperation
@@ -76,7 +79,8 @@ internal static class AdmissionOperations
             PolicyRevision = unit.Policy.Revision, ClientID = services.Client.ID, Audience = services.Client.Audience,
             External = services.Client.External, HandleDigest = credential.Digest, CodeChallenge = codeChallenge,
             CreatedAt = createdAt, ExpiresAt = expiresAt, PasswordChangeOrigin = origin, PasswordProvenAt = passwordProvenAt,
-            ParentID = parentID, FailedAttempts = failedAttempts, SourceSessionDigest = sourceSessionDigest
+            ParentID = parentID, FailedAttempts = failedAttempts, SourceSessionDigest = sourceSessionDigest,
+            SessionProvider = sessionProvider
         };
         var setup = prepareNewFactor ? MfaMaterial.Prepare(services, unit, op) : null;
         unit.AddOperation(op);

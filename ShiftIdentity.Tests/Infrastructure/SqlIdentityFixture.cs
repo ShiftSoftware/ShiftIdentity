@@ -50,6 +50,8 @@ public class SqlIdentityFixture : IAsyncLifetime
     internal IdentityMaterialProtector Protection => new(FactorProtection);
     public TimeProvider Clock { get; set; } = TimeProvider.System;
     public ISecurityEmailSink? EmailSink { get; set; } = new LocalSecurityInbox();
+    /// <summary>Microsoft sign-in for hosts built while it is set; <see cref="ResetAsync"/> clears it.</summary>
+    internal MicrosoftSignIn? Microsoft { get; set; }
     /// <summary>
     /// The test budgets. Every ordinary public request sleeps until the sum of the three has elapsed (the response
     /// floor), so the sender wait stays short: the local inbox answers synchronously, and the padding is dropped.
@@ -181,6 +183,8 @@ public class SqlIdentityFixture : IAsyncLifetime
         EmailSink = new LocalSecurityInbox(Clock);
         DeliveryLimits = TestDeliveryLimits;
         LegacyMfaEnabled = false; LegacyTemporaryLifetimeSeconds = 300;
+        Microsoft = null;
+        await db.Set<UserProviderLink>().ExecuteDeleteAsync();
         await db.Set<AuthThrottleBucket>().ExecuteDeleteAsync();
         await db.Set<AuthenticationOperation>().ExecuteDeleteAsync();
         await db.Set<AuthenticationAuditEvent>().ExecuteDeleteAsync();

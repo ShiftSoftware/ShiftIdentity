@@ -195,7 +195,7 @@ public sealed partial class SqlIdentitySecurityStore(ShiftIdentityDbContext db) 
             (x.State == AuthenticationOperationState.AwaitingMfa || x.State == AuthenticationOperationState.AwaitingPassword ||
              x.State == AuthenticationOperationState.AwaitingNewPassword || x.State == AuthenticationOperationState.AwaitingNewFactor ||
              x.State == AuthenticationOperationState.AwaitingRecoveryProof || x.State == AuthenticationOperationState.AwaitingExplicitSubmit ||
-             x.State == AuthenticationOperationState.AwaitingAppExchange) &&
+             x.State == AuthenticationOperationState.AwaitingAppExchange || x.State == AuthenticationOperationState.AwaitingProviderCompletion) &&
             (x.ExpiresAt <= now || x.PasswordProvenAt <= proofCutoff || x.MfaProvenAt <= proofCutoff))
             .OrderBy(x => x.ExpiresAt).Take(100).ToListAsync(ct);
         var count = 0;

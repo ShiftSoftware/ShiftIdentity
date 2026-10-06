@@ -46,6 +46,8 @@ internal sealed class HostSecurityEmailSink(ShiftIdentityConfiguration configura
             }
             return;
         }
+        // The old provider interfaces carry only verification and reset links; a host on them sends no notice.
+        if (message.Purpose == AuthenticationOperationPurpose.ProviderLogin) return;
         var link = SecurityEmailTemplate.Link(message, configuration.FrontEndUrl!);
         // The recipient and display fields are the snapshot admitted with this grant, never a later database lookup
         // or caller-supplied address. The legacy interfaces lack cancellation; stop awaiting when the budget ends.

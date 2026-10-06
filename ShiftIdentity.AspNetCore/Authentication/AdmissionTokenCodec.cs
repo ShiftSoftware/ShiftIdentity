@@ -41,7 +41,7 @@ internal sealed class AdmissionTokenCodec(IdentityAdmissionOptions options, Time
             new(Schema, "2"), new(Version, proof.SecurityVersion.ToString(CultureInfo.InvariantCulture)),
             new(Policy, proof.PolicyRevision.ToString(CultureInfo.InvariantCulture)),
             new(Factor, proof.FactorGeneration.ToString(CultureInfo.InvariantCulture)),
-            new(Mfa, proof.MfaSatisfied ? "true" : "false"), new(Route, "local"),
+            new(Mfa, proof.MfaSatisfied ? "true" : "false"), new(Route, RouteOf(proof.Provider)),
             new(Client, proof.ClientID), new(Resource, proof.Audience),
             new(External, proof.External ? "true" : "false"),
             new("auth_time", proof.AuthenticatedAt.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture))
@@ -116,7 +116,7 @@ internal sealed class AdmissionTokenCodec(IdentityAdmissionOptions options, Time
                 Single(Resource) is not { Length: > 0 and <= 255 } audience || string.IsNullOrWhiteSpace(audience) ||
                 Single(External) is not ("true" or "false")) return null;
             client ??= new(clientID, audience, Single(External) == "true");
-            if (Single(Schema) != "2" || Single(Purpose) != (access ? "access" : "refresh") || Single(Route) != "local" ||
+            if (Single(Schema) != "2" || Single(Purpose) != (access ? "access" : "refresh") || !TryReadRoute(Single(Route), out var provider) ||
                 Single(Client) != client.ID || Single(Resource) != client.Audience ||
                 Single(External) != (client.External ? "true" : "false")) return null;
             if (string.IsNullOrWhiteSpace(Single("sub")) || !long.TryParse(Single(UserID), out var userID) || userID <= 0 ||
@@ -142,12 +142,26 @@ internal sealed class AdmissionTokenCodec(IdentityAdmissionOptions options, Time
                     return null;
             }
             return new(new(userID, version, policy, factor, Single(Mfa) == "true", authTime, client.ID, client.Audience,
-                client.External, Single("sub")!, appBindings.SingleOrDefault(), compatibilityDeadline), DateTimeOffset.FromUnixTimeSeconds(expiry));
+                client.External, Single("sub")!, appBindings.SingleOrDefault(), compatibilityDeadline, provider), DateTimeOffset.FromUnixTimeSeconds(expiry));
         }
         catch (Exception e) when (e is SecurityTokenException or ArgumentException or FormatException or JsonException)
         {
             return null;
         }
+    }
+
+    // The route names how the session's account was proved: "local" (password, with any MFA) or the sign-in provider.
+    private static string RouteOf(Core.Authentication.SignInProvider? provider) => provider switch
+    {
+        null => "local",
+        Core.Authentication.SignInProvider.Microsoft => "microsoft",
+        _ => throw new InvalidOperationException("Unknown sign-in provider.")
+    };
+
+    private static bool TryReadRoute(string? value, out Core.Authentication.SignInProvider? provider)
+    {
+        provider = value switch { "microsoft" => Core.Authentication.SignInProvider.Microsoft, _ => null };
+        return value == "local" || provider is not null;
     }
 
     private string Encode(IEnumerable<Claim> claims, string audience, DateTimeOffset now, DateTimeOffset expiresAt, SigningCredentials key)

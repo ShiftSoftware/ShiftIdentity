@@ -29,6 +29,8 @@ internal sealed class IdentityAuthorityStartup(IServiceScopeFactory scopes, Iden
             CheckAdapters(scope.ServiceProvider);
             if (CheckEmail(scope.ServiceProvider) is { } problem)
                 logger.LogWarning("Security emails cannot be sent: {Problem} The identity authority starts anyway, and each security email fails until this is fixed.", problem);
+            if (registration.MicrosoftProblem is { } microsoftProblem)
+                logger.LogWarning("Microsoft sign-in is enabled but stays off: {Problem} The login screen shows no Microsoft button until this is fixed.", microsoftProblem);
             var db = scope.ServiceProvider.GetRequiredService<ShiftIdentityDbContext>();
             var revision = await EnsurePolicyAsync(db, registration, cancellationToken);
             var created = await EnsureClientAsync(db, registration, cancellationToken);

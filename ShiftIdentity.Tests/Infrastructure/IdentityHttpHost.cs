@@ -85,7 +85,7 @@ public sealed class IdentityHttpHost : IDisposable
             sp.GetRequiredService<IdentityMaterialProtector>(),
             new AdmissionTokenCodec(fixture.Options, fixture.Clock), observe)
         {
-            EmailSink = sp.GetService<ISecurityEmailSink>(), DeliveryLimits = fixture.DeliveryLimits,
+            EmailSink = sp.GetService<ISecurityEmailSink>(), DeliveryLimits = fixture.DeliveryLimits, Microsoft = fixture.Microsoft,
             LegacyRefreshTokens = LegacyRefreshTokenCodec.TryCreate(
                 sp.GetService<ShiftSoftware.ShiftIdentity.Core.ShiftIdentityConfiguration>()?.RefreshToken, fixture.Clock),
             LegacyTemporaryTokens = LegacyTemporaryTokenCodec.TryCreate(

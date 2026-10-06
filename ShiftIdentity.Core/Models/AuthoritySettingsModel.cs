@@ -61,4 +61,36 @@ public sealed class AuthoritySettingsModel
     /// is the authority's policy; a change is applied at the next start and ends every session bound to the old policy.
     /// </summary>
     public bool RequireVerifiedEmail { get; set; }
+
+    /// <summary>Sign in with Microsoft for existing accounts. Off unless <see cref="MicrosoftSignInSettings.Enabled"/>.</summary>
+    public MicrosoftSignInSettings Microsoft { get; set; } = new();
+}
+
+/// <summary>
+/// Sign in with Microsoft: a work, school or personal Microsoft account whose email Microsoft verified signs in to the
+/// existing account that has the same email, and marks that email verified. No account is ever created this way.
+/// </summary>
+public sealed class MicrosoftSignInSettings
+{
+    /// <summary>Turns Microsoft sign-in on for every account on this host. Off, the login screen shows no Microsoft button.</summary>
+    public bool Enabled { get; set; }
+
+    /// <summary>The Application (client) ID of the host's Microsoft Entra app registration.</summary>
+    public string? ClientId { get; set; }
+
+    /// <summary>A client secret of that app registration. Keep it in App Settings or Key Vault, never in a settings file.</summary>
+    public string? ClientSecret { get; set; }
+
+    /// <summary>
+    /// The absolute URL Microsoft returns to, registered on the app registration. Defaults to this API's
+    /// <c>api/identity/v2/providers/microsoft/callback</c> as the request reached it (HTTPS except on localhost); set it
+    /// when a proxy or custom domain makes that address differ from the registered one.
+    /// </summary>
+    public string? RedirectUri { get; set; }
+
+    /// <summary>
+    /// When true, a Microsoft sign-in still asks for the account's Shift authenticator code, or for enrollment where the
+    /// host requires MFA, as a password sign-in does. When false (the default), Microsoft sign-in skips Shift MFA.
+    /// </summary>
+    public bool RequireShiftMfa { get; set; }
 }

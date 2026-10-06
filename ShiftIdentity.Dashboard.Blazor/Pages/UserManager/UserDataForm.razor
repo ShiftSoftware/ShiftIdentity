@@ -68,6 +68,11 @@ else
                       @bind-Value="context.Item.Username"
                       For="@(() => context.Item.Username)" />
 
+        @if (DashboardOptions.StagedAuthority && AdmissionContext is null && context.Mode == FormModes.View)
+        {
+            <ProviderLinksPanel />
+        }
+
         <br />
         <br />
 

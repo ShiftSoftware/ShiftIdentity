@@ -67,6 +67,20 @@ public interface IIdentitySecurityStore
     /// </summary>
     Task<IReadOnlyDictionary<long, IdentitySecurityTransaction>> AdmitWithinAsync(IEnumerable<long> userIDs,
         AuthenticationClient client, CancellationToken cancellationToken);
+    /// <summary>
+    /// The account a provider identity reaches: its link's account while that account keeps the linked email, otherwise
+    /// the one non-deleted account with the email lookup key. Evidence only; admission checks it again.
+    /// </summary>
+    Task<long?> FindProviderUserAsync(SignInProvider provider, string tenantID, string objectID, string? emailLookupKey,
+        CancellationToken cancellationToken);
+    /// <summary>The provider identity's link, locked for change. Call only inside admission.</summary>
+    Task<UserProviderLink?> ReadProviderLinkAsync(SignInProvider provider, string tenantID, string objectID, CancellationToken cancellationToken);
+    /// <summary>Adds a link in the open admission; the transition's commit writes it.</summary>
+    void AddProviderLink(UserProviderLink link);
+    /// <summary>Removes a link in the open admission; the transition's commit writes it.</summary>
+    void RemoveProviderLink(UserProviderLink link);
+    /// <summary>An account's provider links, for display.</summary>
+    Task<IReadOnlyList<UserProviderLink>> ReadProviderLinksAsync(long userID, CancellationToken cancellationToken);
 }
 
 public sealed class IdentitySecurityUnavailableException(string message, Exception? inner = null) : Exception(message, inner);

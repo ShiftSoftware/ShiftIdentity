@@ -52,6 +52,13 @@
 .identity-login-box ::deep .auth-code { margin: 8px 0 4px; padding: 14px 12px; text-align: center; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 20px; letter-spacing: .12em; word-break: break-all; user-select: all; border: 1px dashed var(--mud-palette-primary); border-radius: 4px; background: var(--mud-palette-background-gray); }
 .identity-login-box ::deep .auth-steps { margin: 12px 0 0; padding-inline-start: 20px; color: var(--mud-palette-text-secondary); font-size: 14px; line-height: 1.6; }
 .identity-login-box ::deep .auth-warning { margin: 0 0 12px; }
+/* Sign in with a provider: a divider, then a full-width button with the provider's mark, under the Login button. */
+.identity-login-box ::deep .auth-divider { display: flex; align-items: center; gap: 12px; margin: clamp(14px, 3dvh, 22px) 0; font-size: 13px; color: var(--mud-palette-text-secondary); }
+.identity-login-box ::deep .auth-divider::before, .identity-login-box ::deep .auth-divider::after { content: ""; flex: 1 1 auto; border-top: 1px solid var(--mud-palette-lines-default); }
+.identity-login-box ::deep .auth-provider { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; min-height: 44px; padding: 10px 16px; border: 1px solid var(--mud-palette-lines-inputs); border-radius: 4px; background: var(--mud-palette-surface); color: var(--mud-palette-text-primary); cursor: pointer; font: inherit; font-size: 15px; font-weight: 500; transition: background 150ms; }
+.identity-login-box ::deep .auth-provider:hover { background: var(--mud-palette-action-default-hover); }
+.identity-login-box ::deep .auth-provider:disabled { opacity: .5; cursor: default; }
+.identity-login-box ::deep .auth-provider svg { flex-shrink: 0; }
 
 /* The box as the body of a security dialog: the dialog draws the surface, the box keeps a readable column. */
 .identity-login-box.dialog { width: min(100%, 560px); border: 0; border-radius: 0; box-shadow: none; background: transparent; }

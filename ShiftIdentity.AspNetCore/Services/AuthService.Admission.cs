@@ -79,14 +79,15 @@ public partial class AuthService
             var refusal = AdmissionOperations.Check(services, unit, reference, request.CodeVerifier,
                 AuthenticationOperationPurpose.Login, AuthenticationOperationState.AwaitingMfa);
             if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
-            if (LocalStep(unit, false) != AuthenticationStep.ExistingMfa)
+            // A provider sign-in that asks for Shift MFA continues here too; its operation carries the provider.
+            if (SessionStep(services, unit, unit.Operation!.SessionProvider, false) != AuthenticationStep.ExistingMfa)
                 return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.StaleOperation));
             refusal = AdmissionOperations.VerifyMfa(services, unit, request.Code);
             if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
             var op = unit.Operation!;
             var now = services.Clock.GetUtcNow();
             AdmissionOperations.Finish(op, now);
-            var remaining = LocalStep(unit, true);
+            var remaining = SessionStep(services, unit, op.SessionProvider, true);
             return Task.FromResult<AuthOutcome>(remaining is not null ? Restricted(remaining.Value, now)
                 : Issue(services, unit, Proof(unit, services, true, op.PasswordProvenAt ?? op.CreatedAt), now));
         }, ct);
@@ -110,10 +111,12 @@ public partial class AuthService
                     return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.StaleOperation));
                 if (!AppSessionIsCurrent(unit, proof))
                     return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.ClientDenied));
+                if (ProviderRefusal(services, proof.Provider) is { } providerRefusal)
+                    return Task.FromResult<AuthOutcome>(providerRefusal);
                 if (proof.Subject != services.HashIds.Encode<UserDTO>(unit.User.ID))
                     return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.InvalidGrant));
                 var now = services.Clock.GetUtcNow();
-                var next = ExistingSessionStep(unit, proof, now);
+                var next = ExistingSessionStep(services, unit, proof, now);
                 if (next is not null) return Task.FromResult<AuthOutcome>(Restricted(next.Value, now));
                 if (updateLastSeen)
                 {

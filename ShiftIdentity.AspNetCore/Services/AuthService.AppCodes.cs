@@ -34,7 +34,7 @@ public partial class AuthService
             if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
             if (!PublicApp(unit.App, destination)) return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.ClientDenied));
             var now = services.Clock.GetUtcNow();
-            var next = ExistingSessionStep(unit, signedIn.Proof, now);
+            var next = ExistingSessionStep(services, unit, signedIn.Proof, now);
             if (next is not null) return Task.FromResult<AuthOutcome>(Restricted(next.Value, now));
             var expiresAt = now.AddMinutes(5);
             if (signedIn.Proof.LegacyCompatibilityExpiresAt is { } compatibilityDeadline && compatibilityDeadline < expiresAt)
@@ -49,6 +49,7 @@ public partial class AuthService
                 AppBinding = BindApp(unit.App!), SessionAuthenticatedAt = signedIn.Proof.AuthenticatedAt,
                 SessionMfaSatisfied = signedIn.Proof.MfaSatisfied,
                 SessionLegacyCompatibilityExpiresAt = signedIn.Proof.LegacyCompatibilityExpiresAt,
+                SessionProvider = signedIn.Proof.Provider,
                 CreatedAt = now, ExpiresAt = expiresAt
             };
             unit.AddOperation(op);
@@ -103,12 +104,14 @@ public partial class AuthService
                 unit.Audit("InvalidAppVerifier", now, op.ID);
                 return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.InvalidProof));
             }
-            var next = LocalStep(unit, mfa);
+            if (ProviderRefusal(targetServices, op.SessionProvider) is { } providerRefusal)
+                return Task.FromResult<AuthOutcome>(providerRefusal);
+            var next = SessionStep(targetServices, unit, op.SessionProvider, mfa);
             var compatibility = op.SessionLegacyCompatibilityExpiresAt;
             if (compatibility is null && next is not null) return Task.FromResult<AuthOutcome>(Restricted(next.Value, now));
             var proof = new SessionProof(op.UserID, op.SecurityVersion, op.PolicyRevision, op.FactorGeneration,
                 mfa, authenticatedAt, destination.ID, destination.Audience, true,
-                services.HashIds.Encode<UserDTO>(unit.User.ID), op.AppBinding, compatibility);
+                services.HashIds.Encode<UserDTO>(unit.User.ID), op.AppBinding, compatibility, op.SessionProvider);
             ClearAppCode(op, now);
             unit.Audit("AppCodeExchanged", now, op.ID);
             // Transferring an existing session does not establish fresh authentication or clear proof failures.
@@ -155,6 +158,6 @@ public partial class AuthService
         op.State = AuthenticationOperationState.Completed; op.CompletedAt = now;
         op.CodeChallenge = ""; op.HandleDigest = []; op.AppBinding = null;
         op.SessionAuthenticatedAt = null; op.SessionMfaSatisfied = null;
-        op.SessionLegacyCompatibilityExpiresAt = null;
+        op.SessionLegacyCompatibilityExpiresAt = null; op.SessionProvider = null;
     }
 }

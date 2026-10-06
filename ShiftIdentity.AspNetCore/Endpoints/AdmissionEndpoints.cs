@@ -58,7 +58,8 @@ internal static class AdmissionEndpoints
         {
             context.HttpContext.Response.Headers.CacheControl = "no-store";
             context.HttpContext.Response.Headers["Referrer-Policy"] = "no-referrer";
-            if (context.HttpContext.Request.Path.Value is "/api/identity/v2/security-link/open" or "/api/identity/v2/password-reset/complete" or "/api/identity/v2/email-verification/complete")
+            if (context.HttpContext.Request.Path.Value is "/api/identity/v2/security-link/open" or "/api/identity/v2/password-reset/complete" or "/api/identity/v2/email-verification/complete"
+                or "/api/identity/v2/providers/microsoft/callback" or "/api/identity/v2/providers/microsoft/complete")
             {
                 var admission = context.HttpContext.RequestServices.GetRequiredService<IdentityAdmissionServices>();
                 var ip = context.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
@@ -150,6 +151,25 @@ internal static class AdmissionEndpoints
             Result(await AccountSecurityService.CompletePasswordResetAsync(services, request, ct)));
         group.MapPost("/email-verification/complete", async (CompleteEmailVerificationRequest request, IdentityAdmissionServices services, CancellationToken ct) =>
             Result(await AccountSecurityService.CompleteEmailVerificationAsync(services, request, ct)));
+        group.MapGet("/providers", (IdentityAdmissionServices services) => Results.Ok(new SignInProviders(services.Microsoft is not null)));
+        group.MapPost("/providers/microsoft/start", (StartProviderSignInRequest request, HttpContext context, IdentityAdmissionServices services) =>
+            Result(AuthService.StartMicrosoftSignIn(services, request, services.Microsoft?.CallbackUri(context.Request) ?? "")));
+        // Microsoft returns the browser here. It always answers with a redirect to the login screen, carrying a
+        // completion handle or the reason there is none in the fragment, which never reaches a server or a referrer.
+        group.MapGet("/providers/microsoft/callback", async (HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
+        {
+            if (services.Microsoft is not { } microsoft) return Results.NotFound();
+            var query = context.Request.Query;
+            var outcome = await AuthService.MicrosoftCallbackAsync(services, query["code"], query["state"],
+                query["error"].Count > 0 ? (string?)query["error"] : null, microsoft.CallbackUri(context.Request), ct);
+            return Results.Redirect(microsoft.ReturnUrl((outcome as ProviderProven)?.Handle, (outcome as AuthenticationRefused)?.Code));
+        });
+        group.MapGet("/providers/links", async (HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AuthService.ReadProviderLinksAsync(services, context.Request.Headers.Authorization, null, ct)));
+        group.MapGet("/providers/links/{userKey}", async (string userKey, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AuthService.ReadProviderLinksAsync(services, context.Request.Headers.Authorization, userKey, ct)));
+        group.MapPost("/providers/microsoft/complete", async (CompleteProviderSignInRequest request, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AuthService.CompleteProviderSignInAsync(services, request, ct)));
     }
 
     private static long LinkTarget(IdentityAdmissionServices services, long id, string? key)

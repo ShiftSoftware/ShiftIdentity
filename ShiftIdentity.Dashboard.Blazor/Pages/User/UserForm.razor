@@ -192,6 +192,11 @@ else
 
                 @if (DashboardOptions.StagedAuthority && context.Mode == FormModes.View && !string.IsNullOrEmpty(context.Item.ID))
                 {
+                    <ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.UserManager.ProviderLinksPanel UserKey="@context.Item.ID" />
+                }
+
+                @if (DashboardOptions.StagedAuthority && context.Mode == FormModes.View && !string.IsNullOrEmpty(context.Item.ID))
+                {
                     <section class="user-security-group user-security-email" aria-label="@Loc["Email actions"]" data-testid="user-security-email">
                         <MudText Typo="Typo.subtitle2" Class="mb-3">@Loc["Email actions"]</MudText>
                         <ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.UserManager.SecurityEmailAdminActions UserKey="@context.Item.ID" Disabled="@context.Disabled" />

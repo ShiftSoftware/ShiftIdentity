@@ -26,11 +26,14 @@ public sealed class LocalSecurityInbox(TimeProvider? clock = null) : ISecurityEm
         if (!(message.Destination.EndsWith("@example.invalid", StringComparison.OrdinalIgnoreCase) ||
               message.Destination.EndsWith(".example.invalid", StringComparison.OrdinalIgnoreCase)))
             throw new InvalidOperationException("The local inbox accepts only reserved synthetic destinations.");
-        if (message.Purpose is not (AuthenticationOperationPurpose.PasswordResetEmail or AuthenticationOperationPurpose.EmailVerify))
+        if (message.Purpose is not (AuthenticationOperationPurpose.PasswordResetEmail or AuthenticationOperationPurpose.EmailVerify or
+            AuthenticationOperationPurpose.ProviderLogin))
             throw new InvalidOperationException("The local inbox accepts only email delivery purposes.");
         if (FailDeliveries) throw new InvalidOperationException("Synthetic delivery failure.");
         var route = message.Purpose == AuthenticationOperationPurpose.EmailVerify ? "/Identity/VerifyEmail" : "/Identity/ResetPassword";
-        var link = route + "#grant=" + Uri.EscapeDataString(message.Grant) + "&purpose=" + message.Purpose;
+        // A provider-link notice carries no grant; it points at the login screen.
+        var link = message.Purpose == AuthenticationOperationPurpose.ProviderLogin ? "/Identity/login"
+            : route + "#grant=" + Uri.EscapeDataString(message.Grant) + "&purpose=" + message.Purpose;
         lock (gate)
             accepted.TryAdd(message.ID, new(message.ID, message.Destination, message.Subject, link, clock.GetUtcNow()));
         if (FailAfterAccept) throw new InvalidOperationException("Synthetic delivery acknowledgement failure.");

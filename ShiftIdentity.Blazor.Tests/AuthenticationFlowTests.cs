@@ -210,8 +210,12 @@ public sealed class ScriptedHttp(Func<HttpRequestMessage, Task<AuthOutcome>> res
     public static JsonSerializerOptions Json { get; } = new(JsonSerializerDefaults.Web);
     public List<(string? Scheme, string? Credential, string Body)> Requests { get; } = [];
     public HttpClient Client() => new(this) { BaseAddress = new("https://identity.invalid/") };
+    /// <summary>What the login screen's read of the host's sign-in providers answers. Not counted in <see cref="Requests"/>.</summary>
+    public SignInProviders Providers { get; set; } = new(false);
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
+        if (request.Method == HttpMethod.Get && request.RequestUri!.AbsolutePath == "/api/identity/v2/providers")
+            return new(HttpStatusCode.OK) { Content = JsonContent.Create(Providers) };
         Requests.Add((request.Headers.Authorization?.Scheme, request.Headers.Authorization?.Parameter,
             await request.Content!.ReadAsStringAsync(cancellationToken)));
         return new(HttpStatusCode.OK) { Content = JsonContent.Create<AuthOutcome>(await respond(request)) };

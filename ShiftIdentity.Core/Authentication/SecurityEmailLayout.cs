@@ -13,6 +13,9 @@ public sealed record SecurityEmailFields(AuthenticationOperationPurpose Purpose,
     /// any value an img src accepts there (an absolute HTTPS URL or a cid: reference).
     /// </summary>
     public string? LogoSource { get; init; }
+
+    /// <summary>On the provider-link notice: the provider account that can now sign in.</summary>
+    public string? ProviderAccount { get; init; }
 }
 
 /// <summary>A composed security email.</summary>
@@ -26,6 +29,7 @@ public static class SecurityEmailLayout
 {
     public static SecurityEmailBody Compose(SecurityEmailFields fields)
     {
+        if (fields.Purpose == AuthenticationOperationPurpose.ProviderLogin) return ComposeProviderNotice(fields);
         var verification = fields.Purpose switch
         {
             AuthenticationOperationPurpose.EmailVerify => true,
@@ -70,6 +74,45 @@ public static class SecurityEmailLayout
             </body></html>
             """;
         var text = $"{title}\n\n{greeting}\nUsername: {fields.Username}\n\n{explanation}\n\n{link}\n\n{expiry}\n\n{caution}";
+        return new(title, html, text);
+    }
+
+    /// <summary>
+    /// The notice sent when a Microsoft account first signs in to an account. It carries no grant; its button opens the
+    /// login screen. It names the Microsoft account that can now sign in, so a mistaken email address shows at once.
+    /// </summary>
+    private static SecurityEmailBody ComposeProviderNotice(SecurityEmailFields fields)
+    {
+        const string title = "Microsoft sign-in linked to your account";
+        var account = string.IsNullOrWhiteSpace(fields.ProviderAccount) ? "A Microsoft account" : "The Microsoft account " + fields.ProviderAccount;
+        var explanation = account + " just signed in to your account. From now on it can sign in without your password.";
+        const string caution = "If this was not you, contact your administrator now: your email address may be on the wrong account.";
+        var greeting = string.IsNullOrWhiteSpace(fields.FullName) ? "Hello," : "Hello " + fields.FullName + ",";
+        static string H(string value) => WebUtility.HtmlEncode(value);
+        var logo = string.IsNullOrWhiteSpace(fields.LogoSource) ? ""
+            : $"""<p style="margin:0 0 24px"><img src="{H(fields.LogoSource!)}" alt="" height="40" style="display:block;height:40px;width:auto;border:0"></p>""";
+        var html = $"""
+            <!doctype html>
+            <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="referrer" content="no-referrer"><title>{H(title)}</title></head>
+            <body style="margin:0;background:#f2f5f9;color:#243247;font-family:Arial,sans-serif">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border:1px solid #dce3ec;border-radius:12px">
+                  <tr><td style="padding:32px">
+                    {logo}
+                    <p style="margin:0 0 16px;color:#52627a;font-size:12px;letter-spacing:2px">ACCOUNT SECURITY</p>
+                    <h1 style="margin:0 0 24px;font-size:26px;line-height:1.3">{H(title)}</h1>
+                    <p>{H(greeting)}</p>
+                    <p>Username: <strong>{H(fields.Username)}</strong></p>
+                    <p style="line-height:1.6">{H(explanation)}</p>
+                    <p style="margin:28px 0"><a href="{H(fields.Link)}" rel="noreferrer" style="display:inline-block;padding:14px 22px;background:#234fc7;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:bold">Go to sign in</a></p>
+                    <hr style="border:0;border-top:1px solid #dce3ec;margin:28px 0">
+                    <p style="font-size:13px;line-height:1.6;color:#52627a">{H(caution)}</p>
+                  </td></tr>
+                </table>
+              </td></tr></table>
+            </body></html>
+            """;
+        var text = $"{title}\n\n{greeting}\nUsername: {fields.Username}\n\n{explanation}\n\nGo to sign in: {fields.Link}\n\n{caution}";
         return new(title, html, text);
     }
 }

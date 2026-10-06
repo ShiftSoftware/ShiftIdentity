@@ -37,6 +37,10 @@ internal sealed class IdentityAuthorityRegistration
     public TotpSettingsModel Totp { get; }
     public string ClientDisplayName { get; }
     public string RedirectUri { get; }
+    /// <summary>Why Microsoft sign-in stays off although enabled (no client secret yet), or null. Startup logs it.</summary>
+    public string? MicrosoftProblem { get; private init; }
+    /// <summary>Microsoft sign-in is enabled and has what it needs.</summary>
+    public bool MicrosoftReady(MicrosoftSignInSettings? microsoft) => microsoft is { Enabled: true } && MicrosoftProblem is null;
 
     internal static bool IsWebUrl(string value) => Uri.TryCreate(value, UriKind.Absolute, out var uri)
         && uri.Scheme is "http" or "https" && string.IsNullOrEmpty(uri.UserInfo);
@@ -82,12 +86,28 @@ internal sealed class IdentityAuthorityRegistration
         if (refreshLifetime < 1) throw Invalid("Authority.RefreshLifetimeSeconds", "must be at least 1 second (RefreshToken.ExpireSeconds applies when it is not set).");
         if (settings.AdministratorAuthenticationGraceSeconds < 1)
             throw Invalid("Authority.AdministratorAuthenticationGraceSeconds", "must be at least 1 second.");
+        var microsoftProblem = ValidateMicrosoft(settings.Microsoft);
         var audience = First(settings.Audience, token.Audience, issuer);
         var refreshAudience = First(settings.RefreshAudience, configuration.RefreshToken?.Audience, issuer);
         var options = new IdentityAdmissionOptions(issuer, refreshAudience, accessKey, refreshKey, operationKey,
             AccessLifetimeSeconds: accessLifetime, RefreshLifetimeSeconds: refreshLifetime,
             AdministratorAuthenticationGraceSeconds: settings.AdministratorAuthenticationGraceSeconds);
-        return new(options, new AuthenticationClient(clientID, audience), configuration);
+        return new(options, new AuthenticationClient(clientID, audience), configuration) { MicrosoftProblem = microsoftProblem };
+    }
+
+    // Turned on, Microsoft sign-in needs its app registration: a malformed value fails at startup, not at the first
+    // sign-in. A missing secret only keeps it off, with a startup warning, so a checked-in empty secret starts the host.
+    internal static string? ValidateMicrosoft(MicrosoftSignInSettings? microsoft)
+    {
+        if (microsoft is not { Enabled: true }) return null;
+        if (!Guid.TryParse(microsoft.ClientId?.Trim(), out _))
+            throw Invalid("Authority.Microsoft.ClientId", "must be the Application (client) ID of the Microsoft Entra app registration when Microsoft sign-in is enabled.");
+        if (microsoft.RedirectUri is { } redirect && !string.IsNullOrWhiteSpace(redirect) &&
+            (!IsWebUrl(redirect.Trim()) || new Uri(redirect.Trim()).Query.Length != 0 || new Uri(redirect.Trim()).Fragment.Length != 0))
+            throw Invalid("Authority.Microsoft.RedirectUri", "must be an absolute HTTP(S) URL without credentials, query or fragment.");
+        return string.IsNullOrWhiteSpace(microsoft.ClientSecret)
+            ? "ShiftIdentityConfiguration.Authority.Microsoft.ClientSecret is empty; supply it from App Settings, Key Vault or user secrets."
+            : null;
     }
 
     private static byte[] ExistingRefreshKey(string? value)

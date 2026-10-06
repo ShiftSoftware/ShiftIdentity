@@ -236,9 +236,10 @@ internal static partial class AccountSecurityService
         if (refusal is not null) return refusal;
         if (!Permitted(actor, permitted)) return Refuse(AuthenticationFailure.ClientDenied);
         var now = services.Clock.GetUtcNow();
-        var step = LocalStep(actor, signedIn.Proof.MfaSatisfied);
+        var step = SessionStep(services, actor, signedIn.Proof.Provider, signedIn.Proof.MfaSatisfied);
         if (step is not null && step != AuthenticationStep.ExistingMfa) return Refuse(AuthenticationFailure.InvalidProof);
-        if (requireRecent && (now < signedIn.Proof.AuthenticatedAt ||
+        // A provider sign-in proves no password: protected changes ask for the administrator's own confirmation.
+        if (requireRecent && (signedIn.Proof.Provider is not null || now < signedIn.Proof.AuthenticatedAt ||
             now >= signedIn.Proof.AuthenticatedAt.AddSeconds(services.Options.AdministratorAuthenticationGraceSeconds) || step == AuthenticationStep.ExistingMfa))
             return Refuse(AuthenticationFailure.ReauthenticationRequired);
         return step is not null ? Refuse(AuthenticationFailure.InvalidProof) : null;

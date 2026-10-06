@@ -37,7 +37,7 @@ public static class IdentitySecurityModel
         {
             e.ToTable("AuthenticationOperations", "ShiftIdentity", t =>
             {
-                t.HasCheckConstraint("CK_AuthenticationOperation_State", "[State] IN (1,2,3,4,5,6,7,8,9,10,11) AND [Purpose] IN (1,2,3,4,5,6,7,8,9,10,11,12,13)");
+                t.HasCheckConstraint("CK_AuthenticationOperation_State", "[State] IN (1,2,3,4,5,6,7,8,9,10,11,12) AND [Purpose] IN (1,2,3,4,5,6,7,8,9,10,11,12,13,14)");
                 t.HasCheckConstraint("CK_AuthenticationOperation_App", "([State] <> 11 OR ([Purpose] = 10 AND [External] = 1 AND [AppBinding] IS NOT NULL AND [SessionAuthenticatedAt] IS NOT NULL AND [SessionMfaSatisfied] IS NOT NULL)) AND ([Purpose] <> 10 OR [State] IN (2,3,6,9,11))");
                 t.HasCheckConstraint("CK_AuthenticationOperation_LegacyRefresh", "[Purpose] <> 11 OR ([State] = 2 AND [External] = 0 AND DATALENGTH([HandleDigest]) = 32 AND [CompletedAt] IS NOT NULL)");
                 // A pre-cutover MFA row is keyed by its credential digest for its whole life: pending, locked, completed or cancelled.
@@ -47,6 +47,8 @@ public static class IdentitySecurityModel
                 t.HasCheckConstraint("CK_AuthenticationOperation_Password", "([PasswordChangeOrigin] IS NULL OR [PasswordChangeOrigin] IN (1,2)) AND (([PendingPasswordHash] IS NULL AND [PendingPasswordSalt] IS NULL) OR ([Purpose] = 4 AND [State] IN (1,7) AND [PendingPasswordHash] IS NOT NULL AND [PendingPasswordSalt] IS NOT NULL))");
                 t.HasCheckConstraint("CK_AuthenticationOperation_Factor", "[ProtectedPendingTotpSecret] IS NULL OR ([Purpose] IN (3,4,5,6) AND [State] = 7)");
                 t.HasCheckConstraint("CK_AuthenticationOperation_Recovery", "([RecoveryCodeDigest] IS NULL OR ([Purpose] = 6 AND [State] = 8 AND [ParentID] IS NULL)) AND ([OutstandingRecoveryUserID] IS NULL OR ([Purpose] = 6 AND [ParentID] IS NULL AND [OutstandingRecoveryUserID] = [UserID]))");
+                // A provider proof continues only into a sign-in step (login MFA or enrollment) or an app code; it is pending only as a provider completion.
+                t.HasCheckConstraint("CK_AuthenticationOperation_Provider", "([SessionProvider] IS NULL OR ([SessionProvider] = 1 AND [Purpose] IN (1,3,10,14))) AND ([State] <> 12 OR ([Purpose] = 14 AND [SessionProvider] IS NOT NULL)) AND ([Purpose] <> 14 OR [State] IN (2,3,6,12))");
                 t.HasCheckConstraint("CK_AuthenticationOperation_Version", "[SecurityVersion] >= 1 AND [FactorGeneration] >= 1 AND [PolicyRevision] >= 1 AND [FailedAttempts] BETWEEN 0 AND 5 AND [ExpiresAt] > [CreatedAt]");
             });
             e.HasKey(x => x.ID);
@@ -70,6 +72,19 @@ public static class IdentitySecurityModel
             e.HasIndex(x => x.HandleDigest).IsUnique().HasFilter("[Purpose] IN (11,12)");
             e.HasIndex(x => x.ParentID);
             e.HasIndex(x => x.OutstandingRecoveryUserID).IsUnique().HasFilter("[OutstandingRecoveryUserID] IS NOT NULL");
+        });
+        builder.Entity<UserProviderLink>(e =>
+        {
+            e.ToTable("UserProviderLinks", "ShiftIdentity", t => t.HasCheckConstraint("CK_UserProviderLink", "[Provider] = 1 AND DATALENGTH([TenantID]) > 0 AND DATALENGTH([ObjectID]) > 0 AND DATALENGTH([EmailLookupKey]) > 0"));
+            e.HasKey(x => x.ID);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.UserID).OnDelete(DeleteBehavior.Restrict);
+            e.Property(x => x.TenantID).HasMaxLength(64).UseCollation("Latin1_General_100_BIN2");
+            e.Property(x => x.ObjectID).HasMaxLength(64).UseCollation("Latin1_General_100_BIN2");
+            e.Property(x => x.EmailLookupKey).HasMaxLength(255).UseCollation("Latin1_General_100_BIN2");
+            e.Property(x => x.Email).HasMaxLength(255);
+            // One provider identity reaches one account. An account may have several.
+            e.HasIndex(x => new { x.Provider, x.TenantID, x.ObjectID }).IsUnique();
+            e.HasIndex(x => x.UserID);
         });
         builder.Entity<AuthenticationPolicyState>(e =>
         {
