@@ -45,6 +45,8 @@ internal sealed class IdentityAuthorityRegistration
     {
         if (configuration.EmailVerificationRedirectUrl is { } redirect && !IsWebUrl(redirect))
             throw Invalid("EmailVerificationRedirectUrl", "must be an absolute HTTP(S) URL without credentials.");
+        if (configuration.EmailLogoUrl is { } logo && !IsWebUrl(logo))
+            throw Invalid("EmailLogoUrl", "must be an absolute HTTP(S) URL without credentials.");
         var settings = configuration.Authority ?? throw Invalid("Authority", "is required when the authority is enabled.");
         if (!settings.Enabled) throw Invalid("Authority.Enabled", "must be true to register the authority.");
         var clientID = settings.ClientId?.Trim();

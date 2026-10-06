@@ -30,6 +30,16 @@ public sealed class SecurityEmailTemplateTests
     }
 
     [Fact]
+    public void Logo_is_shown_only_when_configured_and_its_URL_is_encoded()
+    {
+        var message = new SecurityEmail(Guid.NewGuid(), "admitted@example.invalid", "ignored", "grant",
+            AuthenticationOperationPurpose.PasswordResetEmail, DateTimeOffset.UtcNow.AddHours(1));
+        var logo = SecurityEmailTemplate.Render(message, "https://dashboard.example.invalid/", "https://cdn.example.invalid/logo.png?a=1&b=\"2\"").HtmlBody;
+        Assert.Contains("<img src=\"https://cdn.example.invalid/logo.png?a=1&amp;b=&quot;2&quot;\"", logo);
+        Assert.DoesNotContain("<img", SecurityEmailTemplate.Render(message, "https://dashboard.example.invalid/").HtmlBody);
+    }
+
+    [Fact]
     public void Legacy_template_does_not_guess_expiry_or_generate_a_grant()
     {
         const string url = "https://dashboard.example.invalid/legacy?token=old&user=1";

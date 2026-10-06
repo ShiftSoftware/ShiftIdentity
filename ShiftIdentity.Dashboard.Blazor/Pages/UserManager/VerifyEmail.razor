@@ -1,5 +1,5 @@
 @attribute [Route($"{Constants.IdentityRoutePreifix}/{nameof(VerifyEmail)}")]
-@layout Shared.EmptyLayout
+@layout Shared.LoginLayout
 @using ShiftSoftware.ShiftIdentity.Blazor.Services
 @inject ShiftIdentityDashboardBlazorOptions DashboardOptions
 @using Microsoft.Extensions.DependencyInjection
@@ -7,7 +7,12 @@
 @inject ShiftIdentityLocalizer Loc
 
 @if (LinkFlow is not null) { <SecurityLinkForm Flow="LinkFlow" Verification="true" /> }
-else { <MudAlert Severity="Severity.Info">@Loc["Email verification is unavailable here."]</MudAlert> }
+else
+{
+    <LoginBox ViewKey="verification-unavailable">
+        <MudAlert Severity="Severity.Info">@Loc["Email verification is unavailable here."]</MudAlert>
+    </LoginBox>
+}
 
 @code {
     [CascadingParameter] public AdmissionUiContext? AdmissionContext { get; set; }

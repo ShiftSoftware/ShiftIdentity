@@ -85,7 +85,7 @@ public sealed class SecurityLinkComponentTests
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll("[data-testid=security-link-target]")));
         var submit = cut.FindAll("button").Single(b => b.TextContent.Trim() == "Verify my email").ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
         cut.WaitForAssertion(() => Assert.Equal(2, transport.Requests.Count));
-        if (cancel) cut.FindAll("button").Single(b => b.TextContent.Trim() == "Cancel").Click();
+        if (cancel) cut.Find("[data-testid=security-link-login]").Click();
         else context.Services.GetRequiredService<NavigationManager>().NavigateTo("Identity/VerifyEmail#grant=second&purpose=EmailVerify");
         await cut.InvokeAsync(() => complete.SetResult(new EmailVerificationCompleted()));
         await submit;
@@ -189,7 +189,7 @@ public sealed class SecurityLinkComponentTests
         using var context = Setup(AuthenticationOperationPurpose.PasswordResetEmail, out var ui, out var transport);
         var cut = context.Render<SecurityLinkForm>(p => p.Add(x => x.Context, ui));
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll("[data-testid=security-link-target]")));
-        cut.FindAll("button").Single(b => b.TextContent.Trim() == "Cancel").Click();
+        cut.Find("[data-testid=security-link-login]").Click();
         Assert.Single(transport.Requests);
         Assert.EndsWith(SecurityLinkNavigation.LoginAfterCancel, context.Services.GetRequiredService<NavigationManager>().Uri);
         Assert.Empty(cut.FindAll("form"));

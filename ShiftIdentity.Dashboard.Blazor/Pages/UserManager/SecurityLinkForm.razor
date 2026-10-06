@@ -10,53 +10,93 @@
 
 <HeadContent><meta name="referrer" content="no-referrer" /></HeadContent>
 
+@* The page a user reaches from an email link, in the login box: the host's logo and the same slide
+   between the steps of the link (checking it, the form, done or failed) as between the steps of a sign-in. *@
+<LoginBox ViewKey="@ViewKey">
 <CascadingValue Value="feedback" IsFixed="true">
-<MudPaper Class="pa-5" data-testid="security-link-form">
-    <MudText Typo="Typo.h5">@Loc[Verification ? "Verify your email" : "Choose a new password"]</MudText>
-    @if (loading) { <MudText>@Loc["Checking your link…"]</MudText> }
-    @if (opened is not null)
+<div data-testid="security-link-form">
+    @if (loading)
     {
-        <MudText data-testid="security-link-target">@Loc["For {0}", opened.MaskedTarget]</MudText>
+        <div class="auth-center" role="status">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="auth-done-icon" />
+            <p class="auth-description">@Loc["Checking your link…"]</p>
+        </div>
+    }
+    else if (opened is not null)
+    {
+        <h1 class="auth-title" tabindex="-1">@Loc[Verification ? "Verify your email" : "Choose a new password"]</h1>
+        <div class="auth-account" data-testid="security-link-target">
+            <MudIcon Icon="@Icons.Material.Outlined.AccountCircle" Size="Size.Small" /><span>@opened.MaskedTarget</span>
+        </div>
         @if (Verification)
         {
-            <MudText>@Loc["Opening this page does not verify your email. Confirm that this email address belongs to you."]</MudText>
-            <MudButton Color="Color.Primary" Disabled="@(feedback.Attempting || CurrentFlow.Busy)" OnClick="() => feedback.AttemptAsync(Verify)">@Loc["Verify my email"]</MudButton>
+            <p class="auth-description">@Loc["Opening this page does not verify your email. Confirm that this email address belongs to you."]</p>
+            <AuthError @bind-Message="error" TestId="security-link-error" />
+            <div class="auth-actions">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(feedback.Attempting || CurrentFlow.Busy)" OnClick="() => feedback.AttemptAsync(Verify)">@Loc[CurrentFlow.Busy ? "Verifying…" : "Verify my email"]</MudButton>
+            </div>
         }
         else
         {
-            <MudText>@Loc[NewPasswordPolicy.Guidance]</MudText>
-            <AuthForm Model="entry" Submit="Reset" Context="attempting">
-                <PasswordField Label="@Loc["New Password"]" @bind-Value="entry.Password" For="@(() => entry.Password)" Immediate="true" autocomplete="new-password" />
-                <PasswordField Label="@Loc["Confirm Password"]" @bind-Value="entry.Confirm" For="@(() => entry.Confirm)" Immediate="true" autocomplete="new-password" />
-                <MudButton Color="Color.Primary" ButtonType="ButtonType.Submit" Disabled="@(attempting || CurrentFlow.Busy)">@Loc["Reset Password"]</MudButton>
+            <p class="auth-description">@Loc[NewPasswordPolicy.Guidance]</p>
+            <AuthForm Model="entry" Submit="Reset" class="auth-inputs" Context="attempting">
+                <PasswordField @key="(entryGeneration, 1)" Label="@Loc["New Password"]" @bind-Value="entry.Password" For="@(() => entry.Password)" Immediate="true" autocomplete="new-password" />
+                <PasswordField @key="(entryGeneration, 2)" Label="@Loc["Confirm Password"]" @bind-Value="entry.Confirm" For="@(() => entry.Confirm)" Immediate="true" autocomplete="new-password" />
+                <AuthError @bind-Message="error" TestId="security-link-error" />
+                <div class="auth-actions">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit" Disabled="@(attempting || CurrentFlow.Busy)">@Loc[CurrentFlow.Busy ? "Resetting password…" : "Reset Password"]</MudButton>
+                </div>
             </AuthForm>
-            <MudText>@Loc["Your authenticator and recovery requirements still apply after resetting your password."]</MudText>
+            <p class="auth-note">@Loc["Your authenticator and recovery requirements still apply after resetting your password."]</p>
         }
-        <MudButton OnClick="Cancel">@Loc["Cancel"]</MudButton>
     }
-    @if (verified)
+    else if (verified)
     {
-        <MudAlert Severity="Severity.Success" data-testid="email-verified">@Loc["Your email is verified. You can now return to login."]</MudAlert>
-        <MudButton Href="@SecurityLinkNavigation.LoginAfterVerification">@Loc["Return to login"]</MudButton>
+        <div class="auth-center" role="status" data-testid="email-verified">
+            <MudIcon Icon="@Icons.Material.Outlined.CheckCircle" Color="Color.Success" Size="Size.Large" Class="auth-done-icon" />
+            <h1 class="auth-title" tabindex="-1">@Loc["Email verified"]</h1>
+            <p class="auth-description">@Loc["Your email is verified. You can now sign in."]</p>
+            <div class="auth-actions"><MudButton Variant="Variant.Filled" Color="Color.Primary" Href="@SecurityLinkNavigation.LoginAfterVerification">@Loc["Go to login"]</MudButton></div>
+        </div>
     }
-    <AuthError @bind-Message="error" TestId="security-link-error" />
-    @if (error is not null && opened is null)
+    else if (error is not null)
     {
-        <MudButton Href="@(Verification ? "Identity/SendEmailVerificationLink" : "Identity/SendResetPasswordLink")">@Loc["Request a new link"]</MudButton>
-        <MudButton Href="@SecurityLinkNavigation.LoginAfterCancel">@Loc["Back to login"]</MudButton>
+        @* The link has ended: a new one is the only way on. *@
+        <div class="auth-center">
+            <MudIcon Icon="@Icons.Material.Outlined.LinkOff" Size="Size.Large" Class="auth-done-icon auth-ended-icon" />
+            <h1 class="auth-title" tabindex="-1">@Loc["This link can't be used"]</h1>
+            <p class="auth-description" role="alert" data-testid="security-link-error">@error</p>
+            <div class="auth-actions">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="@(Verification ? "Identity/SendEmailVerificationLink" : "Identity/SendResetPasswordLink")">@Loc["Request a new link"]</MudButton>
+            </div>
+        </div>
     }
-</MudPaper>
+</div>
 </CascadingValue>
+</LoginBox>
+@* A user arrives here from an email, not from the login, so the way there is named as a destination, not a way back. *@
+@if (!verified)
+{
+    <button type="button" class="security-link-exit" data-testid="security-link-login" @onclick="Cancel">
+        @Loc["Go to login"]
+    </button>
+}
 
 @code {
     [Parameter] public AdmissionUiContext? Context { get; set; }
     [Parameter] public AuthenticationFlow? Flow { get; set; }
     private AuthenticationFlow CurrentFlow => Flow ?? Context!.Flow;
+    // The login box slides when the step changes: a new link, its form, and how it ended.
+    private string ViewKey => loading ? "loading" : opened is not null ? "open" : verified ? "verified" : error is not null ? "ended" : "none";
     [Parameter] public bool Verification { get; set; }
     // The page's attempts: a shown error closes before each press, as in every security step.
     private readonly AuthFeedback feedback = new();
     private SecurityLinkOpened? opened;
-    private Entry entry = new();
+    // One model for the page's life, as in the login form: a new model makes the EditForm rebuild its content, and an
+    // error panel rebuilt open appears at once instead of sliding open.
+    private readonly Entry entry = new();
+    // Cleared fields start over untouched; a field the user typed in would flag its cleared value as missing.
+    private int entryGeneration;
     private bool loading = true, verified, disposed, processing;
     private string? error, pendingUri;
     private string mountedPath = "";
@@ -67,6 +107,7 @@
         [Required, MaxLength(512)] public string Password { get; set; } = "";
         [Required, Compare(nameof(Password), ErrorMessage = "Passwords must match.")]
         public string Confirm { get; set; } = "";
+        public void Clear() { Password = ""; Confirm = ""; }
     }
     protected override void OnInitialized()
     {
@@ -136,7 +177,7 @@
         var result = await activeCompletion;
         activeCompletion = null;
         if (disposed || current != pageGeneration) return;
-        entry = new();
+        ClearEntry();
         if (result is ReturnToLogin)
         {
             opened = null;
@@ -179,9 +220,10 @@
         ClearPage();
         Navigation.NavigateTo(SecurityLinkNavigation.LoginAfterCancel, replace: true);
     }
+    private void ClearEntry() { entry.Clear(); entryGeneration++; }
     private void ClearPage()
     {
-        pageGeneration++; pendingUri = null; opened = null; entry = new(); verified = false; error = null;
+        pageGeneration++; pendingUri = null; opened = null; ClearEntry(); verified = false; error = null;
         loading = false; CurrentFlow.Restart();
     }
     public void Dispose()

@@ -1,0 +1,29 @@
+@attribute [Route($"{Constants.IdentityRoutePreifix}/Preview")]
+@layout Shared.EmptyLayout
+@inject ShiftIdentityDashboardBlazorOptions Options
+
+@if (!Options.EnablePreviewPages)
+{
+    <MudAlert Severity="Severity.Info">Preview pages are turned off for this host.</MudAlert>
+}
+else
+{
+    <MudText Typo="Typo.h5" Class="mb-2">Identity UI preview</MudText>
+    <MudText Class="mb-6">The emails the authority sends and the pages their links open, in each state, against an in-memory authority. Nothing is sent or changed.</MudText>
+    @foreach (var (screen, title) in Screens)
+    {
+        <MudText Typo="Typo.h6" Class="mt-4">@title</MudText>
+        <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2" Class="mt-2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="@($"{Constants.IdentityRoutePreifix}/Preview/Email/{screen}")">Email</MudButton>
+            @foreach (var state in Enum.GetValues<PreviewState>().Where(s => SecurityLinkPreview.Shows(screen, s)))
+            {
+                <MudButton Variant="Variant.Outlined" Href="@SecurityLinkPreview.Link(screen, state)">@state</MudButton>
+            }
+        </MudStack>
+    }
+}
+
+@code {
+    private static readonly (string Screen, string Title)[] Screens =
+        [(nameof(ResetPassword), "Reset password (from the reset email)"), (nameof(VerifyEmail), "Verify email (from the verification email)")];
+}

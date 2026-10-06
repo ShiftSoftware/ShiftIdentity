@@ -34,6 +34,13 @@ public class ShiftIdentityDashboardBlazorOptions
     /// </summary>
     public bool StagedAuthority { get; set; }
 
+    /// <summary>
+    /// Serves the UI preview pages under <c>Identity/Preview</c>: the screens a user reaches from an email link,
+    /// rendered in each of their states against an in-memory authority, for design iteration. Off by default; a host
+    /// turns it on in Development only.
+    /// </summary>
+    public bool EnablePreviewPages { get; set; }
+
     public ShiftIdentityDashboardBlazorOptions AddCompanyBranchPhoneTag(string tag)
     {
         this.CompanyBranchPhoneTags.Add(tag);

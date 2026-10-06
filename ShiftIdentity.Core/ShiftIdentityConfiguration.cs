@@ -31,6 +31,12 @@ public class ShiftIdentityConfiguration
     public string? FrontEndUrl { get; set; } = default!;
     /// <summary>The absolute HTTP(S) destination after an explicit email verification succeeds. Never supplied by a link or caller.</summary>
     public string? EmailVerificationRedirectUrl { get; set; }
+    /// <summary>
+    /// The absolute HTTP(S) URL of the logo at the top of the verification and reset emails, or null for none. Mail
+    /// clients load it from there, so it must be publicly reachable, and a raster image (PNG or JPEG), since many
+    /// clients do not show SVG.
+    /// </summary>
+    public string? EmailLogoUrl { get; set; }
     public ShiftIdentityFeatureLocking ShiftIdentityFeatureLocking { get; set; } = new ShiftIdentityFeatureLocking();
     public ShiftIdentityDefaultDataLevelAccessOptions DefaultDataLevelAccessOptions { get; set; } = new();
 }

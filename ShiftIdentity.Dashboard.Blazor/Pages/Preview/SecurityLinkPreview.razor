@@ -1,0 +1,79 @@
+@attribute [Route($"{Constants.IdentityRoutePreifix}/Preview/{{Screen}}")]
+@layout Shared.BareLayout
+@using System.Reflection
+@using ShiftSoftware.ShiftIdentity.Blazor.Services
+@using ShiftSoftware.ShiftIdentity.Core.Authentication
+@inject ShiftIdentityDashboardBlazorOptions Options
+@inject NavigationManager Navigation
+@inject ShiftSoftware.ShiftIdentity.Blazor.IdentitySession Session
+
+@* The real page, in its own layout, with an in-memory authority cascaded where the host's would be. *@
+@if (!Options.EnablePreviewPages || PageType is null)
+{
+    <LayoutView Layout="typeof(Shared.EmptyLayout)">
+        <MudAlert Severity="Severity.Info">@(Options.EnablePreviewPages ? "There is no preview for this page." : "Preview pages are turned off for this host.")</MudAlert>
+    </LayoutView>
+}
+else if (admission is not null)
+{
+    <LayoutView Layout="PageLayout" @key="admission">
+        <CascadingValue Value="admission" IsFixed="true">
+            <DynamicComponent Type="PageType" />
+        </CascadingValue>
+    </LayoutView>
+    <nav class="identity-preview-bar" aria-label="Preview states">
+        <a href="@($"{Constants.IdentityRoutePreifix}/Preview")">Preview</a>
+        @foreach (var option in Enum.GetValues<PreviewState>().Where(s => Shows(Screen, s)))
+        {
+            <a href="@Link(Screen, option)" aria-current="@(option == state ? "page" : null)">@option</a>
+        }
+    </nav>
+}
+
+<style>
+    .identity-preview-bar { position: fixed; inset-inline-start: 12px; bottom: 12px; z-index: 2000; display: flex; flex-wrap: wrap; gap: 4px; max-width: calc(100vw - 24px); padding: 6px; border-radius: 6px; background: #1f2937e6; font: 12px/1.2 system-ui, sans-serif; }
+    .identity-preview-bar a { padding: 5px 8px; border-radius: 4px; color: #e5e7eb; text-decoration: none; }
+    .identity-preview-bar a:hover { background: #ffffff26; }
+    .identity-preview-bar a[aria-current] { background: #fff; color: #111827; }
+</style>
+
+@code {
+    [Parameter] public string Screen { get; set; } = "";
+    [SupplyParameterFromQuery(Name = "state")] public string? StateName { get; set; }
+    private PreviewState state;
+    private AdmissionUiContext? admission;
+
+    private Type? PageType => Screen switch
+    {
+        nameof(ResetPassword) => typeof(ResetPassword),
+        nameof(VerifyEmail) => typeof(VerifyEmail),
+        _ => null
+    };
+
+    private Type? PageLayout => PageType?.GetCustomAttribute<LayoutAttribute>()?.LayoutType;
+
+    /// <summary>Every state applies to both screens except a weak password, which only a reset can meet.</summary>
+    internal static bool Shows(string screen, PreviewState state) => state != PreviewState.WeakPassword || screen == nameof(ResetPassword);
+
+    /// <summary>A preview link carries a link fragment like the email's, so the page opens it as it opens a real one.</summary>
+    internal static string Link(string screen, PreviewState state) =>
+        $"{Constants.IdentityRoutePreifix}/Preview/{screen}?state={state}#grant=preview&purpose="
+        + (screen == nameof(VerifyEmail) ? AuthenticationOperationPurpose.EmailVerify : AuthenticationOperationPurpose.PasswordResetEmail);
+
+    protected override void OnParametersSet()
+    {
+        if (!Options.EnablePreviewPages || PageType is null) return;
+        var requested = Enum.TryParse<PreviewState>(StateName, true, out var parsed) ? parsed : PreviewState.Ready;
+        // The page clears the fragment once it opens the link. Reopening or reloading needs it back.
+        if (!new Uri(Navigation.Uri).Fragment.Contains("grant="))
+        {
+            Navigation.NavigateTo(Link(Screen, requested), forceLoad: true, replace: true);
+            return;
+        }
+        if (admission is not null && requested == state) return;
+        state = requested;
+        // A new context per state, so the page and its form start over as they do from a fresh link.
+        var http = new HttpClient(new PreviewAuthorityHandler(state)) { BaseAddress = new Uri(Navigation.BaseUri) };
+        admission = new AdmissionUiContext(new AuthenticationFlow(http, Session), Session, http);
+    }
+}

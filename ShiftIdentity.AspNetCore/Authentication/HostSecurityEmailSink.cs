@@ -38,7 +38,7 @@ internal sealed class HostSecurityEmailSink(ShiftIdentityConfiguration configura
         cancellationToken.ThrowIfCancellationRequested();
         if (staged.Length > 0)
         {
-            var content = SecurityEmailTemplate.Render(message, configuration.FrontEndUrl!);
+            var content = SecurityEmailTemplate.Render(message, configuration.FrontEndUrl!, configuration.EmailLogoUrl);
             foreach (var sender in staged)
             {
                 cancellationToken.ThrowIfCancellationRequested();

@@ -1,0 +1,4 @@
+/* The way out of an email-link page, under the login box. */
+.security-link-exit { display: block; margin: 18px auto 0; padding: 8px 12px; border: 0; border-radius: 4px; background: transparent; color: var(--mud-palette-text-secondary); cursor: pointer; font: inherit; font-size: 14px; transition: color 150ms, background 150ms; }
+.security-link-exit:hover { color: var(--mud-palette-primary); background: var(--mud-palette-action-default-hover); }
+.security-link-exit:focus-visible { outline: 2px solid var(--mud-palette-primary); outline-offset: 2px; }

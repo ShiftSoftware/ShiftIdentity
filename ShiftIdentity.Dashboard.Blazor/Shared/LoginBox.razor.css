@@ -37,6 +37,12 @@
 .identity-login-box ::deep .auth-reference { display: block; margin-top: 8px; font-size: 11px; color: #805a59; }
 .identity-login-box ::deep .auth-notice { margin-top: 18px; }
 .identity-login-box ::deep .auth-done-icon { display: block; margin: 4px auto 14px; }
+.identity-login-box ::deep .auth-ended-icon { color: var(--mud-palette-text-secondary); }
+/* The account a step acts on, under its title: the masked address of an email link. */
+.identity-login-box ::deep .auth-account { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; margin: 0 0 14px; padding: 4px 12px 4px 6px; border: 1px solid var(--mud-palette-lines-default); border-radius: 16px; font-size: 14px; line-height: 1.4; color: var(--mud-palette-text-primary); }
+.identity-login-box ::deep .auth-account span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.identity-login-box ::deep .auth-account .mud-icon-root { flex-shrink: 0; color: var(--mud-palette-text-secondary); }
+.identity-login-box ::deep .auth-note { margin: clamp(14px, 3dvh, 22px) 0 0; text-align: center; font-size: 13px; line-height: 1.5; color: var(--mud-palette-text-secondary); }
 /* A QR code must stay dark on light to scan, so its tile keeps a white background in every theme. */
 .identity-login-box ::deep .auth-qr { width: min(100%, 184px); margin: 4px auto 14px; padding: 8px; background: #fff; border: 1px solid var(--mud-palette-lines-default); border-radius: 4px; }
 .identity-login-box ::deep .auth-qr svg { display: block; width: 100%; height: auto; }

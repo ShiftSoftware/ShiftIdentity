@@ -121,7 +121,9 @@ public sealed class AuthorityRegistrationTests
         { "Authority.Enabled", c => c.Authority.Enabled = false },
         { "EmailVerificationRedirectUrl", c => c.EmailVerificationRedirectUrl = "/caller/path" },
         { "EmailVerificationRedirectUrl", c => c.EmailVerificationRedirectUrl = "javascript:alert(1)" },
-        { "EmailVerificationRedirectUrl", c => c.EmailVerificationRedirectUrl = "https://user:pass@example.invalid/" }
+        { "EmailVerificationRedirectUrl", c => c.EmailVerificationRedirectUrl = "https://user:pass@example.invalid/" },
+        { "EmailLogoUrl", c => c.EmailLogoUrl = "/img/logo.png" },
+        { "EmailLogoUrl", c => c.EmailLogoUrl = "javascript:alert(1)" }
     };
 
     [Theory, MemberData(nameof(Invalid))]
