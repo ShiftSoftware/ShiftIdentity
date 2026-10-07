@@ -56,6 +56,7 @@
 .identity-login-box ::deep .auth-divider { display: flex; align-items: center; gap: 12px; margin: clamp(14px, 3dvh, 22px) 0; font-size: 13px; color: var(--mud-palette-text-secondary); }
 .identity-login-box ::deep .auth-divider::before, .identity-login-box ::deep .auth-divider::after { content: ""; flex: 1 1 auto; border-top: 1px solid var(--mud-palette-lines-default); }
 .identity-login-box ::deep .auth-provider { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; min-height: 44px; padding: 10px 16px; border: 1px solid var(--mud-palette-lines-inputs); border-radius: 4px; background: var(--mud-palette-surface); color: var(--mud-palette-text-primary); cursor: pointer; font: inherit; font-size: 15px; font-weight: 500; transition: background 150ms; }
+.identity-login-box ::deep .auth-provider + .auth-provider { margin-top: 8px; }
 .identity-login-box ::deep .auth-provider:hover { background: var(--mud-palette-action-default-hover); }
 .identity-login-box ::deep .auth-provider:disabled { opacity: .5; cursor: default; }
 .identity-login-box ::deep .auth-provider svg { flex-shrink: 0; }

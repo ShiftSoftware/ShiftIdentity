@@ -24,6 +24,15 @@ internal sealed record IdentityAdmissionServices(
     internal LegacyTemporaryTokenCodec? LegacyTemporaryTokens { get; init; }
     /// <summary>Sign in with Microsoft, when the host turned it on; null otherwise.</summary>
     internal MicrosoftSignIn? Microsoft { get; init; }
+    /// <summary>Sign in with Google, when the host turned it on; null otherwise.</summary>
+    internal GoogleSignIn? Google { get; init; }
+    /// <summary>The provider's sign-in when the host turned it on; null otherwise.</summary>
+    internal ProviderSignIn? Provider(Core.Authentication.SignInProvider provider) => provider switch
+    {
+        Core.Authentication.SignInProvider.Microsoft => Microsoft,
+        Core.Authentication.SignInProvider.Google => Google,
+        _ => null
+    };
     internal IdentityMaterialProtector LinkProtector => FactorProtector.CreateProtector("SecurityLinks.v1");
 }
 

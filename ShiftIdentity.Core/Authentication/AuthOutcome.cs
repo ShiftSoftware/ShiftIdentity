@@ -51,7 +51,7 @@ public sealed record AuthenticatorStatus(bool Enrolled, bool RecoveryRequired, b
 public sealed record ProviderRedirect(string Url) : AuthOutcome;
 /// <summary>The provider accounts that can sign in to an account. A read for the account screens: it proves and issues nothing.</summary>
 public sealed record ProviderLinksRead(IReadOnlyList<ProviderLinkView> Links) : AuthOutcome;
-/// <summary>A provider account that can sign in: the email it had when linked, and whether it is a personal Microsoft account.</summary>
+/// <summary>A provider account that can sign in: the email it had when linked, and whether it is a personal account rather than a work or school one.</summary>
 public sealed record ProviderLinkView(SignInProvider Provider, string Email, bool PersonalAccount, DateTimeOffset LinkedAt, DateTimeOffset LastUsedAt);
 
 public enum AuthenticationStep { ExistingMfa, PasswordChange, MfaRecovery, NewMfa, EmailVerification, Password }
@@ -67,10 +67,24 @@ public enum AuthenticationFailure
 public enum AuthenticationOperationPurpose { Login = 1, ContactChange = 2, MfaEnrollment = 3, PasswordChange = 4, MfaReplacement = 5, MfaRecovery = 6, PasswordResetEmail = 7, PasswordResetManual = 8, EmailVerify = 9, AppExchange = 10, LegacyRefreshExchange = 11, LegacyMfaExchange = 12, AdministratorConfirmation = 13, ProviderLogin = 14 }
 
 /// <summary>An external sign-in provider. A provider sign-in reaches only an existing account with the same verified email.</summary>
-public enum SignInProvider { Microsoft = 1 }
+public enum SignInProvider { Microsoft = 1, Google = 2 }
 
-/// <summary>The sign-in providers this host has turned on, for the login screen.</summary>
-public sealed record SignInProviders(bool Microsoft);
+/// <summary>The sign-in providers this host has turned on, for the login screen. An older API's answer has no Google.</summary>
+public sealed record SignInProviders(bool Microsoft, bool Google = false)
+{
+    /// <summary>The enabled providers in the order the login screen shows them.</summary>
+    [JsonIgnore]
+    public IReadOnlyList<SignInProvider> Enabled
+    {
+        get
+        {
+            var enabled = new List<SignInProvider>(2);
+            if (Microsoft) enabled.Add(SignInProvider.Microsoft);
+            if (Google) enabled.Add(SignInProvider.Google);
+            return enabled;
+        }
+    }
+}
 
 public sealed record StartProviderSignInRequest(
     [property: Required, StringLength(43, MinimumLength = 43)] string CodeChallenge);

@@ -37,10 +37,38 @@ public sealed partial class AuthenticationFlow
     }
 
     /// <summary>
-    /// Starts a Microsoft sign-in. On success the caller keeps <paramref name="verifier"/> for the page's return (the
-    /// browser leaves for Microsoft, so this flow's memory does not survive) and sends the browser to the redirect.
+    /// Starts a Microsoft sign-in. On success the caller keeps the verifier for the page's return and sends the
+    /// browser to the redirect. The same as <see cref="StartProviderAsync"/> for Microsoft.
     /// </summary>
-    public async Task<(AuthOutcome Outcome, string? Verifier)> StartMicrosoftAsync()
+    public Task<(AuthOutcome Outcome, string? Verifier)> StartMicrosoftAsync() => StartProviderAsync(SignInProvider.Microsoft);
+
+    /// <summary>
+    /// Completes a Microsoft sign-in. The same as <see cref="CompleteProviderAsync"/> for Microsoft.
+    /// </summary>
+    public Task<AuthOutcome> CompleteMicrosoftAsync(string handle, string startedVerifier) =>
+        CompleteProviderAsync(SignInProvider.Microsoft, handle, startedVerifier);
+
+    /// <summary>The provider's name in its routes and in the login screen's return fragment.</summary>
+    public static string RouteName(SignInProvider provider) => provider switch
+    {
+        SignInProvider.Microsoft => "microsoft",
+        SignInProvider.Google => "google",
+        _ => throw new ArgumentOutOfRangeException(nameof(provider))
+    };
+
+    // The only place each provider's sign-in may send the browser.
+    private static string AuthorizeOrigin(SignInProvider provider) => provider switch
+    {
+        SignInProvider.Microsoft => "https://login.microsoftonline.com/",
+        SignInProvider.Google => "https://accounts.google.com/",
+        _ => throw new ArgumentOutOfRangeException(nameof(provider))
+    };
+
+    /// <summary>
+    /// Starts a provider sign-in. On success the caller keeps <paramref name="verifier"/> for the page's return (the
+    /// browser leaves for the provider, so this flow's memory does not survive) and sends the browser to the redirect.
+    /// </summary>
+    public async Task<(AuthOutcome Outcome, string? Verifier)> StartProviderAsync(SignInProvider provider)
     {
         if (Busy) return (new AuthenticationRefused(AuthenticationFailure.InvalidRequest), null);
         Start();
@@ -48,10 +76,10 @@ public sealed partial class AuthenticationFlow
         Busy = true;
         try
         {
-            using var response = await http.SendAsync(Request("providers/microsoft/start", new StartProviderSignInRequest(Challenge())));
+            using var response = await http.SendAsync(Request($"providers/{RouteName(provider)}/start", new StartProviderSignInRequest(Challenge())));
             var outcome = await response.Content.ReadFromJsonAsync<AuthOutcome>();
             if (response.IsSuccessStatusCode && outcome is ProviderRedirect { Url: { } url } redirect &&
-                url.StartsWith("https://login.microsoftonline.com/", StringComparison.Ordinal))
+                url.StartsWith(AuthorizeOrigin(provider), StringComparison.Ordinal))
                 return (redirect, proof);
             Restart();
             return (outcome as AuthenticationRefused ?? new AuthenticationRefused(AuthenticationFailure.InvalidGrant), null);
@@ -65,13 +93,13 @@ public sealed partial class AuthenticationFlow
     }
 
     /// <summary>
-    /// Completes a Microsoft sign-in with the handle the return carried and the verifier kept when it started. The
+    /// Completes a provider sign-in with the handle the return carried and the verifier kept when it started. The
     /// answer is a session, or a Shift MFA step that continues in this flow like a password sign-in's.
     /// </summary>
-    public Task<AuthOutcome> CompleteMicrosoftAsync(string handle, string startedVerifier) => SendAsync(() =>
+    public Task<AuthOutcome> CompleteProviderAsync(SignInProvider provider, string handle, string startedVerifier) => SendAsync(() =>
     {
         Start();
         verifier = startedVerifier;
-        return Request("providers/microsoft/complete", new CompleteProviderSignInRequest(handle, startedVerifier));
+        return Request($"providers/{RouteName(provider)}/complete", new CompleteProviderSignInRequest(handle, startedVerifier));
     });
 }

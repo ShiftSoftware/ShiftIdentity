@@ -16,6 +16,9 @@ public sealed record SecurityEmailFields(AuthenticationOperationPurpose Purpose,
 
     /// <summary>On the provider-link notice: the provider account that can now sign in.</summary>
     public string? ProviderAccount { get; init; }
+
+    /// <summary>On the provider-link notice: the provider of that account. A notice without one is Microsoft's.</summary>
+    public SignInProvider? Provider { get; init; }
 }
 
 /// <summary>A composed security email.</summary>
@@ -78,13 +81,14 @@ public static class SecurityEmailLayout
     }
 
     /// <summary>
-    /// The notice sent when a Microsoft account first signs in to an account. It carries no grant; its button opens the
-    /// login screen. It names the Microsoft account that can now sign in, so a mistaken email address shows at once.
+    /// The notice sent when a provider account first signs in to an account. It carries no grant; its button opens the
+    /// login screen. It names the provider account that can now sign in, so a mistaken email address shows at once.
     /// </summary>
     private static SecurityEmailBody ComposeProviderNotice(SecurityEmailFields fields)
     {
-        const string title = "Microsoft sign-in linked to your account";
-        var account = string.IsNullOrWhiteSpace(fields.ProviderAccount) ? "A Microsoft account" : "The Microsoft account " + fields.ProviderAccount;
+        var provider = fields.Provider == SignInProvider.Google ? "Google" : "Microsoft";
+        var title = provider + " sign-in linked to your account";
+        var account = string.IsNullOrWhiteSpace(fields.ProviderAccount) ? $"A {provider} account" : $"The {provider} account " + fields.ProviderAccount;
         var explanation = account + " just signed in to your account. From now on it can sign in without your password.";
         const string caution = "If this was not you, contact your administrator now: your email address may be on the wrong account.";
         var greeting = string.IsNullOrWhiteSpace(fields.FullName) ? "Hello," : "Hello " + fields.FullName + ",";

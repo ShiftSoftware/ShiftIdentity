@@ -33,6 +33,9 @@ namespace Microsoft.Extensions.DependencyInjection
             if (registration.MicrosoftReady(configuration.Authority.Microsoft) && configuration.Authority.Microsoft is { } microsoft)
                 services.AddSingleton(new MicrosoftSignIn(microsoft, configuration.FrontEndUrl,
                     new MicrosoftTokenClient(microsoft, new HttpClient { Timeout = TimeSpan.FromSeconds(10) })));
+            if (registration.GoogleReady(configuration.Authority.Google) && configuration.Authority.Google is { } google)
+                services.AddSingleton(new GoogleSignIn(google, configuration.FrontEndUrl,
+                    new GoogleTokenClient(google, new HttpClient { Timeout = TimeSpan.FromSeconds(10) })));
             services.AddScoped(sp =>
             {
                 var current = sp.GetRequiredService<IdentityAuthorityRegistration>();
@@ -49,7 +52,8 @@ namespace Microsoft.Extensions.DependencyInjection
                     EmailVerificationRedirectUrl = configuration.EmailVerificationRedirectUrl,
                     LegacyRefreshTokens = new LegacyRefreshTokenCodec(configuration.RefreshToken, clock),
                     LegacyTemporaryTokens = LegacyTemporaryTokenCodec.TryCreate(configuration.TemporaryTokenSettings, clock),
-                    Microsoft = sp.GetService<MicrosoftSignIn>()
+                    Microsoft = sp.GetService<MicrosoftSignIn>(),
+                    Google = sp.GetService<GoogleSignIn>()
                 };
             });
             // Hosted services start in registration order: the policy and client rows must exist before the factor

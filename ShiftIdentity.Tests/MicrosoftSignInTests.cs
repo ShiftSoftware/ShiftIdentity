@@ -52,7 +52,7 @@ public sealed class MicrosoftSignInTests
     public async Task A_valid_work_account_token_with_a_domain_verified_email_is_read()
     {
         var identity = await Client().ValidateAsync(Token(Claims(edov: true)), "nonce", default);
-        Assert.Equal(new MicrosoftIdentity(Tenant, Person, "person@example.invalid", true), identity);
+        Assert.Equal(new ProviderIdentity(Tenant, Person, "person@example.invalid", true, false), identity);
     }
 
     [Fact]

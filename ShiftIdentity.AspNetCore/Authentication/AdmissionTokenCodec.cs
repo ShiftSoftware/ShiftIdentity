@@ -154,13 +154,12 @@ internal sealed class AdmissionTokenCodec(IdentityAdmissionOptions options, Time
     private static string RouteOf(Core.Authentication.SignInProvider? provider) => provider switch
     {
         null => "local",
-        Core.Authentication.SignInProvider.Microsoft => "microsoft",
-        _ => throw new InvalidOperationException("Unknown sign-in provider.")
+        { } signedIn => ProviderSignIn.RouteName(signedIn)
     };
 
     private static bool TryReadRoute(string? value, out Core.Authentication.SignInProvider? provider)
     {
-        provider = value switch { "microsoft" => Core.Authentication.SignInProvider.Microsoft, _ => null };
+        provider = ProviderSignIn.FromRouteName(value);
         return value == "local" || provider is not null;
     }
 

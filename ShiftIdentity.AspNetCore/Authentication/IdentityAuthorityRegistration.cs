@@ -41,6 +41,10 @@ internal sealed class IdentityAuthorityRegistration
     public string? MicrosoftProblem { get; private init; }
     /// <summary>Microsoft sign-in is enabled and has what it needs.</summary>
     public bool MicrosoftReady(MicrosoftSignInSettings? microsoft) => microsoft is { Enabled: true } && MicrosoftProblem is null;
+    /// <summary>Why Google sign-in stays off although enabled (no client secret yet), or null. Startup logs it.</summary>
+    public string? GoogleProblem { get; private init; }
+    /// <summary>Google sign-in is enabled and has what it needs.</summary>
+    public bool GoogleReady(GoogleSignInSettings? google) => google is { Enabled: true } && GoogleProblem is null;
 
     internal static bool IsWebUrl(string value) => Uri.TryCreate(value, UriKind.Absolute, out var uri)
         && uri.Scheme is "http" or "https" && string.IsNullOrEmpty(uri.UserInfo);
@@ -87,12 +91,13 @@ internal sealed class IdentityAuthorityRegistration
         if (settings.AdministratorAuthenticationGraceSeconds < 1)
             throw Invalid("Authority.AdministratorAuthenticationGraceSeconds", "must be at least 1 second.");
         var microsoftProblem = ValidateMicrosoft(settings.Microsoft);
+        var googleProblem = ValidateGoogle(settings.Google);
         var audience = First(settings.Audience, token.Audience, issuer);
         var refreshAudience = First(settings.RefreshAudience, configuration.RefreshToken?.Audience, issuer);
         var options = new IdentityAdmissionOptions(issuer, refreshAudience, accessKey, refreshKey, operationKey,
             AccessLifetimeSeconds: accessLifetime, RefreshLifetimeSeconds: refreshLifetime,
             AdministratorAuthenticationGraceSeconds: settings.AdministratorAuthenticationGraceSeconds);
-        return new(options, new AuthenticationClient(clientID, audience), configuration) { MicrosoftProblem = microsoftProblem };
+        return new(options, new AuthenticationClient(clientID, audience), configuration) { MicrosoftProblem = microsoftProblem, GoogleProblem = googleProblem };
     }
 
     // Turned on, Microsoft sign-in needs its app registration: a malformed value fails at startup, not at the first
@@ -102,12 +107,31 @@ internal sealed class IdentityAuthorityRegistration
         if (microsoft is not { Enabled: true }) return null;
         if (!Guid.TryParse(microsoft.ClientId?.Trim(), out _))
             throw Invalid("Authority.Microsoft.ClientId", "must be the Application (client) ID of the Microsoft Entra app registration when Microsoft sign-in is enabled.");
-        if (microsoft.RedirectUri is { } redirect && !string.IsNullOrWhiteSpace(redirect) &&
-            (!IsWebUrl(redirect.Trim()) || new Uri(redirect.Trim()).Query.Length != 0 || new Uri(redirect.Trim()).Fragment.Length != 0))
-            throw Invalid("Authority.Microsoft.RedirectUri", "must be an absolute HTTP(S) URL without credentials, query or fragment.");
+        ValidateRedirect(microsoft.RedirectUri, "Authority.Microsoft.RedirectUri");
         return string.IsNullOrWhiteSpace(microsoft.ClientSecret)
             ? "ShiftIdentityConfiguration.Authority.Microsoft.ClientSecret is empty; supply it from App Settings, Key Vault or user secrets."
             : null;
+    }
+
+    // The same for Google's OAuth client.
+    internal static string? ValidateGoogle(GoogleSignInSettings? google)
+    {
+        if (google is not { Enabled: true }) return null;
+        var clientId = google.ClientId?.Trim() ?? "";
+        if (!clientId.EndsWith(".apps.googleusercontent.com", StringComparison.Ordinal) || clientId.Length == ".apps.googleusercontent.com".Length ||
+            clientId.Any(x => x is < '!' or > '~'))
+            throw Invalid("Authority.Google.ClientId", "must be the client ID of the Google OAuth client (ending in .apps.googleusercontent.com) when Google sign-in is enabled.");
+        ValidateRedirect(google.RedirectUri, "Authority.Google.RedirectUri");
+        return string.IsNullOrWhiteSpace(google.ClientSecret)
+            ? "ShiftIdentityConfiguration.Authority.Google.ClientSecret is empty; supply it from App Settings, Key Vault or user secrets."
+            : null;
+    }
+
+    private static void ValidateRedirect(string? redirect, string name)
+    {
+        if (redirect is not null && !string.IsNullOrWhiteSpace(redirect) &&
+            (!IsWebUrl(redirect.Trim()) || new Uri(redirect.Trim()).Query.Length != 0 || new Uri(redirect.Trim()).Fragment.Length != 0))
+            throw Invalid(name, "must be an absolute HTTP(S) URL without credentials, query or fragment.");
     }
 
     private static byte[] ExistingRefreshKey(string? value)

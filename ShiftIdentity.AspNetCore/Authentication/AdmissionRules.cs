@@ -88,13 +88,13 @@ internal static class AdmissionRules
     /// <summary>
     /// The step a session's proof still owes. A local proof owes every local step. A provider proof never owes the
     /// password change or the verified-email gate (the provider verified the email), and owes the authenticator only
-    /// where the host's provider settings ask for Shift MFA.
+    /// where the host's settings for that provider ask for Shift MFA.
     /// </summary>
     internal static AuthenticationStep? SessionStep(IdentityAdmissionServices services, IdentitySecurityTransaction unit,
         Core.Authentication.SignInProvider? provider, bool mfaSatisfied)
     {
         if (provider is null) return LocalStep(unit, mfaSatisfied);
-        if (services.Microsoft is not { RequireShiftMfa: true }) return null;
+        if (services.Provider(provider.Value) is not { RequireShiftMfa: true }) return null;
         if (unit.Security.LocalMfaRecoveryRequired) return AuthenticationStep.MfaRecovery;
         if (!unit.Policy.MfaEnabled) return null;
         if (unit.Security.ProtectedTotpSecret is null) return unit.Policy.MfaMandatory ? AuthenticationStep.NewMfa : null;
@@ -103,8 +103,7 @@ internal static class AdmissionRules
 
     /// <summary>A provider session ends when the host turns that provider off.</summary>
     internal static AuthenticationRefused? ProviderRefusal(IdentityAdmissionServices services, Core.Authentication.SignInProvider? provider) =>
-        provider is null || (provider == Core.Authentication.SignInProvider.Microsoft && services.Microsoft is not null)
-            ? null : Refuse(AuthenticationFailure.ClientDenied);
+        provider is null || services.Provider(provider.Value) is not null ? null : Refuse(AuthenticationFailure.ClientDenied);
 
     // A step that continues a provider sign-in (its operation carries the provider) issues a provider session.
     internal static SessionProof Proof(IdentitySecurityTransaction unit, IdentityAdmissionServices services, bool mfa, DateTimeOffset now) =>

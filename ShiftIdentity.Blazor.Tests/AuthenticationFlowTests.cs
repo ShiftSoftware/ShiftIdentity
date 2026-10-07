@@ -217,7 +217,7 @@ public sealed class ScriptedHttp(Func<HttpRequestMessage, Task<AuthOutcome>> res
         if (request.Method == HttpMethod.Get && request.RequestUri!.AbsolutePath == "/api/identity/v2/providers")
             return new(HttpStatusCode.OK) { Content = JsonContent.Create(Providers) };
         Requests.Add((request.Headers.Authorization?.Scheme, request.Headers.Authorization?.Parameter,
-            await request.Content!.ReadAsStringAsync(cancellationToken)));
+            request.Content is null ? "" : await request.Content.ReadAsStringAsync(cancellationToken)));
         return new(HttpStatusCode.OK) { Content = JsonContent.Create<AuthOutcome>(await respond(request)) };
     }
 }

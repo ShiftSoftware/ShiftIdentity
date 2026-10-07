@@ -11,6 +11,8 @@ public sealed record SecurityEmail(Guid ID, string Destination, string Subject, 
     public string FullName { get; init; } = "";
     /// <summary>On a provider-link notice (purpose ProviderLogin, no grant): the provider account that was linked.</summary>
     public string? ProviderAccount { get; init; }
+    /// <summary>On a provider-link notice: the provider of that account.</summary>
+    public SignInProvider? Provider { get; init; }
 }
 
 /// <summary>

@@ -6,21 +6,26 @@
 @inject IdentitySession Session
 @inject ShiftIdentityLocalizer Loc
 
-@* The Microsoft accounts that can sign in to an account. Shown when the host has Microsoft sign-in on, or a link exists. *@
-@if (links is not null && (microsoftEnabled || links.Count > 0))
+@* The provider accounts that can sign in to an account. Shown when the host has a provider on, or a link exists. With
+   one provider involved it reads as that provider's section; with both, rows name their provider. *@
+@if (links is not null && shown.Count > 0)
 {
-    <section class="user-security-group" aria-label="@Loc["Microsoft sign-in"]" data-testid="provider-links">
-        <MudText Typo="Typo.subtitle2">@Loc["Microsoft sign-in"]</MudText>
-        <MudText Typo="Typo.caption" Class="mud-text-secondary">@Loc["A Microsoft account with this account's email can sign in without the password. Changing the email stops it."]</MudText>
+    <section class="user-security-group" aria-label="@Loc[Heading]" data-testid="provider-links">
+        <MudText Typo="Typo.subtitle2">@Loc[Heading]</MudText>
+        <MudText Typo="Typo.caption" Class="mud-text-secondary">@Loc[Caption]</MudText>
         @if (links.Count == 0)
         {
-            <MudText Typo="Typo.body2" Class="mt-2" data-testid="provider-links-empty">@Loc["No Microsoft account has signed in yet."]</MudText>
+            <MudText Typo="Typo.body2" Class="mt-2" data-testid="provider-links-empty">@Loc[Empty]</MudText>
         }
         else
         {
             @foreach (var link in links)
             {
                 <MudStack Row Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="2" Class="mt-2" data-testid="provider-link">
+                    @if (shown.Count > 1)
+                    {
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" data-testid="provider-link-provider">@Loc[link.Provider == SignInProvider.Google ? "Google" : "Microsoft"]</MudChip>
+                    }
                     <MudText Typo="Typo.body2"><strong>@link.Email</strong></MudText>
                     <MudChip T="string" Size="Size.Small">@Loc[link.PersonalAccount ? "Personal account" : "Work or school account"]</MudChip>
                     <MudText Typo="Typo.caption" Class="mud-text-secondary">@Loc["Last used"]: @link.LastUsedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</MudText>
@@ -34,8 +39,17 @@
     /// <summary>The user's encoded key on the user form; null on the signed-in account's own profile.</summary>
     [Parameter] public string? UserKey { get; set; }
     private IReadOnlyList<ProviderLinkView>? links;
-    private bool microsoftEnabled;
+    // The providers this section is about: those the host turned on, and those with a link.
+    private IReadOnlyList<SignInProvider> shown = [];
     private string? loadedFor = "";
+    private bool OnlyGoogle => shown is [SignInProvider.Google];
+    private bool Both => shown.Count > 1;
+    private string Heading => Both ? "Linked sign-in accounts" : OnlyGoogle ? "Google sign-in" : "Microsoft sign-in";
+    private string Caption => Both ? "A Microsoft or Google account with this account's email can sign in without the password. Changing the email stops it."
+        : OnlyGoogle ? "A Google account with this account's email can sign in without the password. Changing the email stops it."
+        : "A Microsoft account with this account's email can sign in without the password. Changing the email stops it.";
+    private string Empty => Both ? "No Microsoft or Google account has signed in yet."
+        : OnlyGoogle ? "No Google account has signed in yet." : "No Microsoft account has signed in yet.";
 
     protected override async Task OnParametersSetAsync()
     {
@@ -43,7 +57,8 @@
         loadedFor = UserKey;
         var access = await Session.GetTokenAsync() is { Flow: AuthPurpose.None, Token: { Length: > 0 } token } ? token : null;
         if (access is null) { links = null; return; }
-        microsoftEnabled = (await Flow.ReadProvidersAsync()).Microsoft;
+        var enabled = (await Flow.ReadProvidersAsync()).Enabled;
         links = (await Flow.ReadProviderLinksAsync(access, UserKey) as ProviderLinksRead)?.Links;
+        shown = [.. enabled.Concat(links?.Select(x => x.Provider) ?? []).Distinct().Order()];
     }
 }

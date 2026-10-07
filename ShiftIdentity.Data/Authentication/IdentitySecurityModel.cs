@@ -48,7 +48,7 @@ public static class IdentitySecurityModel
                 t.HasCheckConstraint("CK_AuthenticationOperation_Factor", "[ProtectedPendingTotpSecret] IS NULL OR ([Purpose] IN (3,4,5,6) AND [State] = 7)");
                 t.HasCheckConstraint("CK_AuthenticationOperation_Recovery", "([RecoveryCodeDigest] IS NULL OR ([Purpose] = 6 AND [State] = 8 AND [ParentID] IS NULL)) AND ([OutstandingRecoveryUserID] IS NULL OR ([Purpose] = 6 AND [ParentID] IS NULL AND [OutstandingRecoveryUserID] = [UserID]))");
                 // A provider proof continues only into a sign-in step (login MFA or enrollment) or an app code; it is pending only as a provider completion.
-                t.HasCheckConstraint("CK_AuthenticationOperation_Provider", "([SessionProvider] IS NULL OR ([SessionProvider] = 1 AND [Purpose] IN (1,3,10,14))) AND ([State] <> 12 OR ([Purpose] = 14 AND [SessionProvider] IS NOT NULL)) AND ([Purpose] <> 14 OR [State] IN (2,3,6,12))");
+                t.HasCheckConstraint("CK_AuthenticationOperation_Provider", "([SessionProvider] IS NULL OR ([SessionProvider] IN (1, 2) AND [Purpose] IN (1,3,10,14))) AND ([State] <> 12 OR ([Purpose] = 14 AND [SessionProvider] IS NOT NULL)) AND ([Purpose] <> 14 OR [State] IN (2,3,6,12))");
                 t.HasCheckConstraint("CK_AuthenticationOperation_Version", "[SecurityVersion] >= 1 AND [FactorGeneration] >= 1 AND [PolicyRevision] >= 1 AND [FailedAttempts] BETWEEN 0 AND 5 AND [ExpiresAt] > [CreatedAt]");
             });
             e.HasKey(x => x.ID);
@@ -75,11 +75,11 @@ public static class IdentitySecurityModel
         });
         builder.Entity<UserProviderLink>(e =>
         {
-            e.ToTable("UserProviderLinks", "ShiftIdentity", t => t.HasCheckConstraint("CK_UserProviderLink", "[Provider] = 1 AND DATALENGTH([TenantID]) > 0 AND DATALENGTH([ObjectID]) > 0 AND DATALENGTH([EmailLookupKey]) > 0"));
+            e.ToTable("UserProviderLinks", "ShiftIdentity", t => t.HasCheckConstraint("CK_UserProviderLink", "[Provider] IN (1, 2) AND DATALENGTH([TenantID]) > 0 AND DATALENGTH([ObjectID]) > 0 AND DATALENGTH([EmailLookupKey]) > 0"));
             e.HasKey(x => x.ID);
             e.HasOne<User>().WithMany().HasForeignKey(x => x.UserID).OnDelete(DeleteBehavior.Restrict);
             e.Property(x => x.TenantID).HasMaxLength(64).UseCollation("Latin1_General_100_BIN2");
-            e.Property(x => x.ObjectID).HasMaxLength(64).UseCollation("Latin1_General_100_BIN2");
+            e.Property(x => x.ObjectID).HasMaxLength(255).UseCollation("Latin1_General_100_BIN2");
             e.Property(x => x.EmailLookupKey).HasMaxLength(255).UseCollation("Latin1_General_100_BIN2");
             e.Property(x => x.Email).HasMaxLength(255);
             // One provider identity reaches one account. An account may have several.

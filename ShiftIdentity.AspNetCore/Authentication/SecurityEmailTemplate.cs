@@ -17,7 +17,7 @@ public static class SecurityEmailTemplate
         // A notice carries no grant: its button opens the login screen.
         ValidateFrontEndUrl(frontEndUrl);
         var body = SecurityEmailLayout.Compose(new(message.Purpose, message.FullName, message.Username,
-            frontEndUrl.TrimEnd('/') + "/Identity/login", null) { LogoSource = logoUrl, ProviderAccount = message.ProviderAccount });
+            frontEndUrl.TrimEnd('/') + "/Identity/login", null) { LogoSource = logoUrl, ProviderAccount = message.ProviderAccount, Provider = message.Provider });
         return new(message.ID, message.Destination, body.Subject, body.HtmlBody, body.TextBody);
     }
 
