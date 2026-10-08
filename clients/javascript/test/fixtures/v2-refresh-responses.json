@@ -1,0 +1,90 @@
+{
+  "source": "Answers of POST /api/identity/v2/refresh, written the way the server serializes them: enums as numbers, nulls written except where a property says JsonIgnore WhenWritingNull, the 'kind' discriminator from AuthOutcome.cs, the TokenDTO.cs properties, and the status codes from AdmissionEndpoints.Result. Entries with naming PascalCase are what a host with the framework's default JSON settings sends (ShiftEntity.Web sets the minimal-API JsonNamingPolicy, which is null by default). The other entries are camelCase, the ASP.NET Core default. issuer-v2.test.js checks these names and statuses against the C# source.",
+  "responses": {
+    "session": {
+      "status": 200,
+      "body": {
+        "kind": "session",
+        "session": {
+          "token": "eyJhbGciOiJSUzI1NiJ9.access-2.signature",
+          "tokenLifeTimeInSeconds": 900,
+          "refreshToken": "eyJhbGciOiJIUzUxMiJ9.refresh-2.signature",
+          "refreshTokenLifeTimeInSeconds": 2592000,
+          "flow": 0,
+          "userData": {
+            "id": "x8Kq2",
+            "username": "board-screen",
+            "fullName": "Board Screen",
+            "emails": [{ "email": "board@example.test", "isVerified": false }],
+            "phones": null,
+            "userSignature": null,
+            "companyType": null
+          }
+        }
+      }
+    },
+    "refusedInvalidGrant": { "status": 400, "body": { "kind": "refused", "code": 2, "passwordFailure": null } },
+    "refusedExpired": { "status": 400, "body": { "kind": "refused", "code": 4, "passwordFailure": null } },
+    "refusedClientDenied": { "status": 400, "body": { "kind": "refused", "code": 7, "passwordFailure": null } },
+    "refusedStaleOperation": { "status": 409, "body": { "kind": "refused", "code": 3, "passwordFailure": null } },
+    "refusedAccountUnavailable": { "status": 400, "body": { "kind": "refused", "code": 6, "passwordFailure": null } },
+    "refusedInvalidRequest": { "status": 400, "body": { "kind": "refused", "code": 0, "passwordFailure": null } },
+    "refusedUnavailable": { "status": 503, "body": { "kind": "refused", "code": 8, "passwordFailure": null } },
+    "refusedInvalidGrantStringEnum": { "status": 400, "body": { "kind": "refused", "code": "InvalidGrant", "passwordFailure": null } },
+    "challengePasswordChange": {
+      "status": 200,
+      "body": {
+        "kind": "challenge",
+        "challenge": { "step": 1, "handle": null, "expiresAt": "2026-10-08T10:05:00+00:00", "purpose": 1, "newAuthenticator": null }
+      }
+    },
+    "challengeNewMfa": {
+      "status": 200,
+      "body": {
+        "kind": "challenge",
+        "challenge": { "step": 3, "handle": null, "expiresAt": "2026-10-08T10:05:00+00:00", "purpose": 1, "newAuthenticator": null }
+      }
+    },
+    "sessionPascalCase": {
+      "naming": "PascalCase",
+      "status": 200,
+      "body": {
+        "kind": "session",
+        "Session": {
+          "Token": "eyJhbGciOiJSUzI1NiJ9.access-4.signature",
+          "TokenLifeTimeInSeconds": 900,
+          "RefreshToken": "eyJhbGciOiJIUzUxMiJ9.refresh-4.signature",
+          "RefreshTokenLifeTimeInSeconds": 2592000,
+          "Flow": 0,
+          "UserData": {
+            "ID": "x8Kq2",
+            "Username": "board-screen",
+            "FullName": "Board Screen",
+            "Emails": [{ "Email": "board@example.test", "IsVerified": false }],
+            "Phones": null,
+            "UserSignature": null,
+            "CompanyType": null
+          }
+        }
+      }
+    },
+    "refusedInvalidGrantPascalCase": {
+      "naming": "PascalCase",
+      "status": 400,
+      "body": { "kind": "refused", "Code": 2, "PasswordFailure": null }
+    },
+    "refusedUnavailablePascalCase": {
+      "naming": "PascalCase",
+      "status": 503,
+      "body": { "kind": "refused", "Code": 8, "PasswordFailure": null }
+    },
+    "challengePasswordChangePascalCase": {
+      "naming": "PascalCase",
+      "status": 200,
+      "body": {
+        "kind": "challenge",
+        "Challenge": { "Step": 1, "Handle": null, "ExpiresAt": "2026-10-08T10:05:00+00:00", "Purpose": 1, "NewAuthenticator": null }
+      }
+    }
+  }
+}
