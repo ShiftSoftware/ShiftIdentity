@@ -180,6 +180,8 @@ internal static class AdmissionEndpoints
         group.MapPost("/providers/{provider:regex(^microsoft$|^google$)}/complete", async (CompleteProviderSignInRequest request,
             IdentityAdmissionServices services, CancellationToken ct) =>
             Result(await AuthService.CompleteProviderSignInAsync(services, request, ct)));
+        // Device sign-in for screens: authorize, token, lookup, approve and deny.
+        group.MapDeviceAuthorizationEndpoints();
     }
 
     private static long LinkTarget(IdentityAdmissionServices services, long id, string? key)
@@ -190,7 +192,7 @@ internal static class AdmissionEndpoints
         catch (Exception error) when (error is ArgumentException or FormatException or OverflowException) { return 0; }
     }
 
-    private static IResult Result(AuthOutcome result) => Results.Json<AuthOutcome>(result, statusCode: result switch
+    internal static IResult Result(AuthOutcome result) => Results.Json<AuthOutcome>(result, statusCode: result switch
     {
         AuthenticationRefused { Code: AuthenticationFailure.Unavailable } => 503,
         AuthenticationRefused { Code: AuthenticationFailure.StaleOperation } => 409,

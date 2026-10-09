@@ -1,0 +1,24 @@
+<Project>
+  <!-- Sibling framework repos reference ShiftIdentity by a fixed relative path (..\..\ShiftIdentity\...). That path is
+       the main checkout. A git worktree of this repo sits next to it under another folder name, so a worktree build
+       would compile its own ShiftIdentity projects together with the main checkout's copies of them, and the Blazor
+       side would silently use the main checkout's code.
+
+       Pass this file to the build as -p:CustomAfterMicrosoftCommonTargets=<full path of this file>. MSBuild imports it
+       at the end of every project in the build, the sibling repos' projects included, because a global property reaches
+       every referenced project. Each project reference into the main checkout then points at the same project in this
+       checkout. In the main checkout itself the two folders are the same, so nothing changes.
+       eng/Start-DevHost.ps1 passes it when the checkout is not the main one. -->
+  <PropertyGroup>
+    <ShiftIdentityCheckoutRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '..'))</ShiftIdentityCheckoutRoot>
+    <ShiftIdentityMainRoot>$([MSBuild]::NormalizeDirectory('$(ShiftIdentityCheckoutRoot)', '..', 'ShiftIdentity'))</ShiftIdentityMainRoot>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(ShiftIdentityMainRoot)' != '$(ShiftIdentityCheckoutRoot)'">
+    <_ShiftIdentityReferenceFullPath Include="@(ProjectReference->'%(FullPath)')" />
+    <_ShiftIdentityReferenceInCheckout Include="@(_ShiftIdentityReferenceFullPath->Replace('$(ShiftIdentityMainRoot)', '$(ShiftIdentityCheckoutRoot)'))" />
+    <_ShiftIdentityReferenceRedirected Include="@(_ShiftIdentityReferenceInCheckout)" Exclude="@(_ShiftIdentityReferenceFullPath)" />
+    <_ShiftIdentityReferenceReplaced Include="@(_ShiftIdentityReferenceFullPath)" Exclude="@(_ShiftIdentityReferenceInCheckout)" />
+    <ProjectReference Remove="@(_ShiftIdentityReferenceReplaced)" />
+    <ProjectReference Include="@(_ShiftIdentityReferenceRedirected)" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,15 @@
+@using ShiftSoftware.ShiftIdentity.Blazor
+@using ShiftSoftware.ShiftIdentity.Core
+@using ShiftSoftware.ShiftIdentity.Dashboard.Blazor
+
+<CascadingAuthenticationState>
+    <DefaultApp AppTitle="Identity DevHost"
+                AppAssembly="@typeof(App).Assembly"
+                IdentityHostingType="ShiftIdentityHostingTypes.Internal"
+                AdditionalAssemblies="additionalAssemblies" />
+</CascadingAuthenticationState>
+
+@code {
+    private readonly System.Reflection.Assembly[] additionalAssemblies =
+        [typeof(ShiftIdentityBlazorMaker).Assembly, typeof(ShiftIdentityDashboarBlazorMaker).Assembly];
+}

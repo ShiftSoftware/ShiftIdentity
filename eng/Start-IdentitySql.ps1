@@ -1,3 +1,6 @@
+# -PassThru is for a local caller (eng/Start-DevHost.ps1): it returns the container name and the connection string
+# instead of writing the pipeline's variables.
+param([switch]$PassThru)
 $ErrorActionPreference = 'Stop'
 # Microsoft Artifact Registry: 2025-CU8-GDR1-ubuntu-24.04, verified 2026-09-13.
 # SQL Server 2025, matching the engine the identity suites are developed against; the 2022 image
@@ -7,8 +10,10 @@ $image = 'mcr.microsoft.com/mssql/server@sha256:b036b61e953e6e660f04514fc3f703b9
 $container = 'identity-tests-' + [Guid]::NewGuid().ToString('N')
 $env:MSSQL_SA_PASSWORD = 'Test!1' + [Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(24))
 $env:SQLCMDPASSWORD = $env:MSSQL_SA_PASSWORD
-Write-Host "##vso[task.setvariable variable=IdentitySqlContainer]$container"
-Write-Host "##vso[task.setvariable variable=IdentitySqlPassword;issecret=true]$env:MSSQL_SA_PASSWORD"
+if (-not $PassThru) {
+    Write-Host "##vso[task.setvariable variable=IdentitySqlContainer]$container"
+    Write-Host "##vso[task.setvariable variable=IdentitySqlPassword;issecret=true]$env:MSSQL_SA_PASSWORD"
+}
 & docker run --detach --name $container --label "identity-test-owner=$container" --publish '127.0.0.1::1433' --env ACCEPT_EULA=Y --env MSSQL_PID=Developer --env MSSQL_SA_PASSWORD $image
 if ($LASTEXITCODE -ne 0) { throw 'Disposable SQL container could not start.' }
 $ready = $false
@@ -21,4 +26,5 @@ if (-not $ready) { throw 'Disposable SQL container did not become ready.' }
 $binding = & docker port $container 1433/tcp
 if ($LASTEXITCODE -ne 0 -or $binding -notmatch '^127\.0\.0\.1:(\d+)$') { throw 'SQL fixture must bind only to loopback.' }
 $connection = "Server=127.0.0.1,$($Matches[1]);User ID=sa;Password=$env:MSSQL_SA_PASSWORD;Encrypt=true;TrustServerCertificate=true;Connect Timeout=5"
+if ($PassThru) { return [pscustomobject]@{ Container = $container; Connection = $connection } }
 Write-Host "##vso[task.setvariable variable=IdentitySqlConnection;issecret=true]$connection"

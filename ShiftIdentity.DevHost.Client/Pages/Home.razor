@@ -1,0 +1,25 @@
+@page "/"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-8">
+    <MudText Typo="Typo.h5" GutterBottom="true">Identity DevHost</MudText>
+    <MudText Typo="Typo.body1" GutterBottom="true">
+        You are signed in@(name is null ? "" : " as " + name).
+    </MudText>
+    <MudList T="string" Dense="true">
+        <MudListItem T="string" Href="Identity/device">Sign in a screen with a code</MudListItem>
+        <MudListItem T="string" Href="Identity/UserDataForm">Your profile and security settings</MudListItem>
+        <MudListItem T="string" Href="dev/" ForceLoad="true">DevHost tools</MudListItem>
+    </MudList>
+</MudContainer>
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState>? AuthenticationState { get; set; }
+    private string? name;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthenticationState is not null)
+            name = (await AuthenticationState).User.Identity?.Name;
+    }
+}

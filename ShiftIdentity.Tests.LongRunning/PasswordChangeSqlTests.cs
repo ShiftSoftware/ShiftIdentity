@@ -102,20 +102,22 @@ public sealed class PasswordChangeSqlTests(SqlIdentityFixture fixture)
         finally { fixture.Clock = TimeProvider.System; }
     }
 
+    // The current password passes the policy here, so that offering it again reaches the "same as current" rule.
     [Theory]
     [InlineData("short", PasswordPolicyFailure.TooShort)]
     [InlineData("passwordpassword", PasswordPolicyFailure.Blocked)]
-    [InlineData("Synthetic Password 7!", PasswordPolicyFailure.SameAsCurrent)]
+    [InlineData(SqlIdentityFixture.PolicyValidPassword, PasswordPolicyFailure.SameAsCurrent)]
     public async Task Invalid_new_password_preserves_the_operation_and_existing_credential(string value, PasswordPolicyFailure reason)
     {
         fixture.Clock = TimeProvider.System;
         await fixture.ResetAsync();
+        await fixture.SetPasswordAsync(SqlIdentityFixture.PolicyValidPassword);
         using var host = new IdentityHttpHost(fixture);
-        var (challenge, verifier) = await Required(host);
+        var (challenge, verifier) = await Required(host, SqlIdentityFixture.PolicyValidPassword);
         var refusal = Assert.IsType<AuthenticationRefused>(await host.ChangePasswordAsync(challenge.Handle!, value, verifier));
         Assert.Equal(AuthenticationFailure.InvalidNewPassword, refusal.Code);
         Assert.Equal(reason, refusal.PasswordFailure);
-        await AssertState(1, fixture.Password, true);
+        await AssertState(1, SqlIdentityFixture.PolicyValidPassword, true);
         Assert.IsType<PasswordChanged>(await host.ChangePasswordAsync(challenge.Handle!, NewPassword, verifier));
     }
 
@@ -230,12 +232,12 @@ public sealed class PasswordChangeSqlTests(SqlIdentityFixture fixture)
             : Assert.IsType<SessionIssued>(result);
     }
     private string Code() => new Totp(fixture.FactorSecret).ComputeTotp(fixture.Clock.GetUtcNow().UtcDateTime);
-    private async Task<(AuthenticationChallenge Challenge, string Verifier)> Required(IdentityHttpHost host)
+    private async Task<(AuthenticationChallenge Challenge, string Verifier)> Required(IdentityHttpHost host, string? password = null)
     {
         await using var db = fixture.CreateContext();
         await db.Users.Where(x => x.ID == fixture.UserID).ExecuteUpdateAsync(x => x.SetProperty(u => u.RequireChangePassword, true));
         var pkce = IdentityHttpHost.Pkce();
-        return (Assert.IsType<ChallengeRequired>(await host.LoginAsync(fixture, pkce.Challenge)).Challenge, pkce.Verifier);
+        return (Assert.IsType<ChallengeRequired>(await host.LoginAsync(fixture, pkce.Challenge, password)).Challenge, pkce.Verifier);
     }
     private async Task AssertState(long version, string password, bool required)
     {

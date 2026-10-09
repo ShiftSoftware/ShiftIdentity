@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DevHost tools</title>
+    <link rel="stylesheet" href="dev.css" />
+</head>
+<body>
+    <header>
+        <h1>Identity DevHost</h1>
+        <nav>
+            <a href="/">Identity app</a>
+            <a href="/Identity/login">Sign in</a>
+            <a href="/Identity/device">Device confirmation</a>
+            <a href="device.html">Device simulator</a>
+            <a href="token-client.html">Token client lab</a>
+        </nav>
+    </header>
+    <main>
+        <section>
+            <h2>Synthetic accounts</h2>
+            <p class="muted">Every account has the password <span class="mono" id="password">…</span>. Codes refresh every 30 seconds.</p>
+            <table>
+                <thead><tr><th>Username</th><th>Device sign-in</th><th>User ID</th><th>Authenticator code</th><th>Notes</th></tr></thead>
+                <tbody id="accounts"></tbody>
+            </table>
+        </section>
+        <section>
+            <h2>Language</h2>
+            <p class="muted">The language of the sign-in and device pages in this browser. On a phone, choose it here before you scan the code.</p>
+            <select id="language" aria-label="Language">
+                <option value="en-US">English</option>
+                <option value="ar-IQ">Arabic</option>
+                <option value="ku-IQ">Kurdish</option>
+                <option value="ru-RU">Russian</option>
+            </select>
+        </section>
+        <section>
+            <h2>Addresses</h2>
+            <p class="muted">A phone opens the tunnel address (a Visual Studio dev tunnel, or <span class="mono">-TunnelUrl</span>), or on the same network the LAN address (<span class="mono">-Lan</span>). The tools on this page stay on this machine.</p>
+            <ul id="origins"></ul>
+        </section>
+    </main>
+    <script src="devhost.js"></script>
+    <script src="index.js"></script>
+</body>
+</html>

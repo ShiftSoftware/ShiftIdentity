@@ -45,6 +45,8 @@ internal sealed class IdentityAuthorityRegistration
     public string? GoogleProblem { get; private init; }
     /// <summary>Google sign-in is enabled and has what it needs.</summary>
     public bool GoogleReady(GoogleSignInSettings? google) => google is { Enabled: true } && GoogleProblem is null;
+    /// <summary>Device sign-in, when the host configured device clients; null otherwise.</summary>
+    public DeviceGrantOptions? Device { get; private init; }
 
     internal static bool IsWebUrl(string value) => Uri.TryCreate(value, UriKind.Absolute, out var uri)
         && uri.Scheme is "http" or "https" && string.IsNullOrEmpty(uri.UserInfo);
@@ -92,13 +94,48 @@ internal sealed class IdentityAuthorityRegistration
             throw Invalid("Authority.AdministratorAuthenticationGraceSeconds", "must be at least 1 second.");
         var microsoftProblem = ValidateMicrosoft(settings.Microsoft);
         var googleProblem = ValidateGoogle(settings.Google);
+        var device = ValidateDevice(settings, configuration.FrontEndUrl);
         var audience = First(settings.Audience, token.Audience, issuer);
         var refreshAudience = First(settings.RefreshAudience, configuration.RefreshToken?.Audience, issuer);
         var options = new IdentityAdmissionOptions(issuer, refreshAudience, accessKey, refreshKey, operationKey,
             AccessLifetimeSeconds: accessLifetime, RefreshLifetimeSeconds: refreshLifetime,
             AdministratorAuthenticationGraceSeconds: settings.AdministratorAuthenticationGraceSeconds);
-        return new(options, new AuthenticationClient(clientID, audience), configuration) { MicrosoftProblem = microsoftProblem, GoogleProblem = googleProblem };
+        return new(options, new AuthenticationClient(clientID, audience), configuration)
+        { MicrosoftProblem = microsoftProblem, GoogleProblem = googleProblem, Device = device };
     }
+
+    // Device sign-in is on when device clients are configured. A malformed client, phone page, lifetime or interval
+    // fails at startup, not when the first screen asks for a code.
+    internal static DeviceGrantOptions? ValidateDevice(AuthoritySettingsModel settings, string? frontEndUrl)
+    {
+        if (settings.DeviceClients is not { Count: > 0 } configured) return null;
+        var clients = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var (id, name) in configured)
+        {
+            if (!DeviceClientId.IsMatch(id ?? ""))
+                throw Invalid("Authority.DeviceClients", $"has the client ID '{id}'. A client ID is 1 to 64 letters, digits, dots, dashes or underscores, starting with a letter or digit.");
+            if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > 100)
+                throw Invalid("Authority.DeviceClients", $"must give the client '{id}' a display name of 1 to 100 characters. The phone shows it.");
+            clients.Add(id!, name.Trim());
+        }
+        var page = settings.DeviceVerificationUri?.Trim();
+        if (string.IsNullOrEmpty(page))
+        {
+            var frontEnd = frontEndUrl?.Trim();
+            if (string.IsNullOrEmpty(frontEnd) || !IsWebUrl(frontEnd))
+                throw Invalid("Authority.DeviceVerificationUri", "is required when Authority.DeviceClients names a client: the absolute URL of the phone page, for example https://identity.example/Identity/device. FrontEndUrl followed by /Identity/device applies when it is not set.");
+            page = frontEnd.TrimEnd('/') + "/Identity/device";
+        }
+        ValidateRedirect(page, "Authority.DeviceVerificationUri");
+        if (settings.DeviceCodeLifetimeSeconds is < 60 or > 1800)
+            throw Invalid("Authority.DeviceCodeLifetimeSeconds", "must be between 60 and 1800 seconds.");
+        if (settings.DevicePollingIntervalSeconds is < 1 or > 60 || settings.DevicePollingIntervalSeconds >= settings.DeviceCodeLifetimeSeconds)
+            throw Invalid("Authority.DevicePollingIntervalSeconds", "must be between 1 and 60 seconds and shorter than the code lifetime.");
+        return new(clients.AsReadOnly(), page, settings.DeviceCodeLifetimeSeconds, settings.DevicePollingIntervalSeconds);
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex DeviceClientId =
+        new(@"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}\z", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
 
     // Turned on, Microsoft sign-in needs its app registration: a malformed value fails at startup, not at the first
     // sign-in. A missing secret only keeps it off, with a startup warning, so a checked-in empty secret starts the host.

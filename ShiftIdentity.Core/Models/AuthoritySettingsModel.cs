@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace ShiftSoftware.ShiftIdentity.Core.Models;
 
 /// <summary>
@@ -67,6 +69,33 @@ public sealed class AuthoritySettingsModel
 
     /// <summary>Sign in with Google for existing accounts. Off unless <see cref="GoogleSignInSettings.Enabled"/>.</summary>
     public GoogleSignInSettings Google { get; set; } = new();
+
+    /// <summary>
+    /// The screens that may sign in with a code (device sign-in, the OAuth 2.0 Device Authorization Grant): client ID
+    /// to the display name the phone shows, for example <c>"service-screen": "Service Screen"</c>. A screen sends its
+    /// client ID when it asks for a code; an ID that is not listed here is refused. Empty (the default) turns device
+    /// sign-in off. A screen signs in as the person who approves it on a phone, with an ordinary session of this
+    /// host's own client (<see cref="ClientId"/>), and renews it through <c>api/identity/v2/refresh</c>.
+    /// A client ID is 1 to 64 letters, digits, dots, dashes or underscores.
+    /// </summary>
+    public Dictionary<string, string> DeviceClients { get; set; } = new();
+
+    /// <summary>
+    /// The absolute URL of the phone page that confirms a code, without a query, for example
+    /// <c>https://identity.example/Identity/device</c>. The screen shows it, and its QR code adds <c>?code=</c> and the
+    /// user code. Defaults to <c>FrontEndUrl</c> followed by <c>/Identity/device</c>; one of the two is required when
+    /// <see cref="DeviceClients"/> names a client.
+    /// </summary>
+    public string? DeviceVerificationUri { get; set; }
+
+    /// <summary>How long a device code and its user code stay valid, in seconds (60 to 1800). Defaults to 600.</summary>
+    public int DeviceCodeLifetimeSeconds { get; set; } = 600;
+
+    /// <summary>
+    /// How often a screen may poll for its session, in seconds (1 to 60). Defaults to 5. A poll that comes sooner is
+    /// answered with <c>slow_down</c>, and the screen then adds 5 seconds.
+    /// </summary>
+    public int DevicePollingIntervalSeconds { get; set; } = 5;
 }
 
 /// <summary>

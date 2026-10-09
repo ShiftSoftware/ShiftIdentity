@@ -215,6 +215,50 @@ public sealed class UserFormAuthoritySqlTests(SqlIdentityFixture fixture) : ICla
         Assert.Equal(AuthenticationFailure.StaleOperation, Assert.IsType<AuthenticationRefused>(await RefreshAsync(host, session.Session.RefreshToken)).Code);
     }
 
+    [Fact]
+    public async Task Allowing_device_sign_in_keeps_sessions_and_taking_it_away_ends_them()
+    {
+        fixture.Device = new(new Dictionary<string, string> { ["service-screen"] = "Service Screen" }, "https://identity.invalid/Identity/device");
+        using var host = await HostAsync();
+        var id = await CreateAsync(host, NewUser(requireChange: false, sendVerification: false));
+        var dto = await GetAsync(host, id);
+        Assert.False(dto.AllowDeviceSignIn);
+        var session = Assert.IsType<SessionIssued>(await LoginAsync(host, dto.Username, Password));
+        // Allowing it restricts nothing, so the version and the session stay.
+        dto.AllowDeviceSignIn = true;
+        await PutAsync(host, dto);
+        var (user, state) = await StateAsync(id);
+        Assert.True(user.AllowDeviceSignIn); Assert.Equal(1, state.SecurityVersion);
+        Assert.True((await GetAsync(host, id)).AllowDeviceSignIn);
+        Assert.Equal(("DeviceSignInAllowed", adminID, 1L), Assert.Single(await AuditsAsync(id, "AccountCreated")));
+        session = Assert.IsType<SessionIssued>(await RefreshAsync(host, session.Session.RefreshToken));
+        // Now a screen can sign in with the account, and its session renews.
+        var screen = await SignInScreenAsync(host, dto.Username);
+        screen = Assert.IsType<SessionIssued>(await RefreshAsync(host, screen)).Session.RefreshToken;
+        // Taking it away ends every session of the account at its next refresh, the screen's included.
+        dto = await GetAsync(host, id);
+        dto.AllowDeviceSignIn = false;
+        await PutAsync(host, dto);
+        (user, state) = await StateAsync(id);
+        Assert.False(user.AllowDeviceSignIn); Assert.Equal(2, state.SecurityVersion);
+        Assert.Equal(("DeviceSignInRemoved", adminID, 2L), (await AuditsAsync(id, "AccountCreated", "DeviceSignInAllowed")).Single());
+        Assert.Equal(AuthenticationFailure.StaleOperation, Assert.IsType<AuthenticationRefused>(await RefreshAsync(host, session.Session.RefreshToken)).Code);
+        Assert.Equal(AuthenticationFailure.StaleOperation, Assert.IsType<AuthenticationRefused>(await RefreshAsync(host, screen)).Code);
+    }
+
+    // A screen asks for codes, a phone types the account's username and password, and the screen collects its session.
+    // Returns the screen's refresh token.
+    private static async Task<string> SignInScreenAsync(LegacyIdentityHttpHost<IdentityTestDbContext> host, string username)
+    {
+        var started = Assert.IsType<DeviceAuthorizationStarted>(await IdentityHttpHost.Read(await host.Client.PostAsJsonAsync(
+            "/api/identity/v2/device/authorize", new StartDeviceAuthorizationRequest("service-screen"))));
+        Assert.IsType<DeviceAuthorizationView>(await IdentityHttpHost.Read(await host.Client.PostAsJsonAsync(
+            "/api/identity/v2/device/approve", new ApproveDeviceRequest(started.UserCode, username, Password))));
+        var issued = await IdentityHttpHost.Read(await host.Client.PostAsJsonAsync(
+            "/api/identity/v2/device/token", new DeviceTokenRequest(started.DeviceCode)));
+        return Assert.IsType<SessionIssued>(issued).Session.RefreshToken;
+    }
+
     [Theory]
     [InlineData("changed")]
     [InlineData("unchanged")]
@@ -585,8 +629,10 @@ public sealed class UserFormAuthoritySqlTests(SqlIdentityFixture fixture) : ICla
         }
     }
 
-    [Fact]
-    public async Task Two_form_saves_on_one_user_serialize_and_the_second_reports_a_conflict()
+    [Theory]
+    [InlineData("username")]
+    [InlineData("device")]
+    public async Task Two_form_saves_on_one_user_serialize_and_the_second_reports_a_conflict(string firstChange)
     {
         using var setup = await HostAsync();
         var id = await CreateAsync(setup, NewUser(requireChange: false, sendVerification: false));
@@ -596,7 +642,9 @@ public sealed class UserFormAuthoritySqlTests(SqlIdentityFixture fixture) : ICla
         using var second = await HostAsync(interceptors: [signal]);
         var a = await GetAsync(first, id); var b = await GetAsync(second, id);
         var nameA = "Renamed-" + Guid.NewGuid().ToString("N")[..8]; var nameB = "Renamed-" + Guid.NewGuid().ToString("N")[..8];
-        a.Username = nameA; b.Username = nameB;
+        // The second form loaded the row before the first save committed, so any change the first made refuses it.
+        if (firstChange == "username") a.Username = nameA; else a.AllowDeviceSignIn = true;
+        b.Username = nameB;
         var saveA = first.Client.PutAsJsonAsync($"/api/IdentityUser/{id}", a);
         Task<HttpResponseMessage>? saveB = null;
         try
@@ -611,7 +659,10 @@ public sealed class UserFormAuthoritySqlTests(SqlIdentityFixture fixture) : ICla
         Assert.Equal(HttpStatusCode.OK, responseA.StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, responseB.StatusCode);
         var (user, state) = await StateAsync(id);
-        Assert.Equal(nameA, user.Username); Assert.Equal(2, state.SecurityVersion);
+        Assert.Equal(firstChange == "username" ? nameA : a.Username, user.Username);
+        Assert.Equal(firstChange == "device", user.AllowDeviceSignIn);
+        // Allowing device sign-in restricts nothing, so only the renamed account's version moves.
+        Assert.Equal(firstChange == "username" ? 2 : 1, state.SecurityVersion);
         Assert.Single(await AuditsAsync(id, "AccountCreated"));
     }
 

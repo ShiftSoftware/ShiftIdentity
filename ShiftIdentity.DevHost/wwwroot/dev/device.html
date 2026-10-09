@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Device simulator</title>
+    <link rel="stylesheet" href="dev.css" />
+    <link rel="stylesheet" href="device.css" />
+</head>
+<body>
+    <header>
+        <h1>Device simulator</h1>
+        <nav>
+            <a href="index.html">DevHost tools</a>
+            <a href="token-client.html">Token client lab</a>
+            <a href="/Identity/device" target="_blank" rel="noopener">Phone page</a>
+        </nav>
+    </header>
+    <main>
+        <div class="grid">
+            <section>
+                <h2>Screen</h2>
+                <div class="row">
+                    <label>Client
+                        <select id="client">
+                            <option value="service-screen">service-screen</option>
+                            <option value="lab-screen">lab-screen</option>
+                            <option value="unknown-screen">unknown-screen (refused)</option>
+                        </select>
+                    </label>
+                    <button class="primary" id="start">Start</button>
+                    <button id="stop">Stop</button>
+                    <label><input type="checkbox" id="auto" checked /> New code when one ends</label>
+                </div>
+                <p><span class="pill" id="status">Idle</span> <span class="muted" id="statusDetail"></span></p>
+                <div class="screen" id="screen" hidden>
+                    <div class="qr" id="qr"></div>
+                    <div class="screen-text">
+                        <p class="muted">Scan the code, or open</p>
+                        <p class="mono" id="shortUrl"></p>
+                        <p class="muted">and enter</p>
+                        <p class="code" id="userCode"></p>
+                        <p class="muted">Expires in <span id="expires" class="mono"></span> · polling every <span id="interval" class="mono"></span> s</p>
+                        <p><a id="phoneLink" target="_blank" rel="noopener">Open the phone page in a new tab</a></p>
+                    </div>
+                </div>
+            </section>
+            <section>
+                <h2>Session</h2>
+                <p class="muted" id="noSession">No session yet. Approve a code on the phone page.</p>
+                <div id="session" hidden>
+                    <table>
+                        <tbody>
+                            <tr><th>Signed in as</th><td id="sessionUser"></td></tr>
+                            <tr><th>User ID</th><td class="mono" id="sessionUserId"></td></tr>
+                            <tr><th>Client · route · MFA</th><td class="mono" id="sessionContext"></td></tr>
+                            <tr><th>Access token</th><td class="mono" id="accessExpiry"></td></tr>
+                            <tr><th>Refresh token</th><td class="mono" id="refreshExpiry"></td></tr>
+                        </tbody>
+                    </table>
+                    <div class="row actions">
+                        <button id="refresh">Refresh now (v2/refresh)</button>
+                        <button id="deactivate">Deactivate user</button>
+                        <button id="activate">Reactivate user</button>
+                        <button id="bump">Bump SecurityVersion</button>
+                        <button id="disallow">Turn off device sign-in</button>
+                        <button id="forget">Forget session</button>
+                    </div>
+                    <div class="row actions">
+                        <label><input type="checkbox" id="keepAlive" /> Keep alive with ShiftIdentity.TokenClient</label>
+                        <label>every <input type="number" id="keepAliveSeconds" value="15" min="2" max="300" /> s</label>
+                    </div>
+                    <details>
+                        <summary>Access token claims</summary>
+                        <pre id="claims"></pre>
+                    </details>
+                </div>
+            </section>
+        </div>
+        <section>
+            <h2>Sign in on the phone</h2>
+            <p class="muted">The phone page asks for the account the screen should use: only one that allows device sign-in works (<span class="mono">dev-screen</span>). Every account has the password <span class="mono" id="password">…</span>. Authenticator codes change every 30 seconds.</p>
+            <table>
+                <thead><tr><th>Username</th><th>Device sign-in</th><th>User ID</th><th>Authenticator code</th><th>Notes</th></tr></thead>
+                <tbody id="accounts"></tbody>
+            </table>
+        </section>
+        <section>
+            <h2>Abuse checks</h2>
+            <p class="muted">Each check logs what the server answered and what it should answer.</p>
+            <div class="row">
+                <button id="pollUserCode">Poll with the user code</button>
+                <button id="reuse">Reuse the consumed device code</button>
+                <button id="fast">Poll faster than the interval</button>
+                <button id="expire">Let the code expire</button>
+            </div>
+        </section>
+        <section>
+            <h2>Log</h2>
+            <div class="row"><button id="clearLog">Clear</button></div>
+            <div class="log" id="log"></div>
+        </section>
+    </main>
+    <script src="vendor/qrcode-generator/qrcode.js"></script>
+    <script src="/clients/shiftidentity-tokenclient.js"></script>
+    <script src="/clients/shiftidentity-tokenclient-issuer-v2.js"></script>
+    <script src="devhost.js"></script>
+    <script src="device.js"></script>
+</body>
+</html>

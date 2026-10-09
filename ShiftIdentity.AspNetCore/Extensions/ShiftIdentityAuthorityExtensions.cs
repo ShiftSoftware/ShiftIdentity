@@ -53,7 +53,8 @@ namespace Microsoft.Extensions.DependencyInjection
                     LegacyRefreshTokens = new LegacyRefreshTokenCodec(configuration.RefreshToken, clock),
                     LegacyTemporaryTokens = LegacyTemporaryTokenCodec.TryCreate(configuration.TemporaryTokenSettings, clock),
                     Microsoft = sp.GetService<MicrosoftSignIn>(),
-                    Google = sp.GetService<GoogleSignIn>()
+                    Google = sp.GetService<GoogleSignIn>(),
+                    Device = current.Device
                 };
             });
             // Hosted services start in registration order: the policy and client rows must exist before the factor

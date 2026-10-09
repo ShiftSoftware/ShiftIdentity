@@ -227,8 +227,8 @@ public class ShiftIdentityMapper : ShiftMapperBase
         // RequireChangeAtNextLogin and SendVerification have no entity source (write-only / per-save form
         // choices that keep their defaults).
         // WRITE (the reverse): Base() maps FullName/BirthDate; the entity's upsert hook owns Username/IsActive/
-        // Email/Phone/AccessTree/password/CompanyBranch-derivation/UserAccessTrees (or hands them to the staged
-        // authority), so those are ignored (or customized) here.
+        // AllowDeviceSignIn/Email/Phone/AccessTree/password/CompanyBranch-derivation/UserAccessTrees (or hands them to
+        // the staged authority), so those are ignored (or customized) here.
         // ────────────────────────────────────────────────────────────────────────────────────────────────────
         CreateMap<User, UserDTO>()
             .ForMember(d => d.CompanyBranchID, opt => opt.MapFrom(e => new ShiftEntitySelectDTO { Value = e.CompanyBranchID.ToString()!, Text = e.CompanyBranch != null ? e.CompanyBranch.Name : null }))
@@ -242,6 +242,7 @@ public class ShiftIdentityMapper : ShiftMapperBase
             .ForMember(e => e.IntegrationId, opt => opt.MapFrom(dto => string.IsNullOrWhiteSpace(dto.IntegrationId) ? null : dto.IntegrationId))
             .ForMember(e => e.Username, opt => opt.Ignore())
             .ForMember(e => e.IsActive, opt => opt.Ignore())
+            .ForMember(e => e.AllowDeviceSignIn, opt => opt.Ignore())
             .ForMember(e => e.Email, opt => opt.Ignore())
             .ForMember(e => e.Phone, opt => opt.Ignore())
             .ForMember(e => e.AccessTree, opt => opt.Ignore())

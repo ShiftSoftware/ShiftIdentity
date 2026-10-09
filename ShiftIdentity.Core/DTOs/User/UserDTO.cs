@@ -32,6 +32,13 @@ public class UserDTO : ShiftEntityViewAndUpsertDTO
 
     public bool IsActive { get; set; }
 
+    /// <summary>
+    /// A device, such as a TV, can be signed in as this account: the device shows a code, and someone types this
+    /// account's username and password on their phone. The device gets the account's full access. Such an account is
+    /// never asked for MFA, even where MFA is mandatory. Turning it off signs the account out everywhere.
+    /// </summary>
+    public bool AllowDeviceSignIn { get; set; }
+
     public string? AccessTree { get; set; }
 
     public bool TotpEnabled { get; set; }

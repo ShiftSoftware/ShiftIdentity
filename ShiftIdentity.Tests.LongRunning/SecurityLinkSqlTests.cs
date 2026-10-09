@@ -189,11 +189,13 @@ public sealed class SecurityLinkSqlTests : SecurityLinkTestBase, IClassFixture<S
     [Fact]
     public async Task Password_policy_errors_keep_the_grant_usable()
     {
+        // The current password passes the policy here, so that offering it again reaches the "same as current" rule.
+        await fixture.SetPasswordAsync(SqlIdentityFixture.PolicyValidPassword);
         using var host = new IdentityHttpHost(fixture); await Request(host, Email);
         var page = Assert.IsType<SecurityLinkOpened>(await Open(host, await Grant(host), AuthenticationOperationPurpose.PasswordResetEmail));
         Assert.Equal(AuthenticationFailure.InvalidNewPassword, Assert.IsType<AuthenticationRefused>(await Reset(host, page.PageHandle, "short")).Code);
-        Assert.Equal(PasswordPolicyFailure.SameAsCurrent, Assert.IsType<AuthenticationRefused>(await Reset(host, page.PageHandle, fixture.Password)).PasswordFailure);
-        await AssertPassword(fixture.Password, 1, false);
+        Assert.Equal(PasswordPolicyFailure.SameAsCurrent, Assert.IsType<AuthenticationRefused>(await Reset(host, page.PageHandle, SqlIdentityFixture.PolicyValidPassword)).PasswordFailure);
+        await AssertPassword(SqlIdentityFixture.PolicyValidPassword, 1, false);
         Assert.IsType<ReturnToLogin>(await Reset(host, page.PageHandle));
     }
 

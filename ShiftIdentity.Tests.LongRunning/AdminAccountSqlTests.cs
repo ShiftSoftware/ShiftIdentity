@@ -76,9 +76,12 @@ public sealed class AdminAccountSqlTests(SqlIdentityFixture fixture) : IClassFix
     [InlineData("empty")]
     public async Task Password_set_refuses_policy_failures_without_changing_anything(string kind)
     {
+        // For "same", the current password passes the policy, so that offering it again reaches the "same as current" rule.
+        var current = kind == "same" ? SqlIdentityFixture.PolicyValidPassword : fixture.Password;
+        await fixture.SetPasswordAsync(current);
         using var host = new IdentityHttpHost(fixture);
         var admin = await AdminLogin(host);
-        var password = kind switch { "same" => fixture.Password, "empty" => "", _ => "short" };
+        var password = kind switch { "same" => current, "empty" => "", _ => "short" };
         var refused = Assert.IsType<AuthenticationRefused>(await host.AdminSetPasswordAsync(admin.Session.Token, fixture.UserID, password));
         if (kind == "empty") Assert.Equal(AuthenticationFailure.InvalidRequest, refused.Code);
         else
@@ -87,7 +90,7 @@ public sealed class AdminAccountSqlTests(SqlIdentityFixture fixture) : IClassFix
             Assert.NotNull(refused.PasswordFailure);
             Assert.Equal(kind == "same", refused.PasswordFailure == PasswordPolicyFailure.SameAsCurrent);
         }
-        await AssertUnchanged();
+        await AssertUnchanged(password: current);
     }
 
     [Theory]
@@ -418,14 +421,14 @@ public sealed class AdminAccountSqlTests(SqlIdentityFixture fixture) : IClassFix
         await db.SaveChangesAsync();
     }
 
-    private async Task AssertUnchanged(string? email = null)
+    private async Task AssertUnchanged(string? email = null, string? password = null)
     {
         await using var db = fixture.CreateContext();
         var user = await db.Users.IgnoreQueryFilters().SingleAsync(x => x.ID == fixture.UserID);
         var state = await db.Set<UserSecurityState>().SingleAsync(x => x.UserID == fixture.UserID);
         Assert.Equal(fixture.Username, user.Username); Assert.Equal(email, user.Email); Assert.Equal(email is not null, user.EmailVerified);
         Assert.True(user.IsActive); Assert.False(user.IsDeleted); Assert.False(user.IsProtected); Assert.False(user.RequireChangePassword);
-        Assert.True(HashService.VerifyVersionedPassword(fixture.Password, user.Salt, user.PasswordHash));
+        Assert.True(HashService.VerifyVersionedPassword(password ?? fixture.Password, user.Salt, user.PasswordHash));
         Assert.Equal(1, state.SecurityVersion); Assert.Equal(1, state.ContactRevision);
         Assert.Empty(await db.Set<AuthenticationAuditEvent>().Where(x => x.UserID == fixture.UserID && x.ActorUserID != null).ToListAsync());
     }

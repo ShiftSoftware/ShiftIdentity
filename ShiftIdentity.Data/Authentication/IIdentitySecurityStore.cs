@@ -81,6 +81,27 @@ public interface IIdentitySecurityStore
     void RemoveProviderLink(UserProviderLink link);
     /// <summary>An account's provider links, for display.</summary>
     Task<IReadOnlyList<UserProviderLink>> ReadProviderLinksAsync(long userID, CancellationToken cancellationToken);
+    /// <summary>
+    /// True when the bucket <paramref name="key"/> has reached <paramref name="limit"/> in its current window. A read only:
+    /// unlike <see cref="ConsumeIngressAsync"/> it counts nothing, so a caller can check a failure budget before it tries.
+    /// </summary>
+    Task<bool> IngressExhaustedAsync(string key, DateTimeOffset now, int limit, TimeSpan window, CancellationToken cancellationToken);
+    /// <summary>Adds a pending device sign-in in its own transaction. False when its user code is already in use (draw another).</summary>
+    Task<bool> AddDeviceAuthorizationAsync(DeviceAuthorization authorization, CancellationToken cancellationToken);
+    /// <summary>A device sign-in by its ID, for evidence only; admission reads it again under its lock.</summary>
+    Task<DeviceAuthorization?> ReadDeviceAuthorizationAsync(Guid id, CancellationToken cancellationToken);
+    /// <summary>The device sign-in that holds this user code digest, for evidence only.</summary>
+    Task<DeviceAuthorization?> FindDeviceAuthorizationAsync(byte[] userCodeDigest, CancellationToken cancellationToken);
+    /// <summary>
+    /// The device sign-in, locked for change. Call only inside admission, after the account's lock; the admission's
+    /// commit writes its changes.
+    /// </summary>
+    Task<DeviceAuthorization?> LockDeviceAuthorizationAsync(Guid id, CancellationToken cancellationToken);
+    /// <summary>
+    /// A change to one device sign-in alone, under its lock and in a transaction of its own. For the steps that involve
+    /// no account yet: a poll before approval, and expiry.
+    /// </summary>
+    Task<T> AdmitDeviceAuthorizationAsync<T>(Guid id, Func<DeviceAuthorization?, T> transition, CancellationToken cancellationToken);
 }
 
 public sealed class IdentitySecurityUnavailableException(string message, Exception? inner = null) : Exception(message, inner);

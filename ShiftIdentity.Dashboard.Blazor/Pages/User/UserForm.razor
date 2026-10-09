@@ -147,6 +147,26 @@ else
                     }
                 </section>
 
+                @* Device sign-in exists only with the staged authority. Off by default; an account made for a device gets it. *@
+                @if (DashboardOptions.StagedAuthority)
+                {
+                    <section class="user-security-group" aria-label="@Loc["Device sign-in"]" data-testid="user-security-device">
+                        <div class="user-security-group-heading">
+                            <MudText Typo="Typo.subtitle2">@Loc["Device sign-in"]</MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">@Loc["For TVs and other devices that sign in with a code"]</MudText>
+                        </div>
+                        <MudCheckBox ReadOnly="@context.ReadOnly"
+                                     Disabled="@context.Disabled"
+                                     For="@(() => context.Item.AllowDeviceSignIn)"
+                                     Label="@Loc["Allow device sign-in"]"
+                                     @bind-Value="@context.Item.AllowDeviceSignIn"
+                                     data-testid="user-allow-device-sign-in" />
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary" data-testid="user-device-sign-in-help">
+                            @Loc["A device shows a code, and someone types this account's username and password on their phone. The device gets this account's full access. Accounts with this on are never asked for MFA. Turning it off signs the account out everywhere. Use it only for accounts made for devices."]
+                        </MudText>
+                    </section>
+                }
+
                 @if (!string.IsNullOrEmpty(Key?.ToString()))
                 {
                     <section class="user-security-group" aria-label="@Loc["Authenticator App (TOTP)"]" data-testid="user-security-authenticator">
@@ -170,6 +190,12 @@ else
                         {
                             <MudText Typo="Typo.caption" Class="mud-text-secondary" data-testid="user-authenticator-recovery-help">
                                 @Loc["This user cannot sign in until they recover their authenticator app with a recovery code from an administrator."]
+                            </MudText>
+                        }
+                        else if (DashboardOptions.StagedAuthority && context.Item.AllowDeviceSignIn)
+                        {
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary" data-testid="user-authenticator-device-note">
+                                @Loc["Not asked for while device sign-in is allowed."]
                             </MudText>
                         }
                         @if (CanRecoverAuthenticator(context.Mode) || CanTurnOffMfa(context.Mode, context.Item))

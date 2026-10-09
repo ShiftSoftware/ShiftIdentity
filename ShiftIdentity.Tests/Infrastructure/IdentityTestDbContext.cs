@@ -21,6 +21,7 @@ public class LegacyIdentityTestDbContext(DbContextOptions options) : ShiftIdenti
         builder.Ignore<AuthenticationPolicyState>();
         builder.Ignore<AuthenticationAuditEvent>();
         builder.Ignore<AuthThrottleBucket>();
+        builder.Ignore<DeviceAuthorization>();
     }
 }
 

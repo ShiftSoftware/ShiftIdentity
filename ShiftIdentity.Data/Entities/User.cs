@@ -70,6 +70,12 @@ public class User : ShiftEntity<User>,
 
     public bool IsActive { get; set; }
 
+    /// <summary>
+    /// A device can be signed in as this account with the account's username and password typed on a phone (device
+    /// sign-in). Such an account is never asked for MFA. Off by default; only administrators change it.
+    /// </summary>
+    public bool AllowDeviceSignIn { get; set; }
+
     public bool IsProtected { get; set; }
 
     public string? AccessTree { get; set; }
@@ -319,6 +325,7 @@ public class User : ShiftEntity<User>,
             // authority mode the repository records that state after the row exists, in the same transaction.
             entity.Username = username;
             entity.IsActive = dto.IsActive;
+            entity.AllowDeviceSignIn = dto.AllowDeviceSignIn;
             entity.Email = dto.Email;
             entity.Phone = formattedPhone;
 
@@ -371,6 +378,7 @@ public class User : ShiftEntity<User>,
                     PhoneChanged = phoneChanged,
                     Phone = formattedPhone,
                     IsActive = saved.IsActive == dto.IsActive ? null : dto.IsActive,
+                    AllowDeviceSignIn = saved.AllowDeviceSignIn == dto.AllowDeviceSignIn ? null : dto.AllowDeviceSignIn,
                     PermissionsChanged = permissionsChanged,
                     AccessTree = generatedAccessTree
                 };

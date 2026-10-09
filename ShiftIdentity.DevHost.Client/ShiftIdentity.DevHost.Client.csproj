@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+	<Import Project="..\..\ShiftTemplates\ShiftFrameworkGlobalSettings.props" Condition="Exists('..\..\ShiftTemplates\ShiftFrameworkGlobalSettings.props')" />
+
+	<!-- The browser client of ShiftIdentity.DevHost: the normal identity WebAssembly shell with the dashboard's login,
+	     account and device pages, against the authority. Only ShiftIdentity.DevHost serves it. It is never packed,
+	     published or deployed. -->
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<IsPackable>false</IsPackable>
+		<IsPublishable>false</IsPublishable>
+		<RootNamespace>ShiftIdentity.DevHost.Client</RootNamespace>
+		<!-- The client applies the language saved in the browser at startup, as a host's client does. -->
+		<BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
+	</PropertyGroup>
+
+	<Target Name="RefuseDevHostClientPublication" BeforeTargets="Publish;Pack">
+		<Error Text="The DevHost client is a local development tool. It cannot be published or packed." />
+	</Target>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.12" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\ShiftIdentity.Dashboard.Blazor\ShiftIdentity.Dashboard.Blazor.csproj" />
+		<ProjectReference Include="..\ShiftIdentity.Blazor\ShiftIdentity.Blazor.csproj" />
+	</ItemGroup>
+
+</Project>

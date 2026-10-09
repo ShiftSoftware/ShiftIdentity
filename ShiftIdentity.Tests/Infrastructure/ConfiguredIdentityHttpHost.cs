@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -33,35 +34,47 @@ public sealed class ConfiguredIdentityHttpHost<TContext> : IDisposable where TCo
     {
         Settings = SettingsFor(fixture, enabled);
         configure?.Invoke(Settings);
-        using var rsa = RSA.Create();
-        rsa.ImportRSAPrivateKey(fixture.Options.AccessPrivateKey, out _);
-        var publicKey = Convert.ToBase64String(rsa.ExportRSAPublicKey());
         server = new TestServer(new WebHostBuilder().UseEnvironment("Testing").ConfigureServices(services =>
         {
-            services.AddRouting();
-            services.AddLocalization();
-            services.AddHttpContextAccessor();
-            services.AddSingleton(fixture.Clock);
-            services.AddTypeAuth(o => o.AddActionTree<ShiftIdentityActions>());
-            services.AddSingleton<IHashIdService>(new HashIdService(Options.Create(new ShiftEntityOptions())));
-            services.AddSingleton<ShiftSoftware.ShiftIdentity.AspNetCore.Authentication.ISecurityEmailSink>(fixture.EmailSink!);
-            services.AddScoped(sp => (TContext)fixture.CreateContext(sp));
-            var mvc = services.AddControllers();
-            mvc.AddShiftEntityWeb(x => x.AddShiftIdentityDataAssembly());
-            mvc.AddShiftIdentity(Settings.Token.Issuer, publicKey).AddShiftIdentityDashboard<TContext>(Settings);
+            AddHostServices(services, fixture, Settings);
             configureServices?.Invoke(services);
         }).Configure(app =>
         {
             app.UseRouting();
             app.UseAuthentication();
             app.UseAuthorization();
-            app.UseEndpoints(endpoints =>
-            {
-                endpoints.MapShiftEntityEndpoints<TContext>();
-                endpoints.MapShiftIdentityDashboard();
-            });
+            app.UseEndpoints(MapHostEndpoints);
         }));
         Client = server.CreateClient();
+    }
+
+    /// <summary>
+    /// The services of this host: the public dashboard registration with <paramref name="settings"/>, on the fixture's
+    /// database, clock and email sink. ShiftIdentity.DevHost registers the same services on a Kestrel host.
+    /// </summary>
+    public static void AddHostServices(IServiceCollection services, SqlIdentityFixture fixture, ShiftIdentityConfiguration settings)
+    {
+        using var rsa = RSA.Create();
+        rsa.ImportRSAPrivateKey(Convert.FromBase64String(settings.Token.RSAPrivateKeyBase64), out _);
+        var publicKey = Convert.ToBase64String(rsa.ExportRSAPublicKey());
+        services.AddRouting();
+        services.AddLocalization();
+        services.AddHttpContextAccessor();
+        services.AddSingleton(fixture.Clock);
+        services.AddTypeAuth(o => o.AddActionTree<ShiftIdentityActions>());
+        services.AddSingleton<IHashIdService>(new HashIdService(Options.Create(new ShiftEntityOptions())));
+        services.AddSingleton<ShiftSoftware.ShiftIdentity.AspNetCore.Authentication.ISecurityEmailSink>(fixture.EmailSink!);
+        services.AddScoped(sp => (TContext)fixture.CreateContext(sp));
+        var mvc = services.AddControllers();
+        mvc.AddShiftEntityWeb(x => x.AddShiftIdentityDataAssembly());
+        mvc.AddShiftIdentity(settings.Token.Issuer, publicKey).AddShiftIdentityDashboard<TContext>(settings);
+    }
+
+    /// <summary>The routes of this host: the attribute-driven identity CRUD and the public dashboard mapping.</summary>
+    public static void MapHostEndpoints(IEndpointRouteBuilder endpoints)
+    {
+        endpoints.MapShiftEntityEndpoints<TContext>();
+        endpoints.MapShiftIdentityDashboard();
     }
 
     /// <summary>The settings a host would configure, on the fixture's keys so its tokens validate against the fixture's options too.</summary>

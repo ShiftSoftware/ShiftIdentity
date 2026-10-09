@@ -214,6 +214,14 @@ internal static partial class AccountSecurityService
         return true;
     }
 
+    /// <summary>Changes whether devices can be signed in as the account. The caller ends its sessions when it is turned off.</summary>
+    internal static bool ApplyDeviceSignIn(IdentitySecurityTransaction unit, bool allowed)
+    {
+        if (unit.User.AllowDeviceSignIn == allowed) return false;
+        unit.User.AllowDeviceSignIn = allowed;
+        return true;
+    }
+
     /// <summary>Replaces the saved phone (already formatted by the caller) and clears its verification.</summary>
     internal static bool ApplyPhone(IdentitySecurityTransaction unit, string? phone)
     {

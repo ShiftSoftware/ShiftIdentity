@@ -24,11 +24,19 @@ namespace ShiftSoftware.ShiftIdentity.Core.Authentication;
 [JsonDerivedType(typeof(AuthenticatorStatus), "authenticatorStatus")]
 [JsonDerivedType(typeof(ProviderRedirect), "providerRedirect")]
 [JsonDerivedType(typeof(ProviderLinksRead), "providerLinks")]
+[JsonDerivedType(typeof(DeviceAuthorizationStarted), "deviceAuthorizationStarted")]
+[JsonDerivedType(typeof(DeviceAuthorizationView), "deviceAuthorization")]
 public abstract record AuthOutcome;
 
 public sealed record SessionIssued(TokenDTO Session) : AuthOutcome;
 public sealed record ChallengeRequired(AuthenticationChallenge Challenge) : AuthOutcome;
-public sealed record AuthenticationRefused(AuthenticationFailure Code, PasswordPolicyFailure? PasswordFailure = null) : AuthOutcome;
+/// <summary>
+/// A refusal. <see cref="Error"/> is set only on the device token route (<c>device/token</c>): it carries the OAuth error
+/// code of RFC 8628 and RFC 6749 (<c>authorization_pending</c>, <c>slow_down</c>, <c>access_denied</c>,
+/// <c>expired_token</c>, <c>invalid_grant</c> and so on), which tells the device what to do next.
+/// </summary>
+public sealed record AuthenticationRefused(AuthenticationFailure Code, PasswordPolicyFailure? PasswordFailure = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Error = null) : AuthOutcome;
 public sealed record PasswordChanged(AuthOutcome Continuation) : AuthOutcome;
 public sealed record OperationCancelled : AuthOutcome;
 public sealed record MfaChanged(AuthOutcome Continuation, bool PasswordAlsoChanged = false) : AuthOutcome;
@@ -62,7 +70,20 @@ public enum AuthenticationFailure
     /// <summary>No active account has the email address the sign-in provider vouched for.</summary>
     ProviderAccountNotFound,
     /// <summary>The sign-in provider did not vouch for an email address, so no account can be matched.</summary>
-    ProviderEmailUnverified
+    ProviderEmailUnverified,
+    /// <summary>Device sign-in: nobody has approved the code yet. The device keeps polling at its interval.</summary>
+    AuthorizationPending,
+    /// <summary>Device sign-in: the device polled before its interval passed. It adds 5 seconds to its interval.</summary>
+    SlowDown,
+    /// <summary>Device sign-in: the code was denied, or the approving account can no longer sign in. The device stops.</summary>
+    AccessDenied,
+    /// <summary>Device sign-in: the code expired before it delivered a session. The device asks for a new code.</summary>
+    ExpiredToken,
+    /// <summary>
+    /// Device sign-in: the account does not allow device sign-in, so no device can be signed in as it. Only an
+    /// administrator can allow it. Given only after a correct password, so it never says which accounts allow it.
+    /// </summary>
+    DeviceSignInNotAllowed
 }
 public enum AuthenticationOperationPurpose { Login = 1, ContactChange = 2, MfaEnrollment = 3, PasswordChange = 4, MfaReplacement = 5, MfaRecovery = 6, PasswordResetEmail = 7, PasswordResetManual = 8, EmailVerify = 9, AppExchange = 10, LegacyRefreshExchange = 11, LegacyMfaExchange = 12, AdministratorConfirmation = 13, ProviderLogin = 14 }
 

@@ -88,6 +88,9 @@ public sealed class UserAccountChange
     /// <summary>The requested active status when it differs from the saved one; otherwise null.</summary>
     public bool? IsActive { get; init; }
 
+    /// <summary>The requested device sign-in choice when it differs from the saved one; otherwise null.</summary>
+    public bool? AllowDeviceSignIn { get; init; }
+
     /// <summary>
     /// True when the generated access tree or the assigned access trees differ from what is saved. The M:N rows are
     /// already tracked as added or removed; <see cref="AccessTree"/> is the generated user-specific tree to store.
@@ -102,7 +105,7 @@ public sealed class UserAccountChange
     public bool Delete { get; init; }
 
     public bool IsEmpty => Password is null && Username is null && !EmailChanged && !PhoneChanged && IsActive is null &&
-        !PermissionsChanged && !VerifyPhone && !Delete;
+        AllowDeviceSignIn is null && !PermissionsChanged && !VerifyPhone && !Delete;
 }
 
 /// <summary>A user the repository inserted in the current transaction.</summary>

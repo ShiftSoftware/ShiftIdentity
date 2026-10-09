@@ -1,0 +1,9 @@
+/* The simulated screen: the QR code beside the short address and the code, as a TV would show them. */
+.screen { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.screen p { margin: 4px 0; }
+.qr { width: 200px; height: 200px; flex: none; }
+.qr svg { width: 100%; height: 100%; display: block; }
+.code { font: 600 28px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .12em; }
+.actions { margin-top: 10px; }
+input[type=number] { width: 70px; }
+details { margin-top: 10px; }

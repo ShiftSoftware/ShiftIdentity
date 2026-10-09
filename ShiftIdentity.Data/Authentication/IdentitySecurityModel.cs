@@ -4,7 +4,7 @@ using ShiftSoftware.ShiftIdentity.Data.Entities;
 namespace ShiftSoftware.ShiftIdentity.Data.Authentication;
 
 /// <summary>
-/// The authority's schema: security state, operations, policy, audit and throttle tables in the ShiftIdentity schema.
+/// The authority's schema: security state, operations, policy, audit, throttle and device sign-in tables in the ShiftIdentity schema.
 /// <see cref="ShiftIdentityDbContext"/> configures it for every host, so a host's next migration carries the additive
 /// expansion whether or not it has enabled the authority; the tables stay empty until it does. Calling this again on a
 /// model that already has the schema is a no-op, so a context that configured it explicitly before keeps working.
@@ -112,6 +112,28 @@ public static class IdentitySecurityModel
             e.Property(x => x.Key).HasMaxLength(64);
             e.Property(x => x.RowVersion).IsRowVersion();
             e.HasIndex(x => x.WindowStart);
+        });
+        builder.Entity<DeviceAuthorization>(e =>
+        {
+            e.ToTable("DeviceAuthorizations", "ShiftIdentity", t =>
+            {
+                t.HasCheckConstraint("CK_DeviceAuthorization_State", "[State] IN (1,2,3,4,5) AND [ExpiresAt] > [CreatedAt] AND [Interval] BETWEEN 1 AND 3600 AND ([SessionProvider] IS NULL OR [SessionProvider] IN (1, 2))");
+                // Pending and approved rows hold both codes; consumed and expired rows hold neither; a denied row keeps
+                // them until its deadline so that the device keeps hearing access_denied.
+                t.HasCheckConstraint("CK_DeviceAuthorization_Codes", "([State] IN (1,2) AND DATALENGTH([DeviceCodeDigest]) = 32 AND DATALENGTH([UserCodeDigest]) = 32) OR ([State] IN (4,5) AND [DeviceCodeDigest] IS NULL AND [UserCodeDigest] IS NULL) OR ([State] = 3 AND ((DATALENGTH([DeviceCodeDigest]) = 32 AND DATALENGTH([UserCodeDigest]) = 32) OR ([DeviceCodeDigest] IS NULL AND [UserCodeDigest] IS NULL)))");
+                // A pending row has no account. An approved or consumed row has the account and everything pinned at approval.
+                t.HasCheckConstraint("CK_DeviceAuthorization_Account", "([State] = 1 AND [UserID] IS NULL AND [ApprovedAt] IS NULL) OR ([State] IN (2,4) AND [UserID] IS NOT NULL AND [SecurityVersion] >= 1 AND [PolicyRevision] >= 1 AND [FactorGeneration] >= 1 AND [MfaSatisfied] IS NOT NULL AND [AuthenticatedAt] IS NOT NULL AND [ApprovedAt] IS NOT NULL) OR [State] IN (3,5)");
+            });
+            e.HasKey(x => x.ID);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.UserID).OnDelete(DeleteBehavior.Restrict);
+            e.Property(x => x.DeviceCodeDigest).HasMaxLength(32);
+            e.Property(x => x.UserCodeDigest).HasMaxLength(32);
+            e.Property(x => x.ClientID).HasMaxLength(64);
+            e.Property(x => x.Audience).HasMaxLength(255);
+            e.Property(x => x.RowVersion).IsRowVersion();
+            e.HasIndex(x => x.UserCodeDigest).IsUnique().HasFilter("[UserCodeDigest] IS NOT NULL");
+            e.HasIndex(x => new { x.ExpiresAt, x.State });
+            e.HasIndex(x => x.UserID);
         });
     }
 }

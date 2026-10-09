@@ -21,7 +21,10 @@ internal sealed class AdmissionMaintenance(IServiceScopeFactory scopes, ILogger<
                     using var scope = scopes.CreateScope();
                     var admission = scope.ServiceProvider.GetRequiredService<IdentityAdmissionServices>();
                     var db = scope.ServiceProvider.GetRequiredService<ShiftIdentityDbContext>();
-                    await new SqlIdentitySecurityStore(db).CleanupAsync(admission.Clock.GetUtcNow(), stoppingToken);
+                    var store = new SqlIdentitySecurityStore(db);
+                    await store.CleanupAsync(admission.Clock.GetUtcNow(), stoppingToken);
+                    // Only a host that configured device sign-in has applied the migration that adds its table.
+                    if (admission.Device is not null) await store.CleanupDeviceAuthorizationsAsync(admission.Clock.GetUtcNow(), stoppingToken);
                 }
                 catch (Exception error) when (error is not OperationCanceledException)
                 {

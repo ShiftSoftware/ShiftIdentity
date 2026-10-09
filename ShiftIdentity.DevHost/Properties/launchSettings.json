@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "DevHost": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "dev/device.html",
+      "applicationUrl": "http://localhost:5288"
+    }
+  }
+}

@@ -123,8 +123,43 @@ public sealed class AuthorityRegistrationTests
         { "EmailVerificationRedirectUrl", c => c.EmailVerificationRedirectUrl = "javascript:alert(1)" },
         { "EmailVerificationRedirectUrl", c => c.EmailVerificationRedirectUrl = "https://user:pass@example.invalid/" },
         { "EmailLogoUrl", c => c.EmailLogoUrl = "/img/logo.png" },
-        { "EmailLogoUrl", c => c.EmailLogoUrl = "javascript:alert(1)" }
+        { "EmailLogoUrl", c => c.EmailLogoUrl = "javascript:alert(1)" },
+        { "Authority.DeviceClients", c => c.Authority.DeviceClients = new() { ["service screen"] = "Service Screen" } },
+        { "Authority.DeviceClients", c => c.Authority.DeviceClients = new() { ["-screen"] = "Service Screen" } },
+        { "Authority.DeviceClients", c => c.Authority.DeviceClients = new() { ["screen"] = " " } },
+        { "Authority.DeviceVerificationUri", c => c.Authority.DeviceClients = new() { ["screen"] = "Screen" } },
+        { "Authority.DeviceVerificationUri", c => { c.Authority.DeviceClients = new() { ["screen"] = "Screen" }; c.FrontEndUrl = "/front"; } },
+        { "Authority.DeviceVerificationUri", c => { c.Authority.DeviceClients = new() { ["screen"] = "Screen" }; c.Authority.DeviceVerificationUri = "/Identity/device"; } },
+        { "Authority.DeviceVerificationUri", c => { c.Authority.DeviceClients = new() { ["screen"] = "Screen" }; c.Authority.DeviceVerificationUri = "https://identity.invalid/Identity/device?code=1"; } },
+        { "Authority.DeviceCodeLifetimeSeconds", c => { c.Authority.DeviceClients = new() { ["screen"] = "Screen" }; c.FrontEndUrl = "https://identity.invalid"; c.Authority.DeviceCodeLifetimeSeconds = 59; } },
+        { "Authority.DevicePollingIntervalSeconds", c => { c.Authority.DeviceClients = new() { ["screen"] = "Screen" }; c.FrontEndUrl = "https://identity.invalid"; c.Authority.DevicePollingIntervalSeconds = 0; } },
+        { "Authority.DevicePollingIntervalSeconds", c => { c.Authority.DeviceClients = new() { ["screen"] = "Screen" }; c.FrontEndUrl = "https://identity.invalid"; c.Authority.DeviceCodeLifetimeSeconds = 60; c.Authority.DevicePollingIntervalSeconds = 60; } }
     };
+
+    [Fact]
+    public void Device_sign_in_is_off_until_device_clients_are_configured()
+    {
+        Assert.Null(IdentityAuthorityRegistration.Create(Valid()).Device);
+    }
+
+    [Fact]
+    public void Device_clients_take_the_configured_phone_page_or_the_front_end_default()
+    {
+        var configuration = Valid();
+        configuration.Authority.DeviceClients = new() { ["service-screen"] = " Service Screen ", ["lobby.tv_2"] = "Lobby" };
+        configuration.FrontEndUrl = "https://identity.invalid/";
+        var device = IdentityAuthorityRegistration.Create(configuration).Device!;
+        Assert.Equal("https://identity.invalid/Identity/device", device.VerificationUri);
+        Assert.Equal("Service Screen", device.Clients["service-screen"]);
+        Assert.Equal((600, 5), (device.LifetimeSeconds, device.IntervalSeconds));
+        // Client IDs are exact: another casing is another client.
+        Assert.False(device.Clients.ContainsKey("Service-Screen"));
+        configuration.Authority.DeviceVerificationUri = " https://phone.invalid/device ";
+        configuration.Authority.DeviceCodeLifetimeSeconds = 900;
+        configuration.Authority.DevicePollingIntervalSeconds = 10;
+        device = IdentityAuthorityRegistration.Create(configuration).Device!;
+        Assert.Equal(("https://phone.invalid/device", 900, 10), (device.VerificationUri, device.LifetimeSeconds, device.IntervalSeconds));
+    }
 
     [Theory, MemberData(nameof(Invalid))]
     public void A_misconfigured_authority_is_refused_at_registration_naming_the_setting(string setting, Action<ShiftIdentityConfiguration> corrupt)

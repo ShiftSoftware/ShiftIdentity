@@ -36,12 +36,15 @@ internal sealed class IdentityAuthorityStartup(IServiceScopeFactory scopes, Iden
             var db = scope.ServiceProvider.GetRequiredService<ShiftIdentityDbContext>();
             var revision = await EnsurePolicyAsync(db, registration, cancellationToken);
             var created = await EnsureClientAsync(db, registration, cancellationToken);
+            // Device sign-in needs its table. A host that configured device clients without the migration stops here.
+            if (registration.Device is not null) await db.Set<DeviceAuthorization>().AnyAsync(cancellationToken);
             var expanded = await UserSecurityExpansion.ExpandMissingAsync(db,
                 userID => logger.LogWarning("Identity user {UserID} got its security row without lookup keys: its saved identifiers collide with another account's. Correct the identifiers so that the account can be found by the security-email lookup.", userID),
                 cancellationToken);
             registration.Options = registration.Options with { PolicyRevision = revision };
-            logger.LogInformation("Identity authority ready: policy revision {Revision}, client {ClientId}{Created}, {Expanded} security rows created.",
-                revision, registration.Client.ID, created ? " (App row created)" : "", expanded);
+            logger.LogInformation("Identity authority ready: policy revision {Revision}, client {ClientId}{Created}, {Expanded} security rows created, device sign-in {Device}.",
+                revision, registration.Client.ID, created ? " (App row created)" : "", expanded,
+                registration.Device is { } device ? $"on for {device.Clients.Count} client(s)" : "off");
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (Exception e) when (e is SqlException or DbUpdateException)

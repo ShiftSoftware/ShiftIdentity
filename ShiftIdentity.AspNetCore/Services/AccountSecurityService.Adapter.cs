@@ -80,6 +80,12 @@ internal static partial class AccountSecurityService
                 audits.Add(active ? "AccountActivated" : "AccountDeactivated");
                 restrictive = true;
             }
+            // Allowing device sign-in restricts nothing. Taking it away ends every session, the devices' included.
+            if (change.AllowDeviceSignIn is { } allowed && ApplyDeviceSignIn(unit, allowed))
+            {
+                audits.Add(allowed ? "DeviceSignInAllowed" : "DeviceSignInRemoved");
+                restrictive |= !allowed;
+            }
             if (change.Username is { } username)
             {
                 var (failure, applied) = await ApplyUsernameAsync(services, unit, username, ct);
@@ -177,7 +183,7 @@ internal static partial class AccountSecurityService
     {
         var row = await db.Users.IgnoreQueryFilters().AsNoTracking().Where(x => x.ID == user.ID).Select(x => new
         {
-            x.Username, x.Email, x.Phone, x.IsActive, x.IsDeleted, x.IsProtected, x.RequireChangePassword,
+            x.Username, x.Email, x.Phone, x.IsActive, x.AllowDeviceSignIn, x.IsDeleted, x.IsProtected, x.RequireChangePassword,
             x.EmailVerified, x.PhoneVerified, x.AccessTree, x.PasswordHash, x.Salt, x.VerificationSASToken
         }).SingleOrDefaultAsync(ct);
         if (row is null) return false;
@@ -186,6 +192,7 @@ internal static partial class AccountSecurityService
             original.GetValue<string?>(nameof(User.Email)) == row.Email &&
             original.GetValue<string?>(nameof(User.Phone)) == row.Phone &&
             original.GetValue<bool>(nameof(User.IsActive)) == row.IsActive &&
+            original.GetValue<bool>(nameof(User.AllowDeviceSignIn)) == row.AllowDeviceSignIn &&
             original.GetValue<bool>(nameof(User.IsDeleted)) == row.IsDeleted &&
             original.GetValue<bool>(nameof(User.IsProtected)) == row.IsProtected &&
             original.GetValue<bool>(nameof(User.RequireChangePassword)) == row.RequireChangePassword &&

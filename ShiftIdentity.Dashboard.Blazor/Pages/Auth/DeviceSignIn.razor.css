@@ -1,0 +1,4 @@
+/* Deny and Approve side by side, Approve last, as the primary action of every step. */
+.device-decision { gap: 12px; }
+/* The warning about codes from messages: under the code, quieter than the code itself. */
+.device-caution { font-size: 0.875rem; }

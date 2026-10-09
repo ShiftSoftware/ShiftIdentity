@@ -54,6 +54,8 @@ public class SqlIdentityFixture : IAsyncLifetime
     internal MicrosoftSignIn? Microsoft { get; set; }
     /// <summary>Google sign-in for hosts built while it is set; <see cref="ResetAsync"/> clears it.</summary>
     internal GoogleSignIn? Google { get; set; }
+    /// <summary>Device sign-in for request hosts built while it is set; <see cref="ResetAsync"/> clears it.</summary>
+    internal DeviceGrantOptions? Device { get; set; }
     /// <summary>
     /// The test budgets. Every ordinary public request sleeps until the sum of the three has elapsed (the response
     /// floor), so the sender wait stays short: the local inbox answers synchronously, and the padding is dropped.
@@ -72,7 +74,18 @@ public class SqlIdentityFixture : IAsyncLifetime
     internal void UseFastPublicResponses() => DeliveryLimits = FastPublicResponses;
     public Func<DbContextOptions, ShiftIdentityDbContext>? ContextFactory { get; set; }
     internal IdentityAdmissionOptions Options { get; private set; } = null!;
-    public string Password { get; } = "Synthetic Password 7!";
+    /// <summary>
+    /// The password of every synthetic account. It is short on purpose, because people type it when they review by hand
+    /// (the DevHost, the sample's identity development app). Signing in has no length rule; only a new password must
+    /// pass the policy.
+    /// </summary>
+    public string Password { get; } = "1";
+    /// <summary>
+    /// A password that passes the new-password policy. A test that offers the current password as the new one, to see
+    /// the "same as current" refusal, gives the account this password first with <see cref="SetPasswordAsync"/>: the
+    /// policy would refuse <see cref="Password"/> as too short before comparing it with the current one.
+    /// </summary>
+    public const string PolicyValidPassword = "A current synthetic phrase 41!";
     public long UserID { get; private set; }
     public string Username { get; } = "synthetic-" + Guid.NewGuid().ToString("N");
 
@@ -158,6 +171,23 @@ public class SqlIdentityFixture : IAsyncLifetime
         return ContextFactory?.Invoke(options) ?? DefaultContext(options);
     }
 
+    /// <summary>Sets the fixture user's password and nothing else. <see cref="ResetAsync"/> restores <see cref="Password"/>.</summary>
+    public async Task SetPasswordAsync(string password)
+    {
+        await using var db = CreateContext();
+        var hash = HashService.GenerateHash(password);
+        await db.Users.IgnoreQueryFilters().Where(x => x.ID == UserID)
+            .ExecuteUpdateAsync(x => x.SetProperty(u => u.PasswordHash, hash.PasswordHash).SetProperty(u => u.Salt, hash.Salt));
+    }
+
+    /// <summary>Lets devices be signed in as the account (the fixture user by default). <see cref="ResetAsync"/> turns it off for the fixture user.</summary>
+    public async Task AllowDeviceSignInAsync(bool allowed = true, long? userID = null)
+    {
+        await using var db = CreateContext();
+        var id = userID ?? UserID;
+        await db.Users.IgnoreQueryFilters().Where(x => x.ID == id).ExecuteUpdateAsync(x => x.SetProperty(u => u.AllowDeviceSignIn, allowed));
+    }
+
     public async Task<long> CreateSyntheticUserAsync(string username, string? accessTree = null, bool mfa = false, string? email = null)
     {
         await using var db = CreateContext();
@@ -185,15 +215,16 @@ public class SqlIdentityFixture : IAsyncLifetime
         EmailSink = new LocalSecurityInbox(Clock);
         DeliveryLimits = TestDeliveryLimits;
         LegacyMfaEnabled = false; LegacyTemporaryLifetimeSeconds = 300;
-        Microsoft = null; Google = null;
+        Microsoft = null; Google = null; Device = null;
         await db.Set<UserProviderLink>().ExecuteDeleteAsync();
         await db.Set<AuthThrottleBucket>().ExecuteDeleteAsync();
+        await db.Set<DeviceAuthorization>().ExecuteDeleteAsync();
         await db.Set<AuthenticationOperation>().ExecuteDeleteAsync();
         await db.Set<AuthenticationAuditEvent>().ExecuteDeleteAsync();
         var user = await db.Users.SingleAsync(x => x.ID == UserID);
         var hash = HashService.GenerateHash(Password);
         user.PasswordHash = hash.PasswordHash; user.Salt = hash.Salt;
-        user.IsActive = true; user.IsDeleted = false; user.RequireChangePassword = false;
+        user.IsActive = true; user.IsDeleted = false; user.RequireChangePassword = false; user.AllowDeviceSignIn = false;
         user.LockDownUntil = null; user.Email = null; user.EmailVerified = false;
         user.TotpSecret = null;
         var state = await db.Set<UserSecurityState>().SingleAsync(x => x.UserID == UserID);

@@ -1,0 +1,308 @@
+@attribute [Route($"{Constants.IdentityRoutePreifix}/device")]
+@layout Shared.LoginLayout
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.Extensions.DependencyInjection
+@using ShiftSoftware.ShiftIdentity.Blazor.Services
+@using ShiftSoftware.ShiftIdentity.Core.Authentication
+@inject ShiftIdentityDashboardBlazorOptions DashboardOptions
+@inject IServiceProvider Services
+@inject NavigationManager Navigation
+@inject ShiftIdentityLocalizer Loc
+
+@* Device sign-in, the phone's side. A device shows a QR code of this page with its code. The person checks that the
+   device shows the same code, then types the username and password of the account the device should use. The phone
+   never signs in, and its own session stays as it is. Without a code the page asks for one, for a person who typed
+   the short URL. *@
+<LoginBox ViewKey="@view">
+<CascadingValue Value="feedback" IsFixed="true">
+<div data-testid="device-sign-in" data-view="@view">
+    @switch (view)
+    {
+        case "loading":
+            <div class="auth-center" role="status">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="auth-done-icon" />
+                <p class="auth-description">@Loc["Checking the code…"]</p>
+            </div>
+            break;
+        case "unavailable":
+            <MudAlert Severity="Severity.Info" data-testid="device-unavailable">@Loc["Signing in a device is unavailable here."]</MudAlert>
+            break;
+        case "entry":
+            <h1 class="auth-title" tabindex="-1">@Loc["Sign in a device"]</h1>
+            <p class="auth-description">@Loc["Enter the code shown on the device."]</p>
+            <AuthForm Model="entry" Submit="ContinueAsync" class="auth-inputs" Context="attempting">
+                <MudTextField T="string" Label="@Loc["Code"]" @bind-Value="entry.Code" For="@(() => entry.Code)" Immediate="true"
+                              autocomplete="off" autocapitalize="characters" spellcheck="false" data-testid="device-code-input" />
+                <AuthError @bind-Message="error" TestId="device-error" />
+                <div class="auth-actions">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit" Disabled="@attempting" data-testid="device-continue">@Loc["Continue"]</MudButton>
+                </div>
+            </AuthForm>
+            break;
+        case "check":
+            <h1 class="auth-title" tabindex="-1">@Loc["Sign in a device"]</h1>
+            <p class="auth-description" data-testid="device-question">@Bold(Loc["{0} is asking to sign in."], device!.ClientDisplayName)</p>
+            <p class="auth-description">@Loc["Only continue if you're in front of it and it shows this code:"]</p>
+            <div class="auth-code" data-testid="device-code">@device.UserCode</div>
+            <p class="auth-description device-caution" data-testid="device-caution">@Loc["Never use a code someone sent you in a message, an email or a call."]</p>
+            <AuthError @bind-Message="error" TestId="device-error" />
+            <div class="auth-actions device-decision">
+                <MudButton Variant="Variant.Text" Disabled="@feedback.Attempting" OnClick="() => feedback.AttemptAsync(DenyAsync)" data-testid="device-deny">@Loc["This isn't it"]</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@feedback.Attempting" OnClick="ShowAccount" data-testid="device-confirm">@Loc["Continue"]</MudButton>
+            </div>
+            break;
+        case "account":
+            <h1 class="auth-title" tabindex="-1">@Loc["Which account should {0} use?", device!.ClientDisplayName]</h1>
+            <MudAlert Severity="Severity.Warning" Class="my-3" data-testid="device-access-warning">
+                @Loc["The device gets this account's full access: everything it can see and do, in every app, not just on this device. It stays signed in until the account's password changes or device sign-in is turned off for it."]
+            </MudAlert>
+            <AuthForm Model="account" Submit="ApproveAsync" class="auth-inputs" Context="attempting">
+                @* The phone's own saved sign-in must not fill these: the account is chosen on purpose, every time. *@
+                <MudTextField T="string" Label="@Loc["Username"]" @bind-Value="account.Username" For="@(() => account.Username)" Immediate="true"
+                              Disabled="@attempting" autocomplete="off" autocapitalize="none" spellcheck="false" data-testid="device-username" />
+                <PasswordField Label="@Loc["Password"]" @bind-Value="account.Password" For="@(() => account.Password)" Immediate="true"
+                               Disabled="@attempting" autocomplete="off" data-testid="device-password" />
+                <AuthError @bind-Message="error" TestId="device-error" />
+                <div class="auth-actions device-decision">
+                    <MudButton Variant="Variant.Text" Disabled="@attempting" OnClick="BackToCheck" data-testid="device-back">@Loc["Back"]</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit" Disabled="@attempting" data-testid="device-approve">@Loc["Sign in the device"]</MudButton>
+                </div>
+            </AuthForm>
+            break;
+        case "approved":
+            <div class="auth-center" role="status" data-testid="device-approved">
+                <MudIcon Icon="@Icons.Material.Outlined.CheckCircle" Color="Color.Success" Size="Size.Large" Class="auth-done-icon" />
+                <h1 class="auth-title" tabindex="-1">@Loc["Done"]</h1>
+                <p class="auth-description" data-testid="device-approved-as">@Bold(Loc["{0} is signed in as {1}."], device!.ClientDisplayName, device.AccountName ?? "")</p>
+                <p class="auth-description">@Loc["Nothing changed on your phone."]</p>
+            </div>
+            break;
+        case "denied":
+            <div class="auth-center" role="status" data-testid="device-denied">
+                <MudIcon Icon="@Icons.Material.Outlined.Block" Size="Size.Large" Class="auth-done-icon auth-ended-icon" />
+                <h1 class="auth-title" tabindex="-1">@Loc["Device not signed in"]</h1>
+                <p class="auth-description">@Loc["The device will not be signed in with this code."]</p>
+            </div>
+            break;
+        case "ended":
+            <div class="auth-center" data-testid="device-ended">
+                <MudIcon Icon="@Icons.Material.Outlined.LinkOff" Size="Size.Large" Class="auth-done-icon auth-ended-icon" />
+                <h1 class="auth-title" tabindex="-1">@Loc["This code can't be used"]</h1>
+                <p class="auth-description" role="alert">@message</p>
+                <div class="auth-actions"><MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="EnterAnother" data-testid="device-another">@Loc["Enter another code"]</MudButton></div>
+            </div>
+            break;
+        case "problem":
+            <div class="auth-center" data-testid="device-problem">
+                <h1 class="auth-title" tabindex="-1">@Loc["We couldn't reach the sign-in service."]</h1>
+                <p class="auth-description" role="alert">@Loc["Check your connection and try again in a moment."]</p>
+                <div class="auth-actions"><MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="RetryAsync" data-testid="device-retry">@Loc["Try again"]</MudButton></div>
+            </div>
+            break;
+    }
+</div>
+</CascadingValue>
+</LoginBox>
+
+@code {
+    [CascadingParameter] public AdmissionUiContext? AdmissionContext { get; set; }
+    /// <summary>The code from the QR code's address, in any case and with or without its dash.</summary>
+    [Parameter, SupplyParameterFromQuery(Name = "code")] public string? Code { get; set; }
+    private readonly AuthFeedback feedback = new();
+    private readonly Entry entry = new();
+    private readonly Account account = new();
+    private AuthenticationFlow? flow;
+    private DeviceAuthorizationView? device;
+    private string view = "loading";
+    private string? error, message, handled;
+    private bool started;
+    // A newer code (or a new press) makes the answers of earlier requests stale.
+    private long generation;
+
+    private sealed class Entry
+    {
+        [Required(ErrorMessage = "Enter the code shown on the device."), MaxLength(64)] public string Code { get; set; } = "";
+    }
+
+    private sealed class Account
+    {
+        [Required(ErrorMessage = "Enter the username."), MaxLength(255)] public string Username { get; set; } = "";
+        // No Required here: the page empties the password after every attempt, and the field would then show a
+        // required-field message at once. An empty password is refused when the form is sent.
+        [MaxLength(1024)] public string Password { get; set; } = "";
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!started)
+        {
+            started = true;
+            flow = AdmissionContext?.Flow ?? (DashboardOptions.StagedAuthority ? Services.GetService<AuthenticationFlow>() : null);
+        }
+        if (flow is null) { view = "unavailable"; return; }
+        if (handled == (Code ?? "")) return;
+        handled = Code ?? "";
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        var current = ++generation;
+        error = null; message = null; device = null; account.Password = "";
+        if (string.IsNullOrWhiteSpace(Code)) { view = "entry"; return; }
+        var normalized = DeviceUserCode.Normalize(Code);
+        if (normalized is null)
+        {
+            ShowEntry(Code, Loc["That code is not complete. Enter the 8 letters shown on the device."]);
+            return;
+        }
+        view = "loading";
+        StateHasChanged();
+        var outcome = await flow!.ReadDeviceAuthorizationAsync(normalized);
+        if (current != generation) return;
+        Show(outcome, normalized);
+    }
+
+    private void Show(AuthOutcome outcome, string normalized)
+    {
+        switch (outcome)
+        {
+            case DeviceAuthorizationView { State: DeviceAuthorizationState.Pending } pending:
+                device = pending; view = "check"; break;
+            case DeviceAuthorizationView { State: DeviceAuthorizationState.Approved }:
+                Ended(Loc["This code was already used to sign the device in."]); break;
+            case DeviceAuthorizationView { State: DeviceAuthorizationState.Denied }:
+                Ended(Loc["This code was refused. Start again on the device."]); break;
+            case DeviceAuthorizationView:
+                Ended(Loc["This code has expired. Start again on the device."]); break;
+            case AuthenticationRefused { Code: AuthenticationFailure.InvalidGrant }:
+                ShowEntry(DeviceUserCode.Format(normalized), Loc["We couldn't find that code. Check the code on the device and try again."]); break;
+            case AuthenticationRefused { Code: AuthenticationFailure.AttemptsExhausted }:
+                ShowEntry(DeviceUserCode.Format(normalized), Loc["Too many attempts. Wait a few minutes and try again."]); break;
+            case AuthenticationRefused { Code: AuthenticationFailure.Expired }:
+                Ended(Loc["This code has expired. Start again on the device."]); break;
+            case AuthenticationRefused { Code: AuthenticationFailure.ClientDenied }:
+                Ended(Loc["This device can't be signed in here."]); break;
+            default:
+                view = "problem"; break;
+        }
+    }
+
+    private void ShowAccount()
+    {
+        error = null;
+        view = "account";
+    }
+
+    private void BackToCheck()
+    {
+        error = null; account.Password = "";
+        view = "check";
+    }
+
+    private async Task ApproveAsync()
+    {
+        if (device is not { } shown || flow is null) return;
+        if (string.IsNullOrEmpty(account.Password))
+        {
+            error = Loc["Enter the password."];
+            return;
+        }
+        var current = ++generation;
+        var normalized = DeviceUserCode.Normalize(shown.UserCode)!;
+        var outcome = await flow.ApproveDeviceAuthorizationAsync(normalized, account.Username.Trim(), account.Password);
+        if (current != generation) return;
+        // The password is never kept once it has been sent.
+        account.Password = "";
+        switch (outcome)
+        {
+            case DeviceAuthorizationView { State: DeviceAuthorizationState.Approved } approved:
+                device = approved; view = "approved"; break;
+            case AuthenticationRefused { Code: AuthenticationFailure.InvalidProof }:
+                error = Loc["Username or password is incorrect."]; break;
+            case AuthenticationRefused { Code: AuthenticationFailure.DeviceSignInNotAllowed }:
+                error = Loc["This account can't be used to sign in devices. An administrator can allow it."]; break;
+            case AuthenticationRefused { Code: AuthenticationFailure.AccountUnavailable }:
+                error = Loc["This account can't sign in."]; break;
+            case AuthenticationRefused { Code: AuthenticationFailure.AttemptsExhausted }:
+                error = Loc["Too many attempts. Wait a few minutes and try again."]; break;
+            case ChallengeRequired:
+                error = Loc["This account has a step to finish first. Sign in with it normally once, then try again."]; break;
+            case AuthenticationRefused { Code: AuthenticationFailure.Unavailable }:
+                error = Loc["We couldn't reach the sign-in service. Try again."]; break;
+            case AuthenticationRefused { Code: AuthenticationFailure.Expired }:
+                Ended(Loc["This code has expired. Start again on the device."]); break;
+            // Someone decided first, the code is gone, or the device client was removed: show what it is now.
+            default:
+                await ReloadAsync(normalized); break;
+        }
+    }
+
+    private async Task DenyAsync()
+    {
+        if (device is not { } shown || flow is null) return;
+        var current = ++generation;
+        var normalized = DeviceUserCode.Normalize(shown.UserCode)!;
+        var outcome = await flow.DenyDeviceAuthorizationAsync(normalized);
+        if (current != generation) return;
+        switch (outcome)
+        {
+            case DeviceAuthorizationView { State: DeviceAuthorizationState.Denied }: view = "denied"; break;
+            case AuthenticationRefused { Code: AuthenticationFailure.Unavailable }:
+                error = Loc["We couldn't reach the sign-in service. Try again."]; break;
+            case AuthenticationRefused { Code: AuthenticationFailure.AttemptsExhausted }:
+                error = Loc["Too many attempts. Wait a few minutes and try again."]; break;
+            case AuthenticationRefused { Code: AuthenticationFailure.Expired }:
+                Ended(Loc["This code has expired. Start again on the device."]); break;
+            default:
+                await ReloadAsync(normalized); break;
+        }
+    }
+
+    private async Task ReloadAsync(string normalized)
+    {
+        var current = generation;
+        var outcome = await flow!.ReadDeviceAuthorizationAsync(normalized);
+        if (current == generation) Show(outcome, normalized);
+    }
+
+    private async Task ContinueAsync()
+    {
+        var normalized = DeviceUserCode.Normalize(entry.Code);
+        if (normalized is null)
+        {
+            error = Loc["That code is not complete. Enter the 8 letters shown on the device."];
+            return;
+        }
+        // The same code again (after a failed lookup) does not change the address, so it is read here.
+        if (DeviceUserCode.Normalize(Code) == normalized) { await LoadAsync(); return; }
+        // The code goes into the address, so Back and a reload work as they do for a scanned code.
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameter("code", DeviceUserCode.Format(normalized)));
+    }
+
+    private void EnterAnother() => Navigation.NavigateTo(Navigation.GetUriWithQueryParameter("code", (string?)null));
+
+    private Task RetryAsync()
+    {
+        view = "loading";
+        return LoadAsync();
+    }
+
+    private void ShowEntry(string code, string text) { entry.Code = code; error = text; view = "entry"; }
+    private void Ended(string text) { message = text; view = "ended"; }
+
+    // A sentence with its names in bold. Each sentence is translated whole, so a language can put the names where its
+    // word order needs them.
+    private static RenderFragment Bold(string sentence, params string[] names) => builder =>
+    {
+        var parts = System.Text.RegularExpressions.Regex.Split(sentence, @"\{(\d)\}");
+        for (var i = 0; i < parts.Length; i++)
+        {
+            if (i % 2 == 0) { builder.AddContent(0, parts[i]); continue; }
+            var index = int.Parse(parts[i], System.Globalization.CultureInfo.InvariantCulture);
+            builder.OpenElement(1, "strong");
+            builder.AddContent(2, index < names.Length ? names[index] : "");
+            builder.CloseElement();
+        }
+    };
+}

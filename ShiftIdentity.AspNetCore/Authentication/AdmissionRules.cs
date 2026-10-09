@@ -64,7 +64,7 @@ internal static class AdmissionRules
     {
         if (unit.User.RequireChangePassword && !ignorePasswordChange) return AuthenticationStep.PasswordChange;
         if (unit.Security.LocalMfaRecoveryRequired) return AuthenticationStep.MfaRecovery;
-        if (unit.Policy.MfaEnabled)
+        if (MfaApplies(unit))
         {
             if (unit.Security.ProtectedTotpSecret is null && unit.Policy.MfaMandatory) return AuthenticationStep.NewMfa;
             if (unit.Security.ProtectedTotpSecret is not null && !mfaSatisfied) return AuthenticationStep.ExistingMfa;
@@ -74,8 +74,16 @@ internal static class AdmissionRules
         return null;
     }
 
-    /// <summary>The host requires an authenticator on every account, so none can be turned off.</summary>
-    internal static bool MfaMandatory(IdentitySecurityTransaction unit) => unit.Policy.MfaEnabled && unit.Policy.MfaMandatory;
+    /// <summary>
+    /// Whether the account uses MFA. An account that allows device sign-in never does, even where the host makes MFA
+    /// mandatory: whoever signs a device in types the account's password on their phone and does not hold its
+    /// authenticator. An authenticator it already has is kept, and applies again once device sign-in is turned off.
+    /// A required recovery is an administrator's lock, not an MFA prompt, so it still applies.
+    /// </summary>
+    internal static bool MfaApplies(IdentitySecurityTransaction unit) => unit.Policy.MfaEnabled && !unit.User.AllowDeviceSignIn;
+
+    /// <summary>The host requires an authenticator on every account that uses MFA, so none can be turned off.</summary>
+    internal static bool MfaMandatory(IdentitySecurityTransaction unit) => MfaApplies(unit) && unit.Policy.MfaMandatory;
 
     /// <summary>
     /// A converted legacy session keeps only its former ordinary-session capability until the old credential's
@@ -96,7 +104,7 @@ internal static class AdmissionRules
         if (provider is null) return LocalStep(unit, mfaSatisfied);
         if (services.Provider(provider.Value) is not { RequireShiftMfa: true }) return null;
         if (unit.Security.LocalMfaRecoveryRequired) return AuthenticationStep.MfaRecovery;
-        if (!unit.Policy.MfaEnabled) return null;
+        if (!MfaApplies(unit)) return null;
         if (unit.Security.ProtectedTotpSecret is null) return unit.Policy.MfaMandatory ? AuthenticationStep.NewMfa : null;
         return mfaSatisfied ? null : AuthenticationStep.ExistingMfa;
     }
