@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Token client lab</title>
+    <link rel="stylesheet" href="dev.css" />
+    <link rel="stylesheet" href="token-client.css" />
+</head>
+<body>
+    <header>
+        <h1>Token client lab</h1>
+        <nav>
+            <a href="index.html">DevHost tools</a>
+            <a href="device.html">Device simulator</a>
+        </nav>
+        <span class="muted" id="clientVersion"></span>
+    </header>
+    <main>
+        <div class="grid">
+            <section>
+                <h2>Get a session</h2>
+                <p class="muted">Sign in through <span class="mono">v2/login</span> with PKCE, or take the session the device simulator holds.</p>
+                <div class="row">
+                    <input id="username" placeholder="Username" value="dev-plain" autocomplete="off" />
+                    <input id="password" type="password" placeholder="Password" autocomplete="off" />
+                    <button class="primary" id="signIn">Sign in</button>
+                </div>
+                <div class="row" id="mfaRow" hidden>
+                    <input id="mfaCode" placeholder="Authenticator code" inputmode="numeric" autocomplete="off" />
+                    <button class="primary" id="mfa">Verify</button>
+                    <span class="muted">The current code is on <a href="index.html" target="_blank" rel="noopener">DevHost tools</a>.</span>
+                </div>
+                <div class="row">
+                    <button id="fromDevice">Use the device simulator's session</button>
+                    <button id="clear">clear()</button>
+                </div>
+            </section>
+            <section>
+                <h2>Session in the store</h2>
+                <p class="muted" id="empty">The store is empty.</p>
+                <div id="stored" hidden>
+                    <table>
+                        <tbody>
+                            <tr><th>Account</th><td id="account"></td></tr>
+                            <tr><th>Access token</th><td class="mono" id="access"></td></tr>
+                            <tr><th>Refresh token</th><td class="mono" id="refreshInfo"></td></tr>
+                        </tbody>
+                    </table>
+                    <div class="lifetime"><div class="lifetime-bar" id="lifetimeBar"></div><div class="lifetime-skew" id="skewMark"></div></div>
+                    <p class="muted">The bar is the access token's remaining life. The client refreshes inside the marked last <span id="skewSeconds"></span> s.</p>
+                </div>
+            </section>
+        </div>
+        <section>
+            <h2>acquireToken</h2>
+            <div class="row">
+                <button class="primary" id="acquire">acquireToken()</button>
+                <button id="acquireMany">5 at once (single flight)</button>
+                <label><input type="checkbox" id="auto" /> Call it every</label>
+                <input type="number" id="autoSeconds" value="5" min="1" max="300" /> s
+                <label>skew <input type="number" id="skew" value="60" min="0" max="900" /> s</label>
+            </div>
+            <p><span class="pill" id="outcome">No call yet</span> <span class="muted" id="outcomeDetail"></span></p>
+        </section>
+        <div class="grid">
+            <section>
+                <h2>Faults</h2>
+                <div class="row">
+                    <button id="expireAccess">Force-expire the access token</button>
+                    <button id="corrupt">Corrupt the refresh token</button>
+                </div>
+                <div class="row">
+                    <span>Refresh route:</span>
+                    <label><input type="radio" name="fault" value="none" checked /> normal</label>
+                    <label><input type="radio" name="fault" value="offline" /> offline</label>
+                    <label><input type="radio" name="fault" value="server-error" /> 5xx</label>
+                </div>
+            </section>
+            <section>
+                <h2>Account</h2>
+                <p class="muted">Changes made directly in the DevHost database, as an administrator would. The next refresh is refused.</p>
+                <div class="row">
+                    <button id="deactivate">Deactivate the user</button>
+                    <button id="activate">Reactivate</button>
+                    <button id="bump">Bump SecurityVersion</button>
+                </div>
+                <p class="muted">A short access lifetime makes refreshes frequent: start the host with <span class="mono">eng/Start-DevHost.ps1 -AccessLifetimeSeconds 90</span> (current: <span id="lifetime">—</span>).</p>
+            </section>
+        </div>
+        <section>
+            <h2>Timeline</h2>
+            <div class="row"><button id="clearLog">Clear</button></div>
+            <div class="log" id="log"></div>
+        </section>
+    </main>
+    <script src="/clients/shiftidentity-tokenclient.js"></script>
+    <script src="/clients/shiftidentity-tokenclient-issuer-v2.js"></script>
+    <script src="devhost.js"></script>
+    <script src="token-client.js"></script>
+</body>
+</html>

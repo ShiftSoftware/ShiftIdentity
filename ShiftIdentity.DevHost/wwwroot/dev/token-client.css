@@ -1,0 +1,5 @@
+/* The access token's remaining life, with the refresh window (the skew) marked at the end. */
+.lifetime { position: relative; height: 14px; margin-top: 12px; border-radius: 7px; background: var(--line); overflow: hidden; }
+.lifetime-bar { height: 100%; width: 0; background: var(--ok); transition: width .9s linear; }
+.lifetime-skew { position: absolute; top: 0; bottom: 0; left: 0; width: 0; background: rgba(154, 91, 0, .35); }
+input[type=number] { width: 70px; }
