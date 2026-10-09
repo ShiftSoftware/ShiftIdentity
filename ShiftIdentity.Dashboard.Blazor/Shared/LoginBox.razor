@@ -77,7 +77,19 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (disposed) return;
-        if (firstRender) module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/ShiftSoftware.ShiftIdentity.Dashboard.Blazor/login-box.js");
+        if (firstRender)
+        {
+            var imported = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/ShiftSoftware.ShiftIdentity.Dashboard.Blazor/login-box.js");
+            // The page can leave while the script loads: the device page sends a signed-out visitor to the login page
+            // at once, and on a slow connection the script arrives after that. The box's element is gone by then, so
+            // the script is released instead of being handed an element that no longer exists.
+            if (disposed)
+            {
+                try { await imported.DisposeAsync(); } catch (JSDisconnectedException) { }
+                return;
+            }
+            module = imported;
+        }
         if (module is not null) await module.InvokeVoidAsync("sync", root, ViewKey, Direction, TrackHistory);
     }
 
