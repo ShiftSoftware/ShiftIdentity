@@ -87,6 +87,26 @@ public sealed class AdmissionSessionTests
     }
 
     [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task A_tab_hears_at_its_next_read_that_another_tab_signed_out(bool admission)
+    {
+        // Another tab removes the saved session, and this tab still shows it. A v2 session tells the app once, at the
+        // next read, so the app stops showing a session that is gone. Legacy never re-notifies, so an open form survives.
+        var storage = new MemoryStorage();
+        using var host = new IdentitySessionTestHost(admission, new ScriptedHttp(_ => throw new InvalidOperationException("No renewal expected.")), storage);
+        await host.Session.StoreTokenAsync(Session("original"));
+        Assert.NotNull(await host.Session.GetTokenAsync());
+        var notifications = 0;
+        host.Auth.AuthenticationStateChanged += _ => notifications++;
+        storage.RemoveItem("test");
+        Assert.Null(await host.Session.GetTokenAsync());
+        Assert.Null(await host.Session.GetTokenAsync());
+        Assert.Equal(admission ? 1 : 0, notifications);
+        Assert.False((await host.Auth.GetAuthenticationStateAsync()).User.Identity!.IsAuthenticated);
+    }
+
+    [Theory]
     [InlineData("Identity/UserDataForm", "/Identity/UserDataForm")]
     [InlineData("/Identity/UserDataForm", "/Identity/UserDataForm")]
     [InlineData("https://other.invalid/path", "/")]

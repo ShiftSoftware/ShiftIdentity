@@ -67,8 +67,28 @@ public sealed class LoginComponentTests
         Assert.Single(cut.FindAll("[data-testid=admission-error]"));
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task A_signed_in_visitor_is_sent_home_only_while_the_session_is_still_saved(bool saved)
+    {
+        // The app shows the visitor as signed in. If another tab signed out meanwhile, the session is gone, and the
+        // visitor signs in here instead of being sent to a home page that cannot load.
+        using var context = Context(out var store, out var flow, signedIn: true);
+        if (saved) await store.Session.StoreTokenAsync(AuthenticationFlowTests.Session().Session);
+        var navigation = context.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("Identity/login");
+        var cut = context.Render<LoginForm>(p => p.Add(x => x.AdmissionFlow, flow));
+        if (saved) cut.WaitForAssertion(() => Assert.Equal(navigation.BaseUri, navigation.Uri));
+        else
+        {
+            Assert.EndsWith("Identity/login", navigation.Uri);
+            Assert.Single(cut.FindAll("form"));
+        }
+    }
+
     private static BunitContext Context(out RecordingStore store, out AuthenticationFlow flow,
-        AuthenticationStep step = AuthenticationStep.ExistingMfa, bool refuseMfa = false)
+        AuthenticationStep step = AuthenticationStep.ExistingMfa, bool refuseMfa = false, bool signedIn = false)
     {
         var context = new BunitContext();
         var transport = new ScriptedHttp(async request =>
@@ -92,7 +112,8 @@ public sealed class LoginComponentTests
         context.Services.AddShiftBlazor(options => options.ShiftConfiguration = config => config.BaseAddress = "https://identity.invalid");
         context.Services.AddShiftIdentityDashboardBlazor(_ => { });
         context.Services.AddTransient(sp => new ShiftIdentityLocalizer(sp, typeof(ShiftSoftwareLocalization.Identity.Resource)));
-        context.AddAuthorization();
+        var authorization = context.AddAuthorization();
+        if (signedIn) authorization.SetAuthorized("synthetic");
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         return context;
     }

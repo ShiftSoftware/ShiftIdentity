@@ -12,6 +12,10 @@ public sealed class IdentitySession
     private readonly SemaphoreSlim state = new(1, 1);
     private long generation;
     private Renewal? renewal;
+    // Whether this tab last knew of a saved session, from its own reads and writes. Another tab can sign out without
+    // this one hearing of it, and the app goes on showing the session it was told about; the first read that finds the
+    // session gone tells the app.
+    private bool known;
     internal event Action? Changed;
     internal bool NotifyOnAuthStateRead => !transport.NotifyChanges;
 
@@ -25,7 +29,17 @@ public sealed class IdentitySession
     public string? GetToken() => transport.Readable(storage.Read())?.Token;
 
     /// <summary>Returns the stored token, renewing ordinary sessions when missing or within ten seconds of expiry.</summary>
-    public async Task<TokenDTO?> GetTokenAsync() => (await ReadOrRenewAsync(false)).Token;
+    public async Task<TokenDTO?> GetTokenAsync()
+    {
+        var token = (await ReadOrRenewAsync(false)).Token;
+        if (token is not null) known = true;
+        else if (known)
+        {
+            known = false;
+            Notify();
+        }
+        return token;
+    }
 
     public async Task StoreTokenAsync(TokenDTO token)
     {
@@ -35,6 +49,7 @@ public sealed class IdentitySession
         {
             generation++;
             await storage.WriteAsync(token);
+            known = true;
         }
         finally { state.Release(); }
         Notify();
@@ -65,6 +80,7 @@ public sealed class IdentitySession
             if (expected.Generation != generation || expected.Access != current?.Token || expected.Refresh != current?.RefreshToken) return false;
             generation++;
             await storage.WriteAsync(replacement);
+            known = true;
         }
         finally { state.Release(); }
         Notify();
@@ -78,6 +94,7 @@ public sealed class IdentitySession
         {
             generation++;
             await storage.RemoveAsync();
+            known = false;
         }
         finally { state.Release(); }
         Notify();
@@ -137,6 +154,7 @@ public sealed class IdentitySession
                     generation++;
                     await storage.WriteAsync(token);
                     changed = true;
+                    known = true;
                     read = new(token, true);
                 }
                 else if (result.Remove)
@@ -144,6 +162,7 @@ public sealed class IdentitySession
                     generation++;
                     await storage.RemoveAsync();
                     changed = true;
+                    known = false;
                     read = new(null, false);
                 }
                 else read = new(result.KeepCurrentAccess ? transport.Readable(current) : null, false);

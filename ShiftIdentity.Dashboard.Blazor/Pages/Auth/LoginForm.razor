@@ -238,13 +238,23 @@
         {
             var authState = await authenticationStateTask;
             if ((authState.User.Identity?.IsAuthenticated ?? false) &&
-                !((AdmissionContext is not null || ShiftIdentityDashboardBlazorOptions.StagedAuthority) && SecurityLink is "reset" or "verification" or "cancelled")) NavManager.NavigateTo("/");
+                !((AdmissionContext is not null || ShiftIdentityDashboardBlazorOptions.StagedAuthority) && SecurityLink is "reset" or "verification" or "cancelled") &&
+                await SessionSavedAsync()) NavManager.NavigateTo("/");
         }
         if (AdmissionFlow is not null)
         {
             providers = (await AdmissionFlow.ReadProvidersAsync()).Enabled;
             await ResumeProvider();
         }
+    }
+
+    // The app's signed-in state can be older than the saved session: another tab can sign out. A visitor is sent on
+    // only while their session is still saved, so a session that is gone is never sent to pages that cannot load.
+    private async Task<bool> SessionSavedAsync()
+    {
+        try { return !string.IsNullOrWhiteSpace((await (AdmissionContext?.Store ?? storageService).GetTokenAsync())?.Token); }
+        // A renewal that could not reach the service says nothing about the session, so it is sent on as before.
+        catch (Exception error) when (error is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException) { return true; }
     }
 
     private async Task SignInWithProvider(SignInProvider provider)
