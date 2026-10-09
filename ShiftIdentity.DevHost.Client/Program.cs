@@ -51,7 +51,8 @@ builder.Services.AddShiftIdentityDashboardBlazor(x =>
     x.DynamicTypeAuthActionExpander = () => Task.CompletedTask;
 });
 
-builder.Services.AddTypeAuth(x => x.AddActionTree<ShiftIdentityActions>());
+// The same trees as the DevHost server, as a real host's client registers them.
+builder.Services.AddTypeAuth(x => x.AddActionTree<ShiftIdentityActions>().AddActionTree<ShiftSoftware.ShiftEntity.Core.GeneralActionTree>());
 
 var host = builder.Build();
 // The language saved in this browser, applied as a host's own client applies it.

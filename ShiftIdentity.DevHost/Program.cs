@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using ShiftIdentity.DevHost;
 using ShiftIdentity.Tests.Infrastructure;
+using ShiftSoftware.ShiftEntity.Core;
+using ShiftSoftware.TypeAuth.AspNetCore.Extensions;
 
 // A local identity host for hand review. See the project file for what it is and what it is not.
 var options = DevHostOptions.Parse(args);
@@ -49,6 +51,10 @@ builder.Services.AddLogging(logging => logging.AddConsole()
 // Keys for this run only. Nothing is written to the machine's key ring.
 builder.Services.AddDataProtection().UseEphemeralDataProtectionProvider();
 ConfiguredIdentityHttpHost<IdentityTestDbContext>.AddHostServices(builder.Services, fixture, settings);
+// A real host also registers GeneralActionTree. Without it nobody can load a list without a page size or with pages
+// above five rows, so the user form's permission tree and the dashboard's lists fail. The shared test host registers
+// only ShiftIdentityActions; TypeAuth adds the trees of every registration together.
+builder.Services.AddTypeAuth(o => o.AddActionTree<GeneralActionTree>());
 builder.Services.AddSingleton(new DevHostState(fixture, accounts, origins, publicOrigin));
 
 await using var app = builder.Build();
