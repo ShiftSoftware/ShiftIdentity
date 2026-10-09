@@ -83,7 +83,13 @@ public enum AuthenticationFailure
     /// Device sign-in: the account does not allow device sign-in, so no device can be signed in as it. Only an
     /// administrator can allow it. Given only after a correct password, so it never says which accounts allow it.
     /// </summary>
-    DeviceSignInNotAllowed
+    DeviceSignInNotAllowed,
+    /// <summary>
+    /// An administrator asked to make an account change its password at next sign-in, but the account allows device
+    /// sign-in. Such an account never owes a password change, so the request is refused and nothing changes. The
+    /// request is never dropped silently. It can be made again after device sign-in is turned off.
+    /// </summary>
+    RequiredPasswordChangeNotAllowed
 }
 public enum AuthenticationOperationPurpose { Login = 1, ContactChange = 2, MfaEnrollment = 3, PasswordChange = 4, MfaReplacement = 5, MfaRecovery = 6, PasswordResetEmail = 7, PasswordResetManual = 8, EmailVerify = 9, AppExchange = 10, LegacyRefreshExchange = 11, LegacyMfaExchange = 12, AdministratorConfirmation = 13, ProviderLogin = 14 }
 

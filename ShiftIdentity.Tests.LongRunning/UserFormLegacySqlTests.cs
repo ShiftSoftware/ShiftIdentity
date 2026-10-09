@@ -179,6 +179,35 @@ public sealed class UserFormLegacySqlTests(SqlIdentityFixture fixture) : IClassF
     }
 
     [Fact]
+    public async Task An_account_that_allows_device_sign_in_never_owes_a_password_change_on_this_path_either()
+    {
+        using var host = await HostAsync();
+        await using var db = fixture.CreateContext();
+        // A new account that asks for both is refused, and nothing is created.
+        var both = NewUser(requireChange: true, sendVerification: false);
+        both.AllowDeviceSignIn = true;
+        using (var refused = await host.Client.PostAsJsonAsync("/api/IdentityUser", both))
+        {
+            Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+            Assert.Equal(nameof(UserDTO.RequireChangeAtNextLogin), (await refused.Content.ReadFromJsonAsync<ShiftEntityResponse<UserDTO>>())!.Message!.For);
+        }
+        Assert.False(await db.Users.AnyAsync(x => x.Username == both.Username));
+        // Allowing device sign-in clears an owed change in the same save.
+        var id = await CreateAsync(host, NewUser(requireChange: true, sendVerification: false));
+        var dto = await GetAsync(host, id);
+        dto.AllowDeviceSignIn = true;
+        await PutAsync(host, dto);
+        Assert.False((await db.Users.AsNoTracking().SingleAsync(x => x.ID == id)).RequireChangePassword);
+        // The configured default (true here) does not apply to it.
+        using var assigned = await host.Client.PostAsJsonAsync("/api/IdentityUser/AssignRandomPasswords",
+            new SelectStateDTO<UserListDTO> { Items = [new UserListDTO { ID = id.ToString() }] });
+        Assert.True(assigned.StatusCode == HttpStatusCode.OK, await assigned.Content.ReadAsStringAsync());
+        var user = await db.Users.AsNoTracking().SingleAsync(x => x.ID == id);
+        Assert.True(user.AllowDeviceSignIn); Assert.False(user.RequireChangePassword);
+        Assert.False(HashService.VerifyPassword(Password, user.Salt, user.PasswordHash));
+    }
+
+    [Fact]
     public async Task Import_keeps_the_configured_forced_change_and_sends_no_verification()
     {
         using var host = await HostAsync();

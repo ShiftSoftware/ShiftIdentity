@@ -248,15 +248,199 @@ public sealed class UserFormAuthoritySqlTests(SqlIdentityFixture fixture) : ICla
 
     // A screen asks for codes, a phone types the account's username and password, and the screen collects its session.
     // Returns the screen's refresh token.
-    private static async Task<string> SignInScreenAsync(LegacyIdentityHttpHost<IdentityTestDbContext> host, string username)
+    private static async Task<string> SignInScreenAsync(LegacyIdentityHttpHost<IdentityTestDbContext> host, string username, string password = Password)
     {
         var started = Assert.IsType<DeviceAuthorizationStarted>(await IdentityHttpHost.Read(await host.Client.PostAsJsonAsync(
             "/api/identity/v2/device/authorize", new StartDeviceAuthorizationRequest("service-screen"))));
         Assert.IsType<DeviceAuthorizationView>(await IdentityHttpHost.Read(await host.Client.PostAsJsonAsync(
-            "/api/identity/v2/device/approve", new ApproveDeviceRequest(started.UserCode, username, Password))));
+            "/api/identity/v2/device/approve", new ApproveDeviceRequest(started.UserCode, username, password))));
         var issued = await IdentityHttpHost.Read(await host.Client.PostAsJsonAsync(
             "/api/identity/v2/device/token", new DeviceTokenRequest(started.DeviceCode)));
         return Assert.IsType<SessionIssued>(issued).Session.RefreshToken;
+    }
+
+    [Theory]
+    [InlineData("allowed")]
+    [InlineData("not-allowed")]
+    [InlineData("audit-fails")]
+    public async Task Creating_an_account_that_allows_device_sign_in_audits_who_allowed_it_in_the_same_save(string scenario)
+    {
+        using var host = await HostAsync(interceptors: scenario == "audit-fails" ? [new DeviceAuditFault()] : Array.Empty<IInterceptor>());
+        var dto = NewUser(requireChange: false, sendVerification: false);
+        dto.AllowDeviceSignIn = scenario != "not-allowed";
+        await using var db = fixture.CreateContext();
+        if (scenario == "audit-fails")
+        {
+            HttpResponseMessage? failed = null;
+            try { failed = await host.Client.PostAsJsonAsync("/api/IdentityUser", dto); }
+            catch (Exception error) when (error is not Xunit.Sdk.XunitException) { }
+            Assert.True(failed is null || failed.StatusCode == HttpStatusCode.InternalServerError);
+            failed?.Dispose();
+            // The audit row is written in the creation's own transaction, so when it fails the account is not created.
+            Assert.False(await db.Users.IgnoreQueryFilters().AnyAsync(x => x.Username == dto.Username));
+            return;
+        }
+        using var response = await host.Client.PostAsJsonAsync("/api/IdentityUser", dto);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var id = long.Parse((await response.Content.ReadFromJsonAsync<ShiftEntityResponse<UserDTO>>())!.Entity!.ID!);
+        var (user, state) = await StateAsync(id);
+        Assert.Equal(dto.AllowDeviceSignIn, user.AllowDeviceSignIn); Assert.Equal(1, state.SecurityVersion);
+        var audits = await db.Set<AuthenticationAuditEvent>().AsNoTracking().Where(x => x.UserID == id).ToListAsync();
+        Assert.Equal(dto.AllowDeviceSignIn ? new[] { "AccountCreated", "DeviceSignInAllowed" } : new[] { "AccountCreated" }, audits.Select(x => x.Outcome).Order());
+        // Both rows name the same operator, the account's first version and the same moment.
+        Assert.All(audits, x => Assert.Equal((adminID, 1L, audits[0].CreatedAt), (x.ActorUserID ?? 0, x.SecurityVersion, x.CreatedAt)));
+    }
+
+    [Fact]
+    public async Task Allowing_device_sign_in_clears_an_owed_password_change_in_the_same_save()
+    {
+        fixture.Device = new(new Dictionary<string, string> { ["service-screen"] = "Service Screen" }, "https://identity.invalid/Identity/device");
+        using var host = await HostAsync();
+        var id = await CreateAsync(host, NewUser(requireChange: true, sendVerification: false));
+        var username = (await GetAsync(host, id)).Username;
+        Assert.Equal(AuthenticationStep.PasswordChange, Assert.IsType<ChallengeRequired>(await LoginAsync(host, username, Password)).Challenge.Step);
+
+        // The flag is part of the stale-row check: a save whose row changed after it was read is refused, and the
+        // device sign-in it asked for is not kept.
+        using (var gate = new AdmissionGate("LegacyAdmission"))
+        using (var gated = await HostAsync(observe: gate.Observe))
+        {
+            var stale = await GetAsync(gated, id);
+            stale.AllowDeviceSignIn = true;
+            var pending = gated.Client.PutAsJsonAsync($"/api/IdentityUser/{id}", stale);
+            try
+            {
+                await gate.Entered.WaitAsync(TimeSpan.FromSeconds(10));
+                await using var db = fixture.CreateContext();
+                await db.Users.Where(x => x.ID == id).ExecuteUpdateAsync(x => x.SetProperty(u => u.RequireChangePassword, false));
+            }
+            finally { gate.Release(); }
+            using var refused = await pending;
+            Assert.Equal(HttpStatusCode.Conflict, refused.StatusCode);
+            Assert.False((await StateAsync(id)).User.AllowDeviceSignIn);
+            await using var restore = fixture.CreateContext();
+            await restore.Users.Where(x => x.ID == id).ExecuteUpdateAsync(x => x.SetProperty(u => u.RequireChangePassword, true));
+        }
+
+        // The form loads the account with the choice ticked (the DTO's default) and sends no password, so the save
+        // asks for nothing but device sign-in.
+        var dto = await GetAsync(host, id);
+        dto.AllowDeviceSignIn = true;
+        await PutAsync(host, dto);
+        var (user, state) = await StateAsync(id);
+        Assert.True(user.AllowDeviceSignIn); Assert.False(user.RequireChangePassword); Assert.Equal(1, state.SecurityVersion);
+        Assert.Equal(("DeviceSignInAllowed", adminID, 1L), Assert.Single(await AuditsAsync(id, "AccountCreated")));
+        // The account now signs in and renews with no step, and a phone signs a screen in as it with no step.
+        var session = Assert.IsType<SessionIssued>(await LoginAsync(host, username, Password));
+        Assert.IsType<SessionIssued>(await RefreshAsync(host, session.Session.RefreshToken));
+        var screen = await SignInScreenAsync(host, username);
+        Assert.IsType<SessionIssued>(await RefreshAsync(host, screen));
+    }
+
+    [Theory]
+    [InlineData("create")]
+    [InlineData("allowed")]
+    [InlineData("allowing")]
+    [InlineData("bulk")]
+    public async Task Asking_for_a_password_change_on_an_account_that_allows_device_sign_in_is_refused_and_changes_nothing(string save)
+    {
+        using var host = await HostAsync();
+        var device = NewUser(requireChange: true, sendVerification: false);
+        device.AllowDeviceSignIn = save != "allowing";
+        if (save == "create")
+        {
+            using var created = await host.Client.PostAsJsonAsync("/api/IdentityUser", device);
+            Assert.Equal(nameof(UserDTO.RequireChangeAtNextLogin), (await DeviceChangeRefusedAsync(created)).For);
+            await using var db = fixture.CreateContext();
+            Assert.False(await db.Users.IgnoreQueryFilters().AnyAsync(x => x.Username == device.Username));
+            return;
+        }
+        device.RequireChangeAtNextLogin = false;
+        var id = await CreateAsync(host, device);
+        var plain = await CreateAsync(host, NewUser(requireChange: false, sendVerification: false));
+        var audits = (await AuditsAsync(id)).Order().ToList();
+        HttpResponseMessage response;
+        if (save == "bulk")
+            response = await host.Client.PostAsJsonAsync("/api/IdentityUser/AssignRandomPasswords?requireChangeAtNextLogin=true",
+                new SelectStateDTO<UserListDTO> { Items = [new() { ID = id.ToString() }, new() { ID = plain.ToString() }] });
+        else
+        {
+            var dto = await GetAsync(host, id);
+            dto.AllowDeviceSignIn = true; dto.Password = OtherPassword; dto.RequireChangeAtNextLogin = true;
+            response = await host.Client.PutAsJsonAsync($"/api/IdentityUser/{id}", dto);
+        }
+        var message = await DeviceChangeRefusedAsync(response);
+        response.Dispose();
+        // The bulk answer names the accounts that allow device sign-in; a form answer points at the checkbox.
+        if (save == "bulk") Assert.Equal(device.Username, Assert.Single(message.SubMessages!).Title);
+        else Assert.Equal(nameof(UserDTO.RequireChangeAtNextLogin), message.For);
+        foreach (var (target, allowed) in new[] { (id, save != "allowing"), (plain, false) })
+        {
+            var (user, state) = await StateAsync(target);
+            Assert.Equal(allowed, user.AllowDeviceSignIn); Assert.False(user.RequireChangePassword);
+            Assert.True(HashService.VerifyVersionedPassword(Password, user.Salt, user.PasswordHash)); Assert.Equal(1, state.SecurityVersion);
+        }
+        Assert.Equal(audits, (await AuditsAsync(id)).Order());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Turning_device_sign_in_off_leaves_the_password_change_off_until_an_administrator_asks_for_it(bool ask)
+    {
+        using var host = await HostAsync();
+        var created = NewUser(requireChange: false, sendVerification: false);
+        created.AllowDeviceSignIn = true;
+        var id = await CreateAsync(host, created);
+        var dto = await GetAsync(host, id);
+        dto.AllowDeviceSignIn = false;
+        // An administrator who wants the change asks for it explicitly, here in the same save.
+        if (ask) { dto.Password = OtherPassword; dto.RequireChangeAtNextLogin = true; }
+        await PutAsync(host, dto);
+        var (user, state) = await StateAsync(id);
+        Assert.False(user.AllowDeviceSignIn); Assert.Equal(ask, user.RequireChangePassword); Assert.Equal(2, state.SecurityVersion);
+        Assert.Equal(ask ? new[] { "AdminPasswordSetRequiringChange", "DeviceSignInRemoved" } : new[] { "DeviceSignInRemoved" },
+            (await AuditsAsync(id, "AccountCreated", "DeviceSignInAllowed")).Select(x => x.Outcome).Order());
+        var login = await LoginAsync(host, dto.Username, ask ? OtherPassword : Password);
+        if (ask) Assert.Equal(AuthenticationStep.PasswordChange, Assert.IsType<ChallengeRequired>(login).Challenge.Step);
+        else Assert.IsType<SessionIssued>(login);
+    }
+
+    [Fact]
+    public async Task The_configured_default_never_asks_an_account_that_allows_device_sign_in_for_a_password_change()
+    {
+        fixture.Device = new(new Dictionary<string, string> { ["service-screen"] = "Service Screen" }, "https://identity.invalid/Identity/device");
+        using var host = await HostAsync();
+        var device = NewUser(requireChange: false, sendVerification: false);
+        device.AllowDeviceSignIn = true;
+        var deviceID = await CreateAsync(host, device);
+        var plainID = await CreateAsync(host, NewUser(requireChange: false, sendVerification: false));
+        // No choice in the request: the host's Security.RequirePasswordChange (true here) applies to the plain account only.
+        using var response = await host.Client.PostAsJsonAsync("/api/IdentityUser/AssignRandomPasswords",
+            new SelectStateDTO<UserListDTO> { Items = [new() { ID = deviceID.ToString() }, new() { ID = plainID.ToString() }] });
+        Assert.True(response.StatusCode == HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        var envelope = (await response.Content.ReadFromJsonAsync<ShiftEntityResponse<IEnumerable<UserInfoDTO>>>())!;
+        var assigned = System.Text.Json.JsonSerializer.Deserialize<List<UserInfoDTO>>(((System.Text.Json.JsonElement)envelope.Additional!["Users"]).GetRawText(),
+            new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web))!;
+        foreach (var (id, deviceAccount) in new[] { (deviceID, true), (plainID, false) })
+        {
+            var (user, state) = await StateAsync(id);
+            Assert.Equal(!deviceAccount, user.RequireChangePassword); Assert.Equal(2, state.SecurityVersion);
+            Assert.Equal((PasswordAudit(!deviceAccount), adminID, 2L), Assert.Single(await AuditsAsync(id, "AccountCreated", "DeviceSignInAllowed")));
+        }
+        // The device account's new password signs a screen in with no step.
+        var password = assigned.Single(x => x.ID == deviceID.ToString()).PlainTextPassword!;
+        Assert.IsType<SessionIssued>(await RefreshAsync(host, await SignInScreenAsync(host, device.Username, password)));
+    }
+
+    // The refusal every writer gives for a password change on an account that allows device sign-in.
+    private static async Task<Message> DeviceChangeRefusedAsync(HttpResponseMessage response)
+    {
+        Assert.True(response.StatusCode == HttpStatusCode.BadRequest, await response.Content.ReadAsStringAsync());
+        var message = (await response.Content.ReadFromJsonAsync<ShiftEntityResponse<UserDTO>>())!.Message!;
+        Assert.Equal("Validation Error", message.Title);
+        Assert.Equal("Accounts that allow device sign-in can't be asked to change their password at next sign-in.", message.Body);
+        return message;
     }
 
     [Theory]
@@ -880,6 +1064,19 @@ public sealed class UserFormAuthoritySqlTests(SqlIdentityFixture fixture) : ICla
     private static string PasswordAudit(bool requireChange) => requireChange ? "AdminPasswordSetRequiringChange" : "AdminPasswordSet";
 
     private LocalSecurityInbox Inbox => Assert.IsType<LocalSecurityInbox>(fixture.EmailSink);
+
+    /// <summary>Fails the flush that writes a DeviceSignInAllowed audit row, so the whole creation rolls back.</summary>
+    private sealed class DeviceAuditFault : SaveChangesInterceptor
+    {
+        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData,
+            InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        {
+            if (eventData.Context is { } context && context.ChangeTracker.Entries<AuthenticationAuditEvent>()
+                    .Any(x => x.State == EntityState.Added && x.Entity.Outcome == "DeviceSignInAllowed"))
+                throw new IOException("Synthetic audit write failure.");
+            return ValueTask.FromResult(result);
+        }
+    }
 
     /// <summary>Fails the flush of a save whose admission changed a security row, so the whole transaction rolls back.</summary>
     private sealed class AdmittedSaveFault : SaveChangesInterceptor

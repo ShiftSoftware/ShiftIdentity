@@ -56,7 +56,6 @@ internal static class UserEndpoints
             async (SelectStateDTO<UserListDTO> ids,
                    HttpContext httpContext,
                    UserRepository userRepo,
-                   ShiftIdentityConfiguration options,
                    [FromQuery(Name = "shareWithUser")] bool? shareWithUser,
                    [FromQuery(Name = "passwordLength")] int? passwordLength,
                    [FromQuery(Name = "requireChangeAtNextLogin")] bool? requireChangeAtNextLogin,
@@ -66,13 +65,14 @@ internal static class UserEndpoints
                 // plaintext password). This used to round-trip that through AutoMapper as a UserInfoDTO ->
                 // UserInfoDTO identity map, which copied every member onto fresh instances to no purpose.
                 // The forced change at next sign-in is the caller's per-request choice (the reset dialog's checkbox);
-                // a caller that sends no choice keeps the configured default. With the staged authority the save
-                // admits every credential in one transaction; a refusal returns the envelope message.
+                // a caller that sends no choice keeps the configured default, except for accounts that allow device
+                // sign-in. With the staged authority the save admits every credential in one transaction; a refusal
+                // returns the envelope message.
                 IEnumerable<UserInfoDTO> userInfos;
                 try
                 {
                     userInfos = userRepo.AssignRandomPasswords(await GetSelectedUsersAsync(httpContext, ids), passwordLength ?? 20,
-                        requireChangeAtNextLogin ?? options.Security.RequirePasswordChange);
+                        requireChangeAtNextLogin);
 
                     await userRepo.SaveChangesAsync();
                 }

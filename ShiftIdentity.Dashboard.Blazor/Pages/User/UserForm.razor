@@ -26,6 +26,7 @@
 else
 {
 <ShiftEntityForm @bind-Value="_theItem"
+                 @bind-Value:after="ItemLoaded"
                  Endpoint="@($"{Constants.IdentityRoutePreifix}User")"
                  Title="@Loc["User"]"
                  AllowSaveAsNew
@@ -137,11 +138,18 @@ else
                         <MudAlert Severity="Severity.Warning" Dense="true" Icon="@Icons.Material.Filled.Password" Class="mt-3" data-testid="user-password-require-change">
                             <MudStack Row Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="4">
                                 <MudText Typo="Typo.body2">@Loc["A new password will be saved for this user."]</MudText>
+                                @* An account that allows device sign-in never owes a password change; the server refuses it. *@
                                 <MudCheckBox T="bool"
                                              Dense
-                                             Disabled="@context.Disabled"
+                                             Disabled="@(context.Disabled || context.Item.AllowDeviceSignIn)"
                                              Label="@Loc["Ask the user to change this password at next sign-in"]"
                                              @bind-Value="context.Item.RequireChangeAtNextLogin" />
+                                @if (context.Item.AllowDeviceSignIn)
+                                {
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary" data-testid="user-password-require-change-device-note">
+                                        @Loc["Not asked for while device sign-in is allowed."]
+                                    </MudText>
+                                }
                             </MudStack>
                         </MudAlert>
                     }
@@ -155,11 +163,13 @@ else
                             <MudText Typo="Typo.subtitle2">@Loc["Device sign-in"]</MudText>
                             <MudText Typo="Typo.caption" Class="mud-text-secondary">@Loc["For TVs and other devices that sign in with a code"]</MudText>
                         </div>
-                        <MudCheckBox ReadOnly="@context.ReadOnly"
+                        <MudCheckBox T="bool"
+                                     ReadOnly="@context.ReadOnly"
                                      Disabled="@context.Disabled"
                                      For="@(() => context.Item.AllowDeviceSignIn)"
                                      Label="@Loc["Allow device sign-in"]"
-                                     @bind-Value="@context.Item.AllowDeviceSignIn"
+                                     Value="@context.Item.AllowDeviceSignIn"
+                                     ValueChanged="@((bool allowed) => SetDeviceSignIn(context.Item, allowed))"
                                      data-testid="user-allow-device-sign-in" />
                         <MudText Typo="Typo.caption" Class="mud-text-secondary" data-testid="user-device-sign-in-help">
                             @Loc["A device shows a code, and someone types this account's username and password on their phone. The device gets this account's full access. Accounts with this on are never asked for MFA. Turning it off signs the account out everywhere. Use it only for accounts made for devices."]
@@ -453,6 +463,19 @@ else
     // Mirrors the upsert hook: the forced change is written only when a password is supplied.
     private static bool PasswordChoiceApplies(UserDTO item, FormModes mode) =>
         mode >= FormModes.Edit && !string.IsNullOrEmpty(item.Password);
+
+    // An account that allows device sign-in never owes a password change at sign-in, and the server refuses a save
+    // that asks for one. Allowing it unticks the choice. Turning it off leaves the choice unticked: the form never
+    // brings back an earlier value, and an administrator who wants the change ticks it again.
+    private static void SetDeviceSignIn(UserDTO item, bool allowed)
+    {
+        item.AllowDeviceSignIn = allowed;
+        if (allowed) item.RequireChangeAtNextLogin = false;
+    }
+
+    // The server never sends the choice back, so a loaded account carries the DTO's default (ticked). An account that
+    // allows device sign-in starts unticked instead.
+    private void ItemLoaded() => SetDeviceSignIn(_theItem, _theItem.AllowDeviceSignIn);
 
     // Mirrors the upsert hook: a link goes only to a created user's address or an address that differs from the saved
     // one, compared case-insensitively without trimming.

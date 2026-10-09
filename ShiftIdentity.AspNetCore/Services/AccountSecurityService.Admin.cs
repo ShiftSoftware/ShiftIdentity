@@ -36,7 +36,7 @@ internal static partial class AccountSecurityService
         // First admission checks the operator and captures the target credential; the expensive hash runs outside the lock.
         var read = await services.Store.AdmitAdminAsync(who.UserID, request.UserID, services.Client, (actor, unit) =>
         {
-            var refusal = AdminTargetRefusal(services, actor, unit, who);
+            var refusal = AdminTargetRefusal(services, actor, unit, who) ?? ChangeRequestRefusal(unit, request.RequireChangeAtNextLogin);
             return Task.FromResult(new SnapshotResult(refusal is null ? new(unit.User, unit.Security, unit.Policy) : null, refusal));
         }, ct);
         if (read.Failure is not null) return read.Failure;
@@ -53,6 +53,8 @@ internal static partial class AccountSecurityService
             if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
             // A credential that changed since the snapshot (self-service change, reset, another operator) is never overwritten.
             if (!SameCredential(snapshot, unit)) return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.StaleOperation));
+            // Checked again under this lock: device sign-in may have been allowed since the snapshot.
+            if (ChangeRequestRefusal(unit, request.RequireChangeAtNextLogin) is { } changeRefusal) return Task.FromResult<AuthOutcome>(changeRefusal);
             var now = services.Clock.GetUtcNow();
             ApplyPassword(unit, candidate, request.RequireChangeAtNextLogin);
             Bump(unit);
@@ -150,6 +152,17 @@ internal static partial class AccountSecurityService
         requireChangeAtNextLogin ? "AdminPasswordSetRequiringChange" : "AdminPasswordSet";
 
     /// <summary>
+    /// An account that allows device sign-in never owes a password change at sign-in. A request to set that flag on
+    /// such an account is refused, and nothing changes; the request is never dropped silently. The caller passes the
+    /// device sign-in choice the change leaves on the account.
+    /// </summary>
+    internal static AuthenticationRefused? ChangeRequestRefusal(bool allowsDeviceSignIn, bool requireChangeAtNextLogin) =>
+        allowsDeviceSignIn && requireChangeAtNextLogin ? Refuse(AuthenticationFailure.RequiredPasswordChangeNotAllowed) : null;
+
+    private static AuthenticationRefused? ChangeRequestRefusal(IdentitySecurityTransaction unit, bool requireChangeAtNextLogin) =>
+        ChangeRequestRefusal(unit.User.AllowDeviceSignIn, requireChangeAtNextLogin);
+
+    /// <summary>
     /// Disables the authenticator and requires individual local recovery, whatever the global MFA policy says: the
     /// factor generation advances, the protected secret and its replay state are cleared, and a password alone can
     /// no longer open an ordinary session. The caller decides whether the account qualifies, increments the version
@@ -214,11 +227,16 @@ internal static partial class AccountSecurityService
         return true;
     }
 
-    /// <summary>Changes whether devices can be signed in as the account. The caller ends its sessions when it is turned off.</summary>
+    /// <summary>
+    /// Changes whether devices can be signed in as the account. The caller ends its sessions when it is turned off.
+    /// Allowing it also clears an owed password change in the same change: such an account never owes one. Turning
+    /// it off leaves the flag off; an administrator who wants the change asks for it again.
+    /// </summary>
     internal static bool ApplyDeviceSignIn(IdentitySecurityTransaction unit, bool allowed)
     {
         if (unit.User.AllowDeviceSignIn == allowed) return false;
         unit.User.AllowDeviceSignIn = allowed;
+        if (allowed) unit.User.RequireChangePassword = false;
         return true;
     }
 

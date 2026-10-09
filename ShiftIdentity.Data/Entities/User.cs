@@ -222,6 +222,13 @@ public class User : ShiftEntity<User>,
         if (authority is not null && !string.IsNullOrEmpty(dto.Password) && authority.CheckNewPassword(dto.Password, username) is { } policyFailure)
             throw new ShiftEntityException(new Message(Loc["Validation Error"], Loc[policyFailure]) { For = nameof(UserDTO.Password) });
 
+        // An account that allows device sign-in never owes a password change at sign-in. A new password that asks for
+        // one on such an account is refused in both modes; the save never goes ahead with the request left out. The
+        // form unticks and disables the choice, so only another client can send this. The staged authority checks it
+        // again.
+        if (dto.AllowDeviceSignIn && !string.IsNullOrEmpty(dto.Password) && dto.RequireChangeAtNextLogin)
+            throw new ShiftEntityException(new Message(Loc["Validation Error"], Loc[UserAccountChange.DeviceSignInPasswordChangeMessage]) { For = nameof(UserDTO.RequireChangeAtNextLogin) });
+
         // Capture old values before mutation to reset verification flags on change
         var oldEmail = entity.Email;
         var oldPhone = entity.Phone;
@@ -350,6 +357,10 @@ public class User : ShiftEntity<User>,
                 // when no password is supplied.
                 entity.RequireChangePassword = dto.RequireChangeAtNextLogin;
             }
+
+            // Allowing device sign-in clears an owed password change, as the staged authority does on an update.
+            if (entity.AllowDeviceSignIn)
+                entity.RequireChangePassword = false;
         }
 
         db.UserAccessTrees.RemoveRange(removedAccessTrees);

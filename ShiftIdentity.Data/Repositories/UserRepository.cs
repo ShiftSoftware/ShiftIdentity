@@ -307,7 +307,15 @@ public class UserRepository :
         }
     }
 
-    public IEnumerable<UserInfoDTO> AssignRandomPasswords(List<User> users, int passwordLength, bool enforceChange)
+    /// <summary>
+    /// Gives every selected user except the built-in ones a new random password.
+    /// </summary>
+    /// <param name="enforceChange">
+    /// Ask the users to change the password at next sign-in. Null applies the configured default
+    /// (<c>Security.RequirePasswordChange</c>), which never applies to an account that allows device sign-in. An
+    /// explicit true for such an account refuses the whole save and names the accounts.
+    /// </param>
+    public IEnumerable<UserInfoDTO> AssignRandomPasswords(List<User> users, int passwordLength, bool? enforceChange)
     {
         var userInfos = new List<UserInfoDTO>();
 
@@ -316,12 +324,19 @@ public class UserRepository :
             throw new ShiftEntityException(new Message(Loc["Validation Error"],
                 Loc["The password length must be at least {0}", NewPasswordPolicy.MinimumLength]));
 
+        // An account that allows device sign-in never owes a password change at sign-in. The request is refused
+        // before any password is generated, so nothing is written. The staged authority checks it again.
+        if (enforceChange == true && users.Where(x => !x.IsProtected && x.AllowDeviceSignIn).Select(x => x.Username).ToList() is { Count: > 0 } deviceAccounts)
+            throw new ShiftEntityException(new Message(Loc["Validation Error"], Loc[UserAccountChange.DeviceSignInPasswordChangeMessage],
+                deviceAccounts.Select(x => new Message(x)).ToList()));
+
         foreach (var user in users)
         {
             if (user.IsProtected)
                 continue;
 
             var password = PasswordGenerator.GeneratePassword(passwordLength);
+            var requireChange = enforceChange ?? (configuration.Security.RequirePasswordChange && !user.AllowDeviceSignIn);
 
             if (authority is null)
             {
@@ -331,7 +346,7 @@ public class UserRepository :
                 user.Salt = hash.Salt;
 
                 //Set flag to enforce password change
-                user.RequireChangePassword = enforceChange;
+                user.RequireChangePassword = requireChange;
             }
             else
             {
@@ -340,7 +355,7 @@ public class UserRepository :
                 {
                     User = user,
                     Password = HashService.GenerateVersionedHash(password),
-                    RequireChangeAtNextLogin = enforceChange
+                    RequireChangeAtNextLogin = requireChange
                 });
             }
 
@@ -406,7 +421,8 @@ public class UserRepository :
                 Password = password,
                 IsActive = true,
                 // Import keeps its previous behaviour: the configured default decides the forced change, and the
-                // imported address is marked verified below, so no verification link is sent.
+                // imported address is marked verified below, so no verification link is sent. An imported account
+                // never allows device sign-in, so the default can apply to every one of them.
                 RequireChangeAtNextLogin = configuration.Security.RequirePasswordChange,
                 SendVerification = false,
             };

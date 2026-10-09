@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Authentication;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.Authentication;
+using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 using ShiftSoftware.ShiftIdentity.Data;
 using ShiftSoftware.ShiftIdentity.Data.Authentication;
 using ShiftSoftware.ShiftIdentity.Data.Entities;
@@ -71,6 +72,10 @@ internal static partial class AccountSecurityService
             // it (a self-service change, another operator, a reset) is never overwritten.
             if (!await RowUnchangedAsync(db, change.User, ct)) throw new AdmissionRefusedException(AuthenticationFailure.StaleOperation, AdmissionRefusalReason.Stale);
             if (services.Options.PolicyRevision != unit.Policy.Revision) throw new AdmissionRefusedException(AuthenticationFailure.Unavailable, AdmissionRefusalReason.Unavailable);
+            // Before anything is applied: a new password that asks for a change at next sign-in is refused when the
+            // account allows device sign-in after this save, whether it allowed it before or this save allows it.
+            if (change.Password is not null && ChangeRequestRefusal(change.AllowDeviceSignIn ?? unit.User.AllowDeviceSignIn, change.RequireChangeAtNextLogin) is { } changeRefusal)
+                throw new AdmissionRefusedException(changeRefusal.Code, AdmissionRefusalReason.Invalid, nameof(UserDTO.RequireChangeAtNextLogin));
 
             var startVersion = unit.Security.SecurityVersion;
             var audits = new List<string>();
@@ -80,7 +85,8 @@ internal static partial class AccountSecurityService
                 audits.Add(active ? "AccountActivated" : "AccountDeactivated");
                 restrictive = true;
             }
-            // Allowing device sign-in restricts nothing. Taking it away ends every session, the devices' included.
+            // Allowing device sign-in restricts nothing, and it clears an owed password change in the same change.
+            // Taking it away ends every session, the devices' included.
             if (change.AllowDeviceSignIn is { } allowed && ApplyDeviceSignIn(unit, allowed))
             {
                 audits.Add(allowed ? "DeviceSignInAllowed" : "DeviceSignInRemoved");
@@ -152,6 +158,9 @@ internal static partial class AccountSecurityService
         {
             var user = creation.User;
             if (user.ID <= 0) throw new InvalidOperationException("A created user must be flushed before its security state is recorded.");
+            // The upsert hook refuses this first, with the same answer. Nothing is committed: the row was only flushed.
+            if (ChangeRequestRefusal(user.AllowDeviceSignIn, user.RequireChangePassword) is { } changeRefusal)
+                throw new AdmissionRefusedException(changeRefusal.Code, AdmissionRefusalReason.Invalid, nameof(UserDTO.RequireChangeAtNextLogin));
             var state = new UserSecurityState { UserID = user.ID };
             RecoveryContact.InitializeLookup(user, state);
             // An address assigned by an administrator is recovery-eligible; a verified import keeps its verified flag.
@@ -162,6 +171,12 @@ internal static partial class AccountSecurityService
             {
                 UserID = user.ID, SecurityVersion = state.SecurityVersion, Outcome = "AccountCreated", CreatedAt = now, ActorUserID = who.UserID
             });
+            // A new account that allows device sign-in records who allowed it, as a later edit of the checkbox does.
+            if (user.AllowDeviceSignIn)
+                db.Set<AuthenticationAuditEvent>().Add(new()
+                {
+                    UserID = user.ID, SecurityVersion = state.SecurityVersion, Outcome = "DeviceSignInAllowed", CreatedAt = now, ActorUserID = who.UserID
+                });
         }
         await db.SaveChangesAsync(ct);
     }

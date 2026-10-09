@@ -94,6 +94,50 @@ public sealed class AdminAccountSqlTests(SqlIdentityFixture fixture) : IClassFix
     }
 
     [Theory]
+    [InlineData("before")]
+    [InlineData("meanwhile")]
+    public async Task Password_set_that_asks_for_a_change_on_an_account_that_allows_device_sign_in_is_refused_and_changes_nothing(string allowed)
+    {
+        using var host = new IdentityHttpHost(fixture);
+        var admin = await AdminLogin(host);
+        AuthOutcome outcome;
+        if (allowed == "before")
+        {
+            await AllowDeviceSignInAsync();
+            outcome = await host.AdminSetPasswordAsync(admin.Session.Token, fixture.UserID, NewPassword, requireChange: true);
+        }
+        else
+        {
+            // Device sign-in is allowed after the first check and before the write: the check under the write's lock refuses.
+            using var gate = new AdmissionGate("AdminPasswordPrepared");
+            using var gated = new IdentityHttpHost(fixture, observe: gate.Observe);
+            var pending = gated.AdminSetPasswordAsync(admin.Session.Token, fixture.UserID, NewPassword, requireChange: true);
+            try
+            {
+                await gate.Entered.WaitAsync(TimeSpan.FromSeconds(10));
+                await AllowDeviceSignInAsync();
+            }
+            finally { gate.Release(); }
+            outcome = await pending;
+        }
+        Assert.Equal(AuthenticationFailure.RequiredPasswordChangeNotAllowed, Assert.IsType<AuthenticationRefused>(outcome).Code);
+        await AssertUnchanged();
+
+        // The same password set without the request is applied, and the account still owes nothing.
+        Assert.IsType<AdminAccountChanged>(await host.AdminSetPasswordAsync(admin.Session.Token, fixture.UserID, NewPassword, requireChange: false));
+        await using var db = fixture.CreateContext();
+        var user = await db.Users.SingleAsync(x => x.ID == fixture.UserID);
+        Assert.True(user.AllowDeviceSignIn); Assert.False(user.RequireChangePassword);
+        Assert.Equal("AdminPasswordSet", (await db.Set<AuthenticationAuditEvent>().SingleAsync(x => x.UserID == fixture.UserID && x.ActorUserID != null)).Outcome);
+    }
+
+    private async Task AllowDeviceSignInAsync()
+    {
+        await using var db = fixture.CreateContext();
+        await db.Users.Where(x => x.ID == fixture.UserID).ExecuteUpdateAsync(x => x.SetProperty(u => u.AllowDeviceSignIn, true));
+    }
+
+    [Theory]
     [InlineData("password", "permission", AuthenticationFailure.ClientDenied)]
     [InlineData("password", "self", AuthenticationFailure.ClientDenied)]
     [InlineData("password", "stale", AuthenticationFailure.ReauthenticationRequired)]

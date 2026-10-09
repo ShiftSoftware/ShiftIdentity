@@ -91,4 +91,19 @@ public sealed class DeviceAuthorizationContractTests
         Assert.Equal(17, (int)AuthenticationFailure.ExpiredToken);
         Assert.Equal(18, (int)AuthenticationFailure.DeviceSignInNotAllowed);
     }
+
+    [Theory]
+    [InlineData(true, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(false, true, false)]
+    [InlineData(false, false, false)]
+    public void A_password_change_request_is_refused_only_for_an_account_that_allows_device_sign_in(bool allowsDeviceSignIn, bool requireChange, bool refused)
+    {
+        var refusal = AccountSecurityService.ChangeRequestRefusal(allowsDeviceSignIn, requireChange);
+        Assert.Equal(refused, refusal is not null);
+        if (refusal is null) return;
+        Assert.Equal(AuthenticationFailure.RequiredPasswordChangeNotAllowed, refusal.Code);
+        // Appended after the device sign-in refusal, so every earlier code keeps its number on the wire.
+        Assert.Equal("""{"kind":"refused","code":19,"passwordFailure":null}""", JsonSerializer.Serialize<AuthOutcome>(refusal, Web));
+    }
 }

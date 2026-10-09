@@ -67,12 +67,21 @@ public enum UserAccountDelivery
 /// </summary>
 public sealed class UserAccountChange
 {
+    /// <summary>
+    /// The message key for a refused request to make an account that allows device sign-in change its password at
+    /// next sign-in. Such an account never owes a password change.
+    /// </summary>
+    public const string DeviceSignInPasswordChangeMessage = "Accounts that allow device sign-in can't be asked to change their password at next sign-in.";
+
     public required User User { get; init; }
 
     /// <summary>A new credential, hashed before the transaction started. Null when no password was supplied.</summary>
     public HashModel? Password { get; init; }
 
-    /// <summary>Applies only with <see cref="Password"/>: force a change at the next sign-in.</summary>
+    /// <summary>
+    /// Applies only with <see cref="Password"/>: force a change at the next sign-in. Refused when the account allows
+    /// device sign-in after this change.
+    /// </summary>
     public bool RequireChangeAtNextLogin { get; init; } = true;
 
     /// <summary>The requested username when it differs from the saved one; otherwise null.</summary>
@@ -88,7 +97,10 @@ public sealed class UserAccountChange
     /// <summary>The requested active status when it differs from the saved one; otherwise null.</summary>
     public bool? IsActive { get; init; }
 
-    /// <summary>The requested device sign-in choice when it differs from the saved one; otherwise null.</summary>
+    /// <summary>
+    /// The requested device sign-in choice when it differs from the saved one; otherwise null. Allowing it also clears
+    /// an owed password change.
+    /// </summary>
     public bool? AllowDeviceSignIn { get; init; }
 
     /// <summary>

@@ -69,8 +69,9 @@ internal sealed class AdmissionUserAccountAuthority(IdentityAdmissionServices se
             AdmissionRefusalReason.Stale => (HttpStatusCode.Conflict, "Conflict", "This user changed meanwhile. Reload the user and try again."),
             AdmissionRefusalReason.Duplicate => (HttpStatusCode.BadRequest, "Duplicate", refused.Field == nameof(Data.Entities.User.Email)
                 ? "Another account already uses this email." : "Another account already uses this username."),
-            AdmissionRefusalReason.Invalid => (HttpStatusCode.BadRequest, "Validation Error", refused.Field == nameof(Data.Entities.User.Email)
-                ? "Invalid Email Address" : "Check the entered value and try again."),
+            AdmissionRefusalReason.Invalid => (HttpStatusCode.BadRequest, "Validation Error",
+                refused.Code == AuthenticationFailure.RequiredPasswordChangeNotAllowed ? UserAccountChange.DeviceSignInPasswordChangeMessage
+                : refused.Field == nameof(Data.Entities.User.Email) ? "Invalid Email Address" : "Check the entered value and try again."),
             AdmissionRefusalReason.Unavailable => (HttpStatusCode.ServiceUnavailable, "Error", "The change could not be saved. Please wait and try again."),
             _ => refused.Code switch
             {

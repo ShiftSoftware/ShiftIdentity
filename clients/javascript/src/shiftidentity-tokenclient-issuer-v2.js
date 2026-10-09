@@ -35,12 +35,14 @@
     // The server writes these enums as numbers unless the host adds a string enum converter, so both forms are read.
     // The order must match AuthenticationFailure and AuthenticationStep in
     // ShiftIdentity.Core/Authentication/AuthOutcome.cs. A test compares them with that file.
-    // The last four belong to the device sign-in route. The refresh route does not return them.
+    // The refresh route does not return the last six. Five belong to the device sign-in routes, and
+    // RequiredPasswordChangeNotAllowed to the administrator's password set.
     var FAILURES = [
         'InvalidRequest', 'InvalidProof', 'InvalidGrant', 'StaleOperation', 'Expired', 'AttemptsExhausted',
         'AccountUnavailable', 'ClientDenied', 'Unavailable', 'InvalidNewPassword', 'DuplicateIdentifier',
         'ReauthenticationRequired', 'ProviderAccountNotFound', 'ProviderEmailUnverified',
-        'AuthorizationPending', 'SlowDown', 'AccessDenied', 'ExpiredToken'
+        'AuthorizationPending', 'SlowDown', 'AccessDenied', 'ExpiredToken', 'DeviceSignInNotAllowed',
+        'RequiredPasswordChangeNotAllowed'
     ];
     var STEPS = ['ExistingMfa', 'PasswordChange', 'MfaRecovery', 'NewMfa', 'EmailVerification', 'Password'];
 

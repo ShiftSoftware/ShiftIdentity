@@ -24,7 +24,7 @@
     var FAILURES = ['InvalidRequest', 'InvalidProof', 'InvalidGrant', 'StaleOperation', 'Expired', 'AttemptsExhausted',
         'AccountUnavailable', 'ClientDenied', 'Unavailable', 'InvalidNewPassword', 'DuplicateIdentifier',
         'ReauthenticationRequired', 'ProviderAccountNotFound', 'ProviderEmailUnverified',
-        'AuthorizationPending', 'SlowDown', 'AccessDenied', 'ExpiredToken'];
+        'AuthorizationPending', 'SlowDown', 'AccessDenied', 'ExpiredToken', 'DeviceSignInNotAllowed', 'RequiredPasswordChangeNotAllowed'];
 
     function failureName(code) { return typeof code === 'number' && FAILURES[code] ? FAILURES[code] : String(code); }
 

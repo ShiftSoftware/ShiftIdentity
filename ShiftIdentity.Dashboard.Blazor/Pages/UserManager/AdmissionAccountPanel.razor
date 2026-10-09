@@ -193,6 +193,7 @@
         AdminAccountChanged => "No change was needed.",
         AuthenticationRefused { Code: AuthenticationFailure.DuplicateIdentifier } => "Another account already uses this username or email.",
         AuthenticationRefused { Code: AuthenticationFailure.InvalidNewPassword } => "The password does not meet the policy. " + NewPasswordPolicy.Guidance,
+        AuthenticationRefused { Code: AuthenticationFailure.RequiredPasswordChangeNotAllowed } => "Accounts that allow device sign-in can't be asked to change their password at next sign-in.",
         AuthenticationRefused { Code: AuthenticationFailure.InvalidRequest } => "Check the entered value and try again.",
         AuthenticationRefused { Code: AuthenticationFailure.StaleOperation } => "This account changed meanwhile. Review the current details and try again.",
         AuthenticationRefused { Code: AuthenticationFailure.AccountUnavailable } => "This account is not available for that change.",
