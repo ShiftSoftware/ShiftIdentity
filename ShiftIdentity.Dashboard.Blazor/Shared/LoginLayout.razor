@@ -1,7 +1,13 @@
 @inherits LayoutComponentBase
+@inject SettingManager SettingManager
 
-<AddMudProviders />
+@* The saved language's direction, as in the dashboard's layout: Arabic and Kurdish read right to left. *@
+<MudRTLProvider RightToLeft="SettingManager.GetLanguage().RTL">
 
-<main class="identity-login-page">
-    @Body
-</main>
+    <AddMudProviders />
+
+    <main class="identity-login-page">
+        @Body
+    </main>
+
+</MudRTLProvider>
