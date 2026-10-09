@@ -12,7 +12,8 @@ namespace ShiftSoftware.ShiftIdentity.AspNetCore.Authentication;
 /// created the security row of every user that had none; a row still missing here stops the host. It copies each legacy
 /// plaintext factor that has no protected copy into the protected column, in a locked transaction per such user, then checks
 /// that every protected factor decrypts with the configured keys. Users with nothing to copy get no transaction, so once the
-/// copy is done a start reads the protected factors in pages instead of visiting every user.
+/// copy is done a start reads the protected factors in pages instead of visiting every user. An empty legacy factor is not a
+/// factor: the store sets it to NULL in that user's transaction and this job logs only how many it cleared.
 /// </summary>
 internal sealed class LegacyTotpMigration(IServiceScopeFactory scopes, ILogger<LegacyTotpMigration> logger) : IHostedService
 {
@@ -21,6 +22,7 @@ internal sealed class LegacyTotpMigration(IServiceScopeFactory scopes, ILogger<L
         long cursor = 0;
         var examined = 0;
         var copied = 0;
+        var cleared = 0;
         var verified = 0;
         try
         {
@@ -39,9 +41,12 @@ internal sealed class LegacyTotpMigration(IServiceScopeFactory scopes, ILogger<L
                     (state, secret) => CopyOrVerify(protector, state, secret), cancellationToken);
                 examined += batch.Examined;
                 copied += batch.Copied;
+                cleared += batch.Cleared;
                 cursor = batch.LastUserID;
                 if (batch.Examined == 0) break;
             }
+            if (cleared > 0)
+                logger.LogWarning("Identity factor migration cleared {Cleared} empty legacy factors (an empty value is not a factor).", cleared);
             // Every protected factor, copied now or enrolled earlier, must decrypt with the configured keys.
             cursor = 0;
             while (true)
@@ -58,8 +63,8 @@ internal sealed class LegacyTotpMigration(IServiceScopeFactory scopes, ILogger<L
                     verified++;
                 }
             }
-            logger.LogInformation("Identity factor migration completed: {Examined} legacy factors examined, {Copied} copied, {Verified} protected factors verified.",
-                examined, copied, verified);
+            logger.LogInformation("Identity factor migration completed: {Examined} legacy factors examined, {Copied} copied, {Cleared} empty ones cleared, {Verified} protected factors verified.",
+                examined, copied, cleared, verified);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch
@@ -79,8 +84,8 @@ internal sealed class LegacyTotpMigration(IServiceScopeFactory scopes, ILogger<L
             return;
         }
         // Recovery deliberately removed the factor. The retained legacy column must not restore it.
-        if (state.LocalMfaRecoveryRequired || legacySecret is null) return;
-        if (legacySecret.Length == 0) throw new CryptographicException("Empty legacy factor.");
+        // An empty legacy column is not a factor either, so there is nothing to copy. (The store clears it before this is called.)
+        if (state.LocalMfaRecoveryRequired || legacySecret is not { Length: > 0 }) return;
         MfaMaterial.ProtectActive(protector, state, legacySecret);
         var verified = MfaMaterial.ReadActive(protector, state);
         try

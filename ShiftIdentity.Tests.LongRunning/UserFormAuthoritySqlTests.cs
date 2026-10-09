@@ -6,6 +6,7 @@ using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using ShiftIdentity.Tests.Infrastructure;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
@@ -92,6 +93,44 @@ public sealed class UserFormAuthoritySqlTests(SqlIdentityFixture fixture) : ICla
         var login = await LoginAsync(host, dto.Username, Password);
         if (requireChange) Assert.Equal(AuthenticationStep.PasswordChange, Assert.IsType<ChallengeRequired>(login).Challenge.Step);
         else Assert.IsType<SessionIssued>(login);
+    }
+
+    /// <summary>
+    /// A user created through the form has no legacy factor: TotpSecret stays NULL, not an empty value (0x). The save
+    /// reloads the user, because the repository has includes, and copies the fresh row onto the tracked one. That copy
+    /// used to turn NULL into an empty array, a later save in the same request stored it, and the next start of the
+    /// authority stopped in the factor migration. Here the migration has nothing to visit, and a start runs cleanly.
+    /// </summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Create_stores_no_legacy_factor_so_the_factor_migration_has_nothing_to_do(bool deviceSignIn)
+    {
+        using var host = await HostAsync();
+        var dto = NewUser(requireChange: false, sendVerification: false);
+        dto.AllowDeviceSignIn = deviceSignIn;
+        var id = await CreateAsync(host, dto);
+        Assert.Null((await StateAsync(id)).User.TotpSecret);
+
+        // An edit keeps it NULL as well.
+        var edited = await GetAsync(host, id);
+        edited.FullName = "Synthetic Form User, edited";
+        await PutAsync(host, edited);
+        Assert.Null((await StateAsync(id)).User.TotpSecret);
+
+        // The factor migration does not visit the user and clears nothing.
+        var visited = new List<long>();
+        LegacyTotpMigrationBatch batch;
+        await using (var db = fixture.CreateContext())
+            batch = await new SqlIdentitySecurityStore(db).MigrateLegacyTotpBatchAsync(id - 1, 1000, (state, _) => visited.Add(state.UserID));
+        Assert.DoesNotContain(id, visited);
+        Assert.Equal(0, batch.Cleared);
+
+        // The start that used to stop here runs.
+        using var startup = new HostBuilder().ConfigureServices(s => IdentityHttpHost.AddAdmissionServices(s, fixture)).Build();
+        await startup.StartAsync();
+        await startup.StopAsync();
+        Assert.Null((await StateAsync(id)).User.TotpSecret);
     }
 
     [Theory]

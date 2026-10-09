@@ -1,8 +1,10 @@
+using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using OtpNet;
 using ShiftIdentity.Tests.Infrastructure;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Authentication;
@@ -140,7 +142,6 @@ public sealed class LegacyTotpMigrationSqlTests(SqlIdentityFixture fixture) : IC
     [InlineData("retired-key")]
     [InlineData("missing-state")]
     [InlineData("corrupt-factor")]
-    [InlineData("empty-legacy")]
     public async Task Incomplete_migration_stops_host_startup_without_disclosing_secrets(string scenario)
     {
         await SeedLegacy();
@@ -153,11 +154,6 @@ public sealed class LegacyTotpMigrationSqlTests(SqlIdentityFixture fixture) : IC
         if (scenario == "missing-state") await db.Set<UserSecurityState>().Where(x => x.UserID == fixture.UserID).ExecuteDeleteAsync();
         if (scenario == "corrupt-factor") await db.Set<UserSecurityState>().Where(x => x.UserID == fixture.UserID)
             .ExecuteUpdateAsync(x => x.SetProperty(s => s.ProtectedTotpSecret, new byte[] { 1, 2, 3 }));
-        if (scenario == "empty-legacy")
-        {
-            await db.Set<UserSecurityState>().Where(x => x.UserID == fixture.UserID).ExecuteUpdateAsync(x => x.SetProperty(s => s.ProtectedTotpSecret, (byte[]?)null));
-            await db.Users.Where(x => x.ID == fixture.UserID).ExecuteUpdateAsync(x => x.SetProperty(u => u.TotpSecret, Array.Empty<byte>()));
-        }
         try
         {
             using var host = new HostBuilder().ConfigureServices(s =>
@@ -211,6 +207,101 @@ public sealed class LegacyTotpMigrationSqlTests(SqlIdentityFixture fixture) : IC
         await host.StopAsync();
     }
 
+    private async Task SetLegacy(long userID, byte[]? secret)
+    {
+        await using var db = fixture.CreateContext();
+        await db.Users.IgnoreQueryFilters().Where(x => x.ID == userID).ExecuteUpdateAsync(x => x.SetProperty(u => u.TotpSecret, secret));
+    }
+
+    private static Task<byte[]?> Legacy(ShiftSoftware.ShiftIdentity.Data.ShiftIdentityDbContext db, long userID) =>
+        db.Users.IgnoreQueryFilters().AsNoTracking().Where(x => x.ID == userID).Select(x => x.TotpSecret).SingleAsync();
+
+    /// <summary>
+    /// An empty legacy factor (0x: not NULL, but no bytes) is not a factor. Releases 2026.9.21.1 to 2026.10.7.2 stored one
+    /// for every user created through the dashboard, and the next start of the authority stopped. Now the start clears it
+    /// to NULL in that user's locked transaction, whatever the security row holds, and logs only how many it cleared. The
+    /// next start does not visit those users.
+    /// </summary>
+    [Fact]
+    public async Task An_empty_legacy_factor_is_cleared_and_the_next_start_does_not_visit_it()
+    {
+        var enrolled = await fixture.CreateSyntheticUserAsync("migration-empty-enrolled-" + Guid.NewGuid().ToString("N"), mfa: true);
+        await SetLegacy(fixture.UserID, []);
+        await SetLegacy(enrolled, []);
+        var logs = new LogCapture();
+        using (var host = new HostBuilder().ConfigureServices(s =>
+        {
+            s.AddLogging(x => x.AddProvider(logs));
+            IdentityHttpHost.AddAdmissionServices(s, fixture);
+        }).Build())
+        {
+            await host.StartAsync();
+            await host.StopAsync();
+        }
+        await using var db = fixture.CreateContext();
+        Assert.Null(await Legacy(db, fixture.UserID));
+        Assert.Null(await Legacy(db, enrolled));
+        // Nothing was copied for the user without a factor, and the enrolled factor is unchanged.
+        Assert.Null((await db.Set<UserSecurityState>().AsNoTracking().SingleAsync(x => x.UserID == fixture.UserID)).ProtectedTotpSecret);
+        Assert.Equal(fixture.FactorSecret, fixture.ReadSyntheticFactor(await db.Set<UserSecurityState>().AsNoTracking().SingleAsync(x => x.UserID == enrolled)));
+        // Only the number is logged.
+        Assert.Contains("Identity factor migration cleared 2 empty legacy factors (an empty value is not a factor).", logs.Messages);
+        Assert.DoesNotContain(logs.Messages, x => x.Contains(Convert.ToBase64String(fixture.FactorSecret)));
+        // The next start visits neither user, so it locks no user.
+        var locks = new SqlCommandSignal("UPDLOCK");
+        using var next = new HostBuilder().ConfigureServices(s => IdentityHttpHost.AddAdmissionServices(s, fixture, interceptors: [locks])).Build();
+        await next.StartAsync();
+        Assert.False(locks.Entered.IsCompleted);
+        await next.StopAsync();
+    }
+
+    /// <summary>A real legacy factor is still copied and verified, at the same start that clears an empty one.</summary>
+    [Fact]
+    public async Task A_real_legacy_factor_is_still_copied_and_verified_beside_an_empty_one()
+    {
+        var real = await fixture.CreateSyntheticUserAsync("migration-real-" + Guid.NewGuid().ToString("N"));
+        await SetLegacy(fixture.UserID, []);
+        await SetLegacy(real, fixture.FactorSecret);
+        using (var host = new HostBuilder().ConfigureServices(s => IdentityHttpHost.AddAdmissionServices(s, fixture)).Build())
+        {
+            await host.StartAsync();
+            await host.StopAsync();
+        }
+        await using var db = fixture.CreateContext();
+        Assert.Null(await Legacy(db, fixture.UserID));
+        Assert.Equal(fixture.FactorSecret, fixture.ReadSyntheticFactor(await db.Set<UserSecurityState>().AsNoTracking().SingleAsync(x => x.UserID == real)));
+        // As before, the copy keeps the legacy column of a real factor.
+        Assert.Equal(fixture.FactorSecret, await Legacy(db, real));
+    }
+
+    /// <summary>
+    /// A non-empty legacy factor whose copy fails still stops the start, as before. The copy has no check of its own on
+    /// the plaintext: any non-empty value is protected as it is. It fails when the protection, its verification or the save
+    /// fails, and a save fault stands in for that here. The empty factor of an earlier user is still cleared, because each
+    /// user commits on its own.
+    /// </summary>
+    [Fact]
+    public async Task A_legacy_factor_that_fails_to_copy_still_stops_the_start()
+    {
+        var broken = await fixture.CreateSyntheticUserAsync("migration-broken-" + Guid.NewGuid().ToString("N"));
+        await SetLegacy(fixture.UserID, []);
+        await SetLegacy(broken, fixture.FactorSecret);
+        try
+        {
+            using var host = new HostBuilder().ConfigureServices(s =>
+                IdentityHttpHost.AddAdmissionServices(s, fixture, interceptors: [new CopyFault(broken)])).Build();
+            var error = await Assert.ThrowsAsync<InvalidOperationException>(() => host.StartAsync());
+            Assert.Null(error.InnerException);
+            Assert.DoesNotContain(Convert.ToBase64String(fixture.FactorSecret), error.ToString());
+            await using var db = fixture.CreateContext();
+            Assert.Null(await Legacy(db, fixture.UserID));
+            Assert.Equal(fixture.FactorSecret, await Legacy(db, broken));
+            Assert.Null((await db.Set<UserSecurityState>().AsNoTracking().SingleAsync(x => x.UserID == broken)).ProtectedTotpSecret);
+        }
+        // Later tests in this class start hosts on the same database.
+        finally { await SetLegacy(broken, null); }
+    }
+
     [Fact]
     public async Task Protected_factor_pages_advance_in_user_order_and_skip_users_without_one()
     {
@@ -224,6 +315,30 @@ public sealed class LegacyTotpMigrationSqlTests(SqlIdentityFixture fixture) : IC
         Assert.Equal(last, page.UserID);
         Assert.Equal(fixture.FactorSecret, fixture.ReadSyntheticFactor(page));
         Assert.Empty(await store.ReadProtectedFactorsAsync(last, 1000));
+    }
+
+    /// <summary>Fails the save that writes a protected factor for one user.</summary>
+    private sealed class CopyFault(long userID) : SaveChangesInterceptor
+    {
+        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData,
+            InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        {
+            if (eventData.Context!.ChangeTracker.Entries<UserSecurityState>()
+                    .Any(x => x.Entity.UserID == userID && x.Entity.ProtectedTotpSecret is not null))
+                throw new IOException("Synthetic factor save failure.");
+            return ValueTask.FromResult(result);
+        }
+    }
+
+    private sealed class LogCapture : ILoggerProvider, ILogger
+    {
+        public ConcurrentQueue<string> Messages { get; } = new();
+        public ILogger CreateLogger(string categoryName) => this;
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
+            Messages.Enqueue(formatter(state, exception));
+        public void Dispose() { }
     }
 
     private sealed class FactorSaveFault(bool afterSave) : SaveChangesInterceptor
