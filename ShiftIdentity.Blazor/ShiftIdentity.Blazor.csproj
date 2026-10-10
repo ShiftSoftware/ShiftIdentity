@@ -31,6 +31,16 @@
 		<Folder Include="Images\" />
 	</ItemGroup>
 
+	<!-- The JavaScript token client from clients/javascript/src, shipped as static web assets. A host serves them at
+	     _content/ShiftSoftware.ShiftIdentity.Blazor/clients/shiftidentity-tokenclient.js and
+	     _content/ShiftSoftware.ShiftIdentity.Blazor/clients/shiftidentity-tokenclient-issuer-v2.js.
+	     Only the two source files ship. The tests and the README stay in clients/javascript.
+	     ContentRoot is the folder the files really are in. Without it the SDK takes this project's wwwroot folder, which
+	     does not exist, and a host that references this project (not the package) answers 404 for both files. -->
+	<ItemGroup>
+		<Content Include="..\clients\javascript\src\*.js" Link="wwwroot\clients\%(Filename)%(Extension)" ContentRoot="$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '..', 'clients', 'javascript', 'src'))" />
+	</ItemGroup>
+
 	<ItemGroup>
 		<ProjectReference Include="..\ShiftIdentity.Core\ShiftIdentity.Core.csproj" />
 		<InternalsVisibleTo Include="ShiftSoftware.ShiftIdentity.Dashboard.Blazor" />

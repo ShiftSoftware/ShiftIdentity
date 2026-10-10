@@ -12,11 +12,14 @@ Plain ES5 with no dependencies and no build step. Each file works as a `<script>
 | `src/shiftidentity-tokenclient.js` | The core: `TokenClient`, the `localStorage` store and the XHR transport. It does not know any issuer. |
 | `src/shiftidentity-tokenclient-issuer-v2.js` | The ShiftIdentity v2 adapter. It registers `TokenClient.issuers.shiftIdentityV2`. |
 
+The `ShiftSoftware.ShiftIdentity.Blazor` package ships both files as static web assets. An app that references it
+serves them at `_content/ShiftSoftware.ShiftIdentity.Blazor/clients/`. Nothing else in this folder ships.
+
 ## Use
 
 ```html
-<script src="shiftidentity-tokenclient.js"></script>
-<script src="shiftidentity-tokenclient-issuer-v2.js"></script>
+<script src="_content/ShiftSoftware.ShiftIdentity.Blazor/clients/shiftidentity-tokenclient.js"></script>
+<script src="_content/ShiftSoftware.ShiftIdentity.Blazor/clients/shiftidentity-tokenclient-issuer-v2.js"></script>
 <script>
   var TokenClient = ShiftIdentity.TokenClient;
   var client = new TokenClient({

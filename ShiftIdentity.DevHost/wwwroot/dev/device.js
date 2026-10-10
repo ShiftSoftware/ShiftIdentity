@@ -237,7 +237,7 @@
     // every few seconds, as a page that polls its own API would.
     function handToClient(tokenDto) {
         if (!TokenClient || !TokenClient.issuers.shiftIdentityV2) {
-            log('Keep-alive needs /clients/shiftidentity-tokenclient.js and its v2 adapter.', 'bad');
+            log('Keep-alive needs shiftidentity-tokenclient.js and its v2 adapter from _content/ShiftSoftware.ShiftIdentity.Blazor/clients/.', 'bad');
             $('keepAlive').checked = false;
             return;
         }

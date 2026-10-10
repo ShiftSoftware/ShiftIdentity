@@ -61,12 +61,10 @@ await using var app = builder.Build();
 app.UseDevHostGuard(hosts, options.LanAddress is not null, loopbackOrigin, options.TunnelOrigin);
 app.UseRefreshFaults();
 app.UseBlazorFrameworkFiles();
+// The static files include the JavaScript token client for the /dev pages, at the path the ShiftIdentity.Blazor package
+// ships it: _content/ShiftSoftware.ShiftIdentity.Blazor/clients/. Through the project reference the files are read from
+// clients/javascript/src, so an edit there needs no rebuild.
 app.UseStaticFiles();
-// The JavaScript token client, straight from clients/javascript/src, for the /dev pages. A host gets it from the
-// ShiftIdentity.Blazor package's static web assets instead.
-var clients = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "clients", "javascript", "src"));
-if (Directory.Exists(clients))
-    app.UseStaticFiles(new StaticFileOptions { FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(clients), RequestPath = "/clients" });
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();

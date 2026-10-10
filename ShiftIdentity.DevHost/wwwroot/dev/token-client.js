@@ -13,7 +13,7 @@
     function log(text, tone) { DevHost.log(logElement, text, tone); }
 
     if (!TokenClient || !TokenClient.issuers.shiftIdentityV2) {
-        log('The lab needs /clients/shiftidentity-tokenclient.js and its v2 adapter (clients/javascript/src).', 'bad');
+        log('The lab needs shiftidentity-tokenclient.js and its v2 adapter from _content/ShiftSoftware.ShiftIdentity.Blazor/clients/ (clients/javascript/src).', 'bad');
         return;
     }
 
