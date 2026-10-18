@@ -197,9 +197,11 @@ public partial class ActionTree
             TraverseTree(item, tree, flattenedList);
     }
 
+    // The tree as it is, with what the admin left untouched beyond their reach: the server saves a tree only exactly as
+    // submitted, so a tree reduced to the admin's reach would be refused for removing those grants.
     public string GenerateAccessTree()
     {
-        return this.tAuth_View.GenerateAccessTree(tAuth_LoggedInUser);
+        return this.tAuth_View.GenerateAccessTree(this.tAuth_View);
     }
 
 }

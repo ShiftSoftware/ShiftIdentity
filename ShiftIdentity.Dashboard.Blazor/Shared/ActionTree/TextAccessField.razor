@@ -6,7 +6,7 @@
               Disabled="@(hasWildCardCard || Disabled)"
               TextChanged="@((e) => TextChanged(e))"
               Variant="Variant.Outlined" Class="type-auth-tree-text" 
-              ReadOnly="ReadOnly" />
+              ReadOnly="@(ReadOnly || ValueBeyondAdmin)" />
 }
 @if (dynamicTextAction != null)
 {
@@ -14,7 +14,7 @@
               Disabled="@(hasWildCardCard || Disabled)"
               TextChanged="@((e) => TextChanged(e))"
               Variant="Variant.Outlined" Class="type-auth-tree-text"
-              ReadOnly="ReadOnly" />
+              ReadOnly="@(ReadOnly || ValueBeyondAdmin)" />
 
               @ActionTreeItem.ID
 }
@@ -44,6 +44,11 @@
 
     private bool hasWildCardCard;
 
+    // A value beyond the admin's is read-only: every change to it would be refused, as they couldn't set it back.
+    private bool ValueBeyondAdmin => textAction != null
+        ? !TypeAuth_View.CanChangeAccessValue(textAction, TypeAuth_LoggedInUser.AccessValue(textAction))
+        : dynamicTextAction != null && !TypeAuth_View.CanChangeAccessValue(dynamicTextAction, ActionTreeItem.ID, TypeAuth_LoggedInUser.AccessValue(dynamicTextAction, ActionTreeItem.ID));
+
     protected override void OnInitialized()
     {
         this.textAction = (ActionTreeItem!.Action as TextAction)!;
@@ -54,7 +59,9 @@
 
     async Task TextChanged(string value)
     {
-        if (hasWildCardCard || string.IsNullOrWhiteSpace(value))
+        // The field reports the value it is given as a change when it shows it. A value beyond the admin's is left as
+        // it is: capped to theirs, the save would be refused for lowering it.
+        if (hasWildCardCard || string.IsNullOrWhiteSpace(value) || ValueBeyondAdmin)
             return;
 
         try

@@ -81,7 +81,7 @@ public class AccessTree : ShiftEntity<AccessTree>, IShiftEntityReplication, IUps
 
         typeAuth_Producer = typeAuthContextBuilder_Producer.Build();
 
-        var generatedTree = typeAuth_Producer.GenerateAccessTree((typeAuthService as TypeAuthContext)!, typeAuth_Preserver);
+        var generatedTree = ExactAccessTreeSave.Generate(typeAuth_Producer, typeAuthService, typeAuth_Preserver, loc);
 
         // Framework default: MapToEntity (dto.Name→Name, dto.Tree→Tree), audit stamping, data-level write check.
         var saved = await context.Base();

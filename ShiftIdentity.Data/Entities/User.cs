@@ -275,7 +275,7 @@ public class User : ShiftEntity<User>,
 
         typeAuth_Producer = typeAuthContextBuilder_Producer.Build();
 
-        var generatedAccessTree = typeAuth_Producer.GenerateAccessTree((typeAuthService as TypeAuthContext)!, typeAuth_Preserver);
+        var generatedAccessTree = ExactAccessTreeSave.Generate(typeAuth_Producer, typeAuthService, typeAuth_Preserver, Loc);
 
         // The expensive hash runs here, before the save transaction and outside every lock. The staged authority
         // stores the versioned format; the direct path keeps the format the legacy login verifies.

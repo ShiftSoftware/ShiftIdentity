@@ -19,11 +19,14 @@ namespace ShiftIdentity.Blazor.Tests;
 /// <summary>
 /// Renders the production User form against a scripted HTTP transport: an operator with Users read/write, the real
 /// ShiftEntityForm save path, and empty OData pages for the action tree and the autocompletes. With
-/// <c>staged</c> the form runs under the identity authority, which shows the device sign-in group.
+/// <c>staged</c> the form runs under the identity authority, which shows the device sign-in group. A test can give the
+/// operator another <c>accessTree</c> and register more <c>actionTrees</c>.
 /// </summary>
 internal static class UserFormHarness
 {
-    public static BunitContext Create(out UserFormTransport transport, bool staged = false)
+    private const string OperatorAccessTree = "{\"ShiftIdentityActions\":{\"Users\":[\"r\",\"w\"]}}";
+
+    public static BunitContext Create(out UserFormTransport transport, bool staged = false, string accessTree = OperatorAccessTree, params Type[] actionTrees)
     {
         var context = new BunitContext();
         transport = new();
@@ -38,8 +41,13 @@ internal static class UserFormHarness
         context.Services.AddShiftIdentityDashboardBlazor(o => o.StagedAuthority = staged);
         context.Services.AddTransient(sp => new ShiftIdentityLocalizer(sp, typeof(ShiftSoftwareLocalization.Identity.Resource)));
         var auth = context.AddAuthorization(); auth.SetAuthorized("synthetic");
-        auth.SetClaims(new Claim(TypeAuthClaimTypes.AccessTree, "{\"ShiftIdentityActions\":{\"Users\":[\"r\",\"w\"]}}"));
-        context.Services.AddTypeAuth(o => o.AddActionTree<ShiftIdentityActions>());
+        auth.SetClaims(new Claim(TypeAuthClaimTypes.AccessTree, accessTree));
+        context.Services.AddTypeAuth(o =>
+        {
+            o.AddActionTree<ShiftIdentityActions>();
+            foreach (var actionTree in actionTrees)
+                o.AddActionTree(actionTree);
+        });
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         return context;
     }
