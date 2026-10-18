@@ -581,6 +581,135 @@ public sealed class UserFormAuthoritySqlTests(SqlIdentityFixture fixture) : ICla
         Assert.Empty(await verify.UserAccessTrees.Where(x => x.UserID == id).ToListAsync());
     }
 
+    // The operator holds AccessTrees read only, so they can assign ReadOnlyTree but not BeyondTree.
+    private const string BeyondTree = "{\"ShiftIdentityActions\":{\"AccessTrees\":[\"r\",\"w\"]}}";
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Adding_a_tree_needs_the_operator_to_be_able_to_assign_it(bool beyond)
+    {
+        using var host = await HostAsync();
+        var (treeID, treeName) = await CreateTreeAsync(beyond ? BeyondTree : ReadOnlyTree);
+        var id = await CreateAsync(host, NewUser(requireChange: false, sendVerification: false));
+        var dto = await GetAsync(host, id); dto.FullName = "Synthetic Form User (edited)";
+        dto.AccessTrees = [new ShiftEntitySelectDTO { Value = treeID.ToString() }];
+        using var response = await host.Client.PutAsJsonAsync($"/api/IdentityUser/{id}", dto);
+        if (beyond)
+        {
+            AssertAssignmentRefused(await AssignmentRefusedAsync(response), "grant", treeName);
+            Assert.Equal("Synthetic Form User", (await StateAsync(id)).User.FullName);
+            Assert.Empty(await AssignedAsync(id));
+        }
+        else
+        {
+            Assert.True(response.StatusCode == HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+            Assert.Equal([treeID], await AssignedAsync(id));
+        }
+    }
+
+    // Review F7: an operator removes only a tree they could have assigned.
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Removing_a_tree_needs_the_operator_to_be_able_to_assign_it(bool beyond)
+    {
+        using var host = await HostAsync();
+        var (treeID, treeName) = await CreateTreeAsync(beyond ? BeyondTree : ReadOnlyTree);
+        var id = await CreateAsync(host, NewUser(requireChange: false, sendVerification: false));
+        await AssignAsync(id, treeID);
+        var dto = await GetAsync(host, id); dto.FullName = "Synthetic Form User (edited)";
+        Assert.Equal(treeID.ToString(), Assert.Single(dto.AccessTrees).Value);
+        dto.AccessTrees = [];
+        using var response = await host.Client.PutAsJsonAsync($"/api/IdentityUser/{id}", dto);
+        if (beyond)
+        {
+            AssertAssignmentRefused(await AssignmentRefusedAsync(response), "remove", treeName);
+            Assert.Equal("Synthetic Form User", (await StateAsync(id)).User.FullName);
+            Assert.Equal([treeID], await AssignedAsync(id));
+        }
+        else
+        {
+            Assert.True(response.StatusCode == HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+            Assert.Empty(await AssignedAsync(id));
+        }
+    }
+
+    // Review F12: a tree the operator couldn't assign, left assigned, no longer blocks the user's other edits.
+    [Fact]
+    public async Task A_tree_beyond_the_operator_left_assigned_does_not_block_the_save()
+    {
+        using var host = await HostAsync();
+        var (beyondID, _) = await CreateTreeAsync(BeyondTree);
+        var (allowedID, _) = await CreateTreeAsync(ReadOnlyTree);
+        var id = await CreateAsync(host, NewUser(requireChange: false, sendVerification: false));
+        await AssignAsync(id, beyondID);
+        var dto = await GetAsync(host, id); dto.FullName = "Synthetic Form User (edited)"; dto.Phone = Phone;
+        dto.AccessTrees = [.. dto.AccessTrees, new ShiftEntitySelectDTO { Value = allowedID.ToString() }];
+        await PutAsync(host, dto);
+        Assert.Equal("Synthetic Form User (edited)", (await StateAsync(id)).User.FullName);
+        Assert.Equal(new[] { beyondID, allowedID }.Order(), (await AssignedAsync(id)).Order());
+    }
+
+    // A new user has no trees, so every submitted tree is added and checked.
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_new_users_trees_are_all_checked(bool beyond)
+    {
+        using var host = await HostAsync();
+        var (allowedID, _) = await CreateTreeAsync(ReadOnlyTree);
+        var (beyondID, beyondName) = await CreateTreeAsync(BeyondTree);
+        var dto = NewUser(requireChange: false, sendVerification: false);
+        dto.AccessTrees = beyond
+            ? [new ShiftEntitySelectDTO { Value = allowedID.ToString() }, new ShiftEntitySelectDTO { Value = beyondID.ToString() }]
+            : [new ShiftEntitySelectDTO { Value = allowedID.ToString() }];
+        if (beyond)
+        {
+            using var response = await host.Client.PostAsJsonAsync("/api/IdentityUser", dto);
+            AssertAssignmentRefused(await AssignmentRefusedAsync(response), "grant", beyondName);
+            await using var db = fixture.CreateContext();
+            Assert.False(await db.Users.IgnoreQueryFilters().AnyAsync(x => x.Username == dto.Username));
+        }
+        else Assert.Equal([allowedID], await AssignedAsync(await CreateAsync(host, dto)));
+    }
+
+    private async Task<(long ID, string Name)> CreateTreeAsync(string tree)
+    {
+        await using var db = fixture.CreateContext();
+        var entity = new AccessTree { Name = "Synthetic assignment " + Guid.NewGuid().ToString("N")[..8], Tree = tree };
+        db.AccessTrees.Add(entity); await db.SaveChangesAsync();
+        return (entity.ID, entity.Name);
+    }
+
+    private async Task AssignAsync(long userID, long treeID)
+    {
+        await using var db = fixture.CreateContext();
+        db.UserAccessTrees.Add(new UserAccessTree { UserID = userID, AccessTreeID = treeID }); await db.SaveChangesAsync();
+    }
+
+    private async Task<List<long>> AssignedAsync(long userID)
+    {
+        await using var db = fixture.CreateContext();
+        return await db.UserAccessTrees.Where(x => x.UserID == userID && !x.IsDeleted).Select(x => x.AccessTreeID).ToListAsync();
+    }
+
+    private static async Task<Message> AssignmentRefusedAsync(HttpResponseMessage response)
+    {
+        Assert.True(response.StatusCode == HttpStatusCode.BadRequest, await response.Content.ReadAsStringAsync());
+        return (await response.Content.ReadFromJsonAsync<ShiftEntityResponse<UserDTO>>())!.Message!;
+    }
+
+    // The refusal names each tree and, under it, the actions the operator lacks: here Write on Access Trees.
+    private static void AssertAssignmentRefused(Message message, string verb, string treeName)
+    {
+        Assert.Equal("Error", message.Title);
+        Assert.Equal($"Below Access Trees contain accesses that you can not {verb}", message.Body);
+        var tree = Assert.Single(message.SubMessages!);
+        Assert.Equal(treeName, tree.Title);
+        Assert.Equal("Access Trees", Assert.Single(tree.SubMessages!).Title);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("{\"ShiftIdentityActions\":{\"Users\":[\"r\",\"r\"]}}")]

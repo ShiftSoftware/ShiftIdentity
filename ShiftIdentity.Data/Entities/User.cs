@@ -284,42 +284,58 @@ public class User : ShiftEntity<User>,
 
         var accessTreeIds = dto.AccessTrees.Select(x => x.Value.ToLong());
 
-        var trees = await db.AccessTrees.Where(x => accessTreeIds.Contains(x.ID)).ToDictionaryAsync(x => x.ID, x => x);
-
-        var inaccessibleAccessTress = new Dictionary<AccessTree, Dictionary<TypeAuth.Core.Actions.ActionBase, string>>();
-
-        foreach (var tree in trees.Values)
-        {
-            var tAuthBuilderForThisTree = new TypeAuthContextBuilder();
-
-            foreach (var type in typeAuthService.GetRegisteredActionTrees())
-            {
-                tAuthBuilderForThisTree.AddActionTree(type);
-            }
-
-            tAuthBuilderForThisTree.AddAccessTree(tree.Tree);
-
-            var tAuthForThisTree = tAuthBuilderForThisTree.Build();
-
-            var inAccessibleActions = (typeAuthService as TypeAuthContext)!.FindInAccessibleActionsOn(tAuthForThisTree);
-
-            if (inAccessibleActions.Count > 0)
-            {
-                inaccessibleAccessTress[tree] = inAccessibleActions;
-            }
-        }
-
-        if (inaccessibleAccessTress.Count > 0)
-        {
-            throw new ShiftEntityException(new Message(
-                Loc["Error"],
-                Loc["Below Access Trees contain accesses that you can not grant"],
-                inaccessibleAccessTress.Select(x => new Message(x.Key.Name, null!, x.Value.Select(y => new Message(y.Key.Name!, y.Value.ToString()!)).ToList())).ToList()
-            ));
-        }
-
         var removedAccessTrees = entity.AccessTrees.Where(x => !accessTreeIds.Contains(x.AccessTreeID)).ToList();
         var addedAccessTrees = accessTreeIds.Where(x => !entity.AccessTrees.Any(y => y.AccessTreeID == x)).ToList();
+
+        // An admin changes only the assignments within their reach, in either direction: a tree they add or remove
+        // must be one they could assign. Trees left assigned are not checked. A new user has none, so every
+        // submitted tree is added.
+        var removedAccessTreeIds = removedAccessTrees.Select(x => x.AccessTreeID).ToList();
+
+        var trees = await db.AccessTrees.Where(x => addedAccessTrees.Contains(x.ID) || removedAccessTreeIds.Contains(x.ID)).ToDictionaryAsync(x => x.ID, x => x);
+
+        Dictionary<AccessTree, Dictionary<TypeAuth.Core.Actions.ActionBase, string>> FindInaccessible(IEnumerable<long> ids)
+        {
+            var inaccessibleAccessTress = new Dictionary<AccessTree, Dictionary<TypeAuth.Core.Actions.ActionBase, string>>();
+
+            foreach (var tree in ids.Where(trees.ContainsKey).Select(x => trees[x]))
+            {
+                var tAuthBuilderForThisTree = new TypeAuthContextBuilder();
+
+                foreach (var type in typeAuthService.GetRegisteredActionTrees())
+                {
+                    tAuthBuilderForThisTree.AddActionTree(type);
+                }
+
+                tAuthBuilderForThisTree.AddAccessTree(tree.Tree);
+
+                var tAuthForThisTree = tAuthBuilderForThisTree.Build();
+
+                var inAccessibleActions = (typeAuthService as TypeAuthContext)!.FindInAccessibleActionsOn(tAuthForThisTree);
+
+                if (inAccessibleActions.Count > 0)
+                {
+                    inaccessibleAccessTress[tree] = inAccessibleActions;
+                }
+            }
+
+            return inaccessibleAccessTress;
+        }
+
+        void RefuseIfAny(Dictionary<AccessTree, Dictionary<TypeAuth.Core.Actions.ActionBase, string>> inaccessibleAccessTress, string body)
+        {
+            if (inaccessibleAccessTress.Count > 0)
+            {
+                throw new ShiftEntityException(new Message(
+                    Loc["Error"],
+                    body,
+                    inaccessibleAccessTress.Select(x => new Message(x.Key.Name, null!, x.Value.Select(y => new Message(y.Key.Name!, y.Value.ToString()!)).ToList())).ToList()
+                ));
+            }
+        }
+
+        RefuseIfAny(FindInaccessible(addedAccessTrees), Loc["Below Access Trees contain accesses that you can not grant"]);
+        RefuseIfAny(FindInaccessible(removedAccessTreeIds), Loc["Below Access Trees contain accesses that you can not remove"]);
 
         // A change to stored grants or assigned trees ends the user's sessions. TypeAuth normalizes the stored
         // grants without classifying additions and reductions; Identity applies the same policy to both.
