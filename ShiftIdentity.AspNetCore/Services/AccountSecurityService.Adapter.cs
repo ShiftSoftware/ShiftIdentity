@@ -21,9 +21,13 @@ internal sealed class AdmissionRefusedException(AuthenticationFailure code, Admi
     public AdmissionRefusalReason Reason { get; } = reason;
     /// <summary>The DTO property the refusal is about, when there is one.</summary>
     public string? Field { get; } = field;
+    /// <summary>With <see cref="AdmissionRefusalReason.NotCovered"/>: each target the operator doesn't cover, and what it holds beyond them.</summary>
+    public IReadOnlyList<(string Username, Dictionary<ShiftSoftware.TypeAuth.Core.Actions.ActionBase, string> Uncovered)> Uncovered { get; init; } = [];
+    /// <summary>The save changed several users, so the refusal says none of them was changed.</summary>
+    public bool Bulk { get; init; }
 }
 
-internal enum AdmissionRefusalReason { Operator, Self, Protected, Deleted, Stale, Duplicate, Invalid, Unavailable }
+internal enum AdmissionRefusalReason { Operator, Self, Protected, Deleted, Stale, Duplicate, Invalid, Unavailable, NotCovered }
 
 /// <summary>
 /// The v2 boundary for the legacy administrator writers. One admission per repository save: the operator and every
@@ -57,6 +61,7 @@ internal static partial class AccountSecurityService
         services.Observe?.Invoke("AdmissionLock");
         var actor = units[who.UserID];
         var now = services.Clock.GetUtcNow();
+        // Every change is checked before any is applied, so a save that changes several users is refused as a whole.
         foreach (var change in changes)
         {
             var unit = units[change.User.ID];
@@ -76,7 +81,26 @@ internal static partial class AccountSecurityService
             // account allows device sign-in after this save, whether it allowed it before or this save allows it.
             if (change.Password is not null && ChangeRequestRefusal(change.AllowDeviceSignIn ?? unit.User.AllowDeviceSignIn, change.RequireChangeAtNextLogin) is { } changeRefusal)
                 throw new AdmissionRefusedException(changeRefusal.Code, AdmissionRefusalReason.Invalid, nameof(UserDTO.RequireChangeAtNextLogin));
+        }
 
+        // Review F16: a change that needs it (UserAccountChange.NeedsCover) needs the operator to cover everything the
+        // target holds, read under the lock from the database as sign-in reads it. The refusal names every target not
+        // covered, and nothing is applied.
+        var covered = changes.Where(x => x.NeedsCover).ToList();
+        if (covered.Count > 0)
+        {
+            var held = await Data.UserCover.HeldTreesAsync(db, covered.Select(x => x.User.ID).ToList(), ct);
+            var uncovered = covered
+                .Select(x => (x.User.Username, Uncovered: Uncovered(services, actor, held.GetValueOrDefault(x.User.ID) ?? [])))
+                .Where(x => x.Uncovered.Count > 0).ToList();
+            if (uncovered.Count > 0)
+                throw new AdmissionRefusedException(AuthenticationFailure.AccessNotCovered, AdmissionRefusalReason.NotCovered)
+                { Uncovered = uncovered, Bulk = changes.Count > 1 };
+        }
+
+        foreach (var change in changes)
+        {
+            var unit = units[change.User.ID];
             var startVersion = unit.Security.SecurityVersion;
             var audits = new List<string>();
             var restrictive = false;

@@ -144,8 +144,8 @@ internal static class AdmissionRules
         foreach (var team in user.TeamUsers) claims.Add(new(ShiftEntity.Core.Constants.TeamIdsClaim, services.HashIds.Encode<TeamDTO>(team.TeamID)));
         if (user.Email is not null) claims.Add(new(ClaimTypes.Email, user.Email));
         if (user.Phone is not null) claims.Add(new(ClaimTypes.MobilePhone, user.Phone));
-        if (!string.IsNullOrWhiteSpace(user.AccessTree)) claims.Add(new(TypeAuthClaimTypes.AccessTree, user.AccessTree));
-        foreach (var tree in user.AccessTrees) claims.Add(new(TypeAuthClaimTypes.AccessTree, tree.AccessTree.Tree));
+        // The administrator cover check (review F16) reads the same trees.
+        foreach (var tree in Data.UserCover.HeldTrees(user)) claims.Add(new(TypeAuthClaimTypes.AccessTree, tree));
         if (freshAuthentication)
         {
             unit.Security.FailedProofs = 0;

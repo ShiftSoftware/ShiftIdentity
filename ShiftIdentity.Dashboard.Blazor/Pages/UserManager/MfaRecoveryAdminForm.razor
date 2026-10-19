@@ -110,6 +110,7 @@
 
     private string RefusalMessage(AuthenticationRefused refused) => refused.Code switch
     {
+        AuthenticationFailure.AccessNotCovered => AdministratorCover.Describe(x => Loc[x], refused),
         AuthenticationFailure.ClientDenied => Loc["You need the Manage MFA Recovery permission to issue a recovery code, and you cannot issue one for your own account."],
         AuthenticationFailure.AccountUnavailable => Loc["This account is inactive or deleted, so its authenticator cannot be recovered."],
         AuthenticationFailure.StaleOperation => Loc["This account changed meanwhile. Close this window, open the user again and retry."],

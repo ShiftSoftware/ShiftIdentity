@@ -36,7 +36,17 @@ public sealed record ChallengeRequired(AuthenticationChallenge Challenge) : Auth
 /// <c>expired_token</c>, <c>invalid_grant</c> and so on), which tells the device what to do next.
 /// </summary>
 public sealed record AuthenticationRefused(AuthenticationFailure Code, PasswordPolicyFailure? PasswordFailure = null,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Error = null) : AuthOutcome;
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Error = null) : AuthOutcome
+{
+    /// <summary>
+    /// Set only with <see cref="AuthenticationFailure.AccessNotCovered"/>: what the target holds that the operator
+    /// doesn't, per action, worded as the access tree assignment check words it.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<UncoveredAccess>? Uncovered { get; init; }
+}
+/// <summary>An action the target holds and what of it the operator doesn't hold.</summary>
+public sealed record UncoveredAccess(string Action, string Access);
 public sealed record PasswordChanged(AuthOutcome Continuation) : AuthOutcome;
 public sealed record OperationCancelled : AuthOutcome;
 public sealed record MfaChanged(AuthOutcome Continuation, bool PasswordAlsoChanged = false) : AuthOutcome;
@@ -89,7 +99,13 @@ public enum AuthenticationFailure
     /// sign-in. Such an account never owes a password change, so the request is refused and nothing changes. The
     /// request is never dropped silently. It can be made again after device sign-in is turned off.
     /// </summary>
-    RequiredPasswordChangeNotAllowed
+    RequiredPasswordChangeNotAllowed,
+    /// <summary>
+    /// The target holds accesses the operator doesn't, so the operator can't change its username, password, sign-in,
+    /// email or status: they could then sign in as the target, or lock it out. <see cref="AuthenticationRefused.Uncovered"/> lists them. Nothing
+    /// changes.
+    /// </summary>
+    AccessNotCovered
 }
 public enum AuthenticationOperationPurpose { Login = 1, ContactChange = 2, MfaEnrollment = 3, PasswordChange = 4, MfaReplacement = 5, MfaRecovery = 6, PasswordResetEmail = 7, PasswordResetManual = 8, EmailVerify = 9, AppExchange = 10, LegacyRefreshExchange = 11, LegacyMfaExchange = 12, AdministratorConfirmation = 13, ProviderLogin = 14 }
 

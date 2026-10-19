@@ -17,6 +17,11 @@ internal sealed record IdentityAdmissionServices(
     Action<string>? Observe = null)
 {
     internal Core.Authentication.NewPasswordPolicy PasswordPolicy { get; init; } = new();
+    /// <summary>
+    /// Every action tree the host registered with TypeAuth. An operator's rights are built over all of them when they
+    /// must cover what a target holds, so an access in any tree counts.
+    /// </summary>
+    internal Type[] ActionTrees { get; init; } = [typeof(Core.ShiftIdentityActions)];
     internal SecurityDeliveryLimits DeliveryLimits { get; init; } = new();
     internal ISecurityEmailSink? EmailSink { get; init; }
     internal string? EmailVerificationRedirectUrl { get; init; }

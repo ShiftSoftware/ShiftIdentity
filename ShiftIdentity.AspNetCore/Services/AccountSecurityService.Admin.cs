@@ -3,6 +3,7 @@ using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.Authentication;
 using ShiftSoftware.ShiftIdentity.Core.Models;
 using ShiftSoftware.ShiftIdentity.Data.Authentication;
+using ShiftSoftware.ShiftIdentity.Data.Services;
 using ShiftSoftware.TypeAuth.Core;
 using static ShiftSoftware.ShiftIdentity.AspNetCore.Authentication.AdmissionRules;
 
@@ -36,7 +37,8 @@ internal static partial class AccountSecurityService
         // First admission checks the operator and captures the target credential; the expensive hash runs outside the lock.
         var read = await services.Store.AdmitAdminAsync(who.UserID, request.UserID, services.Client, (actor, unit) =>
         {
-            var refusal = AdminTargetRefusal(services, actor, unit, who) ?? ChangeRequestRefusal(unit, request.RequireChangeAtNextLogin);
+            // A new password always needs cover (UserAccountChange.NeedsCover).
+            var refusal = AdminTargetRefusal(services, actor, unit, who, coverRequired: true) ?? ChangeRequestRefusal(unit, request.RequireChangeAtNextLogin);
             return Task.FromResult(new SnapshotResult(refusal is null ? new(unit.User, unit.Security, unit.Policy) : null, refusal));
         }, ct);
         if (read.Failure is not null) return read.Failure;
@@ -49,7 +51,7 @@ internal static partial class AccountSecurityService
         services.Observe?.Invoke("AdminPasswordPrepared");
         return await services.Store.AdmitAdminAsync<AuthOutcome>(who.UserID, request.UserID, services.Client, (actor, unit) =>
         {
-            var refusal = AdminTargetRefusal(services, actor, unit, who);
+            var refusal = AdminTargetRefusal(services, actor, unit, who, coverRequired: true);
             if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
             // A credential that changed since the snapshot (self-service change, reset, another operator) is never overwritten.
             if (!SameCredential(snapshot, unit)) return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.StaleOperation));
@@ -75,7 +77,10 @@ internal static partial class AccountSecurityService
         var who = new AdminActor(signedIn.Proof.UserID, signedIn);
         return await services.Store.AdmitAdminAsync<AuthOutcome>(who.UserID, request.UserID, services.Client, async (actor, unit) =>
         {
-            var refusal = AdminTargetRefusal(services, actor, unit, who);
+            var refusal = AdminTargetRefusal(services, actor, unit, who, NeedsCover(unit, user => new()
+            {
+                User = user, Username = string.Equals(user.Username, username, StringComparison.Ordinal) ? null : username
+            }));
             if (refusal is not null) return refusal;
             var (failure, applied) = await ApplyUsernameAsync(services, unit, username, ct);
             if (failure is not null) return failure;
@@ -100,7 +105,10 @@ internal static partial class AccountSecurityService
         var who = new AdminActor(signedIn.Proof.UserID, signedIn);
         var outcome = await services.Store.AdmitAdminAsync<AuthOutcome>(who.UserID, request.UserID, services.Client, async (actor, unit) =>
         {
-            var refusal = AdminTargetRefusal(services, actor, unit, who);
+            var refusal = AdminTargetRefusal(services, actor, unit, who, NeedsCover(unit, user => new()
+            {
+                User = user, EmailChanged = RecoveryContact.Key(user.Email) != RecoveryContact.Key(email), Email = email
+            }));
             if (refusal is not null) return refusal;
             var now = services.Clock.GetUtcNow();
             var (failure, applied) = await ApplyEmailAsync(services, unit, email, now, ct);
@@ -125,7 +133,10 @@ internal static partial class AccountSecurityService
         var who = new AdminActor(signedIn.Proof.UserID, signedIn);
         return await services.Store.AdmitAdminAsync<AuthOutcome>(who.UserID, request.UserID, services.Client, (actor, unit) =>
         {
-            var refusal = AdminTargetRefusal(services, actor, unit, who);
+            var refusal = AdminTargetRefusal(services, actor, unit, who, NeedsCover(unit, user => new()
+            {
+                User = user, IsActive = user.IsActive == request.Active ? null : request.Active
+            }));
             if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
             if (!ApplyStatus(unit, request.Active))
                 return Task.FromResult<AuthOutcome>(new AdminAccountChanged(AdminAccountChange.Active, false, unit.Security.SecurityVersion));
@@ -285,19 +296,44 @@ internal static partial class AccountSecurityService
         return Permitted(actor, permitted) ? null : Refuse(AuthenticationFailure.ClientDenied);
     }
 
-    private static bool Permitted(IdentitySecurityTransaction actor, Func<TypeAuthContext, bool> permitted)
-    {
-        var trees = actor.User.AccessTrees.Select(x => x.AccessTree.Tree).ToList();
-        if (!string.IsNullOrWhiteSpace(actor.User.AccessTree)) trees.Add(actor.User.AccessTree);
-        return permitted(new TypeAuthContext(trees, typeof(ShiftIdentityActions)));
-    }
+    private static bool Permitted(IdentitySecurityTransaction actor, Func<TypeAuthContext, bool> permitted) =>
+        permitted(new TypeAuthContext(Data.UserCover.HeldTrees(actor.User), typeof(ShiftIdentityActions)));
+
+    /// <summary>
+    /// What <paramref name="held"/> grants that the operator doesn't hold, per action (review F16). The operator's rights are
+    /// built from their current trees in the database over every action tree the host registered.
+    /// </summary>
+    internal static Dictionary<ShiftSoftware.TypeAuth.Core.Actions.ActionBase, string> Uncovered(IdentityAdmissionServices services,
+        IdentitySecurityTransaction actor, IEnumerable<string> held) =>
+        Data.UserCover.Uncovered(new TypeAuthContext(Data.UserCover.HeldTrees(actor.User), services.ActionTrees), held);
+
+    /// <summary>
+    /// Refuses a change to the target's password, sign-in, email or status when the target holds accesses the operator
+    /// doesn't: the operator could then sign in as the target. The refusal lists them.
+    /// </summary>
+    internal static AuthenticationRefused? CoverRefusal(IdentityAdmissionServices services, IdentitySecurityTransaction actor,
+        IdentitySecurityTransaction unit) =>
+        Uncovered(services, actor, Data.UserCover.HeldTrees(unit.User)) is { Count: > 0 } uncovered
+            ? new AuthenticationRefused(AuthenticationFailure.AccessNotCovered)
+            {
+                Uncovered = uncovered.Select(x => new UncoveredAccess(x.Key.Name ?? x.Key.Path ?? "", x.Value)).ToList()
+            }
+            : null;
+
+    /// <summary>
+    /// Whether a route's change needs the operator to cover the target, by the rule every writer shares
+    /// (<see cref="UserAccountChange.NeedsCover"/>). The route describes its change against the locked row.
+    /// </summary>
+    private static bool NeedsCover(IdentitySecurityTransaction unit, Func<Data.Entities.User, UserAccountChange> change) =>
+        change(unit.User).NeedsCover;
 
     private static AuthenticationRefused? AdminTargetRefusal(IdentityAdmissionServices services, IdentitySecurityTransaction actor,
-        IdentitySecurityTransaction unit, AdminActor who)
+        IdentitySecurityTransaction unit, AdminActor who, bool coverRequired = false)
     {
         var refusal = ActorRefusal(services, actor, who, permissions => permissions.CanWrite(ShiftIdentityActions.Users));
         if (refusal is not null) return refusal;
         if (unit.User.IsDeleted) return Refuse(AuthenticationFailure.AccountUnavailable);
-        return unit.User.IsProtected ? Refuse(AuthenticationFailure.ClientDenied) : null;
+        if (unit.User.IsProtected) return Refuse(AuthenticationFailure.ClientDenied);
+        return coverRequired ? CoverRefusal(services, actor, unit) : null;
     }
 }

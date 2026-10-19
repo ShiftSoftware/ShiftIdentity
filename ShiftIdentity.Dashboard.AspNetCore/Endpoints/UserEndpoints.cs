@@ -11,6 +11,7 @@ using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftEntity.Web;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
+using ShiftSoftware.ShiftIdentity.Core.Localization;
 using ShiftSoftware.ShiftIdentity.Data.Entities;
 using ShiftSoftware.ShiftIdentity.Data;
 using ShiftSoftware.ShiftIdentity.Data.Repositories;
@@ -71,8 +72,14 @@ internal static class UserEndpoints
                 IEnumerable<UserInfoDTO> userInfos;
                 try
                 {
-                    userInfos = userRepo.AssignRandomPasswords(await GetSelectedUsersAsync(httpContext, ids), passwordLength ?? 20,
-                        requireChangeAtNextLogin);
+                    var users = await GetSelectedUsersAsync(httpContext, ids);
+
+                    // Without the authority: refused as a whole, naming the users, when the admin doesn't cover any
+                    // of them (review F16). The authority checks the same from current data in the save.
+                    if (!userRepo.UsesAuthority)
+                        await RefuseUncoveredAsync(httpContext, users);
+
+                    userInfos = userRepo.AssignRandomPasswords(users, passwordLength ?? 20, requireChangeAtNextLogin);
 
                     await userRepo.SaveChangesAsync();
                 }
@@ -112,11 +119,15 @@ internal static class UserEndpoints
                     }, statusCode: (int)HttpStatusCode.BadRequest);
 
                 var users = await GetSelectedUsersAsync(httpContext, ids);
-                foreach (var user in users)
-                    await userRepo.SetTotpSecret(null, user);
 
                 try
                 {
+                    // Refused as a whole, naming the users, when the admin doesn't cover any of them (review F16).
+                    await RefuseUncoveredAsync(httpContext, users);
+
+                    foreach (var user in users)
+                        await userRepo.SetTotpSecret(null, user);
+
                     await userRepo.SaveChangesAsync();
                 }
                 catch (ShiftEntityException ex)
@@ -257,6 +268,21 @@ internal static class UserEndpoints
             .RequireTypeAuthWrite(ShiftIdentityActions.Users);
 
         return app;
+    }
+
+    // A bulk change to users' credentials needs the admin to cover everything each selected user holds. One user not
+    // covered refuses the whole request, before anything is changed, and the refusal names every such user.
+    private static async Task RefuseUncoveredAsync(HttpContext httpContext, IEnumerable<User> users)
+    {
+        var services = httpContext.RequestServices;
+        var uncovered = await UserCover.FindUncoveredAsync(services.GetRequiredService<ShiftIdentityDbContext>(),
+            (services.GetRequiredService<ITypeAuthService>() as TypeAuthContext)!, users, httpContext.RequestAborted);
+
+        if (uncovered.Count > 0)
+        {
+            var loc = services.GetRequiredService<ShiftIdentityLocalizer>();
+            throw new ShiftEntityException(UserCover.Refusal(x => loc[x], uncovered, bulk: true), (int)HttpStatusCode.Forbidden);
+        }
     }
 
     // Selected-entity resolution ported from ShiftEntitySecureControllerAsync.GetSelectedEntitiesAsync — the CRUD

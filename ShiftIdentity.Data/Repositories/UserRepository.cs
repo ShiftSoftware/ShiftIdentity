@@ -136,12 +136,9 @@ public class UserRepository :
         foreach (var type in typeAuthService.GetRegisteredActionTrees())
             builder.AddActionTree(type);
 
-        if (!string.IsNullOrWhiteSpace(user.AccessTree))
-            builder.AddAccessTree(user.AccessTree);
-
-        foreach (var assigned in user.AccessTrees)
-            if (!string.IsNullOrWhiteSpace(assigned.AccessTree?.Tree))
-                builder.AddAccessTree(assigned.AccessTree.Tree);
+        foreach (var tree in UserCover.HeldTrees(user))
+            if (!string.IsNullOrWhiteSpace(tree))
+                builder.AddAccessTree(tree);
 
         var combined = builder.Build();
 

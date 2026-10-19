@@ -118,6 +118,15 @@ public sealed class UserAccountChange
 
     public bool IsEmpty => Password is null && Username is null && !EmailChanged && !PhoneChanged && IsActive is null &&
         AllowDeviceSignIn is null && !PermissionsChanged && !VerifyPhone && !Delete;
+
+    /// <summary>
+    /// The change needs the operator to cover everything the user holds (review F16): a new password or username, a
+    /// new email or phone, deactivating, allowing device sign-in or deleting. Each part is set only when it changes,
+    /// so an unchanged value never needs it. The access trees are checked by the save itself, and marking a saved phone
+    /// verified, activating and turning device sign-in off don't need it. Every writer asks this, on both paths.
+    /// </summary>
+    public bool NeedsCover => Password is not null || Username is not null || EmailChanged || PhoneChanged ||
+        IsActive == false || AllowDeviceSignIn == true || Delete;
 }
 
 /// <summary>A user the repository inserted in the current transaction.</summary>

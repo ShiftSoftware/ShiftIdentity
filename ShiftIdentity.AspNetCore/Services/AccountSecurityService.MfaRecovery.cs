@@ -22,6 +22,8 @@ internal static partial class AccountSecurityService
         {
             var refusal = ActorRefusal(services, actor, signedIn, permissions => permissions.CanAccess(ShiftIdentityActions.ManageMfaRecovery));
             refusal ??= CommonRefusal(services, unit, unit.Security.SecurityVersion, unit.Policy.Revision);
+            // The code lets whoever holds it sign in as the target, so the operator must cover what the target holds.
+            refusal ??= CoverRefusal(services, actor, unit);
             if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
             var now = services.Clock.GetUtcNow();
             SupersedeRecovery(unit, now);

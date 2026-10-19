@@ -77,6 +77,7 @@
 
     private string RefusalMessage(AuthenticationRefused refused) => refused.Code switch
     {
+        AuthenticationFailure.AccessNotCovered => AdministratorCover.Describe(x => Loc[x], refused),
         AuthenticationFailure.ClientDenied => Loc["MFA cannot be turned off here. It may be mandatory on this system, or you lack the Manage MFA Recovery permission. For your own account, use your profile."],
         AuthenticationFailure.AccountUnavailable => Loc["This account is deleted, so its MFA cannot be changed."],
         AuthenticationFailure.StaleOperation => Loc["This account changed meanwhile. Close this window, open the user again and retry."],

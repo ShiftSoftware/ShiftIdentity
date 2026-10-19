@@ -61,6 +61,8 @@ internal sealed class AdmissionUserAccountAuthority(IdentityAdmissionServices se
     private ShiftEntityException Translate(AdmissionRefusedException refused)
     {
         string Text(string key) => localizer is null ? key : localizer[key];
+        if (refused.Reason == AdmissionRefusalReason.NotCovered)
+            return new ShiftEntityException(Data.UserCover.Refusal(Text, refused.Uncovered, refused.Bulk), (int)HttpStatusCode.Forbidden);
         var (status, title, body) = refused.Reason switch
         {
             AdmissionRefusalReason.Self => (HttpStatusCode.Forbidden, "Forbidden", "Use your own profile to change your own account."),

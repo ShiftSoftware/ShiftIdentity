@@ -31,6 +31,8 @@ internal static partial class AccountSecurityService
             if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
             // An inactive account can be corrected before it is activated again; a deleted one is not changed.
             if (unit.User.IsDeleted) return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.AccountUnavailable));
+            // Turning MFA off leaves the password alone between anyone and the account: the operator must cover what the target holds.
+            if (CoverRefusal(services, actor, unit) is { } notCovered) return Task.FromResult<AuthOutcome>(notCovered);
             if (MfaMandatory(unit)) return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.ClientDenied));
             var now = services.Clock.GetUtcNow();
             if (!ApplyMfaTurnOff(unit, now))

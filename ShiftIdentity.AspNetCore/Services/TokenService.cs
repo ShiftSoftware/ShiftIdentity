@@ -140,14 +140,9 @@ public class TokenService
         if (user.Phone != null)
             claims.Add(new Claim(ClaimTypes.MobilePhone, user.Phone));
 
-        //Store access tree per user
-        if (!string.IsNullOrWhiteSpace(user.AccessTree))
-            claims.Add(new Claim(TypeAuthClaimTypes.AccessTree, user.AccessTree));
-
-        //Store access-trees in calim
-        if (user.AccessTrees?.Count() > 0)
-            foreach (var accessTree in user.AccessTrees)
-                claims.Add(new Claim(TypeAuthClaimTypes.AccessTree, accessTree.AccessTree.Tree));
+        //Store the user's own tree and every assigned tree; the administrator cover check (review F16) reads the same trees
+        foreach (var tree in Data.UserCover.HeldTrees(user))
+            claims.Add(new Claim(TypeAuthClaimTypes.AccessTree, tree));
 
         var rsa = RSA.Create();
         rsa.ImportRSAPrivateKey(Convert.FromBase64String(shiftIdentityConfiguration.Token.RSAPrivateKeyBase64), out _);

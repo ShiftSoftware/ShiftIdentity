@@ -105,6 +105,7 @@
     private void DeliveryResult(AuthOutcome result, bool manualDelivery = false) => message = result switch
     {
         SecurityDeliveryRequested => "If this account is eligible, check its saved email inbox. If no link arrives, wait before trying again.",
+        AuthenticationRefused { Code: AuthenticationFailure.AccessNotCovered } refused => AdministratorCover.Describe(x => x, refused),
         AuthenticationRefused { Code: AuthenticationFailure.Unavailable } => manualDelivery
             ? "The link could not be created. Please wait and try again."
             : "We could not confirm that the email was sent. Check the saved email inbox, then wait before trying again.",
@@ -191,6 +192,7 @@
         AdminAccountChanged { Applied: true, Delivery: AuthenticationRefused } => success + " We could not confirm that the verification email was sent. Send it again after a short wait.",
         AdminAccountChanged { Applied: true } => success,
         AdminAccountChanged => "No change was needed.",
+        AuthenticationRefused { Code: AuthenticationFailure.AccessNotCovered } refused => AdministratorCover.Describe(x => x, refused),
         AuthenticationRefused { Code: AuthenticationFailure.DuplicateIdentifier } => "Another account already uses this username or email.",
         AuthenticationRefused { Code: AuthenticationFailure.InvalidNewPassword } => "The password does not meet the policy. " + NewPasswordPolicy.Guidance,
         AuthenticationRefused { Code: AuthenticationFailure.RequiredPasswordChangeNotAllowed } => "Accounts that allow device sign-in can't be asked to change their password at next sign-in.",

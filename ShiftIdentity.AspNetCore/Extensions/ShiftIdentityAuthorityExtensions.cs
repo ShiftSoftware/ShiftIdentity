@@ -6,6 +6,7 @@ using ShiftSoftware.ShiftIdentity.AspNetCore.Authentication;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Endpoints;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Data.Authentication;
+using ShiftSoftware.TypeAuth.Core;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -54,7 +55,8 @@ namespace Microsoft.Extensions.DependencyInjection
                     LegacyTemporaryTokens = LegacyTemporaryTokenCodec.TryCreate(configuration.TemporaryTokenSettings, clock),
                     Microsoft = sp.GetService<MicrosoftSignIn>(),
                     Google = sp.GetService<GoogleSignIn>(),
-                    Device = current.Device
+                    Device = current.Device,
+                    ActionTrees = sp.GetService<ITypeAuthService>()?.GetRegisteredActionTrees() is { Length: > 0 } trees ? trees : [typeof(ShiftIdentityActions)]
                 };
             });
             // Hosted services start in registration order: the policy and client rows must exist before the factor

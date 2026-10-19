@@ -298,20 +298,10 @@ public class User : ShiftEntity<User>,
         {
             var inaccessibleAccessTress = new Dictionary<AccessTree, Dictionary<TypeAuth.Core.Actions.ActionBase, string>>();
 
+            // The cover rule: a tree is within the admin's reach when a user holding only it would be covered.
             foreach (var tree in ids.Where(trees.ContainsKey).Select(x => trees[x]))
             {
-                var tAuthBuilderForThisTree = new TypeAuthContextBuilder();
-
-                foreach (var type in typeAuthService.GetRegisteredActionTrees())
-                {
-                    tAuthBuilderForThisTree.AddActionTree(type);
-                }
-
-                tAuthBuilderForThisTree.AddAccessTree(tree.Tree);
-
-                var tAuthForThisTree = tAuthBuilderForThisTree.Build();
-
-                var inAccessibleActions = (typeAuthService as TypeAuthContext)!.FindInAccessibleActionsOn(tAuthForThisTree);
+                var inAccessibleActions = UserCover.Uncovered((typeAuthService as TypeAuthContext)!, [tree.Tree]);
 
                 if (inAccessibleActions.Count > 0)
                 {
@@ -341,6 +331,29 @@ public class User : ShiftEntity<User>,
         // grants without classifying additions and reductions; Identity applies the same policy to both.
         var permissionsChanged = actionType == ActionTypes.Update &&
             (removedAccessTrees.Count > 0 || addedAccessTrees.Count > 0 || !AccessTreeComparer.Equivalent(entity.AccessTree, generatedAccessTree));
+
+        // What this update changes beyond the ordinary fields, described once: the staged authority admits it, and the
+        // cover rule (review F16) reads it on both paths. Base() maps onto this tracked row and leaves these fields alone.
+        UserAccountChange Change(User user) => new()
+        {
+            User = user,
+            Password = hash,
+            RequireChangeAtNextLogin = dto.RequireChangeAtNextLogin,
+            Username = string.Equals(user.Username, username, StringComparison.Ordinal) ? null : username,
+            EmailChanged = emailChanged,
+            Email = dto.Email,
+            PhoneChanged = phoneChanged,
+            Phone = formattedPhone,
+            IsActive = user.IsActive == dto.IsActive ? null : dto.IsActive,
+            AllowDeviceSignIn = user.AllowDeviceSignIn == dto.AllowDeviceSignIn ? null : dto.AllowDeviceSignIn,
+            PermissionsChanged = permissionsChanged,
+            AccessTree = generatedAccessTree
+        };
+
+        // Without the authority, the admin must cover everything the user holds for such a change; the authority
+        // checks it itself, from current data. A protected user is refused by Base().
+        if (authority is null && actionType == ActionTypes.Update && !entity.IsProtected && Change(entity).NeedsCover)
+            await RefuseUncoveredAsync(db, typeAuthService, Loc, entity);
 
         if (authority is null || actionType == ActionTypes.Insert)
         {
@@ -394,21 +407,7 @@ public class User : ShiftEntity<User>,
         {
             if (actionType == ActionTypes.Update)
             {
-                var change = new UserAccountChange
-                {
-                    User = saved,
-                    Password = hash,
-                    RequireChangeAtNextLogin = dto.RequireChangeAtNextLogin,
-                    Username = string.Equals(saved.Username, username, StringComparison.Ordinal) ? null : username,
-                    EmailChanged = emailChanged,
-                    Email = dto.Email,
-                    PhoneChanged = phoneChanged,
-                    Phone = formattedPhone,
-                    IsActive = saved.IsActive == dto.IsActive ? null : dto.IsActive,
-                    AllowDeviceSignIn = saved.AllowDeviceSignIn == dto.AllowDeviceSignIn ? null : dto.AllowDeviceSignIn,
-                    PermissionsChanged = permissionsChanged,
-                    AccessTree = generatedAccessTree
-                };
+                var change = Change(saved);
 
                 if (!change.IsEmpty)
                     repository.RequireAdmission(change);
@@ -449,7 +448,18 @@ public class User : ShiftEntity<User>,
 
         if (context.Services.GetService<IUserAccountAuthority>() is not null && context.Repository is Repositories.UserRepository repository)
             repository.RequireAdmission(new UserAccountChange { User = deleted, Delete = true });
+        // Without the authority, deleting needs the admin to cover everything the user holds (review F16). Base() has
+        // only flagged the tracked row; nothing is saved when this refuses.
+        else
+            await RefuseUncoveredAsync(context.Services.GetRequiredService<ShiftIdentityDbContext>(), context.Services.GetRequiredService<ITypeAuthService>(),
+                context.Services.GetRequiredService<ShiftIdentityLocalizer>(), deleted);
 
         return deleted;
+    }
+
+    private static async Task RefuseUncoveredAsync(ShiftIdentityDbContext db, ITypeAuthService typeAuthService, ShiftIdentityLocalizer Loc, User user)
+    {
+        if (await UserCover.FindUncoveredAsync(db, (typeAuthService as TypeAuthContext)!, [user]) is { Count: > 0 } uncovered)
+            throw new ShiftEntityException(UserCover.Refusal(x => Loc[x], uncovered, bulk: false), (int)HttpStatusCode.Forbidden);
     }
 }

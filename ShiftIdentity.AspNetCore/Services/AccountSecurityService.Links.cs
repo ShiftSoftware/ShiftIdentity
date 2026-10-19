@@ -81,6 +81,9 @@ internal static partial class AccountSecurityService
         var outcome = await services.Store.AdmitAdminAsync<AuthOutcome>(who.UserID, userID, services.Client, (actor, unit) =>
         {
             var refusal = ActorRefusal(services, actor, who, permissions => permissions.CanWrite(ShiftIdentityActions.Users), requireRecent: false);
+            // A manual reset grant is handed to the operator, who can then set the target's password: the operator must
+            // cover what the target holds. A link mailed to the target's own address needs no such check.
+            if (refusal is null && purpose == AuthenticationOperationPurpose.PasswordResetManual) refusal = CoverRefusal(services, actor, unit);
             if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
             return Task.FromResult(CreateSecurityLink(services, unit, purpose, out message, actor.User.ID));
         }, ct);

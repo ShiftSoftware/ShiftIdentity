@@ -635,7 +635,8 @@ public sealed class UserFormAuthoritySqlTests(SqlIdentityFixture fixture) : ICla
         }
     }
 
-    // Review F12: a tree the operator couldn't assign, left assigned, no longer blocks the user's other edits.
+    // Review F12: a tree the operator couldn't assign, left assigned, no longer blocks the user's other edits. A new
+    // phone would (review F16, UserCoverSqlTests): the operator doesn't cover this user.
     [Fact]
     public async Task A_tree_beyond_the_operator_left_assigned_does_not_block_the_save()
     {
@@ -644,7 +645,7 @@ public sealed class UserFormAuthoritySqlTests(SqlIdentityFixture fixture) : ICla
         var (allowedID, _) = await CreateTreeAsync(ReadOnlyTree);
         var id = await CreateAsync(host, NewUser(requireChange: false, sendVerification: false));
         await AssignAsync(id, beyondID);
-        var dto = await GetAsync(host, id); dto.FullName = "Synthetic Form User (edited)"; dto.Phone = Phone;
+        var dto = await GetAsync(host, id); dto.FullName = "Synthetic Form User (edited)";
         dto.AccessTrees = [.. dto.AccessTrees, new ShiftEntitySelectDTO { Value = allowedID.ToString() }];
         await PutAsync(host, dto);
         Assert.Equal("Synthetic Form User (edited)", (await StateAsync(id)).User.FullName);
