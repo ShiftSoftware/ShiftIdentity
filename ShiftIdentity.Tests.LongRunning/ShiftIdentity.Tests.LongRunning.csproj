@@ -15,5 +15,7 @@
     <PackageReference Include="xunit.v3.mtp-off" Version="4.0.1" />
     <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0" PrivateAssets="all" />
     <ProjectReference Include="..\ShiftIdentity.Tests\ShiftIdentity.Tests.csproj" />
+    <!-- The Identity catch-up (IdentityCatchUpSqlTests). -->
+    <ProjectReference Include="..\ShiftIdentity.AzureFunctions\ShiftIdentity.AzureFunctions.csproj" />
   </ItemGroup>
 </Project>

@@ -1,10 +1,13 @@
+using CosmosClient = Microsoft.Azure.Cosmos.CosmosClient;
 using Microsoft.EntityFrameworkCore;
+using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.CosmosDbReplication.Services;
 using ShiftSoftware.ShiftEntity.Model.Replication;
 using ShiftSoftware.ShiftEntity.Model.Replication.IdentityModels;
 using ShiftSoftware.ShiftIdentity.Data;
 using ShiftSoftware.ShiftIdentity.Data.Entities;
 using ShiftSoftware.ShiftIdentity.Data.Replication;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -13,9 +16,17 @@ namespace ShiftSoftware.ShiftIdentity.AzureFunctions.Replication;
 /// <summary>
 /// Reusable Cosmos "catch-up" replication for the ShiftIdentity domain — the function/timer counterpart to the
 /// trigger-side <c>SetUpAllIdentityReplications</c>. Each <c>ReplicateXAsync</c> re-syncs ONE entity's rows to Cosmos
-/// through the framework's <see cref="CosmosDBReplication"/> service; <see cref="ReplicateAllAsync{TDbContext}"/> runs
-/// them all. By default only DIRTY rows are synced (<c>updateAll: false</c> — the incremental hourly catch-up); pass
-/// <c>updateAll: true</c> for a full backfill (the on-demand HTTP endpoint).
+/// through the framework's <see cref="CosmosDBReplication"/> service; <see cref="ReplicateAllAsync{TDbContext}(CosmosDBReplication, string, string, bool)"/>
+/// runs them all, and <see cref="ReplicateOrganizationAsync{TDbContext}(CosmosDBReplication, string, string, bool)"/> runs all but
+/// users and authorization. By default only DIRTY rows are synced (<c>updateAll: false</c> — the incremental hourly catch-up); pass
+/// <c>updateAll: true</c> for a full backfill (the on-demand HTTP endpoint). Each one takes the Cosmos DB connection
+/// string, or a <see cref="CosmosClient"/> the host already has.
+///
+/// The runs of several entities go on past a step that fails, and return an <see cref="IdentityCatchUpReport"/> of
+/// every step. Rows a step cannot write, for example to a container that does not exist, fail in its result and stay
+/// dirty for the next run. A step that throws (its rows cannot be read, or, through a connection string, a container it
+/// opens does not exist) is in the report too, and once every other step has run the run throws
+/// <see cref="IdentityCatchUpException"/> with that report.
 ///
 /// No call passes a mapping delegate: every document is mapped through the host's registered ShiftMapper mapper —
 /// the same maps the trigger side uses, so a backfilled document is byte-identical to one a live save produces.
@@ -26,144 +37,268 @@ namespace ShiftSoftware.ShiftIdentity.AzureFunctions.Replication;
 /// any row is touched.
 ///
 /// The catch-up side has no <c>IShiftEntityPrepareForReplicationAsync</c> hook (that runs only inside the save
-/// trigger), so navigations the models depend on (City→Region→Country, CompanyBranch's City/Company, the M:N joins'
-/// Service/Department/Brand, Team's branches) are loaded HERE via the <c>SetUp(…, query)</c> include shaper.
+/// trigger), so navigations the models depend on (Team's branches) are loaded HERE via the <c>SetUp(…, query)</c>
+/// include shaper. A branch is loaded with its replication tree, as the save side loads it.
 /// Containers/partition data are byte-identical to the trigger configuration.
 /// </summary>
 public static class IdentityCatchUpReplicationExtensions
 {
-    /// <summary>Runs every ShiftIdentity catch-up replication in dependency order.</summary>
-    public static async Task ReplicateAllAsync<TDbContext>(this CosmosDBReplication cosmos, string connectionString, string databaseId, bool updateAll = false)
-        where TDbContext : ShiftIdentityDbContext
-    {
-        await cosmos.ReplicateServiceAsync<TDbContext>(connectionString, databaseId, updateAll);
-        await cosmos.ReplicateCompanyBranchServiceAsync<TDbContext>(connectionString, databaseId, updateAll);
-        await cosmos.ReplicateCompanyBranchDepartmentAsync<TDbContext>(connectionString, databaseId, updateAll);
-        await cosmos.ReplicateDepartmentAsync<TDbContext>(connectionString, databaseId, updateAll);
-        await cosmos.ReplicateBrandAsync<TDbContext>(connectionString, databaseId, updateAll);
-        await cosmos.ReplicateCompanyBranchBrandAsync<TDbContext>(connectionString, databaseId, updateAll);
-        await cosmos.ReplicateRegionAsync<TDbContext>(connectionString, databaseId, updateAll);
-        await cosmos.ReplicateCountryAsync<TDbContext>(connectionString, databaseId, updateAll);
-        await cosmos.ReplicateCityAsync<TDbContext>(connectionString, databaseId, updateAll);
-        await cosmos.ReplicateCompanyBranchAsync<TDbContext>(connectionString, databaseId, updateAll);
-        await cosmos.ReplicateCompanyAsync<TDbContext>(connectionString, databaseId, updateAll);
-        await cosmos.ReplicateTeamAsync<TDbContext>(connectionString, databaseId, updateAll);
-        await cosmos.ReplicateUserAsync<TDbContext>(connectionString, databaseId, updateAll);
-        await cosmos.ReplicateAuthorizationAsync<TDbContext>(connectionString, databaseId, updateAll);
-    }
+    /// <summary>Runs every ShiftIdentity catch-up replication in dependency order, and reports each step.</summary>
+    public static Task<IdentityCatchUpReport> ReplicateAllAsync<TDbContext>(this CosmosDBReplication cosmos, string connectionString, string databaseId, bool updateAll = false)
+        where TDbContext : ShiftIdentityDbContext =>
+        ReplicateAllAsync<TDbContext>(new Target(cosmos, connectionString, null, databaseId), updateAll);
+
+    /// <summary>Runs every ShiftIdentity catch-up replication in dependency order, through a client the host already has, and reports each step.</summary>
+    public static Task<IdentityCatchUpReport> ReplicateAllAsync<TDbContext>(this CosmosDBReplication cosmos, CosmosClient client, string databaseId, bool updateAll = false)
+        where TDbContext : ShiftIdentityDbContext =>
+        ReplicateAllAsync<TDbContext>(new Target(cosmos, null, client, databaseId), updateAll);
+
+    private static Task<IdentityCatchUpReport> ReplicateAllAsync<TDbContext>(Target target, bool updateAll)
+        where TDbContext : ShiftIdentityDbContext =>
+        RunStepsAsync(target, updateAll, [.. OrganizationSteps<TDbContext>(), new(nameof(User), ReplicateUserAsync<TDbContext>), .. AuthorizationSteps<TDbContext>()]);
+
+    /// <summary>
+    /// Runs every ShiftIdentity catch-up replication but users and authorization, in dependency order: services,
+    /// departments, brands, regions, countries, cities, branches, companies and teams, and reports each step. For a
+    /// host that does not replicate users.
+    /// </summary>
+    public static Task<IdentityCatchUpReport> ReplicateOrganizationAsync<TDbContext>(this CosmosDBReplication cosmos, string connectionString, string databaseId, bool updateAll = false)
+        where TDbContext : ShiftIdentityDbContext =>
+        ReplicateOrganizationAsync<TDbContext>(new Target(cosmos, connectionString, null, databaseId), updateAll);
+
+    /// <inheritdoc cref="ReplicateOrganizationAsync{TDbContext}(CosmosDBReplication, string, string, bool)"/>
+    public static Task<IdentityCatchUpReport> ReplicateOrganizationAsync<TDbContext>(this CosmosDBReplication cosmos, CosmosClient client, string databaseId, bool updateAll = false)
+        where TDbContext : ShiftIdentityDbContext =>
+        ReplicateOrganizationAsync<TDbContext>(new Target(cosmos, null, client, databaseId), updateAll);
+
+    private static Task<IdentityCatchUpReport> ReplicateOrganizationAsync<TDbContext>(Target target, bool updateAll)
+        where TDbContext : ShiftIdentityDbContext =>
+        RunStepsAsync(target, updateAll, OrganizationSteps<TDbContext>());
+
+    private static Step[] OrganizationSteps<TDbContext>()
+        where TDbContext : ShiftIdentityDbContext =>
+    [
+        new(nameof(Service), ReplicateServiceAsync<TDbContext>),
+        new(nameof(Department), ReplicateDepartmentAsync<TDbContext>),
+        new(nameof(Brand), ReplicateBrandAsync<TDbContext>),
+        new(nameof(Region), ReplicateRegionAsync<TDbContext>),
+        new(nameof(Country), ReplicateCountryAsync<TDbContext>),
+        new(nameof(City), ReplicateCityAsync<TDbContext>),
+        new(nameof(CompanyBranch), ReplicateCompanyBranchAsync<TDbContext>),
+        new(nameof(Company), ReplicateCompanyAsync<TDbContext>),
+        new(nameof(Team), ReplicateTeamAsync<TDbContext>),
+    ];
 
     /// <summary>
     /// Catches up named grants and assignments using the existing replication watermarks.
     /// Hard deletes are delivered by the save trigger; this scan cannot recover an already removed SQL row.
     /// Run alongside user, company and branch catch-up.
     /// </summary>
-    public static async Task ReplicateAuthorizationAsync<TDbContext>(this CosmosDBReplication cosmos,
+    public static Task ReplicateAuthorizationAsync<TDbContext>(this CosmosDBReplication cosmos,
         string connectionString, string databaseId, bool updateAll = false)
-        where TDbContext : ShiftIdentityDbContext
-    {
-        await cosmos.SetUp<TDbContext, AccessTree>(connectionString, databaseId)
-            .Replicate<AccessTreeModel>(IdentityDatabaseAndContainerNames.AccessTreeContainerName).RunAsync(updateAll);
-        await cosmos.SetUp<TDbContext, UserAccessTree>(connectionString, databaseId)
-            .Replicate<UserAccessTreeModel>(IdentityDatabaseAndContainerNames.UserAccessTreeContainerName).RunAsync(updateAll);
-        await cosmos.SetUp<TDbContext, TeamUser>(connectionString, databaseId)
-            .Replicate<TeamUserModel>(IdentityDatabaseAndContainerNames.TeamUserContainerName).RunAsync(updateAll);
-    }
+        where TDbContext : ShiftIdentityDbContext =>
+        ReplicateAuthorizationAsync<TDbContext>(new Target(cosmos, connectionString, null, databaseId), updateAll);
+
+    public static Task ReplicateAuthorizationAsync<TDbContext>(this CosmosDBReplication cosmos, CosmosClient client, string databaseId, bool updateAll = false)
+        where TDbContext : ShiftIdentityDbContext =>
+        ReplicateAuthorizationAsync<TDbContext>(new Target(cosmos, null, client, databaseId), updateAll);
+
+    private static Task<IdentityCatchUpReport> ReplicateAuthorizationAsync<TDbContext>(Target target, bool updateAll)
+        where TDbContext : ShiftIdentityDbContext =>
+        RunStepsAsync(target, updateAll, AuthorizationSteps<TDbContext>());
+
+    private static Step[] AuthorizationSteps<TDbContext>()
+        where TDbContext : ShiftIdentityDbContext =>
+    [
+        new(nameof(AccessTree), (target, updateAll) => target.SetUp<TDbContext, AccessTree>()
+            .Replicate<AccessTreeModel>(IdentityDatabaseAndContainerNames.AccessTreeContainerName).RunAndReportAsync(updateAll)),
+        new(nameof(UserAccessTree), (target, updateAll) => target.SetUp<TDbContext, UserAccessTree>()
+            .Replicate<UserAccessTreeModel>(IdentityDatabaseAndContainerNames.UserAccessTreeContainerName).RunAndReportAsync(updateAll)),
+        new(nameof(TeamUser), (target, updateAll) => target.SetUp<TDbContext, TeamUser>()
+            .Replicate<TeamUserModel>(IdentityDatabaseAndContainerNames.TeamUserContainerName).RunAndReportAsync(updateAll)),
+    ];
 
     public static Task ReplicateServiceAsync<TDbContext>(this CosmosDBReplication cosmos, string connectionString, string databaseId, bool updateAll = false)
         where TDbContext : ShiftIdentityDbContext =>
-        cosmos.SetUp<TDbContext, Service>(connectionString, databaseId)
+        ReplicateServiceAsync<TDbContext>(new Target(cosmos, connectionString, null, databaseId), updateAll);
+
+    public static Task ReplicateServiceAsync<TDbContext>(this CosmosDBReplication cosmos, CosmosClient client, string databaseId, bool updateAll = false)
+        where TDbContext : ShiftIdentityDbContext =>
+        ReplicateServiceAsync<TDbContext>(new Target(cosmos, null, client, databaseId), updateAll);
+
+    private static Task<CosmosDbReplicationResult> ReplicateServiceAsync<TDbContext>(Target target, bool updateAll)
+        where TDbContext : ShiftIdentityDbContext =>
+        target.SetUp<TDbContext, Service>()
             .Replicate<ServiceModel>(IdentityDatabaseAndContainerNames.ServiceContainerName)
-            .UpdateReference<CompanyBranchSubItemModel>(IdentityDatabaseAndContainerNames.CompanyBranchContainerName,
-                (q, e) => q.Where(m => m.ItemType == CompanyBranchContainerItemTypes.Service && m.id == e.ID.ToString()))
-            .RunAsync(updateAll);
-
-    public static Task ReplicateCompanyBranchServiceAsync<TDbContext>(this CosmosDBReplication cosmos, string connectionString, string databaseId, bool updateAll = false)
-        where TDbContext : ShiftIdentityDbContext =>
-        // Include Service — the sub-item carries its Name/IntegrationId (null on the bare join otherwise).
-        cosmos.SetUp<TDbContext, CompanyBranchService>(connectionString, databaseId, q => q.Include(x => x.Service))
-            .Replicate<CompanyBranchSubItemModel>(IdentityDatabaseAndContainerNames.CompanyBranchContainerName)
-            .RunAsync(updateAll);
-
-    public static Task ReplicateCompanyBranchDepartmentAsync<TDbContext>(this CosmosDBReplication cosmos, string connectionString, string databaseId, bool updateAll = false)
-        where TDbContext : ShiftIdentityDbContext =>
-        cosmos.SetUp<TDbContext, CompanyBranchDepartment>(connectionString, databaseId, q => q.Include(x => x.Department))
-            .Replicate<CompanyBranchSubItemModel>(IdentityDatabaseAndContainerNames.CompanyBranchContainerName)
-            .RunAsync(updateAll);
+            .RunAndReportAsync(updateAll);
 
     public static Task ReplicateDepartmentAsync<TDbContext>(this CosmosDBReplication cosmos, string connectionString, string databaseId, bool updateAll = false)
         where TDbContext : ShiftIdentityDbContext =>
-        cosmos.SetUp<TDbContext, Department>(connectionString, databaseId)
+        ReplicateDepartmentAsync<TDbContext>(new Target(cosmos, connectionString, null, databaseId), updateAll);
+
+    public static Task ReplicateDepartmentAsync<TDbContext>(this CosmosDBReplication cosmos, CosmosClient client, string databaseId, bool updateAll = false)
+        where TDbContext : ShiftIdentityDbContext =>
+        ReplicateDepartmentAsync<TDbContext>(new Target(cosmos, null, client, databaseId), updateAll);
+
+    private static Task<CosmosDbReplicationResult> ReplicateDepartmentAsync<TDbContext>(Target target, bool updateAll)
+        where TDbContext : ShiftIdentityDbContext =>
+        target.SetUp<TDbContext, Department>()
             .Replicate<DepartmentModel>(IdentityDatabaseAndContainerNames.DepartmentContainerName)
-            .UpdateReference<CompanyBranchSubItemModel>(IdentityDatabaseAndContainerNames.CompanyBranchContainerName,
-                (q, e) => q.Where(m => m.ItemType == CompanyBranchContainerItemTypes.Department && m.id == e.ID.ToString()))
-            .RunAsync(updateAll);
+            .RunAndReportAsync(updateAll);
 
     public static Task ReplicateBrandAsync<TDbContext>(this CosmosDBReplication cosmos, string connectionString, string databaseId, bool updateAll = false)
         where TDbContext : ShiftIdentityDbContext =>
-        cosmos.SetUp<TDbContext, Brand>(connectionString, databaseId)
-            .Replicate<BrandModel>(IdentityDatabaseAndContainerNames.BrandContainerName)
-            .UpdateReference<CompanyBranchSubItemModel>(IdentityDatabaseAndContainerNames.CompanyBranchContainerName,
-                (q, e) => q.Where(m => m.id == e.ID.ToString() && m.ItemType == CompanyBranchContainerItemTypes.Brand))
-            .RunAsync(updateAll);
+        ReplicateBrandAsync<TDbContext>(new Target(cosmos, connectionString, null, databaseId), updateAll);
 
-    public static Task ReplicateCompanyBranchBrandAsync<TDbContext>(this CosmosDBReplication cosmos, string connectionString, string databaseId, bool updateAll = false)
+    public static Task ReplicateBrandAsync<TDbContext>(this CosmosDBReplication cosmos, CosmosClient client, string databaseId, bool updateAll = false)
         where TDbContext : ShiftIdentityDbContext =>
-        cosmos.SetUp<TDbContext, CompanyBranchBrand>(connectionString, databaseId, q => q.Include(x => x.Brand))
-            .Replicate<CompanyBranchSubItemModel>(IdentityDatabaseAndContainerNames.CompanyBranchContainerName)
-            .RunAsync(updateAll);
+        ReplicateBrandAsync<TDbContext>(new Target(cosmos, null, client, databaseId), updateAll);
+
+    private static Task<CosmosDbReplicationResult> ReplicateBrandAsync<TDbContext>(Target target, bool updateAll)
+        where TDbContext : ShiftIdentityDbContext =>
+        target.SetUp<TDbContext, Brand>()
+            .Replicate<BrandModel>(IdentityDatabaseAndContainerNames.BrandContainerName)
+            .RunAndReportAsync(updateAll);
 
     public static Task ReplicateRegionAsync<TDbContext>(this CosmosDBReplication cosmos, string connectionString, string databaseId, bool updateAll = false)
         where TDbContext : ShiftIdentityDbContext =>
-        // Include Country — the nested CityRegionModel.Country reference is built from it.
-        cosmos.SetUp<TDbContext, Region>(connectionString, databaseId, q => q.Include(x => x.Country))
+        ReplicateRegionAsync<TDbContext>(new Target(cosmos, connectionString, null, databaseId), updateAll);
+
+    public static Task ReplicateRegionAsync<TDbContext>(this CosmosDBReplication cosmos, CosmosClient client, string databaseId, bool updateAll = false)
+        where TDbContext : ShiftIdentityDbContext =>
+        ReplicateRegionAsync<TDbContext>(new Target(cosmos, null, client, databaseId), updateAll);
+
+    private static Task<CosmosDbReplicationResult> ReplicateRegionAsync<TDbContext>(Target target, bool updateAll)
+        where TDbContext : ShiftIdentityDbContext =>
+        target.SetUp<TDbContext, Region>()
             .Replicate<RegionModel>(IdentityDatabaseAndContainerNames.CountryContainerName)
-            .UpdatePropertyReference<CityRegionModel, CompanyBranchModel>(IdentityDatabaseAndContainerNames.CompanyBranchContainerName, m => m.City.Region,
-                (q, e) => q.Where(m => m.City.Region.id == e.ID.ToString() && m.ItemType == CompanyBranchContainerItemTypes.Branch))
-            .RunAsync(updateAll);
+            .RunAndReportAsync(updateAll);
 
     public static Task ReplicateCountryAsync<TDbContext>(this CosmosDBReplication cosmos, string connectionString, string databaseId, bool updateAll = false)
         where TDbContext : ShiftIdentityDbContext =>
-        cosmos.SetUp<TDbContext, Country>(connectionString, databaseId)
+        ReplicateCountryAsync<TDbContext>(new Target(cosmos, connectionString, null, databaseId), updateAll);
+
+    public static Task ReplicateCountryAsync<TDbContext>(this CosmosDBReplication cosmos, CosmosClient client, string databaseId, bool updateAll = false)
+        where TDbContext : ShiftIdentityDbContext =>
+        ReplicateCountryAsync<TDbContext>(new Target(cosmos, null, client, databaseId), updateAll);
+
+    private static Task<CosmosDbReplicationResult> ReplicateCountryAsync<TDbContext>(Target target, bool updateAll)
+        where TDbContext : ShiftIdentityDbContext =>
+        target.SetUp<TDbContext, Country>()
             .Replicate<CountryModel>(IdentityDatabaseAndContainerNames.CountryContainerName)
-            .UpdatePropertyReference<CountryModel, CompanyBranchModel>(IdentityDatabaseAndContainerNames.CompanyBranchContainerName, m => m.City.Region.Country,
-                (q, e) => q.Where(m => m.City.Region.Country.id == e.ID.ToString() && m.ItemType == CompanyBranchContainerItemTypes.Branch))
-            .RunAsync(updateAll);
+            .RunAndReportAsync(updateAll);
 
     public static Task ReplicateCityAsync<TDbContext>(this CosmosDBReplication cosmos, string connectionString, string databaseId, bool updateAll = false)
         where TDbContext : ShiftIdentityDbContext =>
-        // Include Region→Country — the nested CityCompanyBranchModel.Region (and its Country) are built from them.
-        cosmos.SetUp<TDbContext, City>(connectionString, databaseId, q => q.Include(x => x.Region).ThenInclude(x => x.Country))
-            .Replicate<CityModel>(IdentityDatabaseAndContainerNames.CountryContainerName)
-            .UpdatePropertyReference<CityCompanyBranchModel, CompanyBranchModel>(IdentityDatabaseAndContainerNames.CompanyBranchContainerName, m => m.City,
-                (q, e) => q.Where(m => m.City.id == e.ID.ToString() && m.ItemType == CompanyBranchContainerItemTypes.Branch))
-            .RunAsync(updateAll);
+        ReplicateCityAsync<TDbContext>(new Target(cosmos, connectionString, null, databaseId), updateAll);
 
+    public static Task ReplicateCityAsync<TDbContext>(this CosmosDBReplication cosmos, CosmosClient client, string databaseId, bool updateAll = false)
+        where TDbContext : ShiftIdentityDbContext =>
+        ReplicateCityAsync<TDbContext>(new Target(cosmos, null, client, databaseId), updateAll);
+
+    private static Task<CosmosDbReplicationResult> ReplicateCityAsync<TDbContext>(Target target, bool updateAll)
+        where TDbContext : ShiftIdentityDbContext =>
+        target.SetUp<TDbContext, City>()
+            .Replicate<CityModel>(IdentityDatabaseAndContainerNames.CountryContainerName)
+            .RunAndReportAsync(updateAll);
+
+    /// <summary>
+    /// The branch's <see cref="BranchModel"/> in <c>Branches</c>, from the branch loaded with its replication tree.
+    /// Nothing is written to <c>CompanyBranches</c> any more.
+    /// </summary>
     public static Task ReplicateCompanyBranchAsync<TDbContext>(this CosmosDBReplication cosmos, string connectionString, string databaseId, bool updateAll = false)
         where TDbContext : ShiftIdentityDbContext =>
-        // CompanyBranchModel embeds City (→Region→Country) and Company — load the whole chain in one query.
-        cosmos.SetUp<TDbContext, CompanyBranch>(connectionString, databaseId,
-                q => q.Include(x => x.City).ThenInclude(x => x.Region).ThenInclude(x => x.Country).Include(x => x.Company))
-            .Replicate<CompanyBranchModel>(IdentityDatabaseAndContainerNames.CompanyBranchContainerName)
-            .RunAsync(updateAll);
+        ReplicateCompanyBranchAsync<TDbContext>(new Target(cosmos, connectionString, null, databaseId), updateAll);
+
+    public static Task ReplicateCompanyBranchAsync<TDbContext>(this CosmosDBReplication cosmos, CosmosClient client, string databaseId, bool updateAll = false)
+        where TDbContext : ShiftIdentityDbContext =>
+        ReplicateCompanyBranchAsync<TDbContext>(new Target(cosmos, null, client, databaseId), updateAll);
+
+    private static Task<CosmosDbReplicationResult> ReplicateCompanyBranchAsync<TDbContext>(Target target, bool updateAll)
+        where TDbContext : ShiftIdentityDbContext =>
+        target.SetUp<TDbContext, CompanyBranch>()
+            .ReplicateTree<BranchModel>(IdentityDatabaseAndContainerNames.BranchContainerName)
+            .RunAndReportAsync(updateAll);
 
     public static Task ReplicateCompanyAsync<TDbContext>(this CosmosDBReplication cosmos, string connectionString, string databaseId, bool updateAll = false)
         where TDbContext : ShiftIdentityDbContext =>
-        cosmos.SetUp<TDbContext, Company>(connectionString, databaseId)
+        ReplicateCompanyAsync<TDbContext>(new Target(cosmos, connectionString, null, databaseId), updateAll);
+
+    public static Task ReplicateCompanyAsync<TDbContext>(this CosmosDBReplication cosmos, CosmosClient client, string databaseId, bool updateAll = false)
+        where TDbContext : ShiftIdentityDbContext =>
+        ReplicateCompanyAsync<TDbContext>(new Target(cosmos, null, client, databaseId), updateAll);
+
+    private static Task<CosmosDbReplicationResult> ReplicateCompanyAsync<TDbContext>(Target target, bool updateAll)
+        where TDbContext : ShiftIdentityDbContext =>
+        target.SetUp<TDbContext, Company>()
             .Replicate<CompanyModel>(IdentityDatabaseAndContainerNames.CompanyContainerName)
-            .UpdatePropertyReference<CompanyModel, CompanyBranchModel>(IdentityDatabaseAndContainerNames.CompanyBranchContainerName, m => m.Company,
-                (q, e) => q.Where(m => m.Company.id == e.ID.ToString()))
-            .RunAsync(updateAll);
+            .RunAndReportAsync(updateAll);
 
     public static Task ReplicateTeamAsync<TDbContext>(this CosmosDBReplication cosmos, string connectionString, string databaseId, bool updateAll = false)
         where TDbContext : ShiftIdentityDbContext =>
+        ReplicateTeamAsync<TDbContext>(new Target(cosmos, connectionString, null, databaseId), updateAll);
+
+    public static Task ReplicateTeamAsync<TDbContext>(this CosmosDBReplication cosmos, CosmosClient client, string databaseId, bool updateAll = false)
+        where TDbContext : ShiftIdentityDbContext =>
+        ReplicateTeamAsync<TDbContext>(new Target(cosmos, null, client, databaseId), updateAll);
+
+    private static Task<CosmosDbReplicationResult> ReplicateTeamAsync<TDbContext>(Target target, bool updateAll)
+        where TDbContext : ShiftIdentityDbContext =>
         // TeamModel embeds its branches (TeamCompanyBranches → CompanyBranch) — load them so each carries a real Name.
-        cosmos.SetUp<TDbContext, Team>(connectionString, databaseId, q => q.Include(x => x.TeamCompanyBranches).ThenInclude(x => x.CompanyBranch))
+        target.SetUp<TDbContext, Team>(q => q.Include(x => x.TeamCompanyBranches).ThenInclude(x => x.CompanyBranch))
             .Replicate<TeamModel>(IdentityDatabaseAndContainerNames.TeamContainerName)
-            .RunAsync(updateAll);
+            .RunAndReportAsync(updateAll);
 
     public static Task ReplicateUserAsync<TDbContext>(this CosmosDBReplication cosmos, string connectionString, string databaseId, bool updateAll = false)
         where TDbContext : ShiftIdentityDbContext =>
-        cosmos.SetUp<TDbContext, User>(connectionString, databaseId)
+        ReplicateUserAsync<TDbContext>(new Target(cosmos, connectionString, null, databaseId), updateAll);
+
+    public static Task ReplicateUserAsync<TDbContext>(this CosmosDBReplication cosmos, CosmosClient client, string databaseId, bool updateAll = false)
+        where TDbContext : ShiftIdentityDbContext =>
+        ReplicateUserAsync<TDbContext>(new Target(cosmos, null, client, databaseId), updateAll);
+
+    private static Task<CosmosDbReplicationResult> ReplicateUserAsync<TDbContext>(Target target, bool updateAll)
+        where TDbContext : ShiftIdentityDbContext =>
+        target.SetUp<TDbContext, User>()
             .Replicate<UserModel>(IdentityDatabaseAndContainerNames.UserContainerName)
-            .RunAsync(updateAll);
+            .RunAndReportAsync(updateAll);
+
+    // One entity's catch-up in a run of several.
+    private readonly record struct Step(string Entity, Func<Target, bool, Task<CosmosDbReplicationResult>> Run);
+
+    // Runs the steps in order. One that fails does not stop the ones after it: the rows a step could not write fail in
+    // its result and stay dirty, and a step that throws is kept with its exception. Once every step has run, a step that
+    // threw makes the run throw too, with the report of every step, so it fails as loudly as it did when it stopped.
+    private static async Task<IdentityCatchUpReport> RunStepsAsync(Target target, bool updateAll, Step[] steps)
+    {
+        var done = new List<IdentityCatchUpStep>();
+        foreach (var step in steps)
+        {
+            try
+            {
+                done.Add(new IdentityCatchUpStep(step.Entity, await step.Run(target, updateAll), null));
+            }
+            catch (Exception ex)
+            {
+                done.Add(new IdentityCatchUpStep(step.Entity, null, ex));
+            }
+        }
+
+        var report = new IdentityCatchUpReport(done);
+        if (done.Any(x => x.Error is not null))
+            throw new IdentityCatchUpException(report);
+
+        return report;
+    }
+
+    // Where a catch-up writes: through the connection string, or through the host's client.
+    private readonly record struct Target(CosmosDBReplication Cosmos, string? ConnectionString, CosmosClient? Client, string DatabaseId)
+    {
+        public CosmosDbReplicationOperation<TDbContext, TEntity> SetUp<TDbContext, TEntity>(Func<IQueryable<TEntity>, IQueryable<TEntity>>? query = null)
+            where TDbContext : ShiftIdentityDbContext
+            where TEntity : ShiftEntity<TEntity>, IShiftEntityReplication =>
+            Client is null
+                ? Cosmos.SetUp<TDbContext, TEntity>(ConnectionString!, DatabaseId, query)
+                : Cosmos.SetUp<TDbContext, TEntity>(Client, DatabaseId, query);
+    }
 }

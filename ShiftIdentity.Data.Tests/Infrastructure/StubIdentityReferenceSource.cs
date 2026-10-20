@@ -34,6 +34,9 @@ internal sealed class StubIdentityReferenceSource : CosmosIdentityReferenceSourc
     /// <summary>How many times a single row has been read out of the store.</summary>
     public int ItemReads => Volatile.Read(ref this.itemReads);
 
+    /// <summary>The container and item type of every read, in the order they were made.</summary>
+    public System.Collections.Concurrent.ConcurrentQueue<(string Container, string? ItemType)> Reads { get; } = new();
+
     /// <summary>Held by every read while it is set, so several callers can be lined up on one load.</summary>
     public TaskCompletionSource? Gate { get; set; }
 
@@ -50,6 +53,8 @@ internal sealed class StubIdentityReferenceSource : CosmosIdentityReferenceSourc
         string? id,
         CancellationToken cancellationToken)
     {
+        this.Reads.Enqueue((containerName, itemType));
+
         if (id is null)
             Interlocked.Increment(ref this.familyReads);
         else

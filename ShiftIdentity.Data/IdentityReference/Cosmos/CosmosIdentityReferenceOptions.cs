@@ -51,7 +51,15 @@ public class CosmosIdentityReferenceOptions
 
     public string CompanyContainerName { get; set; } = IdentityDatabaseAndContainerNames.CompanyContainerName;
 
+    /// <summary>
+    /// The container replication wrote branches and their link documents to before <see cref="BranchContainerName"/>.
+    /// The framework no longer writes it, and the source does not read it. It stays so that hosts that set it still
+    /// compile.
+    /// </summary>
     public string CompanyBranchContainerName { get; set; } = IdentityDatabaseAndContainerNames.CompanyBranchContainerName;
+
+    /// <summary>The container the source reads branches from, one document per branch.</summary>
+    public string BranchContainerName { get; set; } = IdentityDatabaseAndContainerNames.BranchContainerName;
 
     public string ServiceContainerName { get; set; } = IdentityDatabaseAndContainerNames.ServiceContainerName;
 

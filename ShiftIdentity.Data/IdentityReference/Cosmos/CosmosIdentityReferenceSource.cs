@@ -132,17 +132,20 @@ public partial class CosmosIdentityReferenceSource<TCosmosClient> : IIdentityRef
 
     // ---- Company branches ----------------------------------------------------------------------------
 
+    // Read from the Branches container, where every branch carries its city's region and country. Its documents
+    // are BranchModel; read here as CompanyBranchModel, they keep the branch's own fields.
+
     public Task<CompanyBranchModel?> ResolveCompanyBranchAsync(string id, CancellationToken cancellationToken = default)
-        => this.GetItemByIdAsync<CompanyBranchModel>(id, this.GetCompanyBranchContainerName(), CompanyBranchContainerItemTypes.Branch, cancellationToken);
+        => this.GetItemByIdAsync<CompanyBranchModel>(id, this.GetBranchContainerName(), CompanyBranchContainerItemTypes.Branch, cancellationToken);
 
     public Task<CompanyBranchModel?> ResolveCompanyBranchAsync(long id, CancellationToken cancellationToken = default)
         => this.ResolveCompanyBranchAsync(ToDocumentId(id), cancellationToken);
 
     public Task<IReadOnlyDictionary<string, CompanyBranchModel>> GetCompanyBranchesAsync(IdentityLifecycleFilter lifecycle = IdentityLifecycleFilter.All, CancellationToken cancellationToken = default)
-        => this.GetItemsAsync<CompanyBranchModel>(this.GetCompanyBranchContainerName(), CompanyBranchContainerItemTypes.Branch, lifecycle, cancellationToken);
+        => this.GetItemsAsync<CompanyBranchModel>(this.GetBranchContainerName(), CompanyBranchContainerItemTypes.Branch, lifecycle, cancellationToken);
 
     public Task<IIdentityReferenceSnapshot<CompanyBranchModel>> LoadCompanyBranchesSnapshotAsync(IdentityLifecycleFilter lifecycle = IdentityLifecycleFilter.All, CancellationToken cancellationToken = default)
-        => this.LoadSnapshotAsync<CompanyBranchModel>(this.GetCompanyBranchContainerName(), CompanyBranchContainerItemTypes.Branch, lifecycle, cancellationToken);
+        => this.LoadSnapshotAsync<CompanyBranchModel>(this.GetBranchContainerName(), CompanyBranchContainerItemTypes.Branch, lifecycle, cancellationToken);
 
     // ---- Services ------------------------------------------------------------------------------------
 
@@ -223,7 +226,7 @@ public partial class CosmosIdentityReferenceSource<TCosmosClient> : IIdentityRef
             IdentityReferenceFamily.Regions => this.RefreshFamilyAsync<RegionModel>(this.GetCountryContainerName(), CountryContainerItemTypes.Region, cancellationToken),
             IdentityReferenceFamily.Cities => this.RefreshFamilyAsync<CityModel>(this.GetCountryContainerName(), CountryContainerItemTypes.City, cancellationToken),
             IdentityReferenceFamily.Companies => this.RefreshFamilyAsync<CompanyModel>(this.GetCompanyContainerName(), null, cancellationToken),
-            IdentityReferenceFamily.CompanyBranches => this.RefreshFamilyAsync<CompanyBranchModel>(this.GetCompanyBranchContainerName(), CompanyBranchContainerItemTypes.Branch, cancellationToken),
+            IdentityReferenceFamily.CompanyBranches => this.RefreshFamilyAsync<CompanyBranchModel>(this.GetBranchContainerName(), CompanyBranchContainerItemTypes.Branch, cancellationToken),
             IdentityReferenceFamily.Services => this.RefreshFamilyAsync<ServiceModel>(this.GetServiceContainerName(), null, cancellationToken),
             IdentityReferenceFamily.Departments => this.RefreshFamilyAsync<DepartmentModel>(this.GetDepartmentContainerName(), null, cancellationToken),
             IdentityReferenceFamily.Teams => this.RefreshFamilyAsync<TeamModel>(this.GetTeamContainerName(), null, cancellationToken),
@@ -243,7 +246,7 @@ public partial class CosmosIdentityReferenceSource<TCosmosClient> : IIdentityRef
             IdentityReferenceFamily.Regions => this.RefreshItemAsync<RegionModel>(id, this.GetCountryContainerName(), CountryContainerItemTypes.Region, cancellationToken),
             IdentityReferenceFamily.Cities => this.RefreshItemAsync<CityModel>(id, this.GetCountryContainerName(), CountryContainerItemTypes.City, cancellationToken),
             IdentityReferenceFamily.Companies => this.RefreshItemAsync<CompanyModel>(id, this.GetCompanyContainerName(), null, cancellationToken),
-            IdentityReferenceFamily.CompanyBranches => this.RefreshItemAsync<CompanyBranchModel>(id, this.GetCompanyBranchContainerName(), CompanyBranchContainerItemTypes.Branch, cancellationToken),
+            IdentityReferenceFamily.CompanyBranches => this.RefreshItemAsync<CompanyBranchModel>(id, this.GetBranchContainerName(), CompanyBranchContainerItemTypes.Branch, cancellationToken),
             IdentityReferenceFamily.Services => this.RefreshItemAsync<ServiceModel>(id, this.GetServiceContainerName(), null, cancellationToken),
             IdentityReferenceFamily.Departments => this.RefreshItemAsync<DepartmentModel>(id, this.GetDepartmentContainerName(), null, cancellationToken),
             IdentityReferenceFamily.Teams => this.RefreshItemAsync<TeamModel>(id, this.GetTeamContainerName(), null, cancellationToken),
@@ -573,7 +576,7 @@ public partial class CosmosIdentityReferenceSource<TCosmosClient> : IIdentityRef
 
     private string GetCompanyContainerName() => this.options.CompanyContainerName;
 
-    private string GetCompanyBranchContainerName() => this.options.CompanyBranchContainerName;
+    private string GetBranchContainerName() => this.options.BranchContainerName;
 
     private string GetServiceContainerName() => this.options.ServiceContainerName;
 

@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ShiftSoftware.ShiftEntity.EFCore;
+using ShiftSoftware.ShiftEntity.EFCore.Replication;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftIdentity.Data.Authentication;
@@ -52,6 +53,15 @@ namespace ShiftSoftware.ShiftIdentity.Data
             // The authority's tables are part of the identity model for every host (see IdentitySecurityModel):
             // an additive expansion the host's next migration carries, empty until the host enables the authority.
             b.ConfigureIdentitySecurity();
+
+            // What a branch's document in the Branches container is made of. It adds nothing to the model: it tells
+            // replication to rebuild the document from SQL when any of these rows changes.
+            b.Entity<CompanyBranch>().HasReplicationTree(q => q
+                .Include(x => x.City).ThenInclude(x => x!.Region).ThenInclude(x => x!.Country)
+                .Include(x => x.Company)
+                .Include(x => x.CompanyBranchServices!).ThenInclude(x => x.Service)
+                .Include(x => x.CompanyBranchDepartments!).ThenInclude(x => x.Department)
+                .Include(x => x.CompanyBranchBrands!).ThenInclude(x => x.Brand));
 
             b.Entity<AccessTree>().HasIndex(x => x.Name).IsUnique().HasFilter($"{nameof(AccessTree.IsDeleted)} = 0");
 
