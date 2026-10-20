@@ -40,6 +40,24 @@ public sealed class ActionTreeExpansionTests
     }
 
     [Fact]
+    public async Task A_folder_opens_from_its_arrow_and_a_click_on_its_access_buttons_leaves_it_as_it_is()
+    {
+        await using var context = UserFormHarness.Create(out _, accessTree: Admin, actionTrees: typeof(ExpansionTestActions));
+        var cut = Render(context);
+
+        Arrow(cut, "Expansion Test Actions")!.Click();
+        cut.WaitForAssertion(() => Assert.NotNull(ActionTreeRows.Find(cut, "Orders")));
+        Assert.Null(Arrow(cut, "Orders"));
+
+        Button(cut, "Reports", "Read").Click();
+        Assert.Null(ActionTreeRows.Find(cut, "Sales"));
+    }
+
+    // The expand arrow in front of a row, which only a folder has.
+    private static IElement? Arrow(IRenderedComponent<ActionTreeComponent> cut, string row) =>
+        ActionTreeRows.Row(cut, row).Closest(".mud-treeview-item-content")!.QuerySelector(".mud-treeview-item-arrow button");
+
+    [Fact]
     public async Task A_wildcard_is_offered_only_where_the_admin_holds_it_and_covers_the_rows_below()
     {
         await using var context = UserFormHarness.Create(out _, accessTree: Admin, actionTrees: typeof(ExpansionTestActions));

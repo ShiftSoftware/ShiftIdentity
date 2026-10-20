@@ -1,11 +1,13 @@
 ﻿
-<MudButton Style="padding: 1px 8px; font-size: 12px;" Size="Size.Small" Color="@color"
-           Disabled="ActionTreeItem.ParentWildCardAccess()?.Count > 0 || !LoggedInUserTreeItems[ActionTreeItem.Path].Any(x => x.WildCardAccess.Contains(Access)) || Disabled"
-           OnClick="Bind"
-           Variant="@(ActionTreeItem.WildCardAccess.Contains(Access) ? Variant.Filled : Variant.Text)"
-           StartIcon="@(ActionTreeItem.WildCardAccess.Contains( Access) ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckBoxOutlineBlank)">
-    @ChildContent
-</MudButton>
+@{
+    var isChecked = ActionTreeItem.WildCardAccess.Contains(Access);
+}
+@* A small MudButton with a checkbox start icon, written out (see ActionTreeMarkup). *@
+<button type="button" class="@ActionTreeMarkup.ButtonClass(isChecked, color)" style="padding: 1px 8px; font-size: 12px;"
+        disabled="@(ActionTreeItem.ParentWildCardAccess()?.Count > 0 || !LoggedInUserTreeItems[ActionTreeItem.Path].Any(x => x.WildCardAccess.Contains(Access)) || Disabled)"
+        @onclick="Bind" @onclick:stopPropagation="true">
+    <span class="mud-button-label"><span class="mud-button-icon-start mud-button-icon-size-small">@ActionTreeMarkup.CheckBox(isChecked)</span>@ChildContent</span>
+</button>
 
 @code {
 

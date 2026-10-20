@@ -2,13 +2,12 @@
 @{
     var isChecked = (!hasWildCardCard && TypeAuth_View.Can(ActionTreeItem!.Action!, Access, ActionTreeItem.ID)) || wildCardChecked;
 }
-<MudButton Style="@style" Class="@cssClass" Size="Size.Small" Color="@color"
-           Disabled="@(hasWildCardCard || Disabled || !TypeAuth_LoggedInUser.Can(ActionTreeItem!.Action!, Access, ActionTreeItem.ID))"
-           OnClick="Bind"
-           Variant="@(isChecked ? Variant.Filled : Variant.Text)"
-           StartIcon="@(isChecked ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckBoxOutlineBlank)">
-    @ChildContent
-</MudButton>
+@* A small MudButton with a checkbox start icon, written out (see ActionTreeMarkup). *@
+<button type="button" class="@ActionTreeMarkup.ButtonClass(isChecked, color, cssClass)" style="@style"
+        disabled="@(hasWildCardCard || Disabled || !TypeAuth_LoggedInUser.Can(ActionTreeItem!.Action!, Access, ActionTreeItem.ID))"
+        @onclick="Bind" @onclick:stopPropagation="true">
+    <span class="mud-button-label"><span class="mud-button-icon-start mud-button-icon-size-small">@ActionTreeMarkup.CheckBox(isChecked)</span>@ChildContent</span>
+</button>
 
 
 @code {

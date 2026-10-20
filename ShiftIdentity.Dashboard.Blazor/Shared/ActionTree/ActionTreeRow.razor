@@ -8,9 +8,10 @@
 
 <div class="@(Item.ParentWildCardAccess()?.Count > 0 ? "action-tree-row action-tree-row-inherited" : "action-tree-row")" data-testid="action-tree-row">
 
-    <ActionTreeItemIcon ActionTreeItem="Item" />
+    @* The icon and the label as MudIcon and MudText render them (see ActionTreeMarkup). *@
+    @ActionTreeMarkup.ItemIcon(Item)
 
-    <MudText Class="action-tree-label">@(Item.DisplayName ?? Item.ID)</MudText>
+    <p class="mud-typography mud-typography-body1 action-tree-label">@(Item.DisplayName ?? Item.ID)</p>
 
     <div class="action-tree-access" data-testid="action-tree-access">
     @if (Item.ActionTreeItems.Count > 0)

@@ -80,7 +80,15 @@
                     var extra = item.Extra();
                     <MudTreeViewItem Items="@extra.Children" ExpandedChanged="@((x) => { extra.Expanded = x; })" Expanded="@extra.Expanded">
                         <Content>
-                            <MudTreeViewItemToggleButton ExpandedChanged="@((x) => { extra.Expanded = x; })" Visible="@(item.ActionTreeItems.Count > 0)" Expanded="@extra.Expanded" />
+                            @if (item.ActionTreeItems.Count > 0)
+                            {
+                                <MudTreeViewItemToggleButton ExpandedChanged="@((x) => { extra.Expanded = x; })" Visible="true" Expanded="@extra.Expanded" />
+                            }
+                            else
+                            {
+                                @* What the toggle button renders when it isn't visible, without the component. *@
+                                <div class="mud-treeview-item-arrow"></div>
+                            }
                             <ActionTreeRow Item="item" TypeAuth_View="tAuth_View" TypeAuth_LoggedInUser="tAuth_LoggedInUser"
                                            LoggedInUserTreeItems="LoggedInUserTreeItems_ByPath" ReadOnly="ReadOnly" Disabled="Disabled"
                                            PickerMode="PickerMode" LoggedInUserVersion="loggedInUserVersion" OnWildCardChanged="StateHasChanged" OnPick="PickAsync" />
