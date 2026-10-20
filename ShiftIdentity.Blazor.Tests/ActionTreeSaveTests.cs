@@ -45,7 +45,8 @@ public sealed class ActionTreeSaveTests
     private static IRenderedComponent<ActionTreeComponent> Render(BunitContext context, string tree)
     {
         var cut = context.Render<ActionTreeComponent>(p => p.Add(x => x.Tree, tree));
-        cut.WaitForAssertion(() => Assert.Contains(cut.FindAll("[data-testid=action-tree-row]"), x => x.TextContent.Contains("Discount")));
+        cut.WaitForAssertion(() => Assert.NotNull(ActionTreeRows.Find(cut, "Save Test Actions")));
+        ActionTreeRows.Expand(cut, "Save Test Actions", "Discount");
         return cut;
     }
 

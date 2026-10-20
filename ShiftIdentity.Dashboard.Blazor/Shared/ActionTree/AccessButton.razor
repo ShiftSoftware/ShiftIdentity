@@ -1,9 +1,12 @@
 ﻿
+@{
+    var isChecked = (!hasWildCardCard && TypeAuth_View.Can(ActionTreeItem!.Action!, Access, ActionTreeItem.ID)) || wildCardChecked;
+}
 <MudButton Style="@style" Class="@cssClass" Size="Size.Small" Color="@color"
-           Disabled="@(!TypeAuth_LoggedInUser.Can(ActionTreeItem!.Action!, Access, ActionTreeItem.ID) || hasWildCardCard || Disabled)"
+           Disabled="@(hasWildCardCard || Disabled || !TypeAuth_LoggedInUser.Can(ActionTreeItem!.Action!, Access, ActionTreeItem.ID))"
            OnClick="Bind"
-           Variant="@((TypeAuth_View.Can(ActionTreeItem!.Action!, Access, ActionTreeItem.ID) && !hasWildCardCard) || wildCardChecked ? Variant.Filled : Variant.Text)"
-           StartIcon="@((TypeAuth_View.Can(ActionTreeItem!.Action!, Access, ActionTreeItem.ID) && !hasWildCardCard) || wildCardChecked ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckBoxOutlineBlank)">
+           Variant="@(isChecked ? Variant.Filled : Variant.Text)"
+           StartIcon="@(isChecked ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckBoxOutlineBlank)">
     @ChildContent
 </MudButton>
 
@@ -64,9 +67,11 @@
 
     protected override void OnParametersSet()
     {
-        this.wildCardChecked = ActionTreeItem.AdditionalData?.Parent?.WildCardAccess?.Contains(Access);
+        var parentWildCardAccess = ActionTreeItem.ParentWildCardAccess();
 
-        this.hasWildCardCard = ActionTreeItem.AdditionalData?.Parent?.WildCardAccess?.Count > 0;
+        this.wildCardChecked = parentWildCardAccess?.Contains(Access) == true;
+
+        this.hasWildCardCard = parentWildCardAccess?.Count > 0;
 
         base.OnParametersSet(); 
     }

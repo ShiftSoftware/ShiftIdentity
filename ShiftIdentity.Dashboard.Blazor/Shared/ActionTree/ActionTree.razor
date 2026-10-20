@@ -1,4 +1,4 @@
-@inject ShiftIdentityLocalizer Loc
+﻿@inject ShiftIdentityLocalizer Loc
 
 <style>
     .mud-treeview-item-content {
@@ -75,115 +75,15 @@
         <MudTreeView Items="@TreeItems" ExpandOnClick="true" Hover="true">
             <ItemTemplate>
 
-                @if (context.Value != null && (context.Value.ActionTreeItems.Count > 0 || context.Value.Action != null))
+                @if (context.Value is { } item && (item.ActionTreeItems.Count > 0 || item.Action != null) && IsShown(item))
                 {
-                    var item = context.Value;
-                    <MudTreeViewItem Items="@item.ActionTreeItems.Select(x => new TreeItemData(x)).ToArray()" ExpandedChanged="@((x) => {item.AdditionalData!.Expanded = x;})" Expanded="@((bool) item.AdditionalData!.Expanded)">
+                    var extra = item.Extra();
+                    <MudTreeViewItem Items="@extra.Children" ExpandedChanged="@((x) => { extra.Expanded = x; })" Expanded="@extra.Expanded">
                         <Content>
-                            <MudTreeViewItemToggleButton ExpandedChanged="@((x) => { item.AdditionalData!.Expanded = x;})" Visible="@(item.ActionTreeItems.Count > 0)" Expanded="@((bool) item.AdditionalData!.Expanded)" />
-                            @{
-                                var inherited = item.AdditionalData?.Parent?.WildCardAccess?.Count > 0;
-                            }
-                            <div class="@(inherited ? "action-tree-row action-tree-row-inherited" : "action-tree-row")" data-testid="action-tree-row">
-
-                                <ActionTreeItemIcon ActionTreeItem="item" />
-
-                                <MudText Class="action-tree-label">@(item.DisplayName ?? item.ID)</MudText>
-
-                                <div class="action-tree-access" data-testid="action-tree-access">
-                                @if (item.ActionTreeItems.Count > 0)
-                                {
-                                    @if (PickerMode)
-                                    {
-                                        @* Only the dynamic-action parent gets "any row" picker buttons.
-                                           Pure group nodes (Action == null) render nothing in picker mode. *@
-                                        @if (item.Action is ShiftSoftware.TypeAuth.Core.Actions.DynamicAction)
-                                        {
-                                            @foreach (var access in GetPickerAccessLevels(item.Action!.Type))
-                                            {
-                                                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="@GetAccessColor(access)"
-                                                           StartIcon="@Icons.Material.Filled.Search"
-                                                           OnClick="@(() => PickAsync(item, access, anyDynamicRow: true))">
-                                                    @Loc[GetAccessLabel(access)] (@Loc["any row"])
-                                                </MudButton>
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        <WildCardAccessButton LoggedInUserTreeItems="LoggedInUserTreeItems_Flattened" Access="Access.Maximum"
-                                                              ActionTreeItem="item" ActionTreeItemChanged="StateHasChanged" Disabled="@(ReadOnly || Disabled)">
-                                            @Loc["Max"]
-                                        </WildCardAccessButton>
-                                        <WildCardAccessButton LoggedInUserTreeItems="LoggedInUserTreeItems_Flattened" Access="Access.Delete"
-                                                              ActionTreeItem="item" ActionTreeItemChanged="StateHasChanged" Disabled="@(ReadOnly || Disabled)">
-                                            @Loc["Delete"]
-                                        </WildCardAccessButton>
-                                        <WildCardAccessButton LoggedInUserTreeItems="LoggedInUserTreeItems_Flattened" Access="Access.Write"
-                                                              ActionTreeItem="item" ActionTreeItemChanged="StateHasChanged" Disabled="@(ReadOnly || Disabled)">
-                                            @Loc["Write"]
-                                        </WildCardAccessButton>
-                                        <WildCardAccessButton LoggedInUserTreeItems="LoggedInUserTreeItems_Flattened" Access="Access.Read"
-                                                              ActionTreeItem="item" ActionTreeItemChanged="StateHasChanged" Disabled="@(ReadOnly || Disabled)">
-                                            @Loc["Read"]
-                                        </WildCardAccessButton>
-                                    }
-                                }
-                                else
-                                {
-                                    @if (PickerMode)
-                                    {
-                                        @if (item.Action?.Type == ActionType.Text)
-                                        {
-                                            <MudText Typo="Typo.caption" Color="Color.Default">@Loc["Text actions are not searchable"]</MudText>
-                                        }
-                                        else if (item.Action != null)
-                                        {
-                                            @foreach (var access in GetPickerAccessLevels(item.Action.Type))
-                                            {
-                                                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="@GetAccessColor(access)"
-                                                           StartIcon="@Icons.Material.Filled.Search"
-                                                           OnClick="@(() => PickAsync(item, access, anyDynamicRow: false))">
-                                                    @Loc[GetAccessLabel(access)]
-                                                </MudButton>
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        @if (item.Action?.Type == ActionType.ReadWriteDelete)
-                                        {
-                                            <AccessButton ActionTreeItem="item" Access="Access.Delete" TypeAuth_LoggedInUser="tAuth_LoggedInUser"
-                                                          TypeAuth_View="tAuth_View" Disabled="@(ReadOnly || Disabled)">@Loc["Delete"]</AccessButton>
-                                        }
-
-                                        @if (item.Action?.Type == ActionType.ReadWriteDelete || item.Action?.Type == ActionType.ReadWrite)
-                                        {
-                                            <AccessButton ActionTreeItem="item" Access="Access.Write" TypeAuth_LoggedInUser="tAuth_LoggedInUser"
-                                                          TypeAuth_View="tAuth_View" Disabled="@(ReadOnly || Disabled)">@Loc["Write"]</AccessButton>
-                                        }
-
-                                        @if (item.Action?.Type == ActionType.ReadWriteDelete || item.Action?.Type == ActionType.ReadWrite || item.Action?.Type == ActionType.Read)
-                                        {
-                                            <AccessButton ActionTreeItem="item" Access="Access.Read" TypeAuth_LoggedInUser="tAuth_LoggedInUser"
-                                                          TypeAuth_View="tAuth_View" Disabled="@(ReadOnly || Disabled)">@Loc["Read"]</AccessButton>
-                                        }
-
-                                        @if (item.Action?.Type == ActionType.Boolean)
-                                        {
-                                            <AccessButton ActionTreeItem="item" Access="Access.Maximum" TypeAuth_LoggedInUser="tAuth_LoggedInUser"
-                                                          TypeAuth_View="tAuth_View" Disabled="@(ReadOnly || Disabled)" />
-                                        }
-
-                                        @if (item.Action?.Type == ActionType.Text)
-                                        {
-                                            <TextAccessField ActionTreeItem="item" TypeAuth_LoggedInUser="tAuth_LoggedInUser" TypeAuth_View="tAuth_View"
-                                                             ReadOnly="ReadOnly" Disabled="Disabled" />
-                                        }
-                                    }
-                                }
-                                </div>
-                            </div>
+                            <MudTreeViewItemToggleButton ExpandedChanged="@((x) => { extra.Expanded = x; })" Visible="@(item.ActionTreeItems.Count > 0)" Expanded="@extra.Expanded" />
+                            <ActionTreeRow Item="item" TypeAuth_View="tAuth_View" TypeAuth_LoggedInUser="tAuth_LoggedInUser"
+                                           LoggedInUserTreeItems="LoggedInUserTreeItems_ByPath" ReadOnly="ReadOnly" Disabled="Disabled"
+                                           PickerMode="PickerMode" LoggedInUserVersion="loggedInUserVersion" OnWildCardChanged="StateHasChanged" OnPick="PickAsync" />
                         </Content>
                     </MudTreeViewItem>
                 }

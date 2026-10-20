@@ -1,6 +1,6 @@
 ﻿
 <MudButton Style="padding: 1px 8px; font-size: 12px;" Size="Size.Small" Color="@color"
-           Disabled="ActionTreeItem.AdditionalData?.Parent?.WildCardAccess?.Count > 0 || !LoggedInUserTreeItems.Any(x => x.Path == ActionTreeItem.Path && x.WildCardAccess.Contains(Access)) || Disabled"
+           Disabled="ActionTreeItem.ParentWildCardAccess()?.Count > 0 || !LoggedInUserTreeItems[ActionTreeItem.Path].Any(x => x.WildCardAccess.Contains(Access)) || Disabled"
            OnClick="Bind"
            Variant="@(ActionTreeItem.WildCardAccess.Contains(Access) ? Variant.Filled : Variant.Text)"
            StartIcon="@(ActionTreeItem.WildCardAccess.Contains( Access) ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckBoxOutlineBlank)">
@@ -10,7 +10,7 @@
 @code {
 
     [Parameter]
-    public List<ActionTreeNode> LoggedInUserTreeItems { get; set; } = default!;
+    public ILookup<string?, ActionTreeNode> LoggedInUserTreeItems { get; set; } = default!;
 
     [Parameter]
     public ActionTreeNode ActionTreeItem { get; set; } = default!;
@@ -66,6 +66,8 @@
 
     void AssignWildCard(ActionTreeNode actionTreeItem, List<Access> wildCardAccess)
     {
+        actionTreeItem.Extra().Version++;
+
         foreach (var item in actionTreeItem.ActionTreeItems)
         {
             AssignWildCard(item, wildCardAccess);
@@ -73,8 +75,10 @@
 
         if (actionTreeItem.ActionTreeItems.Count > 0)
         {
-            if (actionTreeItem.AdditionalData!.OldWildCardAccess == null)
-                actionTreeItem.AdditionalData!.OldWildCardAccess = actionTreeItem.WildCardAccess.ToList();
+            var extra = actionTreeItem.Extra();
+
+            if (extra.OldWildCardAccess == null)
+                extra.OldWildCardAccess = actionTreeItem.WildCardAccess.ToList();
 
             actionTreeItem.WildCardAccess.Clear();
             actionTreeItem.WildCardAccess.AddRange(wildCardAccess);
@@ -82,8 +86,8 @@
             if (wildCardAccess.Count == 0)
             {
                 actionTreeItem.WildCardAccess.Clear();
-                actionTreeItem.WildCardAccess.AddRange(actionTreeItem.AdditionalData!.OldWildCardAccess);
-                actionTreeItem.AdditionalData!.OldWildCardAccess = null;
+                actionTreeItem.WildCardAccess.AddRange(extra.OldWildCardAccess);
+                extra.OldWildCardAccess = null;
             }
         }
     }

@@ -1,11 +1,12 @@
 ﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 using MudBlazor;
 using ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services;
 using ShiftSoftware.TypeAuth.Core;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Shared.ActionTree;
 
-public partial class ActionTree
+public partial class ActionTree : IDisposable
 {
     public class TreeItemData : TreeItemData<ActionTreeNode>
     {
@@ -18,10 +19,15 @@ public partial class ActionTree
     [Inject] ITypeAuthService TypeAuth { get; set; } = default!;
     [Inject] ShiftIdentityDashboardBlazorOptions ShiftIdentityDashboardBlazorOptions { get; set; } = default!;
     [Inject] HttpService HttpService { get; set; } = default!;
+    [Inject] AuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
 
     public IReadOnlyCollection<TreeItemData<ActionTreeNode>> TreeItems { get; set; } = [];
 
-    private List<ActionTreeNode> LoggedInUserTreeItems_Flattened = [];
+    // The admin's tree nodes by path, for the wildcard buttons: each asks whether the admin holds that wildcard there.
+    private ILookup<string?, ActionTreeNode> LoggedInUserTreeItems_ByPath = Array.Empty<ActionTreeNode>().ToLookup(x => x.Path);
+
+    // Bumped when the admin's own rights are rebuilt (a token refresh), which every row shows, so every row renders again.
+    private int loggedInUserVersion;
 
     TypeAuthContext tAuth_View = new();
     TypeAuthContext tAuth_LoggedInUser = new();
@@ -49,8 +55,9 @@ public partial class ActionTree
     [Parameter]
     public EventCallback<ActionPickedEventArgs> OnActionPicked { get; set; }
 
-    internal async Task PickAsync(ActionTreeNode item, ShiftSoftware.TypeAuth.Core.Access access, bool anyDynamicRow)
+    internal async Task PickAsync((ActionTreeNode Item, ShiftSoftware.TypeAuth.Core.Access Access, bool AnyDynamicRow) pick)
     {
+        var (item, access, anyDynamicRow) = pick;
         var action = item.Action;
         if (action is null)
             return;
@@ -175,13 +182,37 @@ public partial class ActionTree
 
         this.TraverseTree(tAuth_View.ActionTree, null);
 
-        this.TraverseTree(tAuth_LoggedInUser.ActionTree, null, this.LoggedInUserTreeItems_Flattened);
+        // The root isn't a row: its children, the registered action trees, always show.
+        tAuth_View.ActionTree.Extra().Expanded = true;
 
-        var tree = tAuth_View.ActionTree.ActionTreeItems;
+        this.LoadLoggedInUserTree();
 
-        this.TreeItems = tree.Select(x => new TreeItemData(x)).ToArray();
+        // The TypeAuth service rebuilds the admin's rights on this event, ahead of this handler, which runs on the renderer.
+        AuthenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+
+        this.TreeItems = tAuth_View.ActionTree.Extra().Children;
         this.initialized = true;
     }
+
+    private void LoadLoggedInUserTree()
+    {
+        var loggedInUserTreeItems = new List<ActionTreeNode>();
+        this.TraverseTree(tAuth_LoggedInUser.ActionTree, null, loggedInUserTreeItems);
+        this.LoggedInUserTreeItems_ByPath = loggedInUserTreeItems.ToLookup(x => x.Path);
+    }
+
+    private void OnAuthenticationStateChanged(Task<AuthenticationState> state) => _ = InvokeAsync(() =>
+    {
+        this.LoadLoggedInUserTree();
+        this.loggedInUserVersion++;
+        StateHasChanged();
+    });
+
+    public void Dispose() => AuthenticationStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+
+    // A collapsed item's rows aren't rendered: MudBlazor renders the children of a collapsed item too, only hidden, and the
+    // trees hold hundreds of rows once the data-level lists are expanded.
+    private static bool IsShown(ActionTreeNode item) => item.Extra().Parent is not { } parent || parent.Extra().Expanded;
 
     void TraverseTree(ActionTreeNode tree, ActionTreeNode? parent, List<ActionTreeNode>? flattenedList = null)
     {
@@ -191,6 +222,7 @@ public partial class ActionTree
         {
             Expanded = false,
             Parent = parent,
+            Children = tree.ActionTreeItems.Select(x => new TreeItemData(x)).ToArray(),
         };
 
         foreach (var item in tree.ActionTreeItems)

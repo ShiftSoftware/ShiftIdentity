@@ -81,9 +81,11 @@
 
     protected override void OnParametersSet()
     {
-        this.wildCardChecked = ActionTreeItem.AdditionalData?.Parent?.WildCardAccess?.Contains(Access.Maximum);
+        var parentWildCardAccess = ActionTreeItem.ParentWildCardAccess();
 
-        this.hasWildCardCard = ActionTreeItem.AdditionalData?.Parent?.WildCardAccess?.Count > 0;
+        this.wildCardChecked = parentWildCardAccess?.Contains(Access.Maximum) == true;
+
+        this.hasWildCardCard = parentWildCardAccess?.Count > 0;
 
         base.OnParametersSet();
     }

@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using Bunit;
+using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
 using ShiftSoftware.ShiftBlazor.Extensions;
 using ShiftSoftware.ShiftEntity.Model;
@@ -26,7 +27,11 @@ internal static class UserFormHarness
 {
     private const string OperatorAccessTree = "{\"ShiftIdentityActions\":{\"Users\":[\"r\",\"w\"]}}";
 
-    public static BunitContext Create(out UserFormTransport transport, bool staged = false, string accessTree = OperatorAccessTree, params Type[] actionTrees)
+    public static BunitContext Create(out UserFormTransport transport, bool staged = false, string accessTree = OperatorAccessTree, params Type[] actionTrees) =>
+        Create(out transport, out _, staged, accessTree, actionTrees);
+
+    /// <summary>As above, and hands back the authorization, so a test can change the operator's claims after rendering.</summary>
+    public static BunitContext Create(out UserFormTransport transport, out BunitAuthorizationContext authorization, bool staged = false, string accessTree = OperatorAccessTree, params Type[] actionTrees)
     {
         var context = new BunitContext();
         transport = new();
@@ -40,7 +45,7 @@ internal static class UserFormHarness
         }
         context.Services.AddShiftIdentityDashboardBlazor(o => o.StagedAuthority = staged);
         context.Services.AddTransient(sp => new ShiftIdentityLocalizer(sp, typeof(ShiftSoftwareLocalization.Identity.Resource)));
-        var auth = context.AddAuthorization(); auth.SetAuthorized("synthetic");
+        var auth = authorization = context.AddAuthorization(); auth.SetAuthorized("synthetic");
         auth.SetClaims(new Claim(TypeAuthClaimTypes.AccessTree, accessTree));
         context.Services.AddTypeAuth(o =>
         {

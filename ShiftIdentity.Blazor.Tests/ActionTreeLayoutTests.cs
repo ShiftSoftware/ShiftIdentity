@@ -16,7 +16,8 @@ public sealed class ActionTreeLayoutTests
     {
         await using var context = UserFormHarness.Create(out var transport);
         var cut = context.Render<UserForm>();
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("[data-testid=action-tree-row]")));
+        cut.WaitForAssertion(() => Assert.NotNull(ActionTreeRows.Find(cut, "Identity")));
+        ActionTreeRows.Expand(cut, "Identity", "Users");
 
         var rows = cut.FindAll("[data-testid=action-tree-row]");
         foreach (var row in rows)
