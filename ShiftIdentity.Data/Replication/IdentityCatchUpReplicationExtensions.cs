@@ -6,12 +6,11 @@ using ShiftSoftware.ShiftEntity.Model.Replication;
 using ShiftSoftware.ShiftEntity.Model.Replication.IdentityModels;
 using ShiftSoftware.ShiftIdentity.Data;
 using ShiftSoftware.ShiftIdentity.Data.Entities;
-using ShiftSoftware.ShiftIdentity.Data.Replication;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace ShiftSoftware.ShiftIdentity.AzureFunctions.Replication;
+namespace ShiftSoftware.ShiftIdentity.Data.Replication;
 
 /// <summary>
 /// Reusable Cosmos "catch-up" replication for the ShiftIdentity domain — the function/timer counterpart to the
@@ -30,11 +29,14 @@ namespace ShiftSoftware.ShiftIdentity.AzureFunctions.Replication;
 ///
 /// No call passes a mapping delegate: every document is mapped through the host's registered ShiftMapper mapper —
 /// the same maps the trigger side uses, so a backfilled document is byte-identical to one a live save produces.
-/// The Functions worker's <c>AddShiftIdentity(issuer, key)</c> registers that mapper (the ready-made
-/// <see cref="ShiftIdentityReplicationMapper"/>), so a host that hosts identity has nothing extra to wire; one that
-/// wires replication without it calls <c>AddShiftIdentityReplicationMapper()</c> itself, or includes
-/// <see cref="ShiftIdentityReplicationMapper"/> in a mapper of its own. A host with neither throws out of <c>RunAsync</c> before
-/// any row is touched.
+/// The Functions worker's <c>AddShiftIdentity(issuer, key)</c> and the API's <c>AddShiftIdentityDashboard</c> register
+/// that mapper (the ready-made <see cref="ShiftIdentityReplicationMapper"/>), so a host that hosts identity has nothing
+/// extra to wire; one that wires replication without them calls <c>AddShiftIdentityReplicationMapper()</c> itself, or
+/// includes <see cref="ShiftIdentityReplicationMapper"/> in a mapper of its own. A host with neither throws out of
+/// <c>RunAsync</c> before any row is touched.
+///
+/// It lives in ShiftIdentity.Data so both a Functions app (its timers and <c>replicate-all</c>) and an API (the
+/// dashboard's <c>api/IdentityReplication</c> endpoints) can run it.
 ///
 /// The catch-up side has no <c>IShiftEntityPrepareForReplicationAsync</c> hook (that runs only inside the save
 /// trigger), so navigations the models depend on (Team's branches) are loaded HERE via the <c>SetUp(…, query)</c>
@@ -55,7 +57,24 @@ public static class IdentityCatchUpReplicationExtensions
 
     private static Task<IdentityCatchUpReport> ReplicateAllAsync<TDbContext>(Target target, bool updateAll)
         where TDbContext : ShiftIdentityDbContext =>
-        RunStepsAsync(target, updateAll, [.. OrganizationSteps<TDbContext>(), new(nameof(User), ReplicateUserAsync<TDbContext>), .. AuthorizationSteps<TDbContext>()]);
+        RunStepsAsync(target, updateAll, AllSteps<TDbContext>());
+
+    /// <summary>
+    /// Runs the catch-up of the given entities, through a client the host already has, and reports each step. They
+    /// run in the order <see cref="IdentityReplicationEntities.All"/> lists them, whatever the order given, and an
+    /// entity given twice runs once.
+    /// </summary>
+    public static Task<IdentityCatchUpReport> ReplicateAsync<TDbContext>(this CosmosDBReplication cosmos, CosmosClient client, string databaseId,
+        IEnumerable<IdentityReplicationEntity> entities, bool updateAll = false)
+        where TDbContext : ShiftIdentityDbContext
+    {
+        var selected = entities.ToHashSet();
+        return RunStepsAsync(new Target(cosmos, null, client, databaseId), updateAll, [.. AllSteps<TDbContext>().Where(x => selected.Contains(x.Entity))]);
+    }
+
+    private static Step[] AllSteps<TDbContext>()
+        where TDbContext : ShiftIdentityDbContext =>
+        [.. OrganizationSteps<TDbContext>(), new(IdentityReplicationEntity.User, ReplicateUserAsync<TDbContext>), .. AuthorizationSteps<TDbContext>()];
 
     /// <summary>
     /// Runs every ShiftIdentity catch-up replication but users and authorization, in dependency order: services,
@@ -78,15 +97,15 @@ public static class IdentityCatchUpReplicationExtensions
     private static Step[] OrganizationSteps<TDbContext>()
         where TDbContext : ShiftIdentityDbContext =>
     [
-        new(nameof(Service), ReplicateServiceAsync<TDbContext>),
-        new(nameof(Department), ReplicateDepartmentAsync<TDbContext>),
-        new(nameof(Brand), ReplicateBrandAsync<TDbContext>),
-        new(nameof(Region), ReplicateRegionAsync<TDbContext>),
-        new(nameof(Country), ReplicateCountryAsync<TDbContext>),
-        new(nameof(City), ReplicateCityAsync<TDbContext>),
-        new(nameof(CompanyBranch), ReplicateCompanyBranchAsync<TDbContext>),
-        new(nameof(Company), ReplicateCompanyAsync<TDbContext>),
-        new(nameof(Team), ReplicateTeamAsync<TDbContext>),
+        new(IdentityReplicationEntity.Service, ReplicateServiceAsync<TDbContext>),
+        new(IdentityReplicationEntity.Department, ReplicateDepartmentAsync<TDbContext>),
+        new(IdentityReplicationEntity.Brand, ReplicateBrandAsync<TDbContext>),
+        new(IdentityReplicationEntity.Region, ReplicateRegionAsync<TDbContext>),
+        new(IdentityReplicationEntity.Country, ReplicateCountryAsync<TDbContext>),
+        new(IdentityReplicationEntity.City, ReplicateCityAsync<TDbContext>),
+        new(IdentityReplicationEntity.CompanyBranch, ReplicateCompanyBranchAsync<TDbContext>),
+        new(IdentityReplicationEntity.Company, ReplicateCompanyAsync<TDbContext>),
+        new(IdentityReplicationEntity.Team, ReplicateTeamAsync<TDbContext>),
     ];
 
     /// <summary>
@@ -110,11 +129,11 @@ public static class IdentityCatchUpReplicationExtensions
     private static Step[] AuthorizationSteps<TDbContext>()
         where TDbContext : ShiftIdentityDbContext =>
     [
-        new(nameof(AccessTree), (target, updateAll) => target.SetUp<TDbContext, AccessTree>()
+        new(IdentityReplicationEntity.AccessTree, (target, updateAll) => target.SetUp<TDbContext, AccessTree>()
             .Replicate<AccessTreeModel>(IdentityDatabaseAndContainerNames.AccessTreeContainerName).RunAndReportAsync(updateAll)),
-        new(nameof(UserAccessTree), (target, updateAll) => target.SetUp<TDbContext, UserAccessTree>()
+        new(IdentityReplicationEntity.UserAccessTree, (target, updateAll) => target.SetUp<TDbContext, UserAccessTree>()
             .Replicate<UserAccessTreeModel>(IdentityDatabaseAndContainerNames.UserAccessTreeContainerName).RunAndReportAsync(updateAll)),
-        new(nameof(TeamUser), (target, updateAll) => target.SetUp<TDbContext, TeamUser>()
+        new(IdentityReplicationEntity.TeamUser, (target, updateAll) => target.SetUp<TDbContext, TeamUser>()
             .Replicate<TeamUserModel>(IdentityDatabaseAndContainerNames.TeamUserContainerName).RunAndReportAsync(updateAll)),
     ];
 
@@ -264,7 +283,7 @@ public static class IdentityCatchUpReplicationExtensions
             .RunAndReportAsync(updateAll);
 
     // One entity's catch-up in a run of several.
-    private readonly record struct Step(string Entity, Func<Target, bool, Task<CosmosDbReplicationResult>> Run);
+    private readonly record struct Step(IdentityReplicationEntity Entity, Func<Target, bool, Task<CosmosDbReplicationResult>> Run);
 
     // Runs the steps in order. One that fails does not stop the ones after it: the rows a step could not write fail in
     // its result and stay dirty, and a step that throws is kept with its exception. Once every step has run, a step that
@@ -276,11 +295,11 @@ public static class IdentityCatchUpReplicationExtensions
         {
             try
             {
-                done.Add(new IdentityCatchUpStep(step.Entity, await step.Run(target, updateAll), null));
+                done.Add(new IdentityCatchUpStep(step.Entity.ToString(), await step.Run(target, updateAll), null));
             }
             catch (Exception ex)
             {
-                done.Add(new IdentityCatchUpStep(step.Entity, null, ex));
+                done.Add(new IdentityCatchUpStep(step.Entity.ToString(), null, ex));
             }
         }
 

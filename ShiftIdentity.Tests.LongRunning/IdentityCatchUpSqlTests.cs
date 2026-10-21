@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using ShiftIdentity.Tests.Infrastructure;
 using ShiftSoftware.ShiftEntity.CosmosDbReplication.Services;
-using ShiftSoftware.ShiftIdentity.AzureFunctions.Replication;
 using ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Replication;
 using ShiftSoftware.ShiftIdentity.Data.Entities;
 using ShiftSoftware.ShiftIdentity.Data.Replication;

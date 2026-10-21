@@ -29,6 +29,9 @@ public static class EndpointRouteBuilderExtensions
         app.MapReverseTypeAuthLookupEndpoints();
         app.MapIdentityPublicUserEndpoints();
         app.MapUserManagerEndpoints();
+
+        // The catch-up from the API, only when this host registered it (AddShiftIdentityReplicationEndpoints).
+        app.MapIdentityReplicationEndpoints();
         return app;
     }
 }

@@ -1,6 +1,6 @@
 using ShiftSoftware.ShiftEntity.CosmosDbReplication.Services;
 
-namespace ShiftSoftware.ShiftIdentity.AzureFunctions.Replication;
+namespace ShiftSoftware.ShiftIdentity.Data.Replication;
 
 /// <summary>
 /// What a catch-up of several Identity entities did (<c>ReplicateOrganizationAsync</c>, <c>ReplicateAllAsync</c>): one

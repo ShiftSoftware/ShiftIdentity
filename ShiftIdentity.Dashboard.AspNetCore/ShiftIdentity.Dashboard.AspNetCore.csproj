@@ -28,6 +28,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<!-- The replication endpoints' tests map them on a small host of their own. -->
+		<InternalsVisibleTo Include="ShiftIdentity.Tests.LongRunning" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<None Include="Images\icon.png" Pack="true" PackagePath="\" />
 		<Folder Include="Images\" />
 	</ItemGroup>
