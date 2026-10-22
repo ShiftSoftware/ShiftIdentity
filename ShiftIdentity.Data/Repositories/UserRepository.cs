@@ -4,6 +4,7 @@ using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
+using ShiftSoftware.ShiftEntity.Model.Enums;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.Authentication;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
@@ -31,7 +32,8 @@ namespace ShiftSoftware.ShiftIdentity.Data.Repositories;
 // then commits the ordinary edits, the security changes, the version increments and the audit rows together.
 public class UserRepository :
     ShiftRepository<ShiftIdentityDbContext, User, UserListDTO, UserDTO>,
-    IUserRepository
+    IUserRepository,
+    IShiftEntityPrepareForReplicationAsync<User>
 {
     private readonly ITypeAuthService typeAuthService;
     private readonly ShiftIdentityLocalizer Loc;
@@ -74,6 +76,13 @@ public class UserRepository :
 
     /// <summary>True when this host registered the staged authority; sensitive changes are then admitted, never written directly.</summary>
     public bool UsesAuthority => authority is not null;
+
+    // Every repository is also registered as the replication preparer of its entity, next to UserReplicationPreparer,
+    // and the save trigger gets whichever registration comes last. Without this, the trigger could get the interface's
+    // default here, which loads nothing, and the user document would list only the assignments this save happened to
+    // load. Both registrations now load the assignments the same way, so their order does not matter.
+    ValueTask<User> IShiftEntityPrepareForReplicationAsync<User>.PrepareForReplicationAsync(User entity, ReplicationChangeType changeType)
+        => new UserReplicationPreparer(db).PrepareForReplicationAsync(entity, changeType);
 
     /// <summary>Requests one admitted verification grant, outside the repository transaction. The bulk route keeps each recipient's result.</summary>
     public Task<UserAccountDelivery> RequestVerificationAsync(long userID, CancellationToken cancellationToken) =>

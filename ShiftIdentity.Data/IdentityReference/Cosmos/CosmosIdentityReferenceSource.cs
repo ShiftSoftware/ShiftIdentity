@@ -34,7 +34,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.IdentityReference.Cosmos;
 /// <para>Generic over <typeparamref name="TCosmosClient"/> so a host that keeps more than one client can
 /// say which to read identity through.</para>
 /// </summary>
-public partial class CosmosIdentityReferenceSource<TCosmosClient> : IIdentityReferenceSource
+public class CosmosIdentityReferenceSource<TCosmosClient> : IIdentityReferenceSource
     where TCosmosClient : CosmosClient
 {
     private static readonly ConcurrentDictionary<Type, Func<object, string>> IdValueResolvers = new();
@@ -214,6 +214,20 @@ public partial class CosmosIdentityReferenceSource<TCosmosClient> : IIdentityRef
     public Task<IIdentityReferenceSnapshot<UserModel>> LoadUsersSnapshotAsync(IdentityLifecycleFilter lifecycle = IdentityLifecycleFilter.All, CancellationToken cancellationToken = default)
         => this.LoadSnapshotAsync<UserModel>(this.GetUserContainerName(), null, lifecycle, cancellationToken);
 
+    // ---- Named access trees --------------------------------------------------------------------------
+
+    public Task<AccessTreeModel?> ResolveAccessTreeAsync(string id, CancellationToken cancellationToken = default)
+        => this.GetItemByIdAsync<AccessTreeModel>(id, this.GetAccessTreeContainerName(), null, cancellationToken);
+
+    public Task<AccessTreeModel?> ResolveAccessTreeAsync(long id, CancellationToken cancellationToken = default)
+        => this.ResolveAccessTreeAsync(ToDocumentId(id), cancellationToken);
+
+    public Task<IReadOnlyDictionary<string, AccessTreeModel>> GetAccessTreesAsync(IdentityLifecycleFilter lifecycle = IdentityLifecycleFilter.All, CancellationToken cancellationToken = default)
+        => this.GetItemsAsync<AccessTreeModel>(this.GetAccessTreeContainerName(), null, lifecycle, cancellationToken);
+
+    public Task<IIdentityReferenceSnapshot<AccessTreeModel>> LoadAccessTreesSnapshotAsync(IdentityLifecycleFilter lifecycle = IdentityLifecycleFilter.All, CancellationToken cancellationToken = default)
+        => this.LoadSnapshotAsync<AccessTreeModel>(this.GetAccessTreeContainerName(), null, lifecycle, cancellationToken);
+
     // ---- Refresh -------------------------------------------------------------------------------------
 
     public Task RefreshAsync(IdentityReferenceFamily family, CancellationToken cancellationToken = default)
@@ -229,6 +243,7 @@ public partial class CosmosIdentityReferenceSource<TCosmosClient> : IIdentityRef
             IdentityReferenceFamily.Teams => this.RefreshFamilyAsync<TeamModel>(this.GetTeamContainerName(), null, cancellationToken),
             IdentityReferenceFamily.Brands => this.RefreshFamilyAsync<BrandModel>(this.GetBrandContainerName(), null, cancellationToken),
             IdentityReferenceFamily.Users => this.RefreshFamilyAsync<UserModel>(this.GetUserContainerName(), null, cancellationToken),
+            IdentityReferenceFamily.AccessTrees => this.RefreshFamilyAsync<AccessTreeModel>(this.GetAccessTreeContainerName(), null, cancellationToken),
             _ => throw new ArgumentOutOfRangeException(nameof(family), family, "Unknown identity reference family."),
         };
 
@@ -249,6 +264,7 @@ public partial class CosmosIdentityReferenceSource<TCosmosClient> : IIdentityRef
             IdentityReferenceFamily.Teams => this.RefreshItemAsync<TeamModel>(id, this.GetTeamContainerName(), null, cancellationToken),
             IdentityReferenceFamily.Brands => this.RefreshItemAsync<BrandModel>(id, this.GetBrandContainerName(), null, cancellationToken),
             IdentityReferenceFamily.Users => this.RefreshItemAsync<UserModel>(id, this.GetUserContainerName(), null, cancellationToken),
+            IdentityReferenceFamily.AccessTrees => this.RefreshItemAsync<AccessTreeModel>(id, this.GetAccessTreeContainerName(), null, cancellationToken),
             _ => throw new ArgumentOutOfRangeException(nameof(family), family, "Unknown identity reference family."),
         };
     }
@@ -584,4 +600,6 @@ public partial class CosmosIdentityReferenceSource<TCosmosClient> : IIdentityRef
     private string GetBrandContainerName() => this.options.BrandContainerName;
 
     private string GetUserContainerName() => this.options.UserContainerName;
+
+    private string GetAccessTreeContainerName() => this.options.AccessTreeContainerName;
 }

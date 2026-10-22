@@ -1,47 +1,40 @@
 using System.Security.Claims;
 using ShiftSoftware.ShiftEntity.Core;
-using ShiftSoftware.ShiftEntity.Core.DataLevelAccess;
 using ShiftSoftware.TypeAuth.Core;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Authorization;
 
 /// <summary>
-/// One active replicated user, with private TypeAuth grants and claims. Use for a bounded lookup/batch;
-/// reload subjects to observe subsequent replication updates. No HTTP principal is read or replaced.
-/// Contains identity scope claims, not authentication-session claims or proof of a signed-in session.
+/// One user who could sign in now, prepared from the replicated Identity documents by
+/// <see cref="IdentitySubjectResolver"/>: the TypeAuth grants and the claims that sign-in would give this user's
+/// session. It does not sign the user in and is not a token.
+/// <para>
+/// To ask whether this user could open a record, pass the subject to a repository's
+/// <c>CanAccessAs(entity, access, subject.TypeAuth, subject)</c> for the data-level rules, and check the screen
+/// permission with <c>subject.TypeAuth.Can(...)</c>.
+/// </para>
 /// </summary>
 public sealed class IdentityAccessSubject : ICurrentUserProvider
 {
     private readonly ClaimsPrincipal principal;
-    private readonly DataLevelAccessContext dataContext;
 
-    /// <summary>The raw identity document id. Encode it with UserDTO when crossing a hashed-id API boundary.</summary>
-    public string UserId { get; }
+    /// <summary>The user's ID, as stored. Encode it with <c>UserDTO</c> before it crosses a hashed-ID API boundary.</summary>
+    public long UserId { get; }
+
+    /// <summary>The user's grants: the direct access tree and the assigned named trees, merged.</summary>
     public ITypeAuthService TypeAuth { get; }
 
-    internal IdentityAccessSubject(string userId, TypeAuthContext typeAuth, IEnumerable<Claim> claims, IHashIdService hashIds)
+    internal IdentityAccessSubject(long userId, TypeAuthContext typeAuth, IEnumerable<Claim> claims)
     {
         UserId = userId;
         TypeAuth = typeAuth;
+        // An authentication type makes the identity authenticated, so data-level rules read its claims.
         principal = new ClaimsPrincipal(new ClaimsIdentity(claims, "IdentityReplication"));
-        dataContext = new(new TypeAuthAccessibleItemsSource(typeAuth), this, hashIds);
     }
-
-    // Return a copy so a consumer cannot change claims captured by this subject's data context.
-    public ClaimsPrincipal GetUser() => new(principal.Identities.Select(identity => new ClaimsIdentity(identity)));
 
     /// <summary>
-    /// Requires both system access and the supplied effective repository policy at the same operation.
-    /// The system predicate supports static/dynamic actions and candidate-specific self ids through TypeAuth.
-    /// Pass the repository's effective policy, including its standard dimensions and overrides.
-    /// Application rules outside that policy must also be enforced by the consumer.
+    /// The claims that sign-in would put on this user's session. Each call returns a copy, so a caller cannot change
+    /// the subject.
     /// </summary>
-    public bool CanAccess<TEntity>(TEntity entity, Access operation, DataLevelAccessPolicy<TEntity> policy,
-        Func<IdentityAccessSubject, Access, bool> hasSystemAccess)
-    {
-        ArgumentNullException.ThrowIfNull(policy);
-        ArgumentNullException.ThrowIfNull(hasSystemAccess);
-        ArgumentNullException.ThrowIfNull(entity);
-        return hasSystemAccess(this, operation) && policy.Authorize(entity, operation, dataContext);
-    }
+    public ClaimsPrincipal GetUser() => new(principal.Identities.Select(identity => new ClaimsIdentity(identity)));
 }

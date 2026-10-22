@@ -5,6 +5,8 @@ namespace ShiftSoftware.ShiftIdentity.Data.IdentityReference;
 /// <summary>
 /// Reads identity reference data — countries, regions, cities, companies, branches, services,
 /// departments, teams, brands and users — for everything that needs to turn an identity id into a name.
+/// It also reads the named access trees, so the identity subject resolver reads names and grants through one
+/// source, and the two cannot come from different backends.
 ///
 /// <para><b>Not a Cosmos contract.</b> Cosmos is one implementation
 /// (<c>CosmosIdentityReferenceSource</c>) and the default one, but nothing here names it or assumes it.
@@ -261,4 +263,21 @@ public interface IIdentityReferenceSource
 
     /// <summary>Takes a pinned snapshot of users. The caller owns and disposes it.</summary>
     Task<IIdentityReferenceSnapshot<UserModel>> LoadUsersSnapshotAsync(IdentityLifecycleFilter lifecycle = IdentityLifecycleFilter.All, CancellationToken cancellationToken = default);
+
+    // ---- Named access trees ----------------------------------------------------------------------
+
+    /// <summary>
+    /// Resolves one named access tree. Always answers, whatever its lifecycle state: a deleted tree that is still
+    /// assigned to a user still grants its actions at sign-in.
+    /// </summary>
+    Task<AccessTreeModel?> ResolveAccessTreeAsync(string id, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc cref="ResolveAccessTreeAsync(string, CancellationToken)"/>
+    Task<AccessTreeModel?> ResolveAccessTreeAsync(long id, CancellationToken cancellationToken = default);
+
+    /// <summary>Lists named access trees, keyed by id, filtered by <paramref name="lifecycle"/>.</summary>
+    Task<IReadOnlyDictionary<string, AccessTreeModel>> GetAccessTreesAsync(IdentityLifecycleFilter lifecycle = IdentityLifecycleFilter.All, CancellationToken cancellationToken = default);
+
+    /// <summary>Takes a pinned snapshot of named access trees. The caller owns and disposes it.</summary>
+    Task<IIdentityReferenceSnapshot<AccessTreeModel>> LoadAccessTreesSnapshotAsync(IdentityLifecycleFilter lifecycle = IdentityLifecycleFilter.All, CancellationToken cancellationToken = default);
 }

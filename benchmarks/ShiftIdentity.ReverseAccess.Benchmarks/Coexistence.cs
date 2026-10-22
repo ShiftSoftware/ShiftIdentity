@@ -18,6 +18,7 @@ internal static class Coexistence
     private static readonly List<IReadOnlyList<IdentityAccessSubject>> Sets=[];
     private static readonly List<WeakReference> ObservedSets=[];
     private static IdentityReferenceCache? sharedCache;
+    private static long[] userIds=[];
     private static int sink;
     private static Func<IdentityAccessSubject,Access,bool> SystemAccess=(s,a)=>s.TypeAuth.Can(ShiftIdentityActions.Users,a);
 
@@ -32,7 +33,7 @@ internal static class Coexistence
         var policy=Measurements.Policy(true);var user=data.Users.First(u=>u.IsActive==true&&!u.IsDeleted);
         var row=new Measurements.Row(user.CompanyID,user.CompanyBranchID,user.RegionID,user.CountryID,
             data.Branches.Single(b=>b.id==user.CompanyBranchID.ToString()).CityID,1,1);
-        var phases=new List<object>();
+        var phases=new List<object>();userIds=data.Users.Select(u=>long.Parse(u.id)).ToArray();
         Sources.Clear();Sets.Clear();ObservedSets.Clear();sharedCache=null;var baseline=Snapshot();
         sharedCache=new IdentityReferenceCache(TimeSpan.FromMinutes(5));
         AddSource(data,true);WarmDocuments(Sources[0]);
@@ -55,7 +56,7 @@ internal static class Coexistence
             for(var i=0;i<40;i++)
             {
                 var started=Stopwatch.GetTimestamp();
-                sink=Measurements.Evaluate(Sets[0],row,new[]{Access.Read,Access.Write,Access.Delete}[i%3],policy,SystemAccess).Length;
+                sink=Measurements.Evaluate(Sets[0],row,new[]{Access.Read,Access.Write,Access.Delete}[i%3],policy,SystemAccess,hashIds).Length;
                 latencies.Add(Stopwatch.GetElapsedTime(started).TotalMilliseconds);
             }
         })));
@@ -88,10 +89,10 @@ internal static class Coexistence
         phases.Add(new {Phase="four-scopes-four-private-document-caches",Snapshot=Snapshot(),SourceReads=Sources.Sum(s=>s.Reads)});
         Release();var final=Snapshot();
         return new {Method="Server GC is set externally. Existing local input stays rooted in the baseline. Each cache miss clones its documents to represent separately deserialized SDK results. Full GC before retained-memory snapshots; process working set/commit may remain reserved after release. All population sets are experimental harness roots.",
-            Baseline=baseline,BeforeDocumentComparison=beforeDocumentComparison,Phases=phases,Final=final,DiOwnership=VerifyOwnership(hashIds)};
+            Baseline=baseline,BeforeDocumentComparison=beforeDocumentComparison,Phases=phases,Final=final,DiOwnership=VerifyOwnership(hashIds,actions)};
     }
 
-    private static object VerifyOwnership(IHashIdService hashIds)
+    private static object VerifyOwnership(IHashIdService hashIds,Type[] actions)
     {
         var field=typeof(CosmosIdentityReferenceSource<MemoryClient>).GetField("cache",BindingFlags.NonPublic|BindingFlags.Instance)!;
         object Check(TimeSpan ttl)
@@ -99,18 +100,19 @@ internal static class Coexistence
             ServiceProvider Build()
             {
                 var services=new ServiceCollection();services.AddSingleton(new MemoryClient());services.AddSingleton(hashIds);
-                services.AddIdentityReverseAccessLookup<MemoryClient>(o=>o.CacheTimeToLive=ttl);
+                services.AddSingleton(Measurements.Registry(actions));
+                services.AddIdentitySubjectResolver<MemoryClient>(o=>o.CacheTimeToLive=ttl);
                 return services.BuildServiceProvider();
             }
             using var provider=Build();using var a=provider.CreateScope();using var b=provider.CreateScope();using var other=Build();using var c=other.CreateScope();
             var sa=a.ServiceProvider.GetRequiredService<CosmosIdentityReferenceSource<MemoryClient>>();
             var sb=b.ServiceProvider.GetRequiredService<CosmosIdentityReferenceSource<MemoryClient>>();
             var sc=c.ServiceProvider.GetRequiredService<CosmosIdentityReferenceSource<MemoryClient>>();
-            return new {Ttl=ttl.ToString(),SourceIsScoped=!ReferenceEquals(sa,sb),ReferenceAndAuthorizationUseSameSource=
-                ReferenceEquals(a.ServiceProvider.GetRequiredService<IIdentityReferenceSource>(),a.ServiceProvider.GetRequiredService<IIdentityAuthorizationSource>()),
+            return new {Ttl=ttl.ToString(),SourceIsScoped=!ReferenceEquals(sa,sb),
+                ReferenceSourceIsTheCosmosSource=ReferenceEquals(a.ServiceProvider.GetRequiredService<IIdentityReferenceSource>(),sa),
                 DocumentCacheSharedAcrossScopes=ReferenceEquals(field.GetValue(sa),field.GetValue(sb)),
                 DocumentCacheSharedAcrossServiceProviders=ReferenceEquals(field.GetValue(sa),field.GetValue(sc)),
-                LookupIsScoped=!ReferenceEquals(a.ServiceProvider.GetRequiredService<IdentityReverseAccessLookup>(),b.ServiceProvider.GetRequiredService<IdentityReverseAccessLookup>())};
+                ResolverIsScoped=!ReferenceEquals(a.ServiceProvider.GetRequiredService<IdentitySubjectResolver>(),b.ServiceProvider.GetRequiredService<IdentitySubjectResolver>())};
         }
         return new[]{Check(TimeSpan.Zero),Check(TimeSpan.FromMinutes(5))};
     }
@@ -123,15 +125,16 @@ internal static class Coexistence
     private static void WarmDocuments(MemorySource s)
     {
         s.GetUsersAsync().GetAwaiter().GetResult();s.GetCompaniesAsync().GetAwaiter().GetResult();s.GetCompanyBranchesAsync().GetAwaiter().GetResult();
-        s.GetAccessTreesAsync().GetAwaiter().GetResult();s.GetUserAccessTreesAsync().GetAwaiter().GetResult();s.GetTeamUsersAsync().GetAwaiter().GetResult();
+        s.GetAccessTreesAsync().GetAwaiter().GetResult();s.GetTeamsAsync().GetAwaiter().GetResult();
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static void Prepare(MemorySource source,IHashIdService hashIds,Type[] actions,Measurements.Row row)
     {
-        var set=new IdentityReverseAccessLookup(source,source,hashIds).GetSubjectsAsync(actions).GetAwaiter().GetResult();
+        // A whole population is the resolver called with every user ID.
+        var set=new Measurements.Population(source,actions,hashIds,userIds).PrepareAsync().GetAwaiter().GetResult();
         var policy=Measurements.Policy(true);
-        foreach(var op in new[]{Access.Read,Access.Write,Access.Delete})sink=Measurements.Evaluate(set,row,op,policy,SystemAccess).Length;
+        foreach(var op in new[]{Access.Read,Access.Write,Access.Delete})sink=Measurements.Evaluate(set,row,op,policy,SystemAccess,hashIds).Length;
         lock(Sets){Sets.Add(set);ObservedSets.Add(new WeakReference(set));}
     }
 

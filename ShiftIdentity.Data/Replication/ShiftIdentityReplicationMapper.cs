@@ -10,7 +10,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Replication;
 /// the package ships. The trigger side (<c>SetUpAllIdentityReplications</c>) and the catch-up side (<c>ReplicateAllAsync</c>)
 /// register their <c>Replicate</c> / <c>UpdateReference</c> / <c>UpdatePropertyReference</c> calls WITHOUT a mapping
 /// delegate, and the replication pipeline maps every document through the host's registered <see cref="IMapper"/>
-/// — so the host has to carry these 19 pairs. It does so without asking: the identity registrations
+/// — so the host has to carry these 20 pairs. It does so without asking: the identity registrations
 /// (<c>AddShiftIdentityDashboard&lt;TDbContext&gt;()</c> on the API side, the Functions worker's
 /// <c>AddShiftIdentity(issuer, key)</c>) register this assembly's generated mapper through
 /// <c>AddShiftIdentityReplicationMapper()</c> — the package registering itself, the way ShiftMapper expects a
@@ -21,7 +21,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Replication;
 /// <c>Map</c> methods and the <see cref="IMapper"/> implementation the replication pipeline resolves; <see cref="Mapper"/>
 /// is what a caller injects. The same build writes what these lines DECLARE into the assembly as attributes
 /// (<c>ShiftMapperDeclaredMap</c> and friends), because a consumer's generator sees this assembly as metadata and
-/// never a method body — and from those a host with a generator of its own gets these 19 pairs into ITS generated
+/// never a method body — and from those a host with a generator of its own gets these 20 pairs into ITS generated
 /// mapper with nothing written, re-baked with its own rules, typed methods (<c>mapper.MapToBrandModel(brand)</c>)
 /// included. Both generated mappers may be registered side by side: <see cref="Mapper"/> answers from the host's
 /// first, and a pair reached two ways through ONE declaration runs the same map whichever answers. What ShiftMapper
@@ -189,19 +189,27 @@ public class ShiftIdentityReplicationMapper : ShiftMapperBase
         // Team.TeamCompanyBranches. RecognizePrefixes("Team") is how ShiftMapper says that — the bare name is always
         // tried first, so TeamID still binds to TeamID and `id` to ID — and the elements compose through the
         // TeamCompanyBranch → CompanyBranchSubItemModel map above.
+        // UserIDs lists the members from Team.TeamUsers, in ascending order so the document is the same after every
+        // save. The navigation must hold every membership: TeamReplicationPreparer (save trigger) and
+        // ReplicateTeamAsync (catch-up) load it by query.
         CreateMap<Team, TeamModel>(o => o.RecognizePrefixes("Team"))
-            .ForMember(d => d.ID, o => o.Ignore());
+            .ForMember(d => d.ID, o => o.Ignore())
+            .ForMember(d => d.UserIDs, o => o.MapFrom(s => s.TeamUsers.Select(x => x.UserID).OrderBy(x => x).ToList()));
 
         // ─────────────────────────────── User ───────────────────────────────
+        // AccessTreeIDs lists the assigned named trees from User.AccessTrees in the order of the assignment rows (their
+        // IDs). That is the order sign-in adds them to the session, and TypeAuth's merge depends on it: for a text action
+        // without a comparer the last tree wins. The document stays the same after every save that keeps the
+        // assignments. The navigation must hold every assignment: UserReplicationPreparer (save trigger) and
+        // ReplicateUserAsync (catch-up) load it by query.
         CreateMap<User, UserModel>()
-            .ForMember(d => d.ID, o => o.Ignore());
+            .ForMember(d => d.ID, o => o.Ignore())
+            .ForMember(d => d.AccessTreeIDs, o => o.MapFrom(s => s.AccessTrees.OrderBy(x => x.ID).Select(x => x.AccessTreeID).ToList()));
 
-        // Named trees are shared documents; assignments and memberships retain their join row ids.
+        // ─────────────────────────────── AccessTree ───────────────────────────────
+        // Named trees are shared documents. Assignments and memberships have no documents of their own: they are the
+        // lists on the user and team documents above.
         CreateMap<AccessTree, AccessTreeModel>()
-            .ForMember(d => d.ID, o => o.Ignore());
-        CreateMap<UserAccessTree, UserAccessTreeModel>()
-            .ForMember(d => d.ID, o => o.Ignore());
-        CreateMap<TeamUser, TeamUserModel>()
             .ForMember(d => d.ID, o => o.Ignore());
     }
 }

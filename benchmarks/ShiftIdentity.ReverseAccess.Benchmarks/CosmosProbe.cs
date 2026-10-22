@@ -57,7 +57,9 @@ internal static class CosmosProbe
         await concurrent.RefreshAsync(IdentityReferenceFamily.Users);
         output.Add(new { Operation = "refresh-users", Milliseconds = timer.Elapsed.TotalMilliseconds,
             Pages = concurrent.Pages.Count-before, RequestUnits = concurrent.Pages.Sum(p => p.Ru)-ruBefore });
-        foreach (var family in new[] { "AccessTrees", "UserAccessTrees", "TeamUsers" })
+        // Assignments and memberships are the lists on the user and team documents, so the team family is what the
+        // resolver reads besides the named trees.
+        foreach (var family in new[] { "AccessTrees", "Teams" })
         {
             try
             {
@@ -66,8 +68,7 @@ internal static class CosmosProbe
                 var count = family switch
                 {
                     "AccessTrees" => (await source.GetAccessTreesAsync()).Count,
-                    "UserAccessTrees" => (await source.GetUserAccessTreesAsync()).Count,
-                    _ => (await source.GetTeamUsersAsync()).Count,
+                    _ => (await source.GetTeamsAsync()).Count,
                 };
                 output.Add(new { Operation = family, Count = count, Milliseconds = timer.Elapsed.TotalMilliseconds,
                     Pages = source.Pages.Count, RequestUnits = source.Pages.Sum(p => p.Ru) });

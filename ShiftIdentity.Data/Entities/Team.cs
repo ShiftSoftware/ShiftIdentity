@@ -21,14 +21,16 @@ namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 
 // Attribute-driven endpoint (Rung B): Team has no controller and no repository class. The Include config is on the
 // entity via IConfiguresShiftRepository, the non-convention members are in the mapper class
-// (Mappers/ShiftIdentityMapper.cs), and the duplicate-user validation + M:N TeamUsers/TeamCompanyBranches sync via
-// IUpsertsShiftRepository. Feature locking is central.
+// (Mappers/ShiftIdentityMapper.cs), the duplicate-user validation + M:N TeamUsers/TeamCompanyBranches sync via
+// IUpsertsShiftRepository, and the rule that a team with members cannot be deleted via IDeletesShiftRepository.
+// Feature locking is central.
 [TemporalShiftEntity]
 [Table("Teams", Schema = "ShiftIdentity")]
 [ShiftEntitySecureEndpoint<TeamListDTO, TeamDTO, ShiftIdentityActions>("api/IdentityTeam", nameof(ShiftIdentityActions.Teams))]
 public class Team : ShiftEntity<Team>, IEntityHasCompany<Team>, IEntityHasTeam<Team>, IShiftEntityReplication,
     IConfiguresShiftRepository<Team, TeamListDTO, TeamDTO>,
-    IUpsertsShiftRepository<Team, TeamListDTO, TeamDTO>
+    IUpsertsShiftRepository<Team, TeamListDTO, TeamDTO>,
+    IDeletesShiftRepository<Team, TeamListDTO, TeamDTO>
 {
     /// <inheritdoc />
     public DateTimeOffset? LastReplicationDate { get; set; }
@@ -117,5 +119,27 @@ public class Team : ShiftEntity<Team>, IEntityHasCompany<Team>, IEntityHasTeam<T
             db.Entry(saved).State = EntityState.Modified;
 
         return saved;
+    }
+
+    public async ValueTask<Team> DeleteAsync(
+        Team entity,
+        long? userId,
+        bool disableDefaultDataLevelAccess,
+        bool disableGlobalFilters,
+        ShiftRepositoryDeleteContext<Team, TeamListDTO, TeamDTO> context)
+    {
+        var db = context.Services.GetRequiredService<ShiftIdentityDbContext>();
+
+        // A deleted team still gives each member its team claim, at sign-in too. So a team with a member who is not
+        // deleted cannot be deleted. This runs before the default delete, so a refusal leaves the row as it was.
+        if (await UsersStillUsing.FindAsync(db.TeamUsers.Where(x => x.TeamID == entity.ID).Select(x => x.User)) is { } members)
+        {
+            var loc = context.Services.GetRequiredService<ShiftIdentityLocalizer>();
+
+            throw new ShiftEntityException(new Message(loc["Error"],
+                loc["Members still in this team: {0} ({1} in total). Remove them from the team before you delete it.", members.Names, members.Total]));
+        }
+
+        return await context.Base();
     }
 }

@@ -41,23 +41,19 @@ public static class IdentityReplicationExtensions
         x.SetUpCompanyReplication<TDbContext>(client, databaseId);
         x.SetUpTeamReplication<TDbContext>(client, databaseId);
         x.SetUpUserReplication<TDbContext>(client, databaseId);
-        x.SetUpAuthorizationReplication<TDbContext>(client, databaseId);
+        x.SetUpAccessTreeReplication<TDbContext>(client, databaseId);
     }
 
     /// <summary>
-    /// Replicates named grants and assignments alongside the existing Users collection.
-    /// Provision all three containers with /id as their partition key before enabling this wiring.
+    /// Replicates the named access trees. Provision the AccessTrees container with /id as its partition key before
+    /// enabling this wiring. Which trees a user has, and who is in a team, are not separate documents: they are the
+    /// lists on the user and team documents (<see cref="SetUpUserReplication{TDbContext}"/>,
+    /// <see cref="SetUpTeamReplication{TDbContext}"/>).
     /// </summary>
-    public static void SetUpAuthorizationReplication<TDbContext>(this ShiftEntityCosmosDbOptions x, CosmosClient client, string databaseId)
-        where TDbContext : ShiftIdentityDbContext
-    {
+    public static void SetUpAccessTreeReplication<TDbContext>(this ShiftEntityCosmosDbOptions x, CosmosClient client, string databaseId)
+        where TDbContext : ShiftIdentityDbContext =>
         x.SetUpReplication<TDbContext, AccessTree>(client, databaseId)
             .Replicate<AccessTreeModel>(IdentityDatabaseAndContainerNames.AccessTreeContainerName, m => m.id);
-        x.SetUpReplication<TDbContext, UserAccessTree>(client, databaseId)
-            .Replicate<UserAccessTreeModel>(IdentityDatabaseAndContainerNames.UserAccessTreeContainerName, m => m.id);
-        x.SetUpReplication<TDbContext, TeamUser>(client, databaseId)
-            .Replicate<TeamUserModel>(IdentityDatabaseAndContainerNames.TeamUserContainerName, m => m.id);
-    }
 
     public static void SetUpServiceReplication<TDbContext>(this ShiftEntityCosmosDbOptions x, CosmosClient client, string databaseId)
         where TDbContext : ShiftIdentityDbContext =>
@@ -128,11 +124,15 @@ public static class IdentityReplicationExtensions
             .UpdatePropertyReference<CompanyModel, CompanyBranchModel>(IdentityDatabaseAndContainerNames.CompanyBranchContainerName, m => m.Company,
                 (q, e) => q.Where(m => m.Company.id == e.Entity.ID.ToString()));
 
+    // The team document embeds its branches and lists its members (TeamModel.UserIDs). TeamReplicationPreparer, which
+    // AddShiftIdentityDashboard registers, loads both before each sync.
     public static void SetUpTeamReplication<TDbContext>(this ShiftEntityCosmosDbOptions x, CosmosClient client, string databaseId)
         where TDbContext : ShiftIdentityDbContext =>
         x.SetUpReplication<TDbContext, Team>(client, databaseId)
             .Replicate<TeamModel>(IdentityDatabaseAndContainerNames.TeamContainerName, m => m.id);
 
+    // The user document lists the assigned named trees (UserModel.AccessTreeIDs). UserReplicationPreparer, which
+    // AddShiftIdentityDashboard registers, loads them before each sync.
     public static void SetUpUserReplication<TDbContext>(this ShiftEntityCosmosDbOptions x, CosmosClient client, string databaseId)
         where TDbContext : ShiftIdentityDbContext =>
         x.SetUpReplication<TDbContext, ShiftSoftware.ShiftIdentity.Data.Entities.User>(client, databaseId)

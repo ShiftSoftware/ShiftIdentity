@@ -90,21 +90,26 @@ public static class IdentityReferenceServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Enables reverse lookup over the existing Cosmos identity replication. Uses the reference source's
-    /// database/container options and cache lifetime. The publisher must also replicate authorization families.
+    /// Registers <see cref="IdentitySubjectResolver"/>, and the Cosmos reference source it reads unless another backend
+    /// already provides <see cref="IIdentityReferenceSource"/>. The resolver uses the source's database, container and
+    /// cache options. Identity's replication must write the user, team, company, branch and access tree documents.
+    /// <para>
+    /// The resolver is scoped: one HTTP request, timer run or function invocation is one scope. It also needs the host's
+    /// <c>ITypeAuthService</c>, for the registered action trees, and <c>IHashIdService</c>.
+    /// </para>
     /// </summary>
-    public static IServiceCollection AddIdentityReverseAccessLookup(this IServiceCollection services,
+    public static IServiceCollection AddIdentitySubjectResolver(this IServiceCollection services,
         Action<CosmosIdentityReferenceOptions>? configure = null)
-        => services.AddIdentityReverseAccessLookup<CosmosClient>(configure);
+        => services.AddIdentitySubjectResolver<CosmosClient>(configure);
 
-    /// <summary>Enables reverse lookup using a host's specific Cosmos client registration.</summary>
-    public static IServiceCollection AddIdentityReverseAccessLookup<TCosmosClient>(this IServiceCollection services,
+    /// <inheritdoc cref="AddIdentitySubjectResolver(IServiceCollection, Action{CosmosIdentityReferenceOptions}?)"/>
+    /// <typeparam name="TCosmosClient">The host's Cosmos client registration to read identity through.</typeparam>
+    public static IServiceCollection AddIdentitySubjectResolver<TCosmosClient>(this IServiceCollection services,
         Action<CosmosIdentityReferenceOptions>? configure = null)
         where TCosmosClient : CosmosClient
     {
         services.AddIdentityReferenceSource<TCosmosClient>(configure);
-        services.TryAddScoped<IIdentityAuthorizationSource>(sp => sp.GetRequiredService<CosmosIdentityReferenceSource<TCosmosClient>>());
-        services.TryAddScoped<IdentityReverseAccessLookup>();
+        services.TryAddScoped<IdentitySubjectResolver>();
         return services;
     }
 }

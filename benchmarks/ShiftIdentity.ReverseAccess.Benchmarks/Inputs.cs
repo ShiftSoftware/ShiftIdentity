@@ -50,12 +50,23 @@ internal sealed class Dataset
         while (await reader.ReadAsync()) names.Add(reader.GetString(0));
         return names;
     }
+    // The documents as replication writes them: each user lists its assigned trees (UserModel.AccessTreeIDs) and each
+    // team lists its members (TeamModel.UserIDs).
     public List<UserModel> Users { get; } = [];
     public List<AccessTreeModel> Trees { get; } = [];
-    public List<UserAccessTreeModel> Assignments { get; } = [];
-    public List<TeamUserModel> Memberships { get; } = [];
+    public List<TeamModel> Teams { get; } = [];
     public List<CompanyModel> Companies { get; } = [];
     public List<CompanyBranchModel> Branches { get; } = [];
+
+    // Turns the join rows into the documents' lists, as the replication maps write them: each user's trees in the order
+    // of the assignment rows, which the caller passes in that order, and each team's members in ascending order.
+    internal void SetLists(IEnumerable<(long User,long Tree)> assignments, IEnumerable<(long Team,long User)> memberships)
+    {
+        var trees=assignments.ToLookup(a=>a.User.ToString(CultureInfo.InvariantCulture),a=>a.Tree);
+        foreach(var user in Users)user.AccessTreeIDs=trees[user.id].ToList();
+        var members=memberships.ToLookup(m=>m.Team.ToString(CultureInfo.InvariantCulture),m=>m.User);
+        foreach(var team in Teams)team.UserIDs=members[team.id].Order().ToList();
+    }
 
     // Only the required scope and grant columns are selected. Names and contacts never leave SQL.
     public static async Task<Dataset> ReadLocalSql(Settings settings, string connectionKey = "SQLServer", string? catalog = null)
@@ -83,10 +94,13 @@ internal sealed class Dataset
                 CompanyBranchID = Id(r,5), RegionID = Id(r,6), CountryID = Id(r,7), Username = "benchmark", FullName = "benchmark" }));
         await Read("SELECT ID,Tree,IsDeleted FROM ShiftIdentity.AccessTrees", r => data.Trees.Add(new()
             { id = r.GetInt64(0).ToString(), Tree = r.GetString(1), IsDeleted = r.GetBoolean(2), Name = "benchmark" }));
-        await Read("SELECT ID,UserID,AccessTreeID,IsDeleted FROM ShiftIdentity.UserAccessTrees", r => data.Assignments.Add(new()
-            { id = r.GetInt64(0).ToString(), UserID = r.GetInt64(1), AccessTreeID = r.GetInt64(2), IsDeleted = r.GetBoolean(3) }));
-        await Read("SELECT ID,UserID,TeamID,IsDeleted FROM ShiftIdentity.TeamUsers", r => data.Memberships.Add(new()
-            { id = r.GetInt64(0).ToString(), UserID = r.GetInt64(1), TeamID = r.GetInt64(2), IsDeleted = r.GetBoolean(3) }));
+        await Read("SELECT ID,IsDeleted FROM ShiftIdentity.Teams", r => data.Teams.Add(new()
+            { id = r.GetInt64(0).ToString(CultureInfo.InvariantCulture), IsDeleted = r.GetBoolean(1), Name = "benchmark" }));
+        var assignments = new List<(long User, long Tree)>();
+        await Read("SELECT UserID,AccessTreeID FROM ShiftIdentity.UserAccessTrees ORDER BY ID", r => assignments.Add((r.GetInt64(0), r.GetInt64(1))));
+        var memberships = new List<(long Team, long User)>();
+        await Read("SELECT TeamID,UserID FROM ShiftIdentity.TeamUsers", r => memberships.Add((r.GetInt64(0), r.GetInt64(1))));
+        data.SetLists(assignments, memberships);
         await Read("SELECT ID,CompanyType,IsDeleted FROM ShiftIdentity.Companies", r => data.Companies.Add(new()
             { id = r.GetInt64(0).ToString(), CompanyType = (CompanyTypes)Convert.ToInt32(r.GetValue(1)), IsDeleted = r.GetBoolean(2), Name = "benchmark" }));
         await Read("SELECT ID,CityID,IsDeleted FROM ShiftIdentity.CompanyBranches", r => data.Branches.Add(new()
@@ -118,8 +132,7 @@ internal sealed class Dataset
 
     public object Shape()
     {
-        var assignmentsPerUser=Assignments.GroupBy(a=>a.UserID.ToString()).ToDictionary(g=>g.Key,g=>g.Count());
-        var membershipsPerUser=Memberships.GroupBy(a=>a.UserID.ToString()).ToDictionary(g=>g.Key,g=>g.Count());
+        var membershipsPerUser=Teams.SelectMany(t=>t.UserIDs??[]).GroupBy(u=>u.ToString(CultureInfo.InvariantCulture)).ToDictionary(g=>g.Key,g=>g.Count());
         static int Depth(string? json)
         {
             if(string.IsNullOrWhiteSpace(json)) return 0;
@@ -143,14 +156,14 @@ internal sealed class Dataset
             ActiveWithMissingScope=Users.Count(u=>u.IsActive==true&&!u.IsDeleted&&(u.CompanyID is null||u.CompanyBranchID is null||u.RegionID is null||
                 !Companies.Any(c=>c.id==u.CompanyID.ToString())||!Branches.Any(b=>b.id==u.CompanyBranchID.ToString()&&b.CityID.HasValue))),
             ActiveScopeIssues=Users.Where(u=>u.IsActive==true&&!u.IsDeleted).SelectMany(ScopeIssues).GroupBy(x=>x).ToDictionary(g=>g.Key,g=>g.Count()),
-            ActiveAssignments=Assignments.Count(a=>Users.Any(u=>u.id==a.UserID.ToString()&&u.IsActive==true&&!u.IsDeleted)),
-            NamedTrees = Trees.Count, Assignments = Assignments.Count, Memberships = Memberships.Count,
-            Teams = Memberships.Select(x => x.TeamID).Distinct().Count(), Companies = Companies.Count, Branches = Branches.Count,
+            ActiveAssignments=Users.Where(u=>u.IsActive==true&&!u.IsDeleted).Sum(u=>u.AccessTreeIDs?.Count??0),
+            NamedTrees = Trees.Count, Assignments = Users.Sum(u => u.AccessTreeIDs?.Count ?? 0), Memberships = membershipsPerUser.Values.Sum(),
+            Teams = Teams.Count(t => t.UserIDs?.Count > 0), Companies = Companies.Count, Branches = Branches.Count,
             DirectTreeBytes = Distribution(Users.Select(u => System.Text.Encoding.UTF8.GetByteCount(u.AccessTree ?? ""))),
             NamedTreeBytes = Distribution(Trees.Select(t => System.Text.Encoding.UTF8.GetByteCount(t.Tree))),
             DirectTreeDepth = Distribution(Users.Select(u => Depth(u.AccessTree))),
             NamedTreeDepth = Distribution(Trees.Select(t => Depth(t.Tree))),
-            AssignmentsPerUser = Distribution(Users.Select(u => assignmentsPerUser.GetValueOrDefault(u.id))),
+            AssignmentsPerUser = Distribution(Users.Select(u => u.AccessTreeIDs?.Count ?? 0)),
             MembershipsPerUser = Distribution(Users.Select(u => membershipsPerUser.GetValueOrDefault(u.id))) };
     }
 }
@@ -158,20 +171,22 @@ internal sealed class Dataset
 internal sealed class MemorySource : CosmosIdentityReferenceSource<MemoryClient>
 {
     private readonly Dictionary<Type, IEnumerable<ReplicationModel>> rows;
-    public int Reads;
+    // Store reads: each family scan or single-document read, and the documents they return.
+    public int Reads, FamilyReads, PointReads, RowsRead;
     private readonly bool cloneRows;
     public MemorySource(Dataset data, IdentityReferenceCache? cache = null,bool cloneRows=false)
         : base(new MemoryClient(), Options.Create(new CosmosIdentityReferenceOptions()), cache)
     {
         this.cloneRows=cloneRows;
-        rows = new() { [typeof(UserModel)] = data.Users, [typeof(AccessTreeModel)] = data.Trees,
-            [typeof(UserAccessTreeModel)] = data.Assignments, [typeof(TeamUserModel)] = data.Memberships,
+        rows = new() { [typeof(UserModel)] = data.Users, [typeof(AccessTreeModel)] = data.Trees, [typeof(TeamModel)] = data.Teams,
             [typeof(CompanyModel)] = data.Companies, [typeof(CompanyBranchModel)] = data.Branches };
     }
     internal override Task<IReadOnlyList<T>> ReadRowsAsync<T>(string containerName, string? itemType, string? id, CancellationToken ct)
     {
         Interlocked.Increment(ref Reads);
+        if(id is null)Interlocked.Increment(ref FamilyReads);else Interlocked.Increment(ref PointReads);
         IReadOnlyList<T> values = rows[typeof(T)].Cast<T>().Where(x => id is null || x.id == id).ToArray();
+        Interlocked.Add(ref RowsRead, values.Count);
         if(cloneRows)values=System.Text.Json.JsonSerializer.Deserialize<T[]>(System.Text.Json.JsonSerializer.Serialize(values))!;
         return Task.FromResult(values);
     }

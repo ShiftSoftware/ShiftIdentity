@@ -15,6 +15,8 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0" PrivateAssets="all" />
     <ProjectReference Include="..\ShiftIdentity.AspNetCore\ShiftIdentity.AspNetCore.csproj" />
     <ProjectReference Include="..\ShiftIdentity.Dashboard.AspNetCore\ShiftIdentity.Dashboard.AspNetCore.csproj" />
+    <!-- AuthorizationReplicationTests: drives the identity catch-up against the in-process Cosmos stand-in. -->
+    <ProjectReference Include="..\ShiftIdentity.AzureFunctions\ShiftIdentity.AzureFunctions.csproj" />
   </ItemGroup>
   <ItemGroup>
     <!-- Built with the tests but not referenced by them: a plain host must compile. That project file says why. -->

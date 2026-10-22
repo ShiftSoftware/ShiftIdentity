@@ -7,7 +7,5 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../ShiftIdentity.Data/ShiftIdentity.Data.csproj" />
-    <!-- Exercise the actual profile without adding the web host and its unrelated dependencies. -->
-    <Compile Include="../../../ShiftEntity/ShiftEntity.Web/Services/StandardDataLevelAccessProfile.cs" Link="Framework/StandardDataLevelAccessProfile.cs" />
   </ItemGroup>
 </Project>

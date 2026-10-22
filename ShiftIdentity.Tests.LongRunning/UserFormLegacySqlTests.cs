@@ -3,12 +3,16 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using ShiftIdentity.Tests.Infrastructure;
+using ShiftSoftware.ShiftEntity.Core;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
+using ShiftSoftware.ShiftEntity.Model.Enums;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Core.DTOs;
 using ShiftSoftware.ShiftIdentity.Core.DTOs.User;
+using ShiftSoftware.ShiftIdentity.Data;
 using ShiftSoftware.ShiftIdentity.Data.Entities;
 using Xunit;
 
@@ -221,6 +225,67 @@ public sealed class UserFormLegacySqlTests(SqlIdentityFixture fixture) : IClassF
         var user = await db.Users.SingleAsync(x => x.Username == username);
         Assert.True(user.RequireChangePassword); Assert.True(user.EmailVerified); Assert.Null(user.VerificationSASToken);
         Assert.Empty(host.Verifications.Sent);
+    }
+
+    // The user's Cosmos document lists the assigned trees (UserModel.AccessTreeIDs). Removing an assignment deletes the
+    // join row, which has no document of its own, so the user row must be saved too: then a failed sync leaves the row
+    // dirty and the catch-up rewrites the list.
+    [Fact]
+    public async Task A_save_that_changes_only_the_assigned_trees_still_stamps_the_user_row()
+    {
+        using var host = await HostAsync();
+        var treeID = await AddTreeAsync();
+        var id = await CreateAsync(host, NewUser(requireChange: false, sendVerification: false));
+        var created = await LastSaveDateAsync(id);
+
+        var dto = await GetAsync(host, id);
+        dto.AccessTrees = [new ShiftEntitySelectDTO { Value = treeID.ToString() }];
+        await PutAsync(host, dto);
+        var assigned = await LastSaveDateAsync(id);
+        Assert.True(assigned > created);
+
+        dto = await GetAsync(host, id);
+        dto.AccessTrees = [];
+        await PutAsync(host, dto);
+        Assert.True(await LastSaveDateAsync(id) > assigned);
+        await using var db = fixture.CreateContext();
+        Assert.False(await db.UserAccessTrees.AnyAsync(x => x.UserID == id));
+    }
+
+    // Every repository is also registered as its entity's replication preparer, so the dashboard host has two User
+    // preparers, and the save trigger gets whichever was registered last. Each must load the assignments by query.
+    [Fact]
+    public async Task The_user_preparer_the_dashboard_host_resolves_loads_the_assignments_by_query()
+    {
+        using var host = await HostAsync();
+        var treeID = await AddTreeAsync();
+        var id = await CreateAsync(host, NewUser(requireChange: false, sendVerification: false));
+        var dto = await GetAsync(host, id);
+        dto.AccessTrees = [new ShiftEntitySelectDTO { Value = treeID.ToString() }];
+        await PutAsync(host, dto);
+
+        await using var scope = host.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<ShiftIdentityDbContext>();
+        var user = await db.Users.SingleAsync(x => x.ID == id);
+        Assert.Empty(user.AccessTrees);
+        var prepared = await scope.ServiceProvider.GetRequiredService<IShiftEntityPrepareForReplicationAsync<User>>()
+            .PrepareForReplicationAsync(user, ReplicationChangeType.Modified);
+        Assert.Equal(treeID, Assert.Single(prepared.AccessTrees).AccessTreeID);
+    }
+
+    private async Task<long> AddTreeAsync()
+    {
+        await using var setup = fixture.CreateContext();
+        var tree = new AccessTree { Name = "Synthetic assigned " + Guid.NewGuid().ToString("N")[..8], Tree = "{}" };
+        setup.AccessTrees.Add(tree);
+        await setup.SaveChangesAsync();
+        return tree.ID;
+    }
+
+    private async Task<DateTimeOffset> LastSaveDateAsync(long id)
+    {
+        await using var db = fixture.CreateContext();
+        return (await db.Users.AsNoTracking().SingleAsync(x => x.ID == id)).LastSaveDate;
     }
 
     private async Task<LegacyIdentityHttpHost<IdentityTestDbContext>> HostAsync()

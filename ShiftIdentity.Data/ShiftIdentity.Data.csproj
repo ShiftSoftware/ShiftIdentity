@@ -44,6 +44,8 @@
 		     project drives it through the source's own methods and stands in for Cosmos at the read seam. -->
 		<InternalsVisibleTo Include="ShiftIdentity.Data.Tests" />
     <InternalsVisibleTo Include="ShiftIdentity.ReverseAccess.Benchmarks" />
+		<!-- The replication tests run the save trigger with the internal user and team replication preparers. -->
+		<InternalsVisibleTo Include="ShiftIdentity.Tests" />
 	</ItemGroup>
 
 	<ItemGroup>

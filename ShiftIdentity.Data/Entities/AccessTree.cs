@@ -18,12 +18,15 @@ namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 
 // Attribute-driven endpoint (Rung B): AccessTree has no controller and no repository class. The secure CRUD
 // routes come from the attribute (built-in repository + source-generated mapper), gated by
-// ShiftIdentityActions.AccessTrees; feature locking is central (FeatureLockSaveValidator). The only write logic —
-// name-uniqueness + the TypeAuth access-tree generation — moves onto the entity via IUpsertsShiftRepository.
+// ShiftIdentityActions.AccessTrees; feature locking is central (FeatureLockSaveValidator). The write logic —
+// name-uniqueness + the TypeAuth access-tree generation — moves onto the entity via IUpsertsShiftRepository, and the
+// rule that a tree still in use cannot be deleted via IDeletesShiftRepository.
 [TemporalShiftEntity]
 [Table("AccessTrees", Schema = "ShiftIdentity")]
 [ShiftEntitySecureEndpoint<AccessTreeListDTO, AccessTreeDTO, ShiftIdentityActions>("api/IdentityAccessTree", nameof(ShiftIdentityActions.AccessTrees))]
-public class AccessTree : ShiftEntity<AccessTree>, IShiftEntityReplication, IUpsertsShiftRepository<AccessTree, AccessTreeListDTO, AccessTreeDTO>
+public class AccessTree : ShiftEntity<AccessTree>, IShiftEntityReplication,
+    IUpsertsShiftRepository<AccessTree, AccessTreeListDTO, AccessTreeDTO>,
+    IDeletesShiftRepository<AccessTree, AccessTreeListDTO, AccessTreeDTO>
 {
     public DateTimeOffset? LastReplicationDate { get; set; }
     public string? LastReplicationStamp { get; set; }
@@ -90,5 +93,28 @@ public class AccessTree : ShiftEntity<AccessTree>, IShiftEntityReplication, IUps
         saved.Tree = generatedTree;
 
         return saved;
+    }
+
+    public async ValueTask<AccessTree> DeleteAsync(
+        AccessTree entity,
+        long? userId,
+        bool disableDefaultDataLevelAccess,
+        bool disableGlobalFilters,
+        ShiftRepositoryDeleteContext<AccessTree, AccessTreeListDTO, AccessTreeDTO> context)
+    {
+        var db = context.Services.GetRequiredService<ShiftIdentityDbContext>();
+
+        // A deleted tree still grants its actions to every user who has it, at sign-in too. So a tree that a user who
+        // is not deleted still has cannot be deleted. This runs before the default delete, so a refusal leaves the row
+        // as it was.
+        if (await UsersStillUsing.FindAsync(db.UserAccessTrees.Where(x => x.AccessTreeID == entity.ID).Select(x => x.User)) is { } users)
+        {
+            var loc = context.Services.GetRequiredService<ShiftIdentityLocalizer>();
+
+            throw new ShiftEntityException(new Message(loc["Error"],
+                loc["Users who still have this access tree: {0} ({1} in total). Remove it from them before you delete it.", users.Names, users.Total]));
+        }
+
+        return await context.Base();
     }
 }
