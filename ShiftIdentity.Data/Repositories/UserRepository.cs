@@ -13,7 +13,6 @@ using ShiftSoftware.ShiftIdentity.Data.Entities;
 using ShiftSoftware.ShiftIdentity.Data.IRepositories;
 using ShiftSoftware.ShiftIdentity.Core.Localization;
 using ShiftSoftware.ShiftIdentity.Data.Services;
-using ShiftSoftware.TypeAuth.Core;
 using System.Data;
 using System.Net;
 
@@ -33,7 +32,6 @@ public class UserRepository :
     ShiftRepository<ShiftIdentityDbContext, User, UserListDTO, UserDTO>,
     IUserRepository
 {
-    private readonly ITypeAuthService typeAuthService;
     private readonly ShiftIdentityLocalizer Loc;
     private readonly ShiftIdentityConfiguration configuration;
     private readonly IUserAccountAuthority? authority;
@@ -49,7 +47,6 @@ public class UserRepository :
     private readonly List<UserAccountCreation> pendingCreations = [];
 
     public UserRepository(ShiftIdentityDbContext db,
-        ITypeAuthService typeAuthService,
         ShiftIdentityDefaultDataLevelAccessOptions shiftIdentityDefaultDataLevelAccessOptions,
         ShiftIdentityLocalizer Loc,
         ShiftIdentityConfiguration configuration,
@@ -65,7 +62,6 @@ public class UserRepository :
         );
     })
     {
-        this.typeAuthService = typeAuthService;
         this.Loc = Loc;
         this.configuration = configuration;
         this.authority = authority;
@@ -117,12 +113,11 @@ public class UserRepository :
     }
 
     /// <summary>
-    /// Builds the user's effective/combined access tree by unioning their user-specific
-    /// access (<see cref="User.AccessTree"/>) with every assigned access tree, then serializing
-    /// the merged result to a single access-tree JSON string. Passing the combined context as its
-    /// own reducer means no reduction is applied — the output is the full set TypeAuth enforces.
+    /// The user's access trees: their user-specific access (<see cref="User.AccessTree"/>) and every assigned access
+    /// tree, as sign-in puts them in the token (<see cref="UserCover.HeldTrees"/>). TypeAuth decides with them as one
+    /// context; they aren't merged into one tree, which can't hold everything several grant together.
     /// </summary>
-    public async Task<string> GenerateEffectiveAccessTreeAsync(long userId)
+    public async Task<List<string>> GetEffectiveAccessTreesAsync(long userId)
     {
         var user = await db.Users
             .Include(x => x.AccessTrees).ThenInclude(x => x.AccessTree)
@@ -131,18 +126,7 @@ public class UserRepository :
         if (user is null)
             throw new ShiftEntityException(new Message(Loc["Error"], Loc["User not found"]), (int)HttpStatusCode.NotFound);
 
-        var builder = new TypeAuthContextBuilder();
-
-        foreach (var type in typeAuthService.GetRegisteredActionTrees())
-            builder.AddActionTree(type);
-
-        foreach (var tree in UserCover.HeldTrees(user))
-            if (!string.IsNullOrWhiteSpace(tree))
-                builder.AddAccessTree(tree);
-
-        var combined = builder.Build();
-
-        return combined.GenerateAccessTree(combined);
+        return UserCover.HeldTrees(user).Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
     }
 
     public async Task<User?> GetUserByUsernameAsync(string username)

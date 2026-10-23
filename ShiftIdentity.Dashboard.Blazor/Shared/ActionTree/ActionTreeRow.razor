@@ -77,25 +77,25 @@
             @if (Item.Action?.Type == ActionType.ReadWriteDelete)
             {
                 <AccessButton ActionTreeItem="Item" Access="Access.Delete" TypeAuth_LoggedInUser="TypeAuth_LoggedInUser"
-                              TypeAuth_View="TypeAuth_View" Disabled="@(ReadOnly || Disabled)">@Loc["Delete"]</AccessButton>
+                              TypeAuth_View="TypeAuth_View" ReadOnly="ReadOnly" Disabled="@(ReadOnly || Disabled)">@Loc["Delete"]</AccessButton>
             }
 
             @if (Item.Action?.Type == ActionType.ReadWriteDelete || Item.Action?.Type == ActionType.ReadWrite)
             {
                 <AccessButton ActionTreeItem="Item" Access="Access.Write" TypeAuth_LoggedInUser="TypeAuth_LoggedInUser"
-                              TypeAuth_View="TypeAuth_View" Disabled="@(ReadOnly || Disabled)">@Loc["Write"]</AccessButton>
+                              TypeAuth_View="TypeAuth_View" ReadOnly="ReadOnly" Disabled="@(ReadOnly || Disabled)">@Loc["Write"]</AccessButton>
             }
 
             @if (Item.Action?.Type == ActionType.ReadWriteDelete || Item.Action?.Type == ActionType.ReadWrite || Item.Action?.Type == ActionType.Read)
             {
                 <AccessButton ActionTreeItem="Item" Access="Access.Read" TypeAuth_LoggedInUser="TypeAuth_LoggedInUser"
-                              TypeAuth_View="TypeAuth_View" Disabled="@(ReadOnly || Disabled)">@Loc["Read"]</AccessButton>
+                              TypeAuth_View="TypeAuth_View" ReadOnly="ReadOnly" Disabled="@(ReadOnly || Disabled)">@Loc["Read"]</AccessButton>
             }
 
             @if (Item.Action?.Type == ActionType.Boolean)
             {
                 <AccessButton ActionTreeItem="Item" Access="Access.Maximum" TypeAuth_LoggedInUser="TypeAuth_LoggedInUser"
-                              TypeAuth_View="TypeAuth_View" Disabled="@(ReadOnly || Disabled)" />
+                              TypeAuth_View="TypeAuth_View" ReadOnly="ReadOnly" Disabled="@(ReadOnly || Disabled)" />
             }
 
             @if (Item.Action?.Type == ActionType.Text)

@@ -19,7 +19,7 @@
                 @Loc["Combined permissions from the user's access trees and user-specific access."]
             </MudAlert>
 
-            <ActionTree Tree="@accessTree" ReadOnly="true" Disabled="true" />
+            <ActionTree Trees="@accessTrees" ReadOnly="true" Disabled="true" />
         }
     </DialogContent>
     <DialogActions>
@@ -33,7 +33,7 @@
     /// <summary>Hash-encoded user id whose effective permissions are shown.</summary>
     [Parameter] public string Key { get; set; } = default!;
 
-    private string accessTree = "{}";
+    private List<string> accessTrees = [];
     private bool loading = true;
     private string? error;
 
@@ -45,7 +45,7 @@
                 .GetAsync<ShiftEntityResponse<UserEffectivePermissionsDTO>>($"IdentityUser/{Key}/EffectivePermissions");
 
             if (response.IsSuccess && response.Data?.Entity is not null)
-                accessTree = response.Data.Entity.AccessTree ?? "{}";
+                accessTrees = response.Data.Entity.AccessTrees ?? [];
             else
                 error = Loc["An error occurred while loading the permissions"];
         }

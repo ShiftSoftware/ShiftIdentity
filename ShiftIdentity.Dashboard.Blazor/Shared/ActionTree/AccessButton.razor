@@ -1,6 +1,8 @@
 ﻿
 @{
-    var isChecked = (!hasWildCardCard && TypeAuth_View.Can(ActionTreeItem!.Action!, Access, ActionTreeItem.ID)) || wildCardChecked;
+    // Read-only, the button shows what the view grants: a view of several trees can hold a wildcard and rows beyond it.
+    // While editing, a row under a wildcard shows the wildcard, which is what the tree is posted with.
+    var isChecked = ((ReadOnly || !hasWildCardCard) && TypeAuth_View.Can(ActionTreeItem!.Action!, Access, ActionTreeItem.ID)) || wildCardChecked;
 }
 @* A small MudButton with a checkbox start icon, written out (see ActionTreeMarkup). *@
 <button type="button" class="@ActionTreeMarkup.ButtonClass(isChecked, color, cssClass)" style="@style"
@@ -42,6 +44,9 @@
 
     [Parameter]
     public bool Disabled { get; set; }
+
+    [Parameter]
+    public bool ReadOnly { get; set; }
 
     protected override void OnInitialized()
     {

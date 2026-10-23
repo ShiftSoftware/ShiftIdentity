@@ -38,6 +38,10 @@ public sealed class UserCoverSqlTests(SqlIdentityFixture fixture) : IClassFixtur
     private const string CoveredTree = "{\"ShiftIdentityActions\":{\"Users\":[\"r\"]}}";
     // Beyond the administrator, who can't assign it: Access Trees write.
     private const string BeyondTree = "{\"ShiftIdentityActions\":{\"AccessTrees\":[\"r\",\"w\"]}}";
+    // Two trees within the administrator that together grant what one tree can't hold: a wildcard on Regions, and the
+    // self row of Regions beyond it.
+    private const string OverlappingWildcard = "{\"ShiftIdentityActions\":{\"DataLevelAccess\":{\"Regions\":[\"r\",\"w\"]}}}";
+    private const string OverlappingSelfRow = "{\"ShiftIdentityActions\":{\"DataLevelAccess\":{\"Regions\":{\"_shift_software_type_auth_core_self_reference\":[\"r\",\"w\",\"d\"]}}}}";
     private const string NewPassword = "Cover chosen phrase 63!";
     private static string Phone => "+96477" + Random.Shared.Next(10000000, 99999999).ToString(System.Globalization.CultureInfo.InvariantCulture);
     private ControlledClock clock = null!;
@@ -124,6 +128,24 @@ public sealed class UserCoverSqlTests(SqlIdentityFixture fixture) : IClassFixtur
         using var response = await host.Client.PutAsJsonAsync($"/api/IdentityUser/{id}", dto);
         AssertRefused(await RefusedAsync(response), AdministratorCover.Message, username);
         Assert.Equal(before, await RowAsync(id));
+    }
+
+    // The admin covers a user when they cover each of the user's trees. One tree's wildcard on a dynamic action and
+    // another's self row beyond it can't be written as one tree; reduced as one, they refused every admin, as TCA's
+    // "System: Basic" and "Data by Branch: Self" did for 194 of 277 users on the 23 October backup.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Trees_that_overlap_are_covered_by_an_admin_who_covers_each(bool authority)
+    {
+        using var host = await HostAsync(authority);
+        var (id, _) = await TargetAsync(OverlappingSelfRow, own: OverlappingWildcard);
+        var before = await RowAsync(id);
+        var dto = await GetAsync(host, id);
+        Apply(dto, "password");
+        using var response = await host.Client.PutAsJsonAsync($"/api/IdentityUser/{id}", dto);
+        Assert.True(response.StatusCode == HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        Assert.NotEqual(before.PasswordHash, (await RowAsync(id)).PasswordHash);
     }
 
     [Theory]
@@ -306,6 +328,20 @@ public sealed class UserCoverSqlTests(SqlIdentityFixture fixture) : IClassFixtur
             Assert.Equal(own, granted[0]);
             Assert.Equal(expected.Order(), granted.Order());
         }
+    }
+
+    // Effective Permissions lists the same trees, each as it is: one tree can't hold everything several grant together.
+    [Fact]
+    public async Task Effective_permissions_lists_the_trees_the_check_reads()
+    {
+        var (id, _) = await TargetAsync(OverlappingSelfRow, own: OverlappingWildcard);
+        using var host = await HostAsync(false);
+
+        using var response = await host.Client.GetAsync($"/api/IdentityUser/{id}/EffectivePermissions");
+
+        Assert.True(response.StatusCode == HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        var permissions = (await response.Content.ReadFromJsonAsync<ShiftEntityResponse<UserEffectivePermissionsDTO>>())!.Entity!;
+        Assert.Equal([OverlappingWildcard, OverlappingSelfRow], permissions.AccessTrees);
     }
 
     // A host registers its own action trees beside Identity's. The authority builds the operator's rights over all of

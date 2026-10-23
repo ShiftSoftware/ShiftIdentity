@@ -2,7 +2,7 @@
 
 @if (textAction != null)
 {
-    <MudTextField Value="@(wildCardChecked ? textAction.MaximumAccess : (hasWildCardCard ? textAction.MinimumAccess : TypeAuth_View.AccessValue(textAction) ))"
+    <MudTextField Value="@(ReadOnly ? TypeAuth_View.AccessValue(textAction) : wildCardChecked ? textAction.MaximumAccess : (hasWildCardCard ? textAction.MinimumAccess : TypeAuth_View.AccessValue(textAction) ))"
               Disabled="@(hasWildCardCard || Disabled)"
               TextChanged="@((e) => TextChanged(e))"
               Variant="Variant.Outlined" Class="type-auth-tree-text" 
@@ -10,7 +10,7 @@
 }
 @if (dynamicTextAction != null)
 {
-    <MudTextField Value="@(wildCardChecked ? dynamicTextAction.MaximumAccess : (hasWildCardCard ? dynamicTextAction.MinimumAccess : TypeAuth_View.AccessValue(dynamicTextAction, ActionTreeItem.ID) ))"
+    <MudTextField Value="@(ReadOnly ? TypeAuth_View.AccessValue(dynamicTextAction, ActionTreeItem.ID) : wildCardChecked ? dynamicTextAction.MaximumAccess : (hasWildCardCard ? dynamicTextAction.MinimumAccess : TypeAuth_View.AccessValue(dynamicTextAction, ActionTreeItem.ID) ))"
               Disabled="@(hasWildCardCard || Disabled)"
               TextChanged="@((e) => TextChanged(e))"
               Variant="Variant.Outlined" Class="type-auth-tree-text"
@@ -60,8 +60,8 @@
     async Task TextChanged(string value)
     {
         // The field reports the value it is given as a change when it shows it. A value beyond the admin's is left as
-        // it is: capped to theirs, the save would be refused for lowering it.
-        if (hasWildCardCard || string.IsNullOrWhiteSpace(value) || ValueBeyondAdmin)
+        // it is: capped to theirs, the save would be refused for lowering it. A read-only field changes nothing.
+        if (ReadOnly || hasWildCardCard || string.IsNullOrWhiteSpace(value) || ValueBeyondAdmin)
             return;
 
         try

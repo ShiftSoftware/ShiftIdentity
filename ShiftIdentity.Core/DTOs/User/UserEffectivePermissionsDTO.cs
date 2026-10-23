@@ -1,11 +1,13 @@
+using System.Collections.Generic;
+
 namespace ShiftSoftware.ShiftIdentity.Core.DTOs.User;
 
 public class UserEffectivePermissionsDTO
 {
     /// <summary>
-    /// The merged/effective access-tree JSON for a user, combining the user's
-    /// user-specific access with every assigned access tree. This is the same
-    /// combined set TypeAuth evaluates when validating an action for the user.
+    /// The user's access trees: their user-specific access and every assigned access tree, as sign-in puts them in the
+    /// token. TypeAuth decides with all of them as one context built from this list. They aren't merged into one tree:
+    /// one tree can't hold everything several grant together (rows beyond a dynamic action's wildcard).
     /// </summary>
-    public string AccessTree { get; set; } = "{}";
+    public List<string> AccessTrees { get; set; } = new();
 }

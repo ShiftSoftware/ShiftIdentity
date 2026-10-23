@@ -43,11 +43,11 @@ internal static class UserEndpoints
 
                 var userId = hashIdService.Decode<UserDTO>(key);
 
-                var accessTree = await userRepo.GenerateEffectiveAccessTreeAsync(userId);
+                var accessTrees = await userRepo.GetEffectiveAccessTreesAsync(userId);
 
                 return Results.Ok(new ShiftEntityResponse<UserEffectivePermissionsDTO>(new UserEffectivePermissionsDTO
                 {
-                    AccessTree = accessTree,
+                    AccessTrees = accessTrees,
                 }));
             })
             .RequireTypeAuthRead(ShiftIdentityActions.Users);

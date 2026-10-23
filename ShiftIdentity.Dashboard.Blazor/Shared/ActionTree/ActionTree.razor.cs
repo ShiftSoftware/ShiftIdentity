@@ -40,6 +40,14 @@ public partial class ActionTree : IDisposable
     [Parameter]
     public EventCallback<string> TreeChanged { get; set; }
 
+    /// <summary>
+    /// Several trees shown together, read-only, as TypeAuth decides with them: a user's own tree and every assigned
+    /// tree. Shown in place of <see cref="Tree"/>. They aren't merged into one first: one tree can't hold everything
+    /// several grant together (rows beyond a dynamic action's wildcard).
+    /// </summary>
+    [Parameter]
+    public IReadOnlyList<string>? Trees { get; set; }
+
     [Parameter]
     public bool ReadOnly { get; set; }
     [Parameter]
@@ -164,6 +172,10 @@ public partial class ActionTree : IDisposable
 
     protected override async Task OnInitializedAsync()
     {
+        // An edited tree is posted as one tree, which several can't be written as.
+        if (Trees is not null && !ReadOnly)
+            throw new InvalidOperationException($"{nameof(Trees)} are shown read-only.");
+
         this.tAuth_LoggedInUser = (TypeAuth as TypeAuthContext)!;
 
         var typeAuthBuilder = new TypeAuthContextBuilder();
@@ -176,9 +188,13 @@ public partial class ActionTree : IDisposable
         foreach (var actionTree in this.tAuth_LoggedInUser!.GetRegisteredActionTrees())
             typeAuthBuilder.AddActionTree(actionTree);
 
-        this.tAuth_View = typeAuthBuilder
-        .AddAccessTree(Tree)
-        .Build();
+        if (Trees is null)
+            typeAuthBuilder.AddAccessTree(Tree);
+        else
+            foreach (var tree in Trees)
+                typeAuthBuilder.AddAccessTree(tree);
+
+        this.tAuth_View = typeAuthBuilder.Build();
 
         this.TraverseTree(tAuth_View.ActionTree, null);
 
