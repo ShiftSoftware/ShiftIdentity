@@ -1,13 +1,15 @@
 @using ShiftSoftware.ShiftIdentity.Blazor.Services
 @using ShiftSoftware.ShiftIdentity.Core.Authentication
+@implements IAsyncDisposable
 @inject ShiftIdentityLocalizer Loc
+@inject IJSRuntime JS
 
 <MudDialog>
     <DialogContent>
         @* The same attempts as every security step: a shown error closes before each password or code is sent. *@
         <AuthFeedbackScope>
             <MudText Class="mb-3">@Loc["Confirm your current administrator account to continue. Your edits and selection will stay here."]</MudText>
-            @if (Flow.Pending?.Step is AuthenticationStep.Password or AuthenticationStep.ExistingMfa)
+            @if (Flow.Pending?.Step is AuthenticationStep.Password or AuthenticationStep.ExistingMfa && !waiting)
             {
                 <AuthForm Model="entry" Submit="Submit" data-testid="administrator-confirmation-form" Context="attempting">
                     @if (Flow.Pending?.Step == AuthenticationStep.Password)
@@ -24,7 +26,30 @@
                                Class="mt-3" data-testid="administrator-confirmation-submit">@Loc["Confirm and continue"]</MudButton>
                 </AuthForm>
             }
-            else if (Flow.Busy) { <MudProgressCircular Indeterminate="true" /> }
+            @if (Provider is { } provider && Flow.Pending?.Step is AuthenticationStep.Password or AuthenticationStep.ProviderConfirmation)
+            {
+                @* A provider session (and an account held to a trusted tenant, which has no password) confirms with a new
+                   sign-in at its provider, in a popup. *@
+                <div data-testid="administrator-confirmation-provider" class="mt-3">
+                    @if (Flow.Pending?.Step == AuthenticationStep.ProviderConfirmation)
+                    {
+                        <MudText Class="mb-3">@Loc["Your account signs in with Microsoft. Sign in again in the Microsoft window to confirm."]</MudText>
+                    }
+                    @if (waiting)
+                    {
+                        <MudText Class="mb-3" data-testid="administrator-confirmation-waiting">@Loc["Waiting for the {0} sign-in. Finish it in the {0} window.", Name(provider)]</MudText>
+                        <MudButton Variant="Variant.Outlined" Disabled="Flow.Busy" OnClick="CompleteProvider"
+                                   data-testid="administrator-confirmation-check">@Loc["I've signed in"]</MudButton>
+                    }
+                    else
+                    {
+                        <MudButton Color="Color.Primary" Variant="@(Flow.Pending?.Step == AuthenticationStep.Password ? Variant.Outlined : Variant.Filled)"
+                                   Disabled="@(Flow.Busy || module is null)" OnClick="OpenProvider"
+                                   data-testid="administrator-confirmation-provider-button">@Loc["Confirm with {0}", Name(provider)]</MudButton>
+                    }
+                </div>
+            }
+            else if (Flow.Busy && Flow.Pending is null) { <MudProgressCircular Indeterminate="true" /> }
             <AuthError @bind-Message="error" TestId="administrator-confirmation-error" />
         </AuthFeedbackScope>
     </DialogContent>
@@ -41,8 +66,36 @@
     private Entry entry = new();
     private string? error;
     private bool cancelled;
+    private bool waiting;
+    // The provider that can confirm, kept from the start: the MFA step that may follow a provider proof does not repeat it.
+    private SignInProvider? Provider;
+    private readonly string popupKey = Guid.NewGuid().ToString("N");
+    private IJSObjectReference? module;
+    private IJSObjectReference? listener;
+    private DotNetObjectReference<AdministratorConfirmationDialog>? reference;
 
-    protected override async Task OnInitializedAsync() => Show(await Flow.BeginAdministratorConfirmationAsync(CurrentAccess));
+    private static string Name(SignInProvider provider) => provider == SignInProvider.Google ? "Google" : "Microsoft";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await Flow.BeginAdministratorConfirmationAsync(CurrentAccess);
+        Provider = (result as ChallengeRequired)?.Challenge.Provider;
+        Show(result);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Loaded ahead, so the button's click opens the popup before anything waits: browsers allow a popup only then.
+        if (Provider is null || module is not null || cancelled) return;
+        try
+        {
+            module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/ShiftSoftware.ShiftIdentity.Dashboard.Blazor/provider-popup.js");
+            reference = DotNetObjectReference.Create(this);
+            listener = await module.InvokeAsync<IJSObjectReference>("listen", reference);
+            StateHasChanged();
+        }
+        catch (JSException) { error = Loc["Confirmation could not be completed. Your action has not been retried. Cancel and try again later."]; StateHasChanged(); }
+    }
 
     // AuthForm closes a shown error before each press and runs one attempt at a time.
     private async Task Submit()
@@ -54,13 +107,68 @@
         if (!cancelled) Show(result);
     }
 
+    private async Task OpenProvider()
+    {
+        if (Flow.Busy || cancelled || module is null || Provider is not { } provider) return;
+        error = null;
+        if (!await module.InvokeAsync<bool>("open", popupKey))
+        {
+            error = Loc["Your browser blocked the {0} window. Allow pop-ups for this site, then try again.", Name(provider)];
+            return;
+        }
+        var result = await Flow.StartAdministratorProviderAsync();
+        if (cancelled) return;
+        if (result is ProviderRedirect { Url: { } url } && await module.InvokeAsync<bool>("navigate", popupKey, url)) { waiting = true; return; }
+        await module.InvokeVoidAsync("close", popupKey);
+        if (result is ProviderRedirect) { error = Loc["The {0} window was closed. Try again.", Name(provider)]; return; }
+        Show(result);
+    }
+
+    /// <summary>The popup's page reports the provider's return: null when it proved the account, otherwise why not.</summary>
+    [JSInvokable] public async Task ProviderReturned(string? failure)
+    {
+        if (cancelled || Provider is not { } provider || Flow.Pending?.Step is not (AuthenticationStep.Password or AuthenticationStep.ProviderConfirmation)) return;
+        if (failure is null) { await CompleteProvider(); return; }
+        waiting = false;
+        var name = Name(provider);
+        error = failure switch
+        {
+            nameof(AuthenticationFailure.ProviderNotAllowedForAccount) =>
+                Loc["That Microsoft account can't confirm this account. Sign in with your organization's Microsoft account for this account."],
+            nameof(AuthenticationFailure.ProviderAccountNotFound) =>
+                Loc["That {0} account isn't this account's. Sign in with the {0} account you use to sign in here.", name],
+            nameof(AuthenticationFailure.ProviderEmailUnverified) => Loc["{0} didn't confirm that account's email address. Try another {0} account.", name],
+            nameof(AuthenticationFailure.Expired) => Loc["The {0} sign-in took too long. Try again.", name],
+            nameof(AuthenticationFailure.Unavailable) => Loc["{0} can't be reached right now. Try again later.", name],
+            _ => Loc["The {0} sign-in didn't complete. Try again.", name]
+        };
+        StateHasChanged();
+    }
+
+    private async Task CompleteProvider()
+    {
+        if (Flow.Busy || cancelled || Provider is not { } provider) return;
+        var result = await Flow.CompleteAdministratorProviderAsync();
+        if (cancelled) return;
+        if (result is AuthenticationRefused { Code: AuthenticationFailure.AuthorizationPending })
+        {
+            error = Loc["{0} hasn't confirmed the sign-in yet. Finish it in the {0} window, then try again.", Name(provider)];
+            StateHasChanged();
+            return;
+        }
+        waiting = false;
+        if (module is not null) await module.InvokeVoidAsync("close", popupKey);
+        Show(result);
+        StateHasChanged();
+    }
+
     private void Show(AuthOutcome result)
     {
         if (cancelled) return;
         if (result is SessionIssued session) { Dialog.Close(DialogResult.Ok(session.Session.Token)); return; }
         error = result switch
         {
-            ChallengeRequired { Challenge.Step: AuthenticationStep.Password or AuthenticationStep.ExistingMfa } => null,
+            ChallengeRequired { Challenge.Step: AuthenticationStep.Password or AuthenticationStep.ExistingMfa or AuthenticationStep.ProviderConfirmation } => null,
             AuthenticationRefused { Code: AuthenticationFailure.InvalidProof } => Loc["The password or authenticator code was not accepted. Check it and try again."],
             AuthenticationRefused { Code: AuthenticationFailure.AttemptsExhausted } => Loc["Too many attempts. Cancel and try again later."],
             AuthenticationRefused { Code: AuthenticationFailure.Unavailable } => Loc["Confirmation could not be completed. Your action has not been retried. Cancel and try again later."],
@@ -71,7 +179,20 @@
     private async Task Cancel()
     {
         cancelled = true; entry = new();
+        if (module is not null) { try { await module.InvokeVoidAsync("close", popupKey); } catch (JSException) { } }
         await Flow.CancelAsync();
         Dialog.Cancel();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (listener is not null) { await listener.InvokeVoidAsync("stop"); await listener.DisposeAsync(); }
+            if (module is not null) await module.DisposeAsync();
+        }
+        catch (JSDisconnectedException) { }
+        catch (JSException) { }
+        reference?.Dispose();
     }
 }

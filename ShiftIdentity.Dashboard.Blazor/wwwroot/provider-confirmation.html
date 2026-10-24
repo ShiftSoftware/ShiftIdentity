@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <title>Sign-in</title>
+    <style>
+        body { margin: 0; font-family: Arial, sans-serif; background: #f2f5f9; color: #243247; display: grid; place-items: center; min-height: 100vh; }
+        main { max-width: 360px; padding: 24px; text-align: center; line-height: 1.5; }
+    </style>
+</head>
+<body>
+    <main>
+        <p id="message">Returning to the page that asked for this sign-in…</p>
+    </main>
+    <script>
+        // The identity API sends a confirmation popup here after the provider returns: #result=ok, or #error= and why not,
+        // then &provider= and its name. It carries no credential. This page tells the dashboard that opened it, then closes.
+        (function () {
+            var hash = new URLSearchParams(window.location.hash.slice(1));
+            var data = { kind: 'shift-identity-provider-confirmation', error: hash.get('result') === 'ok' ? null : (hash.get('error') || 'InvalidGrant') };
+            var provider = { microsoft: 'Microsoft', google: 'Google' }[hash.get('provider')] || '';
+            history.replaceState(null, '', window.location.pathname);
+            try { if (typeof BroadcastChannel === 'function') { var channel = new BroadcastChannel(data.kind); channel.postMessage(data); channel.close(); } } catch (e) { }
+            try { if (window.opener) window.opener.postMessage(data, window.location.origin); } catch (e) { }
+            if (provider) document.title = provider + ' sign-in';
+            document.getElementById('message').textContent = data.error === null
+                ? 'Signed in. You can close this window if it stays open.'
+                : 'The ' + (provider ? provider + ' ' : '') + 'sign-in did not complete. You can close this window and try again.';
+            setTimeout(function () { window.close(); }, data.error === null ? 300 : 2500);
+        })();
+    </script>
+</body>
+</html>

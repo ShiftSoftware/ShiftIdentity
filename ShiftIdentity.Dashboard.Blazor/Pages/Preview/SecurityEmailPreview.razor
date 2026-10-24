@@ -38,6 +38,7 @@ else
         <a href="@($"{Constants.IdentityRoutePreifix}/Preview")">Preview</a>
         <a href="@Link(nameof(ResetPassword))" aria-current="@(Screen == nameof(ResetPassword) ? "page" : null)">Reset email</a>
         <a href="@Link(nameof(VerifyEmail))" aria-current="@(Screen == nameof(VerifyEmail) ? "page" : null)">Verify email</a>
+        <a href="@Link(MicrosoftOnly)" aria-current="@(Screen == MicrosoftOnly ? "page" : null)">Microsoft-only notice</a>
         <span></span>
         <button type="button" aria-pressed="@Pressed(mobile)" @onclick="() => mobile = !mobile">Mobile</button>
         <button type="button" aria-pressed="@Pressed(text)" @onclick="() => text = !text">Plain text</button>
@@ -75,21 +76,26 @@ else
 
     private AuthenticationOperationPurpose? Purpose => Screen switch
     {
-        nameof(ResetPassword) => AuthenticationOperationPurpose.PasswordResetEmail,
+        nameof(ResetPassword) or MicrosoftOnly => AuthenticationOperationPurpose.PasswordResetEmail,
         nameof(VerifyEmail) => AuthenticationOperationPurpose.EmailVerify,
         _ => null
     };
+
+    // The notice a reset request gets, instead of a link, from an account that signs in only with Microsoft.
+    private const string MicrosoftOnly = "MicrosoftOnly";
 
     private static string Link(string screen) => $"{Constants.IdentityRoutePreifix}/Preview/Email/{screen}";
     private static string Pressed(bool on) => on ? "true" : "false";
 
     private SecurityEmailBody Body() => SecurityEmailLayout.Compose(new(Purpose!.Value,
         longName ? Sample.LongName : Sample.FullName, Sample.Username,
-        Navigation.ToAbsoluteUri(SecurityLinkPreview.Link(Screen, PreviewState.Ready)).AbsoluteUri,
+        Screen == MicrosoftOnly ? Navigation.ToAbsoluteUri($"{Constants.IdentityRoutePreifix}/login").AbsoluteUri
+            : Navigation.ToAbsoluteUri(SecurityLinkPreview.Link(Screen, PreviewState.Ready)).AbsoluteUri,
         // A sample deadline; off shows the wording for a link without one.
         expiry ? DateTimeOffset.UtcNow.AddHours(1) : null)
     {
-        LogoSource = logo && !string.IsNullOrWhiteSpace(Options.LogoPath) ? Navigation.ToAbsoluteUri(Options.LogoPath).AbsoluteUri : null
+        LogoSource = logo && !string.IsNullOrWhiteSpace(Options.LogoPath) ? Navigation.ToAbsoluteUri(Options.LogoPath).AbsoluteUri : null,
+        MicrosoftOnly = Screen == MicrosoftOnly
     });
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

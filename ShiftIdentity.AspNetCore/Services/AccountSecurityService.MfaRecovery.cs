@@ -85,6 +85,8 @@ internal static partial class AccountSecurityService
                 AdmissionOperations.FailedAttempt(unit, now, "InvalidRecoveryProof");
                 return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.InvalidProof));
             }
+            // Recovery ends in a password session, which an account held to a trusted tenant does not have.
+            if (SignInMethodRefusal(services, unit.User, null, null) is { } method) return Task.FromResult<AuthOutcome>(method);
             AdmissionOperations.Finish(root, now);
             return Task.FromResult<AuthOutcome>(AdmissionOperations.Create(services, unit, AuthenticationOperationPurpose.MfaRecovery,
                 AuthenticationOperationState.AwaitingNewFactor, request.CodeChallenge, root.CreatedAt,

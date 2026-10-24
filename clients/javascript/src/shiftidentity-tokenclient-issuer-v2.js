@@ -35,16 +35,17 @@
     // The server writes these enums as numbers unless the host adds a string enum converter, so both forms are read.
     // The order must match AuthenticationFailure and AuthenticationStep in
     // ShiftIdentity.Core/Authentication/AuthOutcome.cs. A test compares them with that file.
-    // The refresh route does not return the last six. Five belong to the device sign-in routes, and
-    // RequiredPasswordChangeNotAllowed to the administrator's password set.
+    // The refresh route does not return AuthorizationPending to AccessNotCovered: five belong to the device sign-in
+    // routes, and the last two to the administrator's account changes. It does return the last two, when an account
+    // held to a trusted Microsoft tenant renews a session that tenant did not prove.
     var FAILURES = [
         'InvalidRequest', 'InvalidProof', 'InvalidGrant', 'StaleOperation', 'Expired', 'AttemptsExhausted',
         'AccountUnavailable', 'ClientDenied', 'Unavailable', 'InvalidNewPassword', 'DuplicateIdentifier',
         'ReauthenticationRequired', 'ProviderAccountNotFound', 'ProviderEmailUnverified',
         'AuthorizationPending', 'SlowDown', 'AccessDenied', 'ExpiredToken', 'DeviceSignInNotAllowed',
-        'RequiredPasswordChangeNotAllowed'
+        'RequiredPasswordChangeNotAllowed', 'AccessNotCovered', 'PasswordSignInDisabled', 'ProviderNotAllowedForAccount'
     ];
-    var STEPS = ['ExistingMfa', 'PasswordChange', 'MfaRecovery', 'NewMfa', 'EmailVerification', 'Password'];
+    var STEPS = ['ExistingMfa', 'PasswordChange', 'MfaRecovery', 'NewMfa', 'EmailVerification', 'Password', 'ProviderConfirmation'];
 
     // Refusals that mean "try again later". Every other refusal means the session cannot be renewed.
     var TRANSIENT_FAILURES = { Unavailable: true, AttemptsExhausted: true };

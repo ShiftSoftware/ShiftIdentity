@@ -149,6 +149,8 @@ public partial class AuthService
             if (!unit.User.AllowDeviceSignIn) return DeviceRefusal(AuthenticationFailure.DeviceSignInNotAllowed);
             if (unit.Security.FactorGeneration != row.FactorGeneration) return DeviceRefusal(AuthenticationFailure.StaleOperation);
             if (ProviderRefusal(services, row.SessionProvider) is { } providerRefusal) return DeviceRefusal(providerRefusal.Code);
+            if (SignInMethodRefusal(services, unit.User, row.SessionProvider, null) is not null)
+                return DeviceRefusal(AuthenticationFailure.AccessDenied);
             // The device session owes no step, so it can renew. The account owed none at approval either.
             if (SessionStep(services, unit, row.SessionProvider, mfa) is not null) return DeviceRefusal(AuthenticationFailure.StaleOperation);
             // The session dates from the password typed on the phone, on this host's own client. The approval already
@@ -247,6 +249,12 @@ public partial class AuthService
             {
                 unit.User.PasswordHash = upgrade.PasswordHash;
                 unit.User.Salt = upgrade.Salt;
+            }
+            // A device signs in with the account's password, which an account held to a trusted tenant does not use.
+            if (SignInMethodRefusal(services, unit.User, null, null) is { } method)
+            {
+                unit.Audit("DeviceSignInRefused", now, found!.ID);
+                return method;
             }
             if (!unit.User.AllowDeviceSignIn)
             {

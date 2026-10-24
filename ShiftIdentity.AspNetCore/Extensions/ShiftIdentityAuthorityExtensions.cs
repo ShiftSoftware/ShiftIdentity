@@ -56,6 +56,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     Microsoft = sp.GetService<MicrosoftSignIn>(),
                     Google = sp.GetService<GoogleSignIn>(),
                     Device = current.Device,
+                    TrustedTenants = current.TrustedTenants,
                     ActionTrees = sp.GetService<ITypeAuthService>()?.GetRegisteredActionTrees() is { Length: > 0 } trees ? trees : [typeof(ShiftIdentityActions)]
                 };
             });

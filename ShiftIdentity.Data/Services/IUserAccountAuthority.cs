@@ -31,6 +31,12 @@ public interface IUserAccountAuthority
     string? CheckNewPassword(string password, string username);
 
     /// <summary>
+    /// Whether an account with this email signs in only with Microsoft, through the trusted tenant its domain is held
+    /// to. Such an account is created without a chosen password and is never given one.
+    /// </summary>
+    bool SignsInWithMicrosoftOnly(string? email) => false;
+
+    /// <summary>
     /// Admits the pending changes inside the repository's open transaction on <paramref name="db"/>. A refusal throws
     /// a <c>ShiftEntityException</c> that carries the response message; nothing is flushed or committed here.
     /// </summary>
@@ -72,6 +78,12 @@ public sealed class UserAccountChange
     /// next sign-in. Such an account never owes a password change.
     /// </summary>
     public const string DeviceSignInPasswordChangeMessage = "Accounts that allow device sign-in can't be asked to change their password at next sign-in.";
+
+    /// <summary>
+    /// The message key for a refused password or device sign-in on an account whose email is on a trusted Microsoft
+    /// tenant's domain: it signs in only with Microsoft.
+    /// </summary>
+    public const string MicrosoftOnlyMessage = "This account signs in with Microsoft through its organization, so it can't have a password or device sign-in.";
 
     public required User User { get; init; }
 

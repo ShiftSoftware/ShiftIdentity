@@ -84,6 +84,8 @@ internal static partial class AccountSecurityService
             // A manual reset grant is handed to the operator, who can then set the target's password: the operator must
             // cover what the target holds. A link mailed to the target's own address needs no such check.
             if (refusal is null && purpose == AuthenticationOperationPurpose.PasswordResetManual) refusal = CoverRefusal(services, actor, unit);
+            // An account held to a trusted tenant has no password to reset.
+            if (refusal is null && purpose != AuthenticationOperationPurpose.EmailVerify) refusal = PasswordUseRefusal(services, unit.User.Email, unit.User);
             if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
             return Task.FromResult(CreateSecurityLink(services, unit, purpose, out message, actor.User.ID));
         }, ct);
@@ -113,6 +115,19 @@ internal static partial class AccountSecurityService
         { security.DeliveryWindowStart = now; security.DeliveryCount = 0; }
         if (now < security.DeliveryWindowStart || security.DeliveryCount >= services.DeliveryLimits.PerUserPerHour)
             return new SecurityDeliveryRequested();
+        // An account held to a trusted tenant has no password to reset. Its owner gets a notice that says to sign in with
+        // Microsoft instead of a link, under the same budget; the public answer stays the same as for any account.
+        if (purpose == AuthenticationOperationPurpose.PasswordResetEmail && RequiredTenant(services, unit.User) is not null)
+        {
+            security.LastDeliveryAt = now; security.DeliveryCount++;
+            message = new(Guid.NewGuid(), destination!, "Your account signs in with Microsoft", "", purpose, now)
+            {
+                UserID = services.HashIds.Encode<Core.DTOs.User.UserDTO>(unit.User.ID),
+                Username = unit.User.Username, FullName = unit.User.FullName, MicrosoftOnly = true
+            };
+            unit.Audit("PasswordResetMicrosoftOnly", now, actorUserID: actorID);
+            return new SecurityDeliveryRequested();
+        }
 
         var slot = FormattableString.Invariant($"{unit.User.ID}:{(verification ? "verify" : "reset")}");
         foreach (var old in unit.Links.Where(x => x.OutstandingLinkSlot == slot))
@@ -287,6 +302,9 @@ internal static partial class AccountSecurityService
                 (op.Destination != unit.User.Email?.Trim() || !IsDeliveryAddress(op.Destination))) ||
             (op.Purpose == AuthenticationOperationPurpose.PasswordResetEmail && !RecoveryContact.IsEligible(unit.User, unit.Security)))
             return Refuse(AuthenticationFailure.InvalidGrant);
+        // A reset link issued before the account was held to a trusted tenant no longer sets a password.
+        if (op.Purpose != AuthenticationOperationPurpose.EmailVerify && RequiredTenant(services, unit.User) is not null)
+            return Refuse(AuthenticationFailure.PasswordSignInDisabled);
         return services.Options.PolicyRevision != unit.Policy.Revision ? Refuse(AuthenticationFailure.Unavailable) : null;
     }
 

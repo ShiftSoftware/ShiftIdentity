@@ -31,6 +31,63 @@ namespace ShiftIdentity.Blazor.Tests;
 [Trait("Category", "Ui"), Collection("User form")]
 public sealed class AdministratorConfirmationUiTests
 {
+    private const string PopupModule = "./_content/ShiftSoftware.ShiftIdentity.Dashboard.Blazor/provider-popup.js";
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task A_provider_confirms_in_a_popup_and_the_frozen_action_continues_once(bool blocked, bool besidePassword)
+    {
+        var storage = new RecordingStore(); await storage.Session.StoreTokenAsync(Session());
+        var transport = new ConfirmationTransport { Microsoft = !besidePassword, Google = besidePassword, Pending = true };
+        await using var context = Context(storage.Session, transport);
+        var popup = context.JSInterop.SetupModule(PopupModule);
+        popup.Setup<bool>("open", _ => true).SetResult(!blocked);
+        popup.Setup<bool>("navigate", _ => true).SetResult(true);
+        popup.SetupModule(invocation => invocation.Identifier == "listen");
+        var dialogs = context.Render<MudDialogProvider>();
+        var cut = context.Render<UserList>();
+        var list = cut.FindComponent<ShiftList<UserListDTO>>().Instance;
+        list.SelectState.Total = 2;
+        list.SelectState.Toggle(new UserListDTO { ID = "42" });
+        list.SelectState.Toggle(new UserListDTO { ID = "43" });
+        cut.Render();
+        var action = cut.FindComponents<ActionButton<UserListDTO>>().Single(x => x.Instance.Endpoint!.EndsWith("VerifyPhones"));
+        action.Instance.Confirm = false;
+        var clicking = cut.InvokeAsync(() => action.Instance.OnClick.InvokeAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs()));
+        dialogs.WaitForElement("[data-testid=administrator-confirmation-provider-button]:not([disabled])");
+        // A Microsoft-only account has no password; a Google session keeps the password beside the Google button.
+        Assert.Equal(besidePassword, dialogs.FindAll("[data-testid=administrator-confirmation-form]").Count == 1);
+        Assert.Contains(besidePassword ? "Confirm with Google" : "Confirm with Microsoft", dialogs.Find("[data-testid=administrator-confirmation-provider-button]").TextContent);
+        await dialogs.Find("[data-testid=administrator-confirmation-provider-button]").ClickAsync(new());
+        if (blocked)
+        {
+            // The popup never opened: nothing was asked of the server, and the operator can allow pop-ups and retry.
+            dialogs.WaitForAssertion(() => Assert.Contains("blocked the Microsoft window", dialogs.Find("[data-testid=administrator-confirmation-error]").TextContent));
+            Assert.Equal(0, transport.Proofs);
+            dialogs.Find("[data-testid=administrator-confirmation-cancel]").Click();
+            await clicking;
+            Assert.Equal(0, transport.Commits);
+            return;
+        }
+        dialogs.WaitForElement("[data-testid=administrator-confirmation-waiting]");
+        Assert.Equal(besidePassword ? "https://accounts.google.com/o/oauth2/v2/auth?max_age=0" : "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?prompt=login",
+            popup.Invocations["navigate"].Single().Arguments[1]);
+        // Checking before Microsoft returned keeps the confirmation pending.
+        dialogs.Find("[data-testid=administrator-confirmation-check]").Click();
+        dialogs.WaitForAssertion(() => Assert.Contains("hasn't confirmed the sign-in yet", dialogs.Find("[data-testid=administrator-confirmation-error]").TextContent));
+        Assert.Equal(0, transport.Commits);
+        // The popup's page reports Microsoft's return.
+        transport.Pending = false;
+        var dialog = dialogs.FindComponent<ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.UserManager.AdministratorConfirmationDialog>();
+        await dialogs.InvokeAsync(() => dialog.Instance.ProviderReturned(null));
+        await clicking;
+        Assert.Equal(1, transport.Commits);
+        Assert.Equal(2, transport.Mutations.Count);
+        Assert.Equal(transport.Mutations[0], transport.Mutations[1]);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -246,6 +303,8 @@ public sealed class AdministratorConfirmationUiTests
         };
     }
     private static ChallengeRequired Challenge(AuthenticationStep step) => new(new(step, "confirmation-handle", DateTimeOffset.UtcNow.AddMinutes(5), AuthenticationOperationPurpose.AdministratorConfirmation));
+    private static ChallengeRequired ProviderChallenge() => new(new(AuthenticationStep.ProviderConfirmation, "confirmation-handle", DateTimeOffset.UtcNow.AddMinutes(5),
+        AuthenticationOperationPurpose.AdministratorConfirmation, Provider: SignInProvider.Microsoft));
     private static HttpResponseMessage Required() => new(HttpStatusCode.Forbidden)
     { Content = JsonContent.Create(new { Message = new { Title = "Confirm", Body = "Original server detail", For = AdministratorAuthentication.RequiredMessage } }) };
 
@@ -258,6 +317,12 @@ public sealed class AdministratorConfirmationUiTests
     private sealed class ConfirmationTransport : HttpMessageHandler
     {
         public bool Mfa { get; init; }
+        /// <summary>The operator's account signs in only with Microsoft: the confirmation is a Microsoft popup.</summary>
+        public bool Microsoft { get; init; }
+        /// <summary>The operator signed in with Google: the Google popup is offered beside the password.</summary>
+        public bool Google { get; init; }
+        /// <summary>The popup has not reported back yet: completing answers that Microsoft has not returned.</summary>
+        public bool Pending { get; set; }
         public List<string> Mutations { get; } = [];
         /// <summary>Passwords and codes sent to confirm the administrator.</summary>
         public int Proofs { get; private set; }
@@ -270,8 +335,10 @@ public sealed class AdministratorConfirmationUiTests
             {
                 var body = request.Content is null ? "" : await request.Content.ReadAsStringAsync(ct);
                 if (!path.EndsWith("/admin-confirmation") && !path.EndsWith("/cancel")) Proofs++;
-                AuthOutcome outcome = path.EndsWith("/admin-confirmation") ? Challenge(AuthenticationStep.Password)
+                AuthOutcome outcome = path.EndsWith("/admin-confirmation") ? Microsoft ? ProviderChallenge() : Google ? new ChallengeRequired(Challenge(AuthenticationStep.Password).Challenge with { Provider = SignInProvider.Google }) : Challenge(AuthenticationStep.Password)
                     : path.EndsWith("/cancel") ? new OperationCancelled()
+                    : path.EndsWith("/provider/start") ? new ProviderRedirect(Google ? "https://accounts.google.com/o/oauth2/v2/auth?max_age=0" : "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?prompt=login")
+                    : path.EndsWith("/provider/complete") && Pending ? new AuthenticationRefused(AuthenticationFailure.AuthorizationPending)
                     : body.Contains("wrong") ? new AuthenticationRefused(AuthenticationFailure.InvalidProof)
                     : path.EndsWith("/password") && Mfa ? Challenge(AuthenticationStep.ExistingMfa) : new SessionIssued(confirmed);
                 return new(HttpStatusCode.OK) { Content = JsonContent.Create<AuthOutcome>(outcome) };

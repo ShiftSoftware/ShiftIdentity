@@ -35,14 +35,14 @@
       "status": 200,
       "body": {
         "kind": "challenge",
-        "challenge": { "step": 1, "handle": null, "expiresAt": "2026-10-08T10:05:00+00:00", "purpose": 1, "newAuthenticator": null }
+        "challenge": { "step": 1, "handle": null, "expiresAt": "2026-10-08T10:05:00+00:00", "purpose": 1, "newAuthenticator": null, "provider": null }
       }
     },
     "challengeNewMfa": {
       "status": 200,
       "body": {
         "kind": "challenge",
-        "challenge": { "step": 3, "handle": null, "expiresAt": "2026-10-08T10:05:00+00:00", "purpose": 1, "newAuthenticator": null }
+        "challenge": { "step": 3, "handle": null, "expiresAt": "2026-10-08T10:05:00+00:00", "purpose": 1, "newAuthenticator": null, "provider": null }
       }
     },
     "sessionPascalCase": {
@@ -83,7 +83,7 @@
       "status": 200,
       "body": {
         "kind": "challenge",
-        "Challenge": { "Step": 1, "Handle": null, "ExpiresAt": "2026-10-08T10:05:00+00:00", "Purpose": 1, "NewAuthenticator": null }
+        "Challenge": { "Step": 1, "Handle": null, "ExpiresAt": "2026-10-08T10:05:00+00:00", "Purpose": 1, "NewAuthenticator": null, "Provider": null }
       }
     }
   }

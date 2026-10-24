@@ -33,6 +33,8 @@ internal sealed record IdentityAdmissionServices(
     internal GoogleSignIn? Google { get; init; }
     /// <summary>Device sign-in, when the host configured device clients; null otherwise.</summary>
     internal DeviceGrantOptions? Device { get; init; }
+    /// <summary>The trusted Microsoft tenants and the email domains held to them; none unless configured.</summary>
+    internal TrustedTenants TrustedTenants { get; init; } = TrustedTenants.None;
     /// <summary>The provider's sign-in when the host turned it on; null otherwise.</summary>
     internal ProviderSignIn? Provider(Core.Authentication.SignInProvider provider) => provider switch
     {
@@ -66,7 +68,11 @@ internal sealed record SessionProof(
     long UserID, long SecurityVersion, long PolicyRevision, long FactorGeneration,
     bool MfaSatisfied, DateTimeOffset AuthenticatedAt, string ClientID, string Audience, bool External, string Subject,
     string? AppBinding = null, DateTimeOffset? LegacyCompatibilityExpiresAt = null,
-    Core.Authentication.SignInProvider? Provider = null);
+    Core.Authentication.SignInProvider? Provider = null, string? Tenant = null, bool ProviderConfirmed = false)
+{
+    // ProviderConfirmed: the provider authenticated the person again (prompt=login) for an administrator confirmation,
+    // so AuthenticatedAt is that fresh proof. An ordinary provider sign-in may reuse the provider's own session.
+}
 
 internal sealed record SignedInContext(SessionProof Proof, DateTimeOffset ExpiresAt);
 

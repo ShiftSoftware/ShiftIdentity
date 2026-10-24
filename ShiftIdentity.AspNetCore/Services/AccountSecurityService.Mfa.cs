@@ -23,7 +23,8 @@ internal static partial class AccountSecurityService
         {
             var refusal = SignedInRefusal(services, unit, signedIn);
             return Task.FromResult<AuthOutcome>(refusal is not null ? refusal :
-                new AuthenticatorStatus(unit.Security.ProtectedTotpSecret is not null, unit.Security.LocalMfaRecoveryRequired, MfaMandatory(unit)));
+                new AuthenticatorStatus(unit.Security.ProtectedTotpSecret is not null, unit.Security.LocalMfaRecoveryRequired, MfaMandatory(unit),
+                    MicrosoftOnly: RequiredTenant(services, unit.User) is not null));
         }, ct);
     });
 
@@ -37,6 +38,8 @@ internal static partial class AccountSecurityService
         {
             var refusal = SignedInRefusal(services, unit, signedIn);
             if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
+            // An account held to a trusted tenant proves itself with Microsoft, never with a Shift authenticator.
+            if (RequiredTenant(services, unit.User) is not null) return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.PasswordSignInDisabled));
             var now = services.Clock.GetUtcNow();
             if (unit.Security.LocalMfaRecoveryRequired) return Task.FromResult<AuthOutcome>(Restricted(AuthenticationStep.MfaRecovery, now));
             if (unit.User.RequireChangePassword) return Task.FromResult<AuthOutcome>(Restricted(AuthenticationStep.PasswordChange, now));
@@ -146,7 +149,7 @@ internal static partial class AccountSecurityService
                     unit.Security.MfaRecoveryOperationID = null;
                     return Task.FromResult<AuthOutcome>(new MfaChanged(new ReturnToLogin()));
                 }
-                var remaining = SessionStep(services, unit, op.SessionProvider, true);
+                var remaining = SessionStep(services, unit, op.SessionProvider, true, op.SessionTenant);
                 return Task.FromResult<AuthOutcome>(new MfaChanged(remaining is { } next ? Restricted(next, now)
                     : Issue(services, unit, Proof(unit, services, true, authenticatedAt), now)));
             }

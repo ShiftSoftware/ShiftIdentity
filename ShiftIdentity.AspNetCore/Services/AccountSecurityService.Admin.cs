@@ -38,7 +38,8 @@ internal static partial class AccountSecurityService
         var read = await services.Store.AdmitAdminAsync(who.UserID, request.UserID, services.Client, (actor, unit) =>
         {
             // A new password always needs cover (UserAccountChange.NeedsCover).
-            var refusal = AdminTargetRefusal(services, actor, unit, who, coverRequired: true) ?? ChangeRequestRefusal(unit, request.RequireChangeAtNextLogin);
+            var refusal = AdminTargetRefusal(services, actor, unit, who, coverRequired: true) ??
+                PasswordUseRefusal(services, unit.User.Email, unit.User) ?? ChangeRequestRefusal(unit, request.RequireChangeAtNextLogin);
             return Task.FromResult(new SnapshotResult(refusal is null ? new(unit.User, unit.Security, unit.Policy) : null, refusal));
         }, ct);
         if (read.Failure is not null) return read.Failure;
@@ -51,7 +52,7 @@ internal static partial class AccountSecurityService
         services.Observe?.Invoke("AdminPasswordPrepared");
         return await services.Store.AdmitAdminAsync<AuthOutcome>(who.UserID, request.UserID, services.Client, (actor, unit) =>
         {
-            var refusal = AdminTargetRefusal(services, actor, unit, who, coverRequired: true);
+            var refusal = AdminTargetRefusal(services, actor, unit, who, coverRequired: true) ?? PasswordUseRefusal(services, unit.User.Email, unit.User);
             if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
             // A credential that changed since the snapshot (self-service change, reset, another operator) is never overwritten.
             if (!SameCredential(snapshot, unit)) return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.StaleOperation));
@@ -174,6 +175,14 @@ internal static partial class AccountSecurityService
         ChangeRequestRefusal(unit.User.AllowDeviceSignIn, requireChangeAtNextLogin);
 
     /// <summary>
+    /// Refuses giving a password, a reset or device sign-in to an account held to a trusted tenant: it signs in only with
+    /// Microsoft. <paramref name="email"/> is the email the change leaves on the account. The built-in administrator
+    /// is never held to a tenant.
+    /// </summary>
+    internal static AuthenticationRefused? PasswordUseRefusal(IdentityAdmissionServices services, string? email, Data.Entities.User user) =>
+        !user.IsProtected && services.TrustedTenants.ForEmail(email) is not null ? Refuse(AuthenticationFailure.PasswordSignInDisabled) : null;
+
+    /// <summary>
     /// Disables the authenticator and requires individual local recovery, whatever the global MFA policy says: the
     /// factor generation advances, the protected secret and its replay state are cleared, and a password alone can
     /// no longer open an ordinary session. The caller decides whether the account qualifies, increments the version
@@ -273,10 +282,11 @@ internal static partial class AccountSecurityService
         if (refusal is not null) return refusal;
         if (!Permitted(actor, permitted)) return Refuse(AuthenticationFailure.ClientDenied);
         var now = services.Clock.GetUtcNow();
-        var step = SessionStep(services, actor, signedIn.Proof.Provider, signedIn.Proof.MfaSatisfied);
+        var step = SessionStep(services, actor, signedIn.Proof.Provider, signedIn.Proof.MfaSatisfied, signedIn.Proof.Tenant);
         if (step is not null && step != AuthenticationStep.ExistingMfa) return Refuse(AuthenticationFailure.InvalidProof);
-        // A provider sign-in proves no password: protected changes ask for the administrator's own confirmation.
-        if (requireRecent && (signedIn.Proof.Provider is not null || now < signedIn.Proof.AuthenticatedAt ||
+        // A provider sign-in proves no password: protected changes ask for the administrator's own confirmation. A session
+        // from a provider confirmation (a fresh sign-in at the provider, in the confirmation popup) is that confirmation.
+        if (requireRecent && ((signedIn.Proof.Provider is not null && !signedIn.Proof.ProviderConfirmed) || now < signedIn.Proof.AuthenticatedAt ||
             now >= signedIn.Proof.AuthenticatedAt.AddSeconds(services.Options.AdministratorAuthenticationGraceSeconds) || step == AuthenticationStep.ExistingMfa))
             return Refuse(AuthenticationFailure.ReauthenticationRequired);
         return step is not null ? Refuse(AuthenticationFailure.InvalidProof) : null;

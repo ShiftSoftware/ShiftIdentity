@@ -20,6 +20,8 @@ internal sealed class AdmissionUserAccountAuthority(IdentityAdmissionServices se
     public string? CheckNewPassword(string password, string username) =>
         services.PasswordPolicy.Validate(password, username) is { } failure ? NewPasswordPolicy.Describe(failure) : null;
 
+    public bool SignsInWithMicrosoftOnly(string? email) => services.TrustedTenants.ForEmail(email) is not null;
+
     public async Task AdmitAsync(ShiftIdentityDbContext db, IReadOnlyList<UserAccountChange> changes, CancellationToken cancellationToken)
     {
         var actor = AccountSecurityService.ReadActor(services, http.HttpContext)
@@ -73,6 +75,7 @@ internal sealed class AdmissionUserAccountAuthority(IdentityAdmissionServices se
                 ? "Another account already uses this email." : "Another account already uses this username."),
             AdmissionRefusalReason.Invalid => (HttpStatusCode.BadRequest, "Validation Error",
                 refused.Code == AuthenticationFailure.RequiredPasswordChangeNotAllowed ? UserAccountChange.DeviceSignInPasswordChangeMessage
+                : refused.Code == AuthenticationFailure.PasswordSignInDisabled ? UserAccountChange.MicrosoftOnlyMessage
                 : refused.Field == nameof(Data.Entities.User.Email) ? "Invalid Email Address" : "Check the entered value and try again."),
             AdmissionRefusalReason.Unavailable => (HttpStatusCode.ServiceUnavailable, "Error", "The change could not be saved. Please wait and try again."),
             _ => refused.Code switch

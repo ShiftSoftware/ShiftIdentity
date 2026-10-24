@@ -47,6 +47,8 @@ internal sealed class IdentityAuthorityRegistration
     public bool GoogleReady(GoogleSignInSettings? google) => google is { Enabled: true } && GoogleProblem is null;
     /// <summary>Device sign-in, when the host configured device clients; null otherwise.</summary>
     public DeviceGrantOptions? Device { get; private init; }
+    /// <summary>The trusted Microsoft tenants; none unless the host configured them.</summary>
+    public TrustedTenants TrustedTenants { get; private init; } = TrustedTenants.None;
 
     internal static bool IsWebUrl(string value) => Uri.TryCreate(value, UriKind.Absolute, out var uri)
         && uri.Scheme is "http" or "https" && string.IsNullOrEmpty(uri.UserInfo);
@@ -94,6 +96,7 @@ internal sealed class IdentityAuthorityRegistration
             throw Invalid("Authority.AdministratorAuthenticationGraceSeconds", "must be at least 1 second.");
         var microsoftProblem = ValidateMicrosoft(settings.Microsoft);
         var googleProblem = ValidateGoogle(settings.Google);
+        var trustedTenants = TrustedTenants.Create(settings.Microsoft, Invalid);
         var device = ValidateDevice(settings, configuration.FrontEndUrl);
         var audience = First(settings.Audience, token.Audience, issuer);
         var refreshAudience = First(settings.RefreshAudience, configuration.RefreshToken?.Audience, issuer);
@@ -101,7 +104,7 @@ internal sealed class IdentityAuthorityRegistration
             AccessLifetimeSeconds: accessLifetime, RefreshLifetimeSeconds: refreshLifetime,
             AdministratorAuthenticationGraceSeconds: settings.AdministratorAuthenticationGraceSeconds);
         return new(options, new AuthenticationClient(clientID, audience), configuration)
-        { MicrosoftProblem = microsoftProblem, GoogleProblem = googleProblem, Device = device };
+        { MicrosoftProblem = microsoftProblem, GoogleProblem = googleProblem, Device = device, TrustedTenants = trustedTenants };
     }
 
     // Device sign-in is on when device clients are configured. A malformed client, phone page, lifetime or interval

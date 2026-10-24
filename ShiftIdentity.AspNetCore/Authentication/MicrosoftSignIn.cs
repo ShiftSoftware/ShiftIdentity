@@ -33,6 +33,19 @@ internal sealed class MicrosoftSignIn(MicrosoftSignInSettings settings, string? 
         }).ToUriComponent();
 
     /// <summary>
+    /// The authorize URL for an administrator confirmation: the same request, but Microsoft must authenticate the person
+    /// again (<c>prompt=login</c>) rather than reuse its own session, and it is pointed at the account and its tenant.
+    /// </summary>
+    public override string ConfirmationUrl(string state, string nonce, string codeChallenge, string redirectUri, string? loginHint, string? domainHint) =>
+        "https://login.microsoftonline.com/common/oauth2/v2.0/authorize" + QueryString.Create(new Dictionary<string, string?>
+        {
+            ["client_id"] = ClientId, ["response_type"] = "code", ["redirect_uri"] = redirectUri,
+            ["response_mode"] = "query", ["scope"] = "openid profile email", ["state"] = state, ["nonce"] = nonce,
+            ["code_challenge"] = codeChallenge, ["code_challenge_method"] = "S256",
+            ["prompt"] = "login", ["login_hint"] = loginHint, ["domain_hint"] = domainHint
+        }.Where(x => x.Value is not null)).ToUriComponent();
+
+    /// <summary>
     /// The identity in a validated token. An email counts as verified only when Microsoft says so: a personal account's
     /// (Microsoft verified it at sign-up), or a work or school account's with <c>xms_edov</c> true (the domain's owner).
     /// A directory administrator can set any unverified email on a user, so anything else is not proof of the address.
@@ -46,8 +59,19 @@ internal sealed class MicrosoftSignIn(MicrosoftSignInSettings settings, string? 
         var tenantText = tenantID.ToString("D");
         var personal = tenantText == ConsumerTenant;
         var verified = email is not null && (personal || IsTrue(One(claims, "xms_edov")));
-        return new(tenantText, objectGuid.ToString("D"), email, verified, personal);
+        return new(tenantText, objectGuid.ToString("D"), email, verified, personal)
+        { AuthenticatedAt = ReadAuthenticationTime(claims), Guest = IsGuest(claims, tenantText) };
     }
+
+    /// <summary>
+    /// Whether the account is a guest in the tenant that issued the token: <c>tid</c> is that tenant, while <c>idp</c>
+    /// names where the person actually signed in (another tenant, or live.com for a personal account). A tenant's own
+    /// users carry no <c>idp</c>, or one naming the tenant itself. A guest is never that tenant's user for the
+    /// trusted-tenant rules: its sign-in followed its home's policy, not the tenant's.
+    /// </summary>
+    internal static bool IsGuest(ClaimsIdentity claims, string tenant) =>
+        claims.FindAll("idp").Select(x => x.Value).ToArray() is { Length: > 0 } providers &&
+        !providers.All(x => x.Contains(tenant, StringComparison.OrdinalIgnoreCase));
 }
 
 /// <summary>Redeems the code at Microsoft's token endpoint and validates the ID token against Microsoft's published keys.</summary>

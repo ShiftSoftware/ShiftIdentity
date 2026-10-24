@@ -47,8 +47,10 @@ public static class IdentitySecurityModel
                 t.HasCheckConstraint("CK_AuthenticationOperation_Password", "([PasswordChangeOrigin] IS NULL OR [PasswordChangeOrigin] IN (1,2)) AND (([PendingPasswordHash] IS NULL AND [PendingPasswordSalt] IS NULL) OR ([Purpose] = 4 AND [State] IN (1,7) AND [PendingPasswordHash] IS NOT NULL AND [PendingPasswordSalt] IS NOT NULL))");
                 t.HasCheckConstraint("CK_AuthenticationOperation_Factor", "[ProtectedPendingTotpSecret] IS NULL OR ([Purpose] IN (3,4,5,6) AND [State] = 7)");
                 t.HasCheckConstraint("CK_AuthenticationOperation_Recovery", "([RecoveryCodeDigest] IS NULL OR ([Purpose] = 6 AND [State] = 8 AND [ParentID] IS NULL)) AND ([OutstandingRecoveryUserID] IS NULL OR ([Purpose] = 6 AND [ParentID] IS NULL AND [OutstandingRecoveryUserID] = [UserID]))");
-                // A provider proof continues only into a sign-in step (login MFA or enrollment) or an app code; it is pending only as a provider completion.
-                t.HasCheckConstraint("CK_AuthenticationOperation_Provider", "([SessionProvider] IS NULL OR ([SessionProvider] IN (1, 2) AND [Purpose] IN (1,3,10,14))) AND ([State] <> 12 OR ([Purpose] = 14 AND [SessionProvider] IS NOT NULL)) AND ([Purpose] <> 14 OR [State] IN (2,3,6,12))");
+                // A provider proof continues only into a sign-in step (login MFA or enrollment), an app code or an administrator
+                // confirmation; it is pending as a provider completion, or as an administrator confirmation waiting for Microsoft.
+                // A tenant goes only with a Microsoft proof.
+                t.HasCheckConstraint("CK_AuthenticationOperation_Provider", "([SessionProvider] IS NULL OR ([SessionProvider] IN (1, 2) AND [Purpose] IN (1,3,10,13,14))) AND ([State] <> 12 OR ([Purpose] = 14 AND [SessionProvider] IS NOT NULL) OR [Purpose] = 13) AND ([Purpose] <> 14 OR [State] IN (2,3,6,12)) AND ([SessionTenant] IS NULL OR [SessionProvider] = 1)");
                 t.HasCheckConstraint("CK_AuthenticationOperation_Version", "[SecurityVersion] >= 1 AND [FactorGeneration] >= 1 AND [PolicyRevision] >= 1 AND [FailedAttempts] BETWEEN 0 AND 5 AND [ExpiresAt] > [CreatedAt]");
             });
             e.HasKey(x => x.ID);
@@ -59,6 +61,7 @@ public static class IdentitySecurityModel
             e.Property(x => x.CodeChallenge).HasMaxLength(128);
             e.Property(x => x.SourceSessionDigest).HasMaxLength(32);
             e.Property(x => x.AppBinding).HasMaxLength(64);
+            e.Property(x => x.SessionTenant).HasMaxLength(36);
             e.Property(x => x.PendingPasswordHash).HasMaxLength(256);
             e.Property(x => x.PendingPasswordSalt).HasMaxLength(128);
             e.Property(x => x.ProtectedPendingTotpSecret).HasMaxLength(1024);

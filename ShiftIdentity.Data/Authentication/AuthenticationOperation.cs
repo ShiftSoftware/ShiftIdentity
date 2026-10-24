@@ -34,6 +34,11 @@ public sealed class AuthenticationOperation
     /// made from its session. Null for a local proof.
     /// </summary>
     public SignInProvider? SessionProvider { get; set; }
+    /// <summary>
+    /// The Microsoft tenant (<c>tid</c>) of the account that proved it, alongside <see cref="SessionProvider"/> Microsoft.
+    /// It decides the trusted-tenant rules: who must sign in through which tenant, and whose sign-ins skip Shift MFA.
+    /// </summary>
+    public string? SessionTenant { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset ExpiresAt { get; set; }
     public DateTimeOffset? CompletedAt { get; set; }

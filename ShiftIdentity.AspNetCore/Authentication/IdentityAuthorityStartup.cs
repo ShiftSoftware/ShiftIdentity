@@ -31,6 +31,9 @@ internal sealed class IdentityAuthorityStartup(IServiceScopeFactory scopes, Iden
                 logger.LogWarning("Security emails cannot be sent: {Problem} The identity authority starts anyway, and each security email fails until this is fixed.", problem);
             if (registration.MicrosoftProblem is { } microsoftProblem)
                 logger.LogWarning("Microsoft sign-in is enabled but stays off: {Problem} The login screen shows no Microsoft button until this is fixed.", microsoftProblem);
+            if (registration.MicrosoftProblem is not null && registration.TrustedTenants.Any)
+                logger.LogWarning("Accounts on the trusted Microsoft tenants' domains ({Domains}) cannot sign in until Microsoft sign-in works: they have no password sign-in.",
+                    string.Join(", ", registration.TrustedTenants.Domains));
             if (registration.GoogleProblem is { } googleProblem)
                 logger.LogWarning("Google sign-in is enabled but stays off: {Problem} The login screen shows no Google button until this is fixed.", googleProblem);
             var db = scope.ServiceProvider.GetRequiredService<ShiftIdentityDbContext>();

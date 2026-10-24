@@ -54,6 +54,7 @@ internal static partial class AccountSecurityService
         {
             var refusal = SignedInRefusal(services, unit, signedIn);
             if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
+            if (RequiredTenant(services, unit.User) is not null) return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.PasswordSignInDisabled));
             var now = services.Clock.GetUtcNow();
             if (unit.Security.LocalMfaRecoveryRequired) return Task.FromResult<AuthOutcome>(Restricted(AuthenticationStep.MfaRecovery, now));
             if (unit.User.RequireChangePassword) return Task.FromResult<AuthOutcome>(Restricted(AuthenticationStep.PasswordChange, now));

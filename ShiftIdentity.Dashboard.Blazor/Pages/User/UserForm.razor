@@ -109,6 +109,15 @@ else
                                      @bind-Value="@context.Item.IsActive" />
                     </div>
 
+                    @if (MicrosoftOnly(context.Item) && string.IsNullOrEmpty(context.Item.Password))
+                    {
+                        @* An account held to a trusted Microsoft tenant has no password: it signs in only with Microsoft. *@
+                        <MudAlert Severity="Severity.Info" Dense="true" Icon="@Icons.Material.Filled.Business" Class="mt-3" data-testid="user-microsoft-only">
+                            @Loc["This user's email is on an organization domain that signs in with Microsoft. The user has no password and no device sign-in, and confirms with Microsoft."]
+                        </MudAlert>
+                    }
+                    else
+                    {
                     @* Keep the password, generator and next-sign-in choice together when the controls wrap. *@
                     <div class="user-security-password">
                         <div class="user-security-password-field" data-testid="user-password">
@@ -153,10 +162,12 @@ else
                             </MudStack>
                         </MudAlert>
                     }
+                    }
                 </section>
 
-                @* Device sign-in exists only with the staged authority. Off by default; an account made for a device gets it. *@
-                @if (DashboardOptions.StagedAuthority)
+                @* Device sign-in exists only with the staged authority. Off by default; an account made for a device gets it.
+                   An account that signs in only with Microsoft never gets it; one that already has it can still turn it off. *@
+                @if (DashboardOptions.StagedAuthority && (!MicrosoftOnly(context.Item) || context.Item.AllowDeviceSignIn))
                 {
                     <section class="user-security-group" aria-label="@Loc["Device sign-in"]" data-testid="user-security-device">
                         <div class="user-security-group-heading">
@@ -235,7 +246,8 @@ else
                 {
                     <section class="user-security-group user-security-email" aria-label="@Loc["Email actions"]" data-testid="user-security-email">
                         <MudText Typo="Typo.subtitle2" Class="mb-3">@Loc["Email actions"]</MudText>
-                        <ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.UserManager.SecurityEmailAdminActions UserKey="@context.Item.ID" Disabled="@context.Disabled" />
+                        <ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.UserManager.SecurityEmailAdminActions UserKey="@context.Item.ID" Disabled="@context.Disabled"
+                                                                                                         MicrosoftOnly="@MicrosoftOnly(context.Item)" />
                     </section>
                 }
             </div>
@@ -373,8 +385,18 @@ else
     // where it is mandatory, and null until it is read or when it cannot be read.
     private bool? mfaMandatory;
 
+    // The host's sign-in providers, with the email domains held to its trusted Microsoft tenants; null until read.
+    private ShiftSoftware.ShiftIdentity.Core.Authentication.SignInProviders? signInProviders;
+
+    // An account whose email is on a trusted tenant's domain signs in only with Microsoft: no password, reset or device sign-in.
+    private bool MicrosoftOnly(UserDTO item) => signInProviders?.RequiresMicrosoft(item.Email) == true;
+
     protected override async Task OnInitializedAsync()
     {
+        if (DashboardOptions.StagedAuthority)
+            signInProviders = await new ShiftSoftware.ShiftIdentity.Blazor.Services.AuthenticationFlow(
+                Services.GetRequiredService<ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services.StagedAuthorityHttpClient>(),
+                Services.GetRequiredService<ShiftSoftware.ShiftIdentity.Blazor.IdentitySession>()).ReadProvidersAsync();
         if (AuthenticationStateTask is null) return;
         var user = (await AuthenticationStateTask).User;
         operatorKey = user.FindFirst("sub")?.Value ?? user.FindFirst("nameid")?.Value

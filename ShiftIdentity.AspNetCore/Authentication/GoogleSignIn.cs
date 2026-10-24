@@ -34,6 +34,21 @@ internal sealed class GoogleSignIn(GoogleSignInSettings settings, string? frontE
         }).ToUriComponent();
 
     /// <summary>
+    /// The authorize URL for an administrator confirmation. Google has no <c>prompt=login</c>: <c>max_age=0</c> asks it to
+    /// authenticate the person again, and the <c>claims</c> request asks for <c>auth_time</c> in the ID token, which Google
+    /// sends only when asked and the confirmation requires.
+    /// </summary>
+    public override string ConfirmationUrl(string state, string nonce, string codeChallenge, string redirectUri, string? loginHint, string? domainHint) =>
+        "https://accounts.google.com/o/oauth2/v2/auth" + QueryString.Create(new Dictionary<string, string?>
+        {
+            ["client_id"] = ClientId, ["response_type"] = "code", ["redirect_uri"] = redirectUri,
+            ["scope"] = "openid email", ["state"] = state, ["nonce"] = nonce,
+            ["code_challenge"] = codeChallenge, ["code_challenge_method"] = "S256",
+            ["prompt"] = "select_account", ["max_age"] = "0", ["login_hint"] = loginHint,
+            ["claims"] = """{"id_token":{"auth_time":{"essential":true}}}"""
+        }.Where(x => x.Value is not null)).ToUriComponent();
+
+    /// <summary>
     /// The identity in a validated token, bound to Google's issuer and <c>sub</c> (stable, never reused, the same for
     /// every OAuth client). The email counts as verified when Google says so (<c>email_verified</c>): a Gmail or
     /// Workspace address, or another address Google checked when the account was made (owner decision, 7 October
@@ -47,7 +62,7 @@ internal sealed class GoogleSignIn(GoogleSignInSettings settings, string? frontE
         var email = ReadEmail(claims);
         var verified = email is not null && IsTrue(One(claims, "email_verified"));
         var workspace = !string.IsNullOrWhiteSpace(One(claims, "hd"));
-        return new(Issuer, subject, email, verified, !workspace);
+        return new(Issuer, subject, email, verified, !workspace) { AuthenticatedAt = ReadAuthenticationTime(claims) };
     }
 }
 

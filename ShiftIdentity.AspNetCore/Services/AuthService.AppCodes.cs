@@ -49,7 +49,7 @@ public partial class AuthService
                 AppBinding = BindApp(unit.App!), SessionAuthenticatedAt = signedIn.Proof.AuthenticatedAt,
                 SessionMfaSatisfied = signedIn.Proof.MfaSatisfied,
                 SessionLegacyCompatibilityExpiresAt = signedIn.Proof.LegacyCompatibilityExpiresAt,
-                SessionProvider = signedIn.Proof.Provider,
+                SessionProvider = signedIn.Proof.Provider, SessionTenant = signedIn.Proof.Tenant,
                 CreatedAt = now, ExpiresAt = expiresAt
             };
             unit.AddOperation(op);
@@ -106,12 +106,14 @@ public partial class AuthService
             }
             if (ProviderRefusal(targetServices, op.SessionProvider) is { } providerRefusal)
                 return Task.FromResult<AuthOutcome>(providerRefusal);
-            var next = SessionStep(targetServices, unit, op.SessionProvider, mfa);
+            if (SignInMethodRefusal(targetServices, unit.User, op.SessionProvider, op.SessionTenant) is { } method)
+                return Task.FromResult<AuthOutcome>(method);
+            var next = SessionStep(targetServices, unit, op.SessionProvider, mfa, op.SessionTenant);
             var compatibility = op.SessionLegacyCompatibilityExpiresAt;
             if (compatibility is null && next is not null) return Task.FromResult<AuthOutcome>(Restricted(next.Value, now));
             var proof = new SessionProof(op.UserID, op.SecurityVersion, op.PolicyRevision, op.FactorGeneration,
                 mfa, authenticatedAt, destination.ID, destination.Audience, true,
-                services.HashIds.Encode<UserDTO>(unit.User.ID), op.AppBinding, compatibility, op.SessionProvider);
+                services.HashIds.Encode<UserDTO>(unit.User.ID), op.AppBinding, compatibility, op.SessionProvider, op.SessionTenant);
             ClearAppCode(op, now);
             unit.Audit("AppCodeExchanged", now, op.ID);
             // Transferring an existing session does not establish fresh authentication or clear proof failures.
@@ -158,6 +160,6 @@ public partial class AuthService
         op.State = AuthenticationOperationState.Completed; op.CompletedAt = now;
         op.CodeChallenge = ""; op.HandleDigest = []; op.AppBinding = null;
         op.SessionAuthenticatedAt = null; op.SessionMfaSatisfied = null;
-        op.SessionLegacyCompatibilityExpiresAt = null; op.SessionProvider = null;
+        op.SessionLegacyCompatibilityExpiresAt = null; op.SessionProvider = null; op.SessionTenant = null;
     }
 }

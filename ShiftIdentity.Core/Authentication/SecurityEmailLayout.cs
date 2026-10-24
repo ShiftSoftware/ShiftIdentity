@@ -19,6 +19,12 @@ public sealed record SecurityEmailFields(AuthenticationOperationPurpose Purpose,
 
     /// <summary>On the provider-link notice: the provider of that account. A notice without one is Microsoft's.</summary>
     public SignInProvider? Provider { get; init; }
+
+    /// <summary>
+    /// The notice sent instead of a reset link to an account that signs in only with Microsoft through its organization.
+    /// <see cref="Link"/> opens the login screen.
+    /// </summary>
+    public bool MicrosoftOnly { get; init; }
 }
 
 /// <summary>A composed security email.</summary>
@@ -32,7 +38,7 @@ public static class SecurityEmailLayout
 {
     public static SecurityEmailBody Compose(SecurityEmailFields fields)
     {
-        if (fields.Purpose == AuthenticationOperationPurpose.ProviderLogin) return ComposeProviderNotice(fields);
+        if (fields.Purpose == AuthenticationOperationPurpose.ProviderLogin || fields.MicrosoftOnly) return ComposeProviderNotice(fields);
         var verification = fields.Purpose switch
         {
             AuthenticationOperationPurpose.EmailVerify => true,
@@ -83,14 +89,19 @@ public static class SecurityEmailLayout
     /// <summary>
     /// The notice sent when a provider account first signs in to an account. It carries no grant; its button opens the
     /// login screen. It names the provider account that can now sign in, so a mistaken email address shows at once.
+    /// The same layout answers a reset request from an account that signs in only with Microsoft.
     /// </summary>
     private static SecurityEmailBody ComposeProviderNotice(SecurityEmailFields fields)
     {
         var provider = fields.Provider == SignInProvider.Google ? "Google" : "Microsoft";
-        var title = provider + " sign-in linked to your account";
+        var title = fields.MicrosoftOnly ? "Your account signs in with Microsoft" : provider + " sign-in linked to your account";
         var account = string.IsNullOrWhiteSpace(fields.ProviderAccount) ? $"A {provider} account" : $"The {provider} account " + fields.ProviderAccount;
-        var explanation = account + " just signed in to your account. From now on it can sign in without your password.";
-        const string caution = "If this was not you, contact your administrator now: your email address may be on the wrong account.";
+        var explanation = fields.MicrosoftOnly
+            ? "Someone asked to reset the password of your account. Your account has no password to reset: it signs in with your organization's Microsoft account. On the sign-in page, choose Sign in with Microsoft."
+            : account + " just signed in to your account. From now on it can sign in without your password.";
+        var caution = fields.MicrosoftOnly
+            ? "If you did not ask for this, you can ignore this email. Nothing about your account has changed."
+            : "If this was not you, contact your administrator now: your email address may be on the wrong account.";
         var greeting = string.IsNullOrWhiteSpace(fields.FullName) ? "Hello," : "Hello " + fields.FullName + ",";
         static string H(string value) => WebUtility.HtmlEncode(value);
         var logo = string.IsNullOrWhiteSpace(fields.LogoSource) ? ""

@@ -90,6 +90,14 @@ internal static class AdmissionEndpoints
             Result(await AccountSecurityService.ProveAdministratorPasswordAsync(services, context.Request.Headers.Authorization.ToString(), request, ct)));
         group.MapPost("/admin-confirmation/mfa", async (AdministratorMfaProofRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
             Result(await AccountSecurityService.ProveAdministratorMfaAsync(services, context.Request.Headers.Authorization.ToString(), request, ct)));
+        // An account held to a trusted tenant confirms with a fresh Microsoft sign-in in a popup: start gives the popup's
+        // address, Microsoft returns to the provider callback, and complete issues the confirmed session.
+        group.MapPost("/admin-confirmation/provider/start", async (AdministratorProviderConfirmationRequest request, HttpContext context,
+            IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.StartAdministratorProviderAsync(services, context.Request, context.Request.Headers.Authorization.ToString(), request, ct)));
+        group.MapPost("/admin-confirmation/provider/complete", async (AdministratorProviderConfirmationRequest request, HttpContext context,
+            IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.CompleteAdministratorProviderAsync(services, context.Request.Headers.Authorization.ToString(), request, ct)));
         group.MapPost("/password-change", async (StartPasswordChangeRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
             Result(await AccountSecurityService.BeginPasswordChangeAsync(services, context.Request.Headers.Authorization.ToString(), request, ct)));
         group.MapPost("/password-change/password", async (PasswordChangeProofRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
@@ -153,7 +161,8 @@ internal static class AdmissionEndpoints
         group.MapPost("/email-verification/complete", async (CompleteEmailVerificationRequest request, IdentityAdmissionServices services, CancellationToken ct) =>
             Result(await AccountSecurityService.CompleteEmailVerificationAsync(services, request, ct)));
         group.MapGet("/providers", (IdentityAdmissionServices services) =>
-            Results.Ok(new SignInProviders(services.Microsoft is not null, services.Google is not null)));
+            Results.Ok(new SignInProviders(services.Microsoft is not null, services.Google is not null,
+                services.TrustedTenants.Any ? services.TrustedTenants.Domains : null)));
         group.MapPost("/providers/{provider:regex(^microsoft$|^google$)}/start", (string provider, StartProviderSignInRequest request,
             HttpContext context, IdentityAdmissionServices services) =>
         {
@@ -170,6 +179,8 @@ internal static class AdmissionEndpoints
             var query = context.Request.Query;
             var outcome = await AuthService.ProviderCallbackAsync(services, signIn, query["code"], query["state"],
                 query["error"].Count > 0 ? (string?)query["error"] : null, enabled.CallbackUri(context.Request), ct);
+            // A confirmation popup goes back to its own page, which reports to the dashboard that opened it and closes.
+            if (outcome is ProviderConfirmationReturned confirmation) return Results.Redirect(enabled.ConfirmationReturnUrl(confirmation.Failure));
             return Results.Redirect(enabled.ReturnUrl((outcome as ProviderProven)?.Handle, (outcome as AuthenticationRefused)?.Code));
         });
         group.MapGet("/providers/links", async (HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>

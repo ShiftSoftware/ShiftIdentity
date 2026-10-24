@@ -81,6 +81,13 @@ internal static partial class AccountSecurityService
             // account allows device sign-in after this save, whether it allowed it before or this save allows it.
             if (change.Password is not null && ChangeRequestRefusal(change.AllowDeviceSignIn ?? unit.User.AllowDeviceSignIn, change.RequireChangeAtNextLogin) is { } changeRefusal)
                 throw new AdmissionRefusedException(changeRefusal.Code, AdmissionRefusalReason.Invalid, nameof(UserDTO.RequireChangeAtNextLogin));
+            // An account whose email (after this save) is held to a trusted tenant signs in only with Microsoft: it is
+            // given neither a password nor device sign-in.
+            var email = change.EmailChanged ? change.Email : unit.User.Email;
+            if (change.Password is not null && PasswordUseRefusal(services, email, unit.User) is { } passwordRefusal)
+                throw new AdmissionRefusedException(passwordRefusal.Code, AdmissionRefusalReason.Invalid, nameof(UserDTO.Password));
+            if (change.AllowDeviceSignIn is true && PasswordUseRefusal(services, email, unit.User) is { } deviceRefusal)
+                throw new AdmissionRefusedException(deviceRefusal.Code, AdmissionRefusalReason.Invalid, nameof(UserDTO.AllowDeviceSignIn));
         }
 
         // Review F16: a change that needs it (UserAccountChange.NeedsCover) needs the operator to cover everything the
@@ -185,6 +192,8 @@ internal static partial class AccountSecurityService
             // The upsert hook refuses this first, with the same answer. Nothing is committed: the row was only flushed.
             if (ChangeRequestRefusal(user.AllowDeviceSignIn, user.RequireChangePassword) is { } changeRefusal)
                 throw new AdmissionRefusedException(changeRefusal.Code, AdmissionRefusalReason.Invalid, nameof(UserDTO.RequireChangeAtNextLogin));
+            if (user.AllowDeviceSignIn && PasswordUseRefusal(services, user.Email, user) is { } deviceRefusal)
+                throw new AdmissionRefusedException(deviceRefusal.Code, AdmissionRefusalReason.Invalid, nameof(UserDTO.AllowDeviceSignIn));
             var state = new UserSecurityState { UserID = user.ID };
             RecoveryContact.InitializeLookup(user, state);
             // An address assigned by an administrator is recovery-eligible; a verified import keeps its verified flag.

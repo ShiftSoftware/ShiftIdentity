@@ -59,6 +59,8 @@ public partial class AuthService
                     return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.InvalidProof));
                 }
                 if (now >= startedAt.AddMinutes(5)) return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.Expired));
+                // Only after a correct password, so the refusal never says which usernames are held to a tenant.
+                if (SignInMethodRefusal(services, unit.User, null, null) is { } method) return Task.FromResult<AuthOutcome>(method);
                 if (upgrade is not null)
                 {
                     unit.User.PasswordHash = upgrade.PasswordHash;
@@ -80,14 +82,17 @@ public partial class AuthService
                 AuthenticationOperationPurpose.Login, AuthenticationOperationState.AwaitingMfa);
             if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
             // A provider sign-in that asks for Shift MFA continues here too; its operation carries the provider.
-            if (SessionStep(services, unit, unit.Operation!.SessionProvider, false) != AuthenticationStep.ExistingMfa)
+            var pending = unit.Operation!;
+            if (SignInMethodRefusal(services, unit.User, pending.SessionProvider, pending.SessionTenant) is { } method)
+                return Task.FromResult<AuthOutcome>(method);
+            if (SessionStep(services, unit, pending.SessionProvider, false, pending.SessionTenant) != AuthenticationStep.ExistingMfa)
                 return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.StaleOperation));
             refusal = AdmissionOperations.VerifyMfa(services, unit, request.Code);
             if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
             var op = unit.Operation!;
             var now = services.Clock.GetUtcNow();
             AdmissionOperations.Finish(op, now);
-            var remaining = SessionStep(services, unit, op.SessionProvider, true);
+            var remaining = SessionStep(services, unit, op.SessionProvider, true, op.SessionTenant);
             return Task.FromResult<AuthOutcome>(remaining is not null ? Restricted(remaining.Value, now)
                 : Issue(services, unit, Proof(unit, services, true, op.PasswordProvenAt ?? op.CreatedAt), now));
         }, ct);
@@ -113,6 +118,10 @@ public partial class AuthService
                     return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.ClientDenied));
                 if (ProviderRefusal(services, proof.Provider) is { } providerRefusal)
                     return Task.FromResult<AuthOutcome>(providerRefusal);
+                // An account held to a trusted tenant renews only that tenant's Microsoft sessions: its password sessions
+                // end when the rule starts to apply to it.
+                if (SignInMethodRefusal(services, unit.User, proof.Provider, proof.Tenant) is { } methodRefusal)
+                    return Task.FromResult<AuthOutcome>(methodRefusal);
                 if (proof.Subject != services.HashIds.Encode<UserDTO>(unit.User.ID))
                     return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.InvalidGrant));
                 var now = services.Clock.GetUtcNow();
@@ -145,7 +154,7 @@ public partial class AuthService
             var now = services.Clock.GetUtcNow();
             if (current is null || current.Subject != legacy.Subject || current.ExpiresAt != legacy.ExpiresAt || now >= legacy.ExpiresAt)
                 return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.Expired));
-            var refusal = LegacyCredentialRefusal(services, unit);
+            var refusal = LegacyCredentialRefusal(services, unit) ?? SignInMethodRefusal(services, unit.User, null, null);
             if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
             var proof = new SessionProof(unit.User.ID, unit.Security.SecurityVersion, unit.Policy.Revision,
                 unit.Security.FactorGeneration, false, DateTimeOffset.UnixEpoch, services.Client.ID,

@@ -172,6 +172,21 @@ public sealed class DashboardStagedSecurityTests
     }
 
     [Fact]
+    public async Task A_Microsoft_only_profile_offers_no_password_or_authenticator_changes()
+    {
+        var store = new RecordingStore();
+        await store.Session.StoreTokenAsync(AuthenticationFlowTests.Session().Session);
+        var transport = new DashboardTransport { Status = new AuthenticatorStatus(true, false, MicrosoftOnly: true) };
+        await using var context = Context(transport, store.Session, staged: true);
+        var cut = context.Render<UserDataForm>();
+        cut.WaitForElement("[data-testid=profile-microsoft-only]");
+        Assert.Contains("signs in with Microsoft through your organization", cut.Find("[data-testid=profile-microsoft-only]").TextContent);
+        Assert.Empty(cut.FindAll("[data-testid=profile-change-password]"));
+        Assert.Empty(cut.FindAll("[data-testid=profile-authenticator]"));
+        Assert.Empty(cut.FindAll("[data-testid=profile-mfa-opt-out]"));
+    }
+
+    [Fact]
     public async Task Profile_password_change_opens_a_narrow_dialog_whose_steps_share_one_close_control_and_end_on_a_done_step()
     {
         var store = new RecordingStore();

@@ -58,8 +58,9 @@ internal static class AdmissionOperations
         if (purpose == AuthenticationOperationPurpose.MfaRecovery &&
             (!unit.Security.LocalMfaRecoveryRequired || op.ParentID is not { } root || unit.Security.MfaRecoveryOperationID != root))
             return Refuse(AuthenticationFailure.StaleOperation);
-        // Local password and MFA failures do not block a provider sign-in; its own MFA step, if any, is checked here again.
-        if (purpose != AuthenticationOperationPurpose.ProviderLogin &&
+        // Local password and MFA failures do not block a provider sign-in, or an administrator confirmation waiting for
+        // Microsoft; their own MFA step, if any, is checked here again.
+        if (purpose != AuthenticationOperationPurpose.ProviderLogin && op.State != AuthenticationOperationState.AwaitingProviderCompletion &&
             (BudgetExhausted(unit.Security, now) || op.FailedAttempts >= 5 || unit.User.LockDownUntil > now.UtcDateTime))
             return Refuse(AuthenticationFailure.AttemptsExhausted);
         return null;
@@ -69,7 +70,7 @@ internal static class AdmissionOperations
         AuthenticationOperationPurpose purpose, AuthenticationOperationState state, string codeChallenge,
         DateTimeOffset createdAt, DateTimeOffset expiresAt, PasswordChangeOrigin? origin = null, DateTimeOffset? passwordProvenAt = null,
         bool prepareNewFactor = false, Guid? parentID = null, int failedAttempts = 0, byte[]? sourceSessionDigest = null,
-        SignInProvider? sessionProvider = null)
+        SignInProvider? sessionProvider = null, string? sessionTenant = null)
     {
         var credential = OperationCredential.Create(services.Options.OperationKey);
         var op = new AuthenticationOperation
@@ -80,7 +81,7 @@ internal static class AdmissionOperations
             External = services.Client.External, HandleDigest = credential.Digest, CodeChallenge = codeChallenge,
             CreatedAt = createdAt, ExpiresAt = expiresAt, PasswordChangeOrigin = origin, PasswordProvenAt = passwordProvenAt,
             ParentID = parentID, FailedAttempts = failedAttempts, SourceSessionDigest = sourceSessionDigest,
-            SessionProvider = sessionProvider
+            SessionProvider = sessionProvider, SessionTenant = sessionTenant
         };
         var setup = prepareNewFactor ? MfaMaterial.Prepare(services, unit, op) : null;
         unit.AddOperation(op);
@@ -175,6 +176,9 @@ internal static class AdmissionOperations
             AuthenticationOperationState.AwaitingNewPassword => AuthenticationStep.PasswordChange,
             AuthenticationOperationState.AwaitingMfa => AuthenticationStep.ExistingMfa,
             AuthenticationOperationState.AwaitingNewFactor => AuthenticationStep.NewMfa,
+            // Only an administrator confirmation waits for a provider through a handle the page holds.
+            AuthenticationOperationState.AwaitingProviderCompletion when op.Purpose == AuthenticationOperationPurpose.AdministratorConfirmation
+                => AuthenticationStep.ProviderConfirmation,
             _ => throw new InvalidOperationException("This operation has no pending step.")
         }, handle, op.ExpiresAt, op.Purpose, setup));
 }

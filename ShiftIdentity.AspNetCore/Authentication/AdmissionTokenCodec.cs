@@ -25,6 +25,10 @@ internal sealed class AdmissionTokenCodec(IdentityAdmissionOptions options, Time
     internal const string UserID = "shift_uid";
     internal const string AppBinding = "shift_app";
     internal const string LegacyCompatibility = "shift_legacy_until";
+    // The Microsoft tenant of a Microsoft session's account. Only Microsoft sessions carry it.
+    internal const string Tenant = "shift_tenant";
+    // A provider session whose authentication time is a fresh sign-in at that provider, made to confirm an administrator.
+    internal const string Confirmed = "shift_confirmed";
 
     public TokenDTO Issue(IssuanceDecision decision)
     {
@@ -32,7 +36,9 @@ internal sealed class AdmissionTokenCodec(IdentityAdmissionOptions options, Time
         if (proof.UserID <= 0 || string.IsNullOrWhiteSpace(proof.Subject) || proof.SecurityVersion < 1 || proof.PolicyRevision != options.PolicyRevision ||
             options.AccessLifetimeSeconds is < 1 or > 900 || options.RefreshLifetimeSeconds < 1 ||
             options.RefreshKey.Length < 64 || options.OperationKey.Length < 32 ||
-            proof.LegacyCompatibilityExpiresAt is { } compatibilityDeadline && compatibilityDeadline <= decision.AdmittedAt)
+            proof.LegacyCompatibilityExpiresAt is { } compatibilityDeadline && compatibilityDeadline <= decision.AdmittedAt ||
+            proof.Tenant is not null && (proof.Provider != Core.Authentication.SignInProvider.Microsoft || !IsTenant(proof.Tenant)) ||
+            proof.ProviderConfirmed && proof.Provider is null)
             throw new InvalidOperationException("Invalid admission configuration.");
         var now = decision.AdmittedAt;
         var common = new List<Claim>
@@ -47,6 +53,8 @@ internal sealed class AdmissionTokenCodec(IdentityAdmissionOptions options, Time
             new("auth_time", proof.AuthenticatedAt.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture))
         };
         if (proof.AppBinding is not null) common.Add(new(AppBinding, proof.AppBinding));
+        if (proof.Tenant is not null) common.Add(new(Tenant, proof.Tenant));
+        if (proof.ProviderConfirmed) common.Add(new(Confirmed, "true"));
         if (proof.LegacyCompatibilityExpiresAt is { } legacyDeadline)
             common.Add(new(LegacyCompatibility, legacyDeadline.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture)));
         using var rsa = RSA.Create();
@@ -141,8 +149,14 @@ internal sealed class AdmissionTokenCodec(IdentityAdmissionOptions options, Time
                 if (compatibilityDeadline <= clock.GetUtcNow() || DateTimeOffset.FromUnixTimeSeconds(expiry) > compatibilityDeadline)
                     return null;
             }
+            var tenants = principal.FindAll(Tenant).Select(c => c.Value).ToArray();
+            if (tenants.Length > 1 || (tenants.Length == 1 &&
+                (provider != Core.Authentication.SignInProvider.Microsoft || !IsTenant(tenants[0])))) return null;
+            var confirmed = principal.FindAll(Confirmed).Select(c => c.Value).ToArray();
+            if (confirmed.Length > 1 || (confirmed.Length == 1 && (confirmed[0] != "true" || provider is null))) return null;
             return new(new(userID, version, policy, factor, Single(Mfa) == "true", authTime, client.ID, client.Audience,
-                client.External, Single("sub")!, appBindings.SingleOrDefault(), compatibilityDeadline, provider), DateTimeOffset.FromUnixTimeSeconds(expiry));
+                client.External, Single("sub")!, appBindings.SingleOrDefault(), compatibilityDeadline, provider, tenants.SingleOrDefault(),
+                confirmed.Length == 1), DateTimeOffset.FromUnixTimeSeconds(expiry));
         }
         catch (Exception e) when (e is SecurityTokenException or ArgumentException or FormatException or JsonException)
         {
@@ -156,6 +170,9 @@ internal sealed class AdmissionTokenCodec(IdentityAdmissionOptions options, Time
         null => "local",
         { } signedIn => ProviderSignIn.RouteName(signedIn)
     };
+
+    // A tenant is written as Microsoft's lowercase hyphenated GUID, so a trusted tenant matches it exactly.
+    private static bool IsTenant(string value) => Guid.TryParseExact(value, "D", out var id) && id.ToString("D") == value;
 
     private static bool TryReadRoute(string? value, out Core.Authentication.SignInProvider? provider)
     {

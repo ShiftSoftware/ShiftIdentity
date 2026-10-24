@@ -64,7 +64,9 @@ public enum AdminAccountChange { Password = 1, Username = 2, Email = 3, Active =
 /// the account screens: it proves nothing, issues nothing and never carries a session. <see cref="Mandatory"/> is
 /// the host's policy: every account must have an authenticator, so no screen offers to turn one off.
 /// </summary>
-public sealed record AuthenticatorStatus(bool Enrolled, bool RecoveryRequired, bool Mandatory = false) : AuthOutcome;
+/// <remarks><see cref="MicrosoftOnly"/>: the account signs in only with Microsoft through a trusted tenant, so it has no
+/// password or Shift authenticator to manage and the screens offer neither.</remarks>
+public sealed record AuthenticatorStatus(bool Enrolled, bool RecoveryRequired, bool Mandatory = false, bool MicrosoftOnly = false) : AuthOutcome;
 /// <summary>The browser continues at the sign-in provider. It carries no credential; the session comes after the provider returns.</summary>
 public sealed record ProviderRedirect(string Url) : AuthOutcome;
 /// <summary>The provider accounts that can sign in to an account. A read for the account screens: it proves and issues nothing.</summary>
@@ -72,7 +74,11 @@ public sealed record ProviderLinksRead(IReadOnlyList<ProviderLinkView> Links) : 
 /// <summary>A provider account that can sign in: the email it had when linked, and whether it is a personal account rather than a work or school one.</summary>
 public sealed record ProviderLinkView(SignInProvider Provider, string Email, bool PersonalAccount, DateTimeOffset LinkedAt, DateTimeOffset LastUsedAt);
 
-public enum AuthenticationStep { ExistingMfa, PasswordChange, MfaRecovery, NewMfa, EmailVerification, Password }
+/// <summary>
+/// The step an operation waits for. <see cref="ProviderConfirmation"/>: an administrator confirmation for an account
+/// that signs in only with Microsoft, proved by a fresh Microsoft sign-in in a popup instead of the password.
+/// </summary>
+public enum AuthenticationStep { ExistingMfa, PasswordChange, MfaRecovery, NewMfa, EmailVerification, Password, ProviderConfirmation }
 public enum AuthenticationFailure
 {
     InvalidRequest, InvalidProof, InvalidGrant, StaleOperation, Expired, AttemptsExhausted,
@@ -105,16 +111,43 @@ public enum AuthenticationFailure
     /// email or status: they could then sign in as the target, or lock it out. <see cref="AuthenticationRefused.Uncovered"/> lists them. Nothing
     /// changes.
     /// </summary>
-    AccessNotCovered
+    AccessNotCovered,
+    /// <summary>
+    /// The account's email is on a trusted Microsoft tenant's domain, so it signs in only with Microsoft through that
+    /// tenant: no password sign-in, password reset, password change or device sign-in. Given after a correct password
+    /// only, so it never says which usernames belong to such accounts.
+    /// </summary>
+    PasswordSignInDisabled,
+    /// <summary>
+    /// The account's email is on a trusted Microsoft tenant's domain, and this sign-in came from another provider,
+    /// another tenant or a personal Microsoft account. Only a Microsoft account of that tenant signs in to it.
+    /// </summary>
+    ProviderNotAllowedForAccount
 }
 public enum AuthenticationOperationPurpose { Login = 1, ContactChange = 2, MfaEnrollment = 3, PasswordChange = 4, MfaReplacement = 5, MfaRecovery = 6, PasswordResetEmail = 7, PasswordResetManual = 8, EmailVerify = 9, AppExchange = 10, LegacyRefreshExchange = 11, LegacyMfaExchange = 12, AdministratorConfirmation = 13, ProviderLogin = 14 }
 
 /// <summary>An external sign-in provider. A provider sign-in reaches only an existing account with the same verified email.</summary>
 public enum SignInProvider { Microsoft = 1, Google = 2 }
 
-/// <summary>The sign-in providers this host has turned on, for the login screen. An older API's answer has no Google.</summary>
-public sealed record SignInProviders(bool Microsoft, bool Google = false)
+/// <summary>
+/// The sign-in providers this host has turned on, for the login screen. An older API's answer has no Google.
+/// <see cref="MicrosoftDomains"/> are the email domains of the host's trusted Microsoft tenants: an account whose email
+/// is on one signs in only with Microsoft, so the screens can say so before a password is typed. Empty or missing: none.
+/// </summary>
+public sealed record SignInProviders(bool Microsoft, bool Google = false, IReadOnlyList<string>? MicrosoftDomains = null)
 {
+    /// <summary>Whether <paramref name="email"/> is on one of <see cref="MicrosoftDomains"/>: exact domain, any case.</summary>
+    public bool RequiresMicrosoft(string? email)
+    {
+        if (MicrosoftDomains is not { Count: > 0 } domains || email is null) return false;
+        var at = email.Trim().LastIndexOf('@');
+        if (at <= 0) return false;
+        var domain = email.Trim()[(at + 1)..];
+        foreach (var candidate in domains)
+            if (string.Equals(candidate, domain, StringComparison.OrdinalIgnoreCase)) return true;
+        return false;
+    }
+
     /// <summary>The enabled providers in the order the login screen shows them.</summary>
     [JsonIgnore]
     public IReadOnlyList<SignInProvider> Enabled
@@ -148,15 +181,28 @@ public sealed record AdministratorPasswordProofRequest(
     [property: Required, MaxLength(2048)] string Handle,
     [property: Required, MaxLength(1024)] string CurrentPassword,
     [property: Required, StringLength(128, MinimumLength = 43)] string CodeVerifier);
+/// <summary>
+/// Starts or completes an administrator confirmation through Microsoft, for the operation's handle and this page's
+/// verifier. Starting answers with the popup's <see cref="ProviderRedirect"/>; completing answers with the confirmed
+/// session, the MFA step, or a refusal while Microsoft has not returned yet.
+/// </summary>
+public sealed record AdministratorProviderConfirmationRequest(
+    [property: Required, MaxLength(2048)] string Handle,
+    [property: Required, StringLength(128, MinimumLength = 43)] string CodeVerifier);
 public sealed record AdministratorMfaProofRequest(
     [property: Required, MaxLength(2048)] string Handle,
     [property: Required, RegularExpression(@"^[0-9]{6,8}$")] string Code,
     [property: Required, StringLength(128, MinimumLength = 43)] string CodeVerifier);
 
+/// <remarks>
+/// <see cref="Provider"/>: on an administrator confirmation, the sign-in provider that can confirm it with a fresh
+/// sign-in in a popup: the provider of the session being confirmed, or Microsoft for an account held to a trusted
+/// tenant. Null when only the password confirms.
+/// </remarks>
 public sealed record AuthenticationChallenge(
     AuthenticationStep Step, string? Handle, DateTimeOffset ExpiresAt,
     AuthenticationOperationPurpose Purpose = AuthenticationOperationPurpose.Login,
-    NewAuthenticatorSetup? NewAuthenticator = null);
+    NewAuthenticatorSetup? NewAuthenticator = null, SignInProvider? Provider = null);
 
 // Sent only after the required proof, over the protected response, and held in component memory.
 public sealed record NewAuthenticatorSetup(string Secret, string Uri, string Svg);

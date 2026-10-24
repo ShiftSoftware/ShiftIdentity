@@ -32,6 +32,7 @@ internal static class AdmissionRules
         if (services.Clock.GetUtcNow() >= signedIn.ExpiresAt) return Refuse(AuthenticationFailure.Expired);
         if (!Services.AuthService.AppSessionIsCurrent(unit, proof)) return Refuse(AuthenticationFailure.ClientDenied);
         if (ProviderRefusal(services, proof.Provider) is { } providerRefusal) return providerRefusal;
+        if (SignInMethodRefusal(services, unit.User, proof.Provider, proof.Tenant) is { } methodRefusal) return methodRefusal;
         return unit.Security.FactorGeneration != proof.FactorGeneration || proof.Subject != services.HashIds.Encode<UserDTO>(unit.User.ID)
             ? Refuse(AuthenticationFailure.StaleOperation) : null;
     }
@@ -91,23 +92,50 @@ internal static class AdmissionRules
     /// </summary>
     internal static AuthenticationStep? ExistingSessionStep(IdentityAdmissionServices services, IdentitySecurityTransaction unit,
         SessionProof proof, DateTimeOffset now) => proof.LegacyCompatibilityExpiresAt is { } deadline && now < deadline
-            ? null : SessionStep(services, unit, proof.Provider, proof.MfaSatisfied);
+            ? null : SessionStep(services, unit, proof.Provider, proof.MfaSatisfied, proof.Tenant);
 
     /// <summary>
     /// The step a session's proof still owes. A local proof owes every local step. A provider proof never owes the
     /// password change or the verified-email gate (the provider verified the email), and owes the authenticator only
-    /// where the host's settings for that provider ask for Shift MFA.
+    /// where the host's settings for that provider ask for Shift MFA. A Microsoft proof from a trusted tenant that
+    /// enforces its own MFA owes nothing.
     /// </summary>
     internal static AuthenticationStep? SessionStep(IdentityAdmissionServices services, IdentitySecurityTransaction unit,
-        Core.Authentication.SignInProvider? provider, bool mfaSatisfied)
+        Core.Authentication.SignInProvider? provider, bool mfaSatisfied, string? tenant = null)
     {
         if (provider is null) return LocalStep(unit, mfaSatisfied);
+        if (TenantSkipsShiftMfa(services, provider, tenant)) return null;
         if (services.Provider(provider.Value) is not { RequireShiftMfa: true }) return null;
         if (unit.Security.LocalMfaRecoveryRequired) return AuthenticationStep.MfaRecovery;
         if (!MfaApplies(unit)) return null;
         if (unit.Security.ProtectedTotpSecret is null) return unit.Policy.MfaMandatory ? AuthenticationStep.NewMfa : null;
         return mfaSatisfied ? null : AuthenticationStep.ExistingMfa;
     }
+
+    /// <summary>
+    /// The trusted tenant an account must sign in through: the one its email's domain is held to. The built-in
+    /// administrator (the protected account the host seeds) is never held to one, so emergency access never depends on
+    /// Microsoft or on its email.
+    /// </summary>
+    internal static TrustedTenant? RequiredTenant(IdentityAdmissionServices services, Data.Entities.User user) =>
+        user.IsProtected ? null : services.TrustedTenants.ForEmail(user.Email);
+
+    /// <summary>
+    /// Refuses a proof the account may not use: a password (or any local proof) for an account held to a trusted tenant,
+    /// or a provider proof from anywhere but that tenant. Null when the proof is allowed.
+    /// </summary>
+    internal static AuthenticationRefused? SignInMethodRefusal(IdentityAdmissionServices services, Data.Entities.User user,
+        Core.Authentication.SignInProvider? provider, string? tenant)
+    {
+        if (RequiredTenant(services, user) is not { } required) return null;
+        if (provider is null) return Refuse(AuthenticationFailure.PasswordSignInDisabled);
+        return provider == Core.Authentication.SignInProvider.Microsoft && tenant == required.ID
+            ? null : Refuse(AuthenticationFailure.ProviderNotAllowedForAccount);
+    }
+
+    /// <summary>A Microsoft proof from a trusted tenant that enforces its own MFA: never asked for the Shift authenticator.</summary>
+    internal static bool TenantSkipsShiftMfa(IdentityAdmissionServices services, Core.Authentication.SignInProvider? provider, string? tenant) =>
+        provider == Core.Authentication.SignInProvider.Microsoft && services.TrustedTenants.Find(tenant) is { SkipShiftMfa: true };
 
     /// <summary>A provider session ends when the host turns that provider off.</summary>
     internal static AuthenticationRefused? ProviderRefusal(IdentityAdmissionServices services, Core.Authentication.SignInProvider? provider) =>
@@ -117,7 +145,7 @@ internal static class AdmissionRules
     internal static SessionProof Proof(IdentitySecurityTransaction unit, IdentityAdmissionServices services, bool mfa, DateTimeOffset now) =>
         new(unit.User.ID, unit.Security.SecurityVersion, unit.Policy.Revision, unit.Security.FactorGeneration,
             mfa, now, services.Client.ID, services.Client.Audience, services.Client.External, services.HashIds.Encode<UserDTO>(unit.User.ID),
-            Provider: unit.Operation?.SessionProvider);
+            Provider: unit.Operation?.SessionProvider, Tenant: unit.Operation?.SessionTenant);
 
     internal static AuthOutcome Issue(IdentityAdmissionServices services, IdentitySecurityTransaction unit, SessionProof proof, DateTimeOffset now, bool freshAuthentication = true)
     {

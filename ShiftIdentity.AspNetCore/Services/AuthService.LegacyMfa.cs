@@ -40,6 +40,7 @@ public partial class AuthService
             if (current is null || current.Subject != legacy.Subject || current.Purpose != AuthPurpose.Mfa ||
                 current.ExpiresAt != legacy.ExpiresAt || now >= legacy.ExpiresAt)
                 return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.Expired));
+            if (SignInMethodRefusal(services, unit.User, null, null) is { } method) return Task.FromResult<AuthOutcome>(method);
             var op = unit.Operation;
             if (op is null)
             {

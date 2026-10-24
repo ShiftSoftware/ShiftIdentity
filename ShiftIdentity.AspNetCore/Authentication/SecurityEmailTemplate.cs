@@ -11,13 +11,14 @@ public static class SecurityEmailTemplate
     /// <summary>The same, with the logo at <paramref name="logoUrl"/> above the message, or none when it is null.</summary>
     public static SecurityEmailContent Render(SecurityEmail message, string frontEndUrl, string? logoUrl)
     {
-        if (message.Purpose != AuthenticationOperationPurpose.ProviderLogin)
+        if (message.Purpose != AuthenticationOperationPurpose.ProviderLogin && !message.MicrosoftOnly)
             return Compose(message.ID, message.Destination, message.FullName, message.Username, message.Purpose,
                 Link(message, frontEndUrl), message.ExpiresAt, logoUrl);
         // A notice carries no grant: its button opens the login screen.
         ValidateFrontEndUrl(frontEndUrl);
         var body = SecurityEmailLayout.Compose(new(message.Purpose, message.FullName, message.Username,
-            frontEndUrl.TrimEnd('/') + "/Identity/login", null) { LogoSource = logoUrl, ProviderAccount = message.ProviderAccount, Provider = message.Provider });
+            frontEndUrl.TrimEnd('/') + "/Identity/login", null)
+            { LogoSource = logoUrl, ProviderAccount = message.ProviderAccount, Provider = message.Provider, MicrosoftOnly = message.MicrosoftOnly });
         return new(message.ID, message.Destination, body.Subject, body.HtmlBody, body.TextBody);
     }
 

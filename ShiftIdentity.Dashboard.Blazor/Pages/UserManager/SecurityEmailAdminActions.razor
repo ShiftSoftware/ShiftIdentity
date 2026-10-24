@@ -11,7 +11,11 @@
 <CascadingValue Value="feedback" IsFixed="true">
     <div data-testid="security-email-admin">
         <MudStack Row Wrap="Wrap.Wrap" Spacing="2">
-            <MudButton ButtonType="ButtonType.Button" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.MailOutline" Disabled="@(Disabled || Flow.Busy || feedback.Attempting)" OnClick="() => feedback.AttemptAsync(() => Send(false))">@Loc["Send password reset link"]</MudButton>
+            @* An account that signs in only with Microsoft has no password to reset. *@
+            @if (!MicrosoftOnly)
+            {
+                <MudButton ButtonType="ButtonType.Button" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.MailOutline" Disabled="@(Disabled || Flow.Busy || feedback.Attempting)" OnClick="() => feedback.AttemptAsync(() => Send(false))" data-testid="security-email-admin-reset">@Loc["Send password reset link"]</MudButton>
+            }
             <MudButton ButtonType="ButtonType.Button" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.MarkEmailRead" Disabled="@(Disabled || Flow.Busy || feedback.Attempting)" OnClick="() => feedback.AttemptAsync(() => Send(true))">@Loc["Send email verification link"]</MudButton>
         </MudStack>
         <AuthError @bind-Message="message" Context="text">
@@ -23,6 +27,8 @@
 @code {
     [Parameter, EditorRequired] public string UserKey { get; set; } = "";
     [Parameter] public bool Disabled { get; set; }
+    /// <summary>The account signs in only with Microsoft through a trusted tenant: no password reset is offered.</summary>
+    [Parameter] public bool MicrosoftOnly { get; set; }
     private readonly AuthFeedback feedback = new();
     private string? message;
     private Severity severity;

@@ -61,6 +61,7 @@ public partial class AuthService
             if (!unit.User.IsActive) return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.AccountUnavailable));
             if (unit.User.LockDownUntil > now.UtcDateTime || BudgetExhausted(unit.Security, now))
                 return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.AttemptsExhausted));
+            if (SignInMethodRefusal(services, unit.User, null, null) is { } method) return Task.FromResult<AuthOutcome>(method);
             unit.User.LoginAttempts = 0;
             unit.User.LockDownUntil = null;
             unit.User.UserLog ??= new Data.Entities.UserLog();

@@ -10,7 +10,20 @@ namespace ShiftSoftware.ShiftIdentity.AspNetCore.Authentication;
 /// the person there, the email and whether the provider vouches for it, and whether the account is a personal one.
 /// It authorizes nothing by itself.
 /// </summary>
-internal sealed record ProviderIdentity(string Directory, string Subject, string? Email, bool EmailVerified, bool PersonalAccount);
+internal sealed record ProviderIdentity(string Directory, string Subject, string? Email, bool EmailVerified, bool PersonalAccount)
+{
+    /// <summary>When the person last authenticated at the provider (<c>auth_time</c>), when the token says.</summary>
+    public DateTimeOffset? AuthenticatedAt { get; init; }
+
+    /// <summary>
+    /// A guest in the issuing directory (Microsoft: <c>idp</c> names another provider). Its session carries no tenant, so
+    /// the trusted-tenant rules never count it as that tenant's user.
+    /// </summary>
+    public bool Guest { get; init; }
+
+    /// <summary>The tenant a Microsoft session carries: the issuing tenant, unless the account is a guest there.</summary>
+    public string? SessionTenant(SignInProvider provider) => provider == SignInProvider.Microsoft && !Guest ? Directory : null;
+}
 
 /// <summary>The protocol boundary: redeems an authorization code and returns the validated identity, or null.</summary>
 internal interface IProviderTokenClient
@@ -44,6 +57,27 @@ internal abstract class ProviderSignIn(SignInProvider provider, string clientId,
     }
 
     public abstract string AuthorizeUrl(string state, string nonce, string codeChallenge, string redirectUri);
+
+    /// <summary>
+    /// The authorize URL for an administrator confirmation: the provider must authenticate the person again rather than
+    /// reuse its own session, pointed at the account's email (and, for Microsoft, its domain).
+    /// </summary>
+    public abstract string ConfirmationUrl(string state, string nonce, string codeChallenge, string redirectUri, string? loginHint, string? domainHint);
+
+    /// <summary><c>auth_time</c> from a validated token, or null when it is missing or malformed.</summary>
+    internal static DateTimeOffset? ReadAuthenticationTime(ClaimsIdentity claims) =>
+        long.TryParse(One(claims, "auth_time"), System.Globalization.NumberStyles.None,
+            System.Globalization.CultureInfo.InvariantCulture, out var seconds) ? DateTimeOffset.FromUnixTimeSeconds(seconds) : null;
+
+    /// <summary>
+    /// The page an administrator confirmation's popup returns to: it tells the dashboard that opened it how the provider
+    /// sign-in went (<c>#result=ok</c> or <c>#error=</c> and the failure, then <c>&amp;provider=</c> and its name for the
+    /// page's text) and closes. It carries no credential.
+    /// </summary>
+    public string ConfirmationReturnUrl(AuthenticationFailure? failure) =>
+        (string.IsNullOrWhiteSpace(frontEndUrl) ? "" : frontEndUrl.Trim().TrimEnd('/')) +
+        "/_content/ShiftSoftware.ShiftIdentity.Dashboard.Blazor/provider-confirmation.html#" +
+        (failure is null ? "result=ok" : "error=" + failure) + "&provider=" + Name;
 
     /// <summary>The login screen the browser returns to: a handle to complete with, or why there is none. Both travel in the fragment.</summary>
     public string ReturnUrl(string? handle, AuthenticationFailure? failure)

@@ -215,8 +215,10 @@ public sealed partial class AuthenticationFlow(HttpClient http, IdentitySession 
                 case MfaRecoveryCodeIssued issued when response.IsSuccessStatusCode:
                     return issued;
                 case AuthenticationRefused refused:
-                    // Invalid proof and password-policy errors permit correction within the original deadline.
-                    if (refused.Code is not (AuthenticationFailure.InvalidProof or AuthenticationFailure.InvalidNewPassword)) Restart();
+                    // Invalid proof and password-policy errors permit correction within the original deadline. A provider
+                    // confirmation that Microsoft has not returned yet stays pending, so the page can ask again.
+                    if (refused.Code is not (AuthenticationFailure.InvalidProof or AuthenticationFailure.InvalidNewPassword or
+                        AuthenticationFailure.AuthorizationPending)) Restart();
                     return refused;
                 default:
                     Restart();

@@ -56,6 +56,8 @@ public class SqlIdentityFixture : IAsyncLifetime
     internal GoogleSignIn? Google { get; set; }
     /// <summary>Device sign-in for request hosts built while it is set; <see cref="ResetAsync"/> clears it.</summary>
     internal DeviceGrantOptions? Device { get; set; }
+    /// <summary>Trusted Microsoft tenants for hosts built while they are set; <see cref="ResetAsync"/> clears them.</summary>
+    internal TrustedTenants TrustedTenants { get; set; } = TrustedTenants.None;
     /// <summary>
     /// The test budgets. Every ordinary public request sleeps until the sum of the three has elapsed (the response
     /// floor), so the sender wait stays short: the local inbox answers synchronously, and the padding is dropped.
@@ -215,7 +217,7 @@ public class SqlIdentityFixture : IAsyncLifetime
         EmailSink = new LocalSecurityInbox(Clock);
         DeliveryLimits = TestDeliveryLimits;
         LegacyMfaEnabled = false; LegacyTemporaryLifetimeSeconds = 300;
-        Microsoft = null; Google = null; Device = null;
+        Microsoft = null; Google = null; Device = null; TrustedTenants = TrustedTenants.None;
         await db.Set<UserProviderLink>().ExecuteDeleteAsync();
         await db.Set<AuthThrottleBucket>().ExecuteDeleteAsync();
         await db.Set<DeviceAuthorization>().ExecuteDeleteAsync();

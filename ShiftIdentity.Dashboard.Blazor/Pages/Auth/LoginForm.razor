@@ -83,8 +83,8 @@
                                 <div><strong>@Loc[FailureMessage]</strong><p>@Loc[FailureHint]</p></div>
                             </div>
                             <button type="button" class="auth-help" data-testid="login-failure-help" @onclick="OpenAccess">@Loc["Can't access your account?"] <MudIcon Icon="@Icons.Material.Filled.ChevronRight" /></button>
-                            @if (providerFailure is not null ? lastFailure is not AuthenticationFailure.ProviderAccountNotFound and not AuthenticationFailure.ProviderEmailUnverified
-                                : lastFailure is not AuthenticationFailure.InvalidProof and not AuthenticationFailure.AccountUnavailable)
+                            @if (providerFailure is not null ? lastFailure is not AuthenticationFailure.ProviderAccountNotFound and not AuthenticationFailure.ProviderEmailUnverified and not AuthenticationFailure.ProviderNotAllowedForAccount
+                                : lastFailure is not AuthenticationFailure.InvalidProof and not AuthenticationFailure.AccountUnavailable and not AuthenticationFailure.PasswordSignInDisabled)
                             { <span class="auth-reference" data-testid="login-failure-reference">@Loc["Error reference"]: @FailureReference</span> }
                         }
                     </div>
@@ -147,6 +147,7 @@
     private string FailureMessage => lastFailure switch
     {
         AuthenticationFailure.Unavailable => "We couldn't reach the sign-in service.",
+        AuthenticationFailure.PasswordSignInDisabled or AuthenticationFailure.ProviderNotAllowedForAccount => "Your account signs in with your organization's Microsoft account.",
         AuthenticationFailure.ProviderAccountNotFound when providerFailure == SignInProvider.Google => "No account uses this Google account's email.",
         AuthenticationFailure.ProviderEmailUnverified when providerFailure == SignInProvider.Google => "Google can't confirm this account's email.",
         AuthenticationFailure.ProviderAccountNotFound => "No account uses this Microsoft account's email.",
@@ -160,6 +161,8 @@
     private string FailureHint => lastFailure switch
     {
         AuthenticationFailure.Unavailable => "Check your connection and try again in a moment.",
+        AuthenticationFailure.PasswordSignInDisabled => "Choose Sign in with Microsoft. Your account has no password here.",
+        AuthenticationFailure.ProviderNotAllowedForAccount => "Choose Sign in with Microsoft and use your organization's account, not a personal or other account.",
         AuthenticationFailure.ProviderAccountNotFound => "Sign in with your username and password, or ask your administrator to put this email on your account.",
         AuthenticationFailure.ProviderEmailUnverified => "Sign in with your username and password instead.",
         AuthenticationFailure.AccountUnavailable when providerFailure is not null => "Contact your administrator.",
@@ -173,8 +176,9 @@
     // Sign in with a provider. The verifier and return path wait in session storage while the browser is at the provider.
     private static string PendingKey(SignInProvider provider) => "shift-identity-" + AuthenticationFlow.RouteName(provider);
     private sealed record PendingProvider(string Verifier, string? ReturnUrl);
-    // The providers the host turned on, in button order.
+    // The providers the host turned on, in button order, and the email domains that sign in only with Microsoft.
     private IReadOnlyList<SignInProvider> providers = [];
+    private SignInProviders signInProviders = new(false);
     // providerFailure: the failure panel shows that provider's sign-in failure, not a password sign-in's.
     private SignInProvider? providerFailure;
     private string? providerReturnUrl;
@@ -243,7 +247,8 @@
         }
         if (AdmissionFlow is not null)
         {
-            providers = (await AdmissionFlow.ReadProvidersAsync()).Enabled;
+            signInProviders = await AdmissionFlow.ReadProvidersAsync();
+            providers = signInProviders.Enabled;
             await ResumeProvider();
         }
     }
@@ -409,6 +414,13 @@
     {
         if (AdmissionFlow is not null)
         {
+            // An email on a domain that signs in only with Microsoft: say so before any password is sent. The rule is
+            // about the domain, so this tells nothing about the account. A username is answered by the server instead.
+            if (signInProviders.RequiresMicrosoft(loginDto.Username))
+            {
+                await ShowLoginFailure(AuthenticationFailure.PasswordSignInDisabled);
+                return;
+            }
             var outcome = await AdmissionFlow.LoginAsync(loginDto.Username, loginDto.Password);
             loginDto.Password = string.Empty;
             if (disposed || attempt != loginAttempt) return;

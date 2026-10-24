@@ -123,8 +123,36 @@ public sealed class MicrosoftSignInSettings
     /// <summary>
     /// When true, a Microsoft sign-in still asks for the account's Shift authenticator code, or for enrollment where the
     /// host requires MFA, as a password sign-in does. When false (the default), Microsoft sign-in skips Shift MFA.
+    /// A trusted tenant's <see cref="TrustedTenantSettings.SkipShiftMfa"/> overrides it for that tenant's sign-ins.
     /// </summary>
     public bool RequireShiftMfa { get; set; }
+
+    /// <summary>
+    /// Microsoft tenants (organizations) this host trusts with their own users. An account whose email is on one of a
+    /// tenant's <see cref="TrustedTenantSettings.Domains"/> signs in only with Microsoft through that tenant: no
+    /// password sign-in, password reset, password change, device sign-in, or sign-in through Google, a personal
+    /// Microsoft account or another tenant. The built-in administrator is never held to this. Empty (the default): none.
+    /// </summary>
+    public List<TrustedTenantSettings> TrustedTenants { get; set; } = new();
+}
+
+/// <summary>A Microsoft tenant this host trusts, and the email domains whose accounts must sign in through it.</summary>
+public sealed class TrustedTenantSettings
+{
+    /// <summary>The tenant's ID (a GUID), from its Entra ID overview. Never the personal-account tenant.</summary>
+    public string? TenantId { get; set; }
+
+    /// <summary>
+    /// The email domains, such as <c>example.com</c>, whose accounts sign in only through this tenant. Matched exactly
+    /// and in any case against the part after <c>@</c>; a subdomain is not matched. A domain belongs to one tenant only.
+    /// </summary>
+    public List<string> Domains { get; set; } = new();
+
+    /// <summary>
+    /// The tenant enforces its own MFA, so its sign-ins are never asked for the Shift authenticator, whatever
+    /// <see cref="MicrosoftSignInSettings.RequireShiftMfa"/> and the host's MFA policy say. Default true.
+    /// </summary>
+    public bool SkipShiftMfa { get; set; } = true;
 }
 
 /// <summary>

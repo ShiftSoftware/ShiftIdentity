@@ -13,6 +13,11 @@ public sealed record SecurityEmail(Guid ID, string Destination, string Subject, 
     public string? ProviderAccount { get; init; }
     /// <summary>On a provider-link notice: the provider of that account.</summary>
     public SignInProvider? Provider { get; init; }
+    /// <summary>
+    /// A notice in answer to a reset request (purpose PasswordResetEmail, no grant): the account signs in only with
+    /// Microsoft through its organization, so it has no password to reset.
+    /// </summary>
+    public bool MicrosoftOnly { get; init; }
 }
 
 /// <summary>

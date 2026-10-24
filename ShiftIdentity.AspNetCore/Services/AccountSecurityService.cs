@@ -22,6 +22,8 @@ internal static partial class AccountSecurityService
         {
             var refusal = SignedInRefusal(services, unit, signedIn);
             if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
+            // An account held to a trusted tenant has no password of its own to change.
+            if (RequiredTenant(services, unit.User) is not null) return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.PasswordSignInDisabled));
             var now = services.Clock.GetUtcNow();
             var deadline = now.AddMinutes(5) < signedIn.ExpiresAt ? now.AddMinutes(5) : signedIn.ExpiresAt;
             // Existing access/MFA claims establish context only. Fresh password proof follows this operation's creation.

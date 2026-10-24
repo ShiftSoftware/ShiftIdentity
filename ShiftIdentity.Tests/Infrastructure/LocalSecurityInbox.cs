@@ -31,8 +31,8 @@ public sealed class LocalSecurityInbox(TimeProvider? clock = null) : ISecurityEm
             throw new InvalidOperationException("The local inbox accepts only email delivery purposes.");
         if (FailDeliveries) throw new InvalidOperationException("Synthetic delivery failure.");
         var route = message.Purpose == AuthenticationOperationPurpose.EmailVerify ? "/Identity/VerifyEmail" : "/Identity/ResetPassword";
-        // A provider-link notice carries no grant; it points at the login screen.
-        var link = message.Purpose == AuthenticationOperationPurpose.ProviderLogin ? "/Identity/login"
+        // A provider-link notice and a Microsoft-only reset notice carry no grant; they point at the login screen.
+        var link = message.Purpose == AuthenticationOperationPurpose.ProviderLogin || message.MicrosoftOnly ? "/Identity/login"
             : route + "#grant=" + Uri.EscapeDataString(message.Grant) + "&purpose=" + message.Purpose;
         lock (gate)
             accepted.TryAdd(message.ID, new(message.ID, message.Destination, message.Subject, link, clock.GetUtcNow()));

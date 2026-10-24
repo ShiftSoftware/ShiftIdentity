@@ -212,7 +212,10 @@ public class User : ShiftEntity<User>,
         if (await db.Users.AnyAsync(x => !x.IsDeleted && x.Phone.ToLower() == (formattedPhone ?? "").ToLower() && x.ID != id))
             throw new ShiftEntityException(new Message(Loc["Duplicate"], Loc["The phone {0} exist", dto.Phone]) { For = nameof(UserDTO.Phone) });
 
-        if (actionType == ActionTypes.Insert)
+        // An account whose email is on a trusted Microsoft tenant's domain signs in only with Microsoft. It is created
+        // without a password the administrator chooses: it gets a random one nobody knows and never uses.
+        var microsoftOnly = authority?.SignsInWithMicrosoftOnly(dto.Email) == true;
+        if (actionType == ActionTypes.Insert && !microsoftOnly)
         {
             if (string.IsNullOrWhiteSpace(dto.Password))
                 throw new ShiftEntityException(new Message(Loc["Validation Error"], Loc["Password can not be empty."]) { For = nameof(UserDTO.Password) });
@@ -279,8 +282,10 @@ public class User : ShiftEntity<User>,
 
         // The expensive hash runs here, before the save transaction and outside every lock. The staged authority
         // stores the versioned format; the direct path keeps the format the legacy login verifies.
-        HashModel? hash = string.IsNullOrEmpty(dto.Password) ? null
+        HashModel? hash = string.IsNullOrEmpty(dto.Password)
+            ? actionType == ActionTypes.Insert && microsoftOnly ? HashService.GenerateVersionedHash(PasswordGenerator.GeneratePassword(32)) : null
             : authority is null ? HashService.GenerateHash(dto.Password) : HashService.GenerateVersionedHash(dto.Password);
+        if (actionType == ActionTypes.Insert && microsoftOnly && string.IsNullOrEmpty(dto.Password)) dto.RequireChangeAtNextLogin = false;
 
         var accessTreeIds = dto.AccessTrees.Select(x => x.Value.ToLong());
 

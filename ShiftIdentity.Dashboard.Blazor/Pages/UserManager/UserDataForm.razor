@@ -30,7 +30,12 @@ else
                  Key="@("")"
                  T=" ShiftIdentity.Core.DTOs.User.UserDataDTO">
     <ToolbarStartTemplate>
-        @if (_mode == FormModes.View)
+        @if (_mode == FormModes.View && authenticator is { MicrosoftOnly: true })
+        {
+            @* An account held to a trusted Microsoft tenant has no password or Shift authenticator to manage. *@
+            <MudText Typo="Typo.body2" Class="ml-2 align-self-center" data-testid="profile-microsoft-only">@Loc["Your account signs in with Microsoft through your organization. Manage your password and MFA there."]</MudText>
+        }
+        else if (_mode == FormModes.View)
         {
             <MudButton OnClick="ChangePassword" Size="Size.Small" Color="Color.Warning" StartIcon="@Icons.Material.Filled.Edit" Variant="Variant.Filled" data-testid="profile-change-password">@Loc["Change Password"]</MudButton>
             @if (!DashboardOptions.StagedAuthority)
