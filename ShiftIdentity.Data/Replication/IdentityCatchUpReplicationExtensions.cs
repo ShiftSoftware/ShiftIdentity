@@ -263,9 +263,9 @@ public static class IdentityCatchUpReplicationExtensions
 
     private static Task<CosmosDbReplicationResult> ReplicateTeamAsync<TDbContext>(Target target, bool updateAll)
         where TDbContext : ShiftIdentityDbContext =>
-        // TeamModel embeds its branches (TeamCompanyBranches → CompanyBranch) — load them so each carries a real Name.
-        target.SetUp<TDbContext, Team>(q => q.Include(x => x.TeamCompanyBranches).ThenInclude(x => x.CompanyBranch))
-            .Replicate<TeamModel>(IdentityDatabaseAndContainerNames.TeamContainerName)
+        // Loaded with its replication tree: its branches and its members.
+        target.SetUp<TDbContext, Team>()
+            .ReplicateTree<TeamModel>(IdentityDatabaseAndContainerNames.TeamContainerName)
             .RunAndReportAsync(updateAll);
 
     public static Task ReplicateUserAsync<TDbContext>(this CosmosDBReplication cosmos, string connectionString, string databaseId, bool updateAll = false)
@@ -278,8 +278,9 @@ public static class IdentityCatchUpReplicationExtensions
 
     private static Task<CosmosDbReplicationResult> ReplicateUserAsync<TDbContext>(Target target, bool updateAll)
         where TDbContext : ShiftIdentityDbContext =>
+        // Loaded with its replication tree: its assignments.
         target.SetUp<TDbContext, User>()
-            .Replicate<UserModel>(IdentityDatabaseAndContainerNames.UserContainerName)
+            .ReplicateTree<UserModel>(IdentityDatabaseAndContainerNames.UserContainerName)
             .RunAndReportAsync(updateAll);
 
     // One entity's catch-up in a run of several.

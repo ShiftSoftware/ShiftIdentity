@@ -63,6 +63,16 @@ namespace ShiftSoftware.ShiftIdentity.Data
                 .Include(x => x.CompanyBranchDepartments!).ThenInclude(x => x.Department)
                 .Include(x => x.CompanyBranchBrands!).ThenInclude(x => x.Brand));
 
+            // A user's document lists the assigned named trees, in the order of the assignment rows: the order sign-in
+            // adds them to the session, which TypeAuth's merge depends on.
+            b.Entity<User>().HasReplicationTree(q => q
+                .Include(x => x.AccessTrees.OrderBy(a => a.ID)));
+
+            // A team's document embeds its branches and lists its members.
+            b.Entity<Team>().HasReplicationTree(q => q
+                .Include(x => x.TeamCompanyBranches).ThenInclude(x => x.CompanyBranch)
+                .Include(x => x.TeamUsers));
+
             b.Entity<AccessTree>().HasIndex(x => x.Name).IsUnique().HasFilter($"{nameof(AccessTree.IsDeleted)} = 0");
 
             b.Entity<App>().HasIndex(x => x.AppId).IsUnique().HasFilter($"{nameof(App.IsDeleted)} = 0");

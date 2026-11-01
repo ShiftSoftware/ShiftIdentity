@@ -115,10 +115,14 @@ public static class IdentityReplicationExtensions
     public static void SetUpTeamReplication<TDbContext>(this ShiftEntityCosmosDbOptions x, CosmosClient client, string databaseId)
         where TDbContext : ShiftIdentityDbContext =>
         x.SetUpReplication<TDbContext, Team>(client, databaseId)
-            .Replicate<TeamModel>(IdentityDatabaseAndContainerNames.TeamContainerName, m => m.id);
+            .ReplicateTree<TeamModel>(IdentityDatabaseAndContainerNames.TeamContainerName, m => m.id);
 
+    /// <summary>
+    /// The user's <see cref="UserModel"/>, rebuilt from the user's replication tree after any save that changes the user
+    /// or one of its assignments, so <see cref="UserModel.AccessTreeIDs"/> is always the whole list.
+    /// </summary>
     public static void SetUpUserReplication<TDbContext>(this ShiftEntityCosmosDbOptions x, CosmosClient client, string databaseId)
         where TDbContext : ShiftIdentityDbContext =>
         x.SetUpReplication<TDbContext, ShiftSoftware.ShiftIdentity.Data.Entities.User>(client, databaseId)
-            .Replicate<UserModel>(IdentityDatabaseAndContainerNames.UserContainerName, m => m.id);
+            .ReplicateTree<UserModel>(IdentityDatabaseAndContainerNames.UserContainerName, m => m.id);
 }

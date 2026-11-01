@@ -51,8 +51,8 @@ public class IdentityCatchUpSqlTests
         public ReplicationSyncLog Log { get; } = new();
         public ServiceProvider Provider { get; private set; } = null!;
 
-        // The catch-up always; the save side (SetUpOrganizationReplications) when asked.
-        public static async Task<Host> StartAsync(string name, RecordingCosmos cosmos, bool saveSide = false)
+        // The catch-up always; the save side (SetUpOrganizationReplications, and users when asked) when asked.
+        public static async Task<Host> StartAsync(string name, RecordingCosmos cosmos, bool saveSide = false, bool users = false)
         {
             var host = new Host { Cosmos = cosmos };
             host.catalog = await OwnedSqlCatalog.CreateAsync(name, Ct);
@@ -62,7 +62,11 @@ public class IdentityCatchUpSqlTests
             services.AddDbContext<IdentityTestDbContext>(o => o.UseSqlServer(host.catalog.ConnectionString));
             if (saveSide)
                 services.AddShiftEntityCosmosDbReplicationTrigger<IdentityTestDbContext>(x =>
-                    x.SetUpOrganizationReplications<IdentityTestDbContext>(cosmos.Client, Database));
+                {
+                    x.SetUpOrganizationReplications<IdentityTestDbContext>(cosmos.Client, Database);
+                    if (users)
+                        x.SetUpUserReplication<IdentityTestDbContext>(cosmos.Client, Database);
+                });
             services.AddShiftEntityCosmosDbReplication<IdentityTestDbContext>();
             services.AddShiftIdentityReplicationMapper();
             host.Provider = services.BuildServiceProvider();
@@ -167,6 +171,64 @@ public class IdentityCatchUpSqlTests
         Assert.DoesNotContain(host.Cosmos.Queries, x => x.Container == CompanyBranchContainerName);
         Assert.Empty(host.Cosmos.Stored(CompanyBranchContainerName));
         Assert.Empty(host.Cosmos.Stored(UserContainerName));
+    }
+
+    private static long[] Ids(JToken? list) => list!.Select(x => (long)x).ToArray();
+
+    [Fact]
+    public async Task A_save_and_a_catch_up_write_the_whole_assignment_and_membership_lists_to_the_user_and_team()
+    {
+        await using var host = await Host.StartAsync("IdentityUserTeamTrees", Cosmos(), saveSide: true, users: true);
+
+        var first = new AccessTree { Name = "First", Tree = "{}" };
+        var second = new AccessTree { Name = "Second", Tree = "{}" };
+        var user = new User { Username = "tree", FullName = "Tree User", PasswordHash = [1], Salt = [1], IsActive = true };
+        var team = new Team { Name = "Team" };
+        await host.SaveAsync(db =>
+        {
+            db.AddRange(first, second, user, team);
+            return Task.CompletedTask;
+        });
+
+        // Assigned second, then first: the list keeps the order of the assignment rows, not of the trees' IDs.
+        await host.SaveAsync(db =>
+        {
+            db.Add(new UserAccessTree { UserID = user.ID, AccessTreeID = second.ID });
+            return Task.CompletedTask;
+        });
+        await host.SaveAsync(db =>
+        {
+            db.AddRange(new UserAccessTree { UserID = user.ID, AccessTreeID = first.ID }, new TeamUser { TeamID = team.ID, UserID = user.ID });
+            return Task.CompletedTask;
+        });
+
+        Assert.Empty(host.Log.Failed);
+        Assert.Equal([second.ID, first.ID], Ids(Assert.Single(host.Cosmos.Stored(UserContainerName))["AccessTreeIDs"]));
+        Assert.Equal([user.ID], Ids(Assert.Single(host.Cosmos.Stored(TeamContainerName))["UserIDs"]));
+
+        // A save of the user row alone, with no navigation loaded, keeps the whole list.
+        await host.SaveAsync(async db => (await db.Users.SingleAsync(Ct)).FullName = "Renamed");
+        Assert.Equal([second.ID, first.ID], Ids(Assert.Single(host.Cosmos.Stored(UserContainerName))["AccessTreeIDs"]));
+
+        // Hard-deleted rows leave the lists.
+        await host.SaveAsync(async db =>
+        {
+            db.UserAccessTrees.Remove(await db.UserAccessTrees.SingleAsync(x => x.AccessTreeID == second.ID, Ct));
+            db.TeamUsers.Remove(await db.TeamUsers.SingleAsync(Ct));
+        });
+
+        Assert.Empty(host.Log.Failed);
+        var savedUser = Assert.Single(host.Cosmos.Stored(UserContainerName));
+        var savedTeam = Assert.Single(host.Cosmos.Stored(TeamContainerName));
+        Assert.Equal([first.ID], Ids(savedUser["AccessTreeIDs"]));
+        Assert.Empty(Ids(savedTeam["UserIDs"]));
+
+        var report = await host.CatchUpAsync(x => x.ReplicateAsync<IdentityTestDbContext>(host.Cosmos.Client, Database,
+            [IdentityReplicationEntity.Team, IdentityReplicationEntity.User], updateAll: true));
+
+        Assert.True(report.Succeeded, report.ToString());
+        Assert.Equal(savedUser.ToString(), Assert.Single(host.Cosmos.Stored(UserContainerName)).ToString());
+        Assert.Equal(savedTeam.ToString(), Assert.Single(host.Cosmos.Stored(TeamContainerName)).ToString());
     }
 
     // RV-19. The run used to stop at the branch step when Branches was missing, so companies and teams never ran.

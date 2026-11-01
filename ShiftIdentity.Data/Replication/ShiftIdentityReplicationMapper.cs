@@ -168,12 +168,19 @@ public class ShiftIdentityReplicationMapper : ShiftMapperBase
         // Team.TeamCompanyBranches. RecognizePrefixes("Team") is how ShiftMapper says that — the bare name is always
         // tried first, so TeamID still binds to TeamID and `id` to ID — and the elements compose through the
         // TeamCompanyBranch → CompanyBranchSubItemModel map above.
+        // UserIDs lists the members from Team.TeamUsers, in ascending order so the document is the same after every save.
+        // The team is loaded with its replication tree, so the navigation holds every membership.
         CreateMap<Team, TeamModel>(o => o.RecognizePrefixes("Team"))
-            .ForMember(d => d.ID, o => o.Ignore());
+            .ForMember(d => d.ID, o => o.Ignore())
+            .ForMember(d => d.UserIDs, o => o.MapFrom(s => s.TeamUsers.Select(x => x.UserID).OrderBy(x => x).ToList()));
 
         // ─────────────────────────────── User ───────────────────────────────
+        // AccessTreeIDs lists the assigned named trees in the order of the assignment rows (their IDs), the order sign-in
+        // adds them to the session; TypeAuth's merge depends on it. The user is loaded with its replication tree, so the
+        // navigation holds every assignment.
         CreateMap<User, UserModel>()
-            .ForMember(d => d.ID, o => o.Ignore());
+            .ForMember(d => d.ID, o => o.Ignore())
+            .ForMember(d => d.AccessTreeIDs, o => o.MapFrom(s => s.AccessTrees.OrderBy(x => x.ID).Select(x => x.AccessTreeID).ToList()));
 
         // Named trees are shared documents; assignments and memberships retain their join row ids.
         CreateMap<AccessTree, AccessTreeModel>()
