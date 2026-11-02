@@ -176,18 +176,15 @@ public class ShiftIdentityReplicationMapper : ShiftMapperBase
 
         // ─────────────────────────────── User ───────────────────────────────
         // AccessTreeIDs lists the assigned named trees in the order of the assignment rows (their IDs), the order sign-in
-        // adds them to the session; TypeAuth's merge depends on it. The user is loaded with its replication tree, so the
-        // navigation holds every assignment.
+        // adds them to the session, so the document does not change when a save keeps the assignments. The user is loaded
+        // with its replication tree, so the navigation holds every assignment.
         CreateMap<User, UserModel>()
             .ForMember(d => d.ID, o => o.Ignore())
             .ForMember(d => d.AccessTreeIDs, o => o.MapFrom(s => s.AccessTrees.OrderBy(x => x.ID).Select(x => x.AccessTreeID).ToList()));
 
-        // Named trees are shared documents; assignments and memberships retain their join row ids.
+        // Named trees are shared documents. Assignments and memberships have no documents of their own: they are the
+        // lists on the user and team documents above.
         CreateMap<AccessTree, AccessTreeModel>()
-            .ForMember(d => d.ID, o => o.Ignore());
-        CreateMap<UserAccessTree, UserAccessTreeModel>()
-            .ForMember(d => d.ID, o => o.Ignore());
-        CreateMap<TeamUser, TeamUserModel>()
             .ForMember(d => d.ID, o => o.Ignore());
     }
 }

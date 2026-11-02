@@ -117,21 +117,20 @@ public class IdentityReplicationEndpointsSqlTests
         Assert.Equal(HttpStatusCode.OK, status);
         Assert.Equal(["Brand", "CompanyBranch"], body!.Steps.Select(x => x.Entity));
         Assert.Equal(
-            ["Service", "Department", "Region", "Country", "City", "Company", "Team", "User", "AccessTree", "UserAccessTree", "TeamUser"],
+            ["Service", "Department", "Region", "Country", "City", "Company", "Team", "User", "AccessTree"],
             body.Skipped);
         Assert.Single(host.Cosmos.Stored(BrandContainerName));
         Assert.Single(host.Cosmos.Stored(BranchContainerName));
         Assert.Empty(host.Cosmos.Stored(CompanyContainerName));
     }
 
-    // Which users hold a tree is edited on the user, so whoever may write users may rebuild those too.
+    // Which users hold a tree is on the user document, so whoever may write users rebuilds those lists with the users.
     [Fact]
-    public async Task Whoever_may_write_users_can_rebuild_the_users_and_their_access_trees()
+    public async Task Whoever_may_write_users_can_rebuild_the_users_but_not_the_named_trees()
     {
         await using var host = await Host.StartAsync("ReplicationUsers");
 
         Assert.Equal(HttpStatusCode.OK, (await host.PostAsync("users", UsersWriter)).Status);
-        Assert.Equal(HttpStatusCode.OK, (await host.PostAsync("user-access-trees", UsersWriter)).Status);
         Assert.Equal(HttpStatusCode.Forbidden, (await host.PostAsync("access-trees", UsersWriter)).Status);
     }
 
@@ -206,9 +205,7 @@ public class IdentityReplicationEndpointsSqlTests
                 .Container(BrandContainerName, "/id")
                 .Container(TeamContainerName, "/id")
                 .Container(UserContainerName, "/id")
-                .Container(AccessTreeContainerName, "/id")
-                .Container(UserAccessTreeContainerName, "/id")
-                .Container(TeamUserContainerName, "/id");
+                .Container(AccessTreeContainerName, "/id");
             if (withBranches)
                 cosmos.Container(BranchContainerName, "/id");
 

@@ -17,8 +17,6 @@ public enum IdentityReplicationEntity
     Team,
     User,
     AccessTree,
-    UserAccessTree,
-    TeamUser,
 }
 
 /// <summary>The entities of each Identity catch-up, in the order it runs them.</summary>
@@ -38,12 +36,10 @@ public static class IdentityReplicationEntities
         IdentityReplicationEntity.Team,
     ];
 
-    /// <summary>The access trees, and which users and teams hold them.</summary>
+    /// <summary>The named access trees. Which users and teams hold them is on the user and team documents.</summary>
     public static IReadOnlyList<IdentityReplicationEntity> Authorization { get; } =
     [
         IdentityReplicationEntity.AccessTree,
-        IdentityReplicationEntity.UserAccessTree,
-        IdentityReplicationEntity.TeamUser,
     ];
 
     /// <summary>Every entity: the organization, then users, then authorization.</summary>

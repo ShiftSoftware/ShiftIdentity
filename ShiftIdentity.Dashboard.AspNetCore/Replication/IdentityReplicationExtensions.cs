@@ -51,18 +51,15 @@ public static class IdentityReplicationExtensions
     }
 
     /// <summary>
-    /// Replicates named grants and assignments alongside the existing Users collection.
-    /// Provision all three containers with /id as their partition key before enabling this wiring.
+    /// Replicates the named access trees. Assignments and memberships have no documents of their own: they are the
+    /// lists on the user and team documents. Provision the container with /id as its partition key before enabling
+    /// this wiring.
     /// </summary>
     public static void SetUpAuthorizationReplication<TDbContext>(this ShiftEntityCosmosDbOptions x, CosmosClient client, string databaseId)
         where TDbContext : ShiftIdentityDbContext
     {
         x.SetUpReplication<TDbContext, AccessTree>(client, databaseId)
             .Replicate<AccessTreeModel>(IdentityDatabaseAndContainerNames.AccessTreeContainerName, m => m.id);
-        x.SetUpReplication<TDbContext, UserAccessTree>(client, databaseId)
-            .Replicate<UserAccessTreeModel>(IdentityDatabaseAndContainerNames.UserAccessTreeContainerName, m => m.id);
-        x.SetUpReplication<TDbContext, TeamUser>(client, databaseId)
-            .Replicate<TeamUserModel>(IdentityDatabaseAndContainerNames.TeamUserContainerName, m => m.id);
     }
 
     public static void SetUpServiceReplication<TDbContext>(this ShiftEntityCosmosDbOptions x, CosmosClient client, string databaseId)

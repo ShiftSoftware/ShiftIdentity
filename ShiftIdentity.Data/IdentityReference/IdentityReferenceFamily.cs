@@ -21,4 +21,7 @@ public enum IdentityReferenceFamily
     Teams = 7,
     Brands = 8,
     Users = 9,
+
+    /// <summary>The named access trees. The users and teams that use them are lists on the user and team documents.</summary>
+    AccessTrees = 10,
 }

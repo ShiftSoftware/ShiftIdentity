@@ -17,19 +17,18 @@ using Xunit;
 namespace ShiftIdentity.Tests;
 
 /// <summary>Runs Identity's actual authorization registration and mapper through the real save trigger.
-/// SQLite stores the three participating entities; Cosmos is an in-process stand-in.</summary>
+/// SQLite stores the named trees; Cosmos is an in-process stand-in. Assignments and memberships have no documents of
+/// their own: <c>IdentityCatchUpSqlTests</c> covers the user and team documents that list them.</summary>
 public class AuthorizationReplicationTests
 {
     public sealed class ReplicationDb(DbContextOptions<ReplicationDb> options) : ShiftIdentityDbContext(options)
     {
         protected override void OnModelCreating(ModelBuilder model)
         {
-            // The Identity SQL Server model is not under test here. Keep the actual scalar join entities
-            // and replication columns while leaving SQL Server-specific computed columns out of SQLite.
+            // The Identity SQL Server model is not under test here. Keep the named trees while leaving SQL
+            // Server-specific computed columns out of SQLite.
             foreach (var entity in model.Model.GetEntityTypes().ToArray()) model.Ignore(entity.ClrType);
             model.Entity<AccessTree>();
-            model.Entity<UserAccessTree>().Ignore(x => x.User).Ignore(x => x.AccessTree);
-            model.Entity<TeamUser>().Ignore(x => x.User).Ignore(x => x.Team);
         }
     }
 
@@ -55,15 +54,13 @@ public class AuthorizationReplicationTests
     }
 
     [Fact]
-    public async Task Named_tree_edits_and_hard_deleted_assignments_and_memberships_reach_Cosmos()
+    public async Task Named_tree_edits_reach_Cosmos()
     {
         await using var connection = new SqliteConnection("DataSource=:memory:");
         await connection.OpenAsync(TestContext.Current.CancellationToken);
         var stored = new ConcurrentDictionary<string, ReplicationModel>();
         var database = Substitute.For<Database>();
         Wire<AccessTreeModel>(database, IdentityDatabaseAndContainerNames.AccessTreeContainerName, stored);
-        Wire<UserAccessTreeModel>(database, IdentityDatabaseAndContainerNames.UserAccessTreeContainerName, stored);
-        Wire<TeamUserModel>(database, IdentityDatabaseAndContainerNames.TeamUserContainerName, stored);
         var client = Substitute.For<CosmosClient>();
         client.ClientOptions.Returns(new CosmosClientOptions());
         client.GetDatabase("Identity").Returns(database);
@@ -89,31 +86,6 @@ public class AuthorizationReplicationTests
         await db.SaveChangesAsync(ct);
         await log.WaitAsync();
         Assert.Equal("{}", Assert.IsType<AccessTreeModel>(stored["AccessTrees/" + tree.ID]).Tree);
-
-        var assignment = new UserAccessTree { UserID = 5, AccessTreeID = tree.ID };
-        db.UserAccessTrees.Add(assignment);
-        await db.SaveChangesAsync(ct);
-        await log.WaitAsync();
-        Assert.Equal(tree.ID, Assert.IsType<UserAccessTreeModel>(stored["UserAccessTrees/" + assignment.ID]).AccessTreeID);
-        db.ChangeTracker.Clear();
-        var reloaded = await db.UserAccessTrees.SingleAsync(ct);
-        Assert.NotNull(reloaded.LastReplicationStamp);
-        db.UserAccessTrees.Remove(reloaded);
-        await db.SaveChangesAsync(ct);
-        await log.WaitAsync();
-        Assert.DoesNotContain("UserAccessTrees/" + assignment.ID, stored.Keys);
-
-        var membership = new TeamUser { UserID = 5, TeamID = 9 };
-        db.TeamUsers.Add(membership);
-        await db.SaveChangesAsync(ct);
-        await log.WaitAsync();
-        Assert.Equal(9, Assert.IsType<TeamUserModel>(stored["TeamUsers/" + membership.ID]).TeamID);
-        db.ChangeTracker.Clear();
-        var reloadedMembership = await db.TeamUsers.SingleAsync(ct);
-        db.TeamUsers.Remove(reloadedMembership);
-        await db.SaveChangesAsync(ct);
-        await log.WaitAsync();
-        Assert.DoesNotContain("TeamUsers/" + membership.ID, stored.Keys);
     }
 
     private static void Wire<T>(Database database, string name, ConcurrentDictionary<string, ReplicationModel> stored)

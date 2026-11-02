@@ -1,16 +1,15 @@
 ﻿using ShiftSoftware.ShiftEntity.Core;
 using System.ComponentModel.DataAnnotations.Schema;
-using ShiftSoftware.ShiftEntity.Model.Replication;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 
+// Not replicated on its own. It is part of the user's replication tree: the user's document lists the assigned trees
+// (UserModel.AccessTreeIDs), and a save that adds, changes or deletes one of these rows marks the user as not
+// replicated in the same transaction, so a failed sync leaves it to the catch-up.
 [TemporalShiftEntity]
 [Table("UserAccessTrees", Schema = "ShiftIdentity")]
-public class UserAccessTree: ShiftEntity<UserAccessTree>, IShiftEntityReplication
+public class UserAccessTree: ShiftEntity<UserAccessTree>
 {
-    public DateTimeOffset? LastReplicationDate { get; set; }
-    public string? LastReplicationStamp { get; set; }
-
     public long UserID { get; set; }
 
     public long AccessTreeID { get; set; }

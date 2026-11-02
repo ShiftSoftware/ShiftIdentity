@@ -38,8 +38,6 @@ internal static class IdentityReplicationEndpoints
         (IdentityReplicationEntity.Team, "teams", ShiftIdentityActions.Teams),
         (IdentityReplicationEntity.User, "users", ShiftIdentityActions.Users),
         (IdentityReplicationEntity.AccessTree, "access-trees", ShiftIdentityActions.AccessTrees),
-        (IdentityReplicationEntity.UserAccessTree, "user-access-trees", ShiftIdentityActions.Users),
-        (IdentityReplicationEntity.TeamUser, "team-users", ShiftIdentityActions.Teams),
     ];
 
     public static IEndpointRouteBuilder MapIdentityReplicationEndpoints(this IEndpointRouteBuilder app)

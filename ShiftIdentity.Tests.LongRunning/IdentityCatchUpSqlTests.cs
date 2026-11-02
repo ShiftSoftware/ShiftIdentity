@@ -37,9 +37,7 @@ public class IdentityCatchUpSqlTests
             .Container(BrandContainerName, "/id")
             .Container(TeamContainerName, "/id")
             .Container(UserContainerName, "/id")
-            .Container(AccessTreeContainerName, "/id")
-            .Container(UserAccessTreeContainerName, "/id")
-            .Container(TeamUserContainerName, "/id");
+            .Container(AccessTreeContainerName, "/id");
         return withBranches ? cosmos.Container(BranchContainerName, "/id") : cosmos;
     }
 
@@ -273,7 +271,7 @@ public class IdentityCatchUpSqlTests
             return Task.CompletedTask;
         });
 
-        // The users' step reads a column that is gone, so it throws. The three authorization steps come after it.
+        // The users' step reads a column that is gone, so it throws. The authorization step comes after it.
         await host.WithDbAsync(async db =>
         {
             var users = db.Model.FindEntityType(typeof(User))!;
@@ -285,13 +283,13 @@ public class IdentityCatchUpSqlTests
             host.CatchUpAsync(x => x.ReplicateAllAsync<IdentityTestDbContext>(host.Cosmos.Client, Database, updateAll: true)));
 
         var steps = thrown.Report.Steps;
-        Assert.Equal(13, steps.Count);
+        Assert.Equal(11, steps.Count);
         var users = Assert.Single(steps, x => x.Entity == nameof(User));
         Assert.Null(users.Result);
         Assert.Same(users.Error, thrown.InnerException);
         Assert.Contains("FullName", users.Error!.Message);
 
-        Assert.Equal([nameof(AccessTree), nameof(UserAccessTree), nameof(TeamUser)],
+        Assert.Equal([nameof(AccessTree)],
             steps.SkipWhile(x => x != users).Skip(1).Select(x => x.Entity));
         Assert.All(steps.Where(x => x != users), x => Assert.True(x.Succeeded, x.ToString()));
         Assert.Equal(1, steps.Single(x => x.Entity == nameof(AccessTree)).Result!.Replicated);

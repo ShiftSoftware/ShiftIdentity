@@ -131,10 +131,6 @@ public static class IdentityCatchUpReplicationExtensions
     [
         new(IdentityReplicationEntity.AccessTree, (target, updateAll) => target.SetUp<TDbContext, AccessTree>()
             .Replicate<AccessTreeModel>(IdentityDatabaseAndContainerNames.AccessTreeContainerName).RunAndReportAsync(updateAll)),
-        new(IdentityReplicationEntity.UserAccessTree, (target, updateAll) => target.SetUp<TDbContext, UserAccessTree>()
-            .Replicate<UserAccessTreeModel>(IdentityDatabaseAndContainerNames.UserAccessTreeContainerName).RunAndReportAsync(updateAll)),
-        new(IdentityReplicationEntity.TeamUser, (target, updateAll) => target.SetUp<TDbContext, TeamUser>()
-            .Replicate<TeamUserModel>(IdentityDatabaseAndContainerNames.TeamUserContainerName).RunAndReportAsync(updateAll)),
     ];
 
     public static Task ReplicateServiceAsync<TDbContext>(this CosmosDBReplication cosmos, string connectionString, string databaseId, bool updateAll = false)

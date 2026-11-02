@@ -64,7 +64,7 @@ namespace ShiftSoftware.ShiftIdentity.Data
                 .Include(x => x.CompanyBranchBrands!).ThenInclude(x => x.Brand));
 
             // A user's document lists the assigned named trees, in the order of the assignment rows: the order sign-in
-            // adds them to the session, which TypeAuth's merge depends on.
+            // adds them to the session.
             b.Entity<User>().HasReplicationTree(q => q
                 .Include(x => x.AccessTrees.OrderBy(a => a.ID)));
 

@@ -24,7 +24,7 @@ internal static class Program
                 Console.WriteLine("Local backup: --bacpac <existing export> --dac-assembly <Microsoft.Data.Tools.Schema.Sql.dll>; reads directly, no database import.");
                 Console.WriteLine("Optional: --exclude-action-root <full type name> --exclude-incomplete-scope true (explicitly reported benchmark-only subset)");
                 Console.WriteLine("Memory experiment: --mode coexist; optional --hold-ms 30000 writes aggregate readiness metadata for independent process measurements.");
-                Console.WriteLine("Scope projection experiment: --mode slim --system-action <root:field>; compares full/required roots and compact projections for 1/10/50/all candidates.");
+                Console.WriteLine("Per event: --mode candidates; optional --candidates 10,100,500 --events 100 --seed 1 (prepare and check times, reuse in one scope, Match cost).");
                 Console.WriteLine("Build Release. For stable JIT comparison set DOTNET_TieredCompilation=0 before launching.");
                 Console.WriteLine("measure uses SQL projections replayed in the real cache; inspect probes actual local Cosmos reads. No writes to either database.");
                 return 0;
@@ -60,15 +60,15 @@ internal static class Program
             if(arguments.GetValueOrDefault("--exclude-incomplete-scope")=="true")
             {
                 var excluded=data.Users.RemoveAll(u=>u.IsActive==true&&!u.IsDeleted&&data.HasIncompleteScope(u));
-                report["benchmarkScope"]=new {ExcludedIncompleteActiveUsers=excluded,Reason="Explicit benchmark-only subset. Unmodified full-population lookup fails closed on these incomplete inputs; no source data was repaired.",Dataset=data.Shape()};
+                report["benchmarkScope"]=new {ExcludedIncompleteActiveUsers=excluded,Reason="Explicit benchmark-only subset. The resolver gives these users a NotEligible or Unresolved outcome, not a subject; no source data was repaired.",Dataset=data.Shape()};
             }
             if (arguments.GetValueOrDefault("--mode") == "sql-inspect") { }
             else if (arguments.GetValueOrDefault("--mode") == "inspect")
                 report["cosmos"] = await CosmosProbe.Run(settings);
             else if(arguments.GetValueOrDefault("--mode")=="coexist")
                 report["coexistence"]=await Coexistence.Run(data,settings.HashIds(),actions,arguments);
-            else if(arguments.GetValueOrDefault("--mode")=="slim")
-                report["slim"]=await SlimMeasurements.Run(data,settings.HashIds(),actions,arguments);
+            else if(arguments.GetValueOrDefault("--mode")=="candidates")
+                report["candidates"]=await Candidates.Run(data,settings.HashIds(),actions,arguments);
             else
                 report["measurements"] = await Measurements.Run(data, settings.HashIds(), actions, arguments);
             await File.WriteAllTextAsync(arguments["--output"], JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));

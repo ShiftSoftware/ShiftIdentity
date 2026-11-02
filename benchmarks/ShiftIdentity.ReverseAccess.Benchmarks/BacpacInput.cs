@@ -76,8 +76,11 @@ internal static class BacpacInput
         ReadTable("Users",r=>data.Users.Add(new UserModel{id=Key(r),IsActive=Flag(r,"IsActive"),IsDeleted=Flag(r,"IsDeleted"),AccessTree=(string?)r["AccessTree"],
             CompanyID=Id(r,"CompanyID"),CompanyBranchID=Id(r,"CompanyBranchID"),RegionID=Id(r,"RegionID"),CountryID=Id(r,"CountryID"),Username="benchmark",FullName="benchmark"}));
         ReadTable("AccessTrees",r=>data.Trees.Add(new AccessTreeModel{id=Key(r),Name="benchmark",Tree=(string)r["Tree"]!,IsDeleted=Flag(r,"IsDeleted")}));
-        ReadTable("UserAccessTrees",r=>data.Assignments.Add(new UserAccessTreeModel{id=Key(r),UserID=Id(r,"UserID")!.Value,AccessTreeID=Id(r,"AccessTreeID")!.Value,IsDeleted=Flag(r,"IsDeleted")}));
-        ReadTable("TeamUsers",r=>data.Memberships.Add(new TeamUserModel{id=Key(r),UserID=Id(r,"UserID")!.Value,TeamID=Id(r,"TeamID")!.Value,IsDeleted=Flag(r,"IsDeleted")}));
+        ReadTable("Teams",r=>data.Teams.Add(new TeamModel{id=Key(r),Name="benchmark",IsDeleted=Flag(r,"IsDeleted")}));
+        var assignments=new List<(long Row,long User,long Tree)>();var memberships=new List<(long Team,long User)>();
+        ReadTable("UserAccessTrees",r=>assignments.Add((Id(r,"ID")!.Value,Id(r,"UserID")!.Value,Id(r,"AccessTreeID")!.Value)));
+        ReadTable("TeamUsers",r=>memberships.Add((Id(r,"TeamID")!.Value,Id(r,"UserID")!.Value)));
+        data.SetLists(assignments.OrderBy(a=>a.Row).Select(a=>(a.User,a.Tree)),memberships);
         ReadTable("Companies",r=>{organizations.Add((string)r["Name"]!);data.Companies.Add(new CompanyModel{id=Key(r),Name="benchmark",CompanyType=(CompanyTypes)Convert.ToInt32(r["CompanyType"]),IsDeleted=Flag(r,"IsDeleted")});});
         ReadTable("CompanyBranches",r=>data.Branches.Add(new CompanyBranchModel{id=Key(r),Name="benchmark",CityID=Id(r,"CityID"),IsDeleted=Flag(r,"IsDeleted")}));
         ReadTable("Countries",r=>countries.Add((string)r["Name"]!));
