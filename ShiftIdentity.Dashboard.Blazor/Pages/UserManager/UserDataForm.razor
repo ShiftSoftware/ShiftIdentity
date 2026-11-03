@@ -153,6 +153,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        _ = ShiftSoftware.ShiftIdentity.Blazor.Services.PhoneNumberEngine.PreloadAsync(Services);
         if (DashboardOptions.StagedAuthority && AdmissionContext is null)
             await ReadAuthenticatorAsync();
     }

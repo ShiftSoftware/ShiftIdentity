@@ -17,6 +17,7 @@
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Department
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Service
 @inject ShiftIdentityLocalizer Loc
+@inject IServiceProvider Services
 
 
 
@@ -457,6 +458,7 @@
 
     protected override Task OnInitializedAsync()
     {
+        _ = ShiftSoftware.ShiftIdentity.Blazor.Services.PhoneNumberEngine.PreloadAsync(Services);
         this.SetCustomFiles();
 
         return base.OnInitializedAsync();

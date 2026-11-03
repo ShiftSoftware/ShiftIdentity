@@ -55,6 +55,10 @@ public static class IServiceCollectionExtensions
         services.TryAddScoped(sp => new IdentitySession(sp.GetRequiredService<IIdentityTokenStorage>(),
             sp.GetRequiredService<IdentityRenewalTransport>()));
 
+        services.TryAddSingleton<PhoneNumberEngine>();
+
+        if (OperatingSystem.IsBrowser())
+            ShiftSoftware.ShiftIdentity.Core.ValidatorsAndFormatters.PhoneNumber.EngineAvailable = false;
         services.AddScoped<MessageService>();
         services.AddScoped<CodeVerifierStorageService>();
 
