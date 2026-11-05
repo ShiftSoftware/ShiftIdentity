@@ -72,8 +72,7 @@ public sealed class DashboardLinkSqlTests(SqlIdentityFixture fixture) : IClassFi
 
     private static async Task Journey(SqlIdentityFixture target, HttpClient client, HostSecurityInbox inbox, bool verification)
     {
-        using var login = await client.PostAsJsonAsync("api/Auth/Login", new { target.Username, target.Password });
-        var old = (await login.Content.ReadFromJsonAsync<ShiftSoftware.ShiftEntity.Model.ShiftEntityResponse<TokenDTO>>())!.Entity!;
+        var old = await IdentityHttpHost.SignInAsync(client, target.Username, target.Password);
         var route = verification ? "email-verification" : "password-reset";
         using var request = await client.PostAsJsonAsync("api/identity/v2/" + route + "/request", new RequestSecurityEmail(target.Username));
         Assert.Equal(HttpStatusCode.Accepted, request.StatusCode);
@@ -116,8 +115,7 @@ public sealed class DashboardLinkSqlTests(SqlIdentityFixture fixture) : IClassFi
     {
         var inbox = new HostSecurityInbox();
         using var host = Host<IdentityTestDbContext>(fixture, inbox);
-        using var login = await host.Client.PostAsJsonAsync("api/Auth/Login", new { fixture.Username, fixture.Password });
-        var session = (await login.Content.ReadFromJsonAsync<ShiftSoftware.ShiftEntity.Model.ShiftEntityResponse<TokenDTO>>())!.Entity!;
+        var session = await IdentityHttpHost.SignInAsync(host.Client, fixture.Username, fixture.Password);
         host.Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", session.Token);
         string[] routes = ["SendEmailVerificationLink", "VerifyEmail/1?expires=1&token=legacy", "SendPasswordResetLink?email=saved%40example.invalid", "ResetPassword/1?expires=1&token=legacy"];
         foreach (var route in routes)
@@ -158,8 +156,7 @@ public sealed class DashboardLinkSqlTests(SqlIdentityFixture fixture) : IClassFi
                 services.AddScoped<ISecurityEmailSink, HostSecurityEmailSink>();
                 services.AddScoped<ISecurityEmailSender>(_ => throw new InvalidOperationException("Synthetic: the queue connection is not configured."));
             });
-        using var login = await host.Client.PostAsJsonAsync("api/Auth/Login", new { fixture.Username, fixture.Password });
-        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
+        await IdentityHttpHost.SignInAsync(host.Client, fixture.Username, fixture.Password);
 
         using var request = await host.Client.PostAsJsonAsync("api/identity/v2/password-reset/request", new RequestSecurityEmail(fixture.Username));
         await using var db = fixture.CreateContext();

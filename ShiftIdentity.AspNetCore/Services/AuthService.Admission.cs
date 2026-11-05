@@ -61,6 +61,12 @@ public partial class AuthService
                 if (now >= startedAt.AddMinutes(5)) return Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.Expired));
                 // Only after a correct password, so the refusal never says which usernames are held to a tenant.
                 if (SignInMethodRefusal(services, unit.User, null, null) is { } method) return Task.FromResult<AuthOutcome>(method);
+                // A correct password clears the counter the direct issuer (an Azure Functions login) keeps on the same
+                // account, and records the sign-in, also before a further step.
+                unit.User.LoginAttempts = 0;
+                unit.User.LockDownUntil = null;
+                unit.User.UserLog ??= new Data.Entities.UserLog();
+                unit.User.UserLog.LastSeen = now;
                 if (upgrade is not null)
                 {
                     unit.User.PasswordHash = upgrade.PasswordHash;
@@ -69,6 +75,27 @@ public partial class AuthService
                 return Task.FromResult(ContinuePasswordLogin(services, unit, request.CodeChallenge, startedAt, provenAt));
             }, ct);
         });
+
+    // All local restrictions use the locked staged policy/factor state.
+    private static AuthOutcome ContinuePasswordLogin(IdentityAdmissionServices services, IdentitySecurityTransaction unit,
+        string challenge, DateTimeOffset started, DateTimeOffset provenAt)
+    {
+        var next = LocalStep(unit, false);
+        return next switch
+        {
+            AuthenticationStep.PasswordChange => AdmissionOperations.Create(services, unit,
+                AuthenticationOperationPurpose.PasswordChange, AuthenticationOperationState.AwaitingNewPassword,
+                challenge, started, started.AddMinutes(5), PasswordChangeOrigin.RequiredLogin, provenAt),
+            AuthenticationStep.NewMfa => AdmissionOperations.Create(services, unit,
+                AuthenticationOperationPurpose.MfaEnrollment, AuthenticationOperationState.AwaitingNewFactor,
+                challenge, started, started.AddMinutes(10), passwordProvenAt: provenAt, prepareNewFactor: true),
+            AuthenticationStep.ExistingMfa => AdmissionOperations.Create(services, unit,
+                AuthenticationOperationPurpose.Login, AuthenticationOperationState.AwaitingMfa,
+                challenge, started, started.AddMinutes(5), passwordProvenAt: provenAt),
+            { } step => Restricted(step, services.Clock.GetUtcNow()),
+            null => Issue(services, unit, Proof(unit, services, false, provenAt), services.Clock.GetUtcNow())
+        };
+    }
 
     internal static Task<AuthOutcome> CompleteLoginMfaAsync(IdentityAdmissionServices services, string? handle,
         CompleteMfaRequest request, CancellationToken ct) => AtBoundary(async () =>
@@ -178,4 +205,18 @@ public partial class AuthService
         }, ct);
     });
 
+    /// <summary>Both the hash-encoded subject of current credentials and the numeric subject of older ones.</summary>
+    internal static long? LegacySubject(IdentityAdmissionServices services, string subject)
+    {
+        try
+        {
+            var userID = services.HashIds.Decode<UserDTO>(subject);
+            if (userID <= 0 && !long.TryParse(subject, NumberStyles.None, CultureInfo.InvariantCulture, out userID)) return null;
+            return userID > 0 ? userID : null;
+        }
+        catch (Exception e) when (e is ArgumentException or FormatException or OverflowException)
+        {
+            return null;
+        }
+    }
 }

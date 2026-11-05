@@ -126,9 +126,7 @@ public sealed class CompanyCalendarRoundTripSqlTests(SqlIdentityFixture fixture)
     private async Task<LegacyIdentityHttpHost<IdentityTestDbContext>> HostAsync()
     {
         var host = new LegacyIdentityHttpHost<IdentityTestDbContext>(fixture);
-        using var login = await host.Client.PostAsJsonAsync("/api/Auth/Login", new LoginDTO { Username = OperatorName, Password = fixture.Password });
-        Assert.True(login.StatusCode == HttpStatusCode.OK, await login.Content.ReadAsStringAsync());
-        var token = (await login.Content.ReadFromJsonAsync<ShiftEntityResponse<TokenDTO>>())!.Entity!.Token;
+        var token = (await host.DirectSignInAsync(OperatorName, fixture.Password))!.Token;
         host.Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return host;
     }

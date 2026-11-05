@@ -52,7 +52,6 @@ namespace Microsoft.Extensions.DependencyInjection
                         ? new DeferredSecurityEmailSink(sp) : null,
                     EmailVerificationRedirectUrl = configuration.EmailVerificationRedirectUrl,
                     LegacyRefreshTokens = new LegacyRefreshTokenCodec(configuration.RefreshToken, clock),
-                    LegacyTemporaryTokens = LegacyTemporaryTokenCodec.TryCreate(configuration.TemporaryTokenSettings, clock),
                     Microsoft = sp.GetService<MicrosoftSignIn>(),
                     Google = sp.GetService<GoogleSignIn>(),
                     Device = current.Device,

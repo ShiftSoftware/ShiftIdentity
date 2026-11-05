@@ -312,9 +312,7 @@ public sealed class UserCoverSqlTests(SqlIdentityFixture fixture) : IClassFixtur
 
         // The deployed issuer of a host without the authority.
         using var legacy = new LegacyIdentityHttpHost<IdentityTestDbContext>(fixture);
-        using var login = await legacy.Client.PostAsJsonAsync("/api/Auth/Login", new LoginDTO { Username = username, Password = fixture.Password });
-        Assert.True(login.StatusCode == HttpStatusCode.OK, await login.Content.ReadAsStringAsync());
-        var legacyToken = (await login.Content.ReadFromJsonAsync<ShiftEntityResponse<TokenDTO>>())!.Entity!.Token;
+        var legacyToken = (await legacy.DirectSignInAsync(username, fixture.Password))!.Token;
 
         // The authority's issuer.
         using var host = new IdentityHttpHost(fixture);
@@ -440,9 +438,7 @@ public sealed class UserCoverSqlTests(SqlIdentityFixture fixture) : IClassFixtur
         // for its issuer; a host without the authority signs in itself.
         using var minter = authority ? new LegacyIdentityHttpHost<IdentityTestDbContext>(fixture) : null;
         if (minter is not null) minter.Services.GetRequiredService<ShiftIdentityConfiguration>().Token.Issuer = fixture.Options.Issuer;
-        using var login = await (minter ?? host).Client.PostAsJsonAsync("/api/Auth/Login", new LoginDTO { Username = AdminName, Password = fixture.Password });
-        Assert.True(login.StatusCode == HttpStatusCode.OK, await login.Content.ReadAsStringAsync());
-        var token = (await login.Content.ReadFromJsonAsync<ShiftEntityResponse<TokenDTO>>())!.Entity!.Token;
+        var token = (await (minter ?? host).DirectSignInAsync(AdminName, fixture.Password))!.Token;
         host.Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return host;
     }

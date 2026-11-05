@@ -149,8 +149,7 @@ public sealed class LegacyRefreshConcurrencySqlTests(SqlIdentityFixture fixture)
         fixture.LegacyRefreshLifetimeSeconds = 1800;
         await fixture.ResetAsync();
         using var issuer = new LegacyIdentityHttpHost<IdentityTestDbContext>(fixture);
-        var login = await EntityAsync<TokenDTO>(await issuer.Client.PostAsJsonAsync("/api/Auth/Login",
-            new LoginDTO { Username = fixture.Username, Password = fixture.Password }));
+        var login = (await issuer.DirectSignInAsync(fixture.Username, fixture.Password))!;
         return login.RefreshToken;
     }
 

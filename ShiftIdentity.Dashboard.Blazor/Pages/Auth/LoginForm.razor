@@ -6,7 +6,6 @@
 @using ShiftSoftware.ShiftIdentity.Core.Authentication
 @using AuthenticationFlow = ShiftSoftware.ShiftIdentity.Blazor.Services.AuthenticationFlow
 @inject ShiftIdentityDashboardBlazorOptions ShiftIdentityDashboardBlazorOptions
-@inject Services.AuthService AuthService
 @inject IServiceProvider Services
 @inject IdentitySession storageService
 @inject AuthenticationStateProvider AuthenticationStateProvider
@@ -432,79 +431,7 @@
             await HandleAdmission(outcome);
             return;
         }
-        HttpResponse<ShiftEntityResponse<TokenDTO>> loginResult;
-        try { loginResult = await this.AuthService.LoginAsync(loginDto); }
-        catch (Exception error) when (error is HttpRequestException or System.Text.Json.JsonException or NotSupportedException or TaskCanceledException)
-        {
-            if (!disposed && attempt == loginAttempt) await ShowLoginFailure(AuthenticationFailure.Unavailable);
-            return;
-        }
-        if (disposed || attempt != loginAttempt) return;
-
-        if (!loginResult.IsSuccess)
-        {
-            await ShowLoginFailure(loginResult.StatusCode is System.Net.HttpStatusCode.BadRequest or System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden
-                ? AuthenticationFailure.InvalidProof : AuthenticationFailure.Unavailable);
-            return;
-        }
-
-        loginDto.Password = string.Empty;
-
-        await storageService.StoreTokenAsync(loginResult?.Data?.Entity!);
-
-        //Notify AuthenticationStateProvider and TypeAuth taht auth state has changed
-        await AuthenticationStateProvider.GetAuthenticationStateAsync();
-
-        //TypeAuth.AuthStateHasChanged();
-
-        if (loginResult?.Data?.Entity?.Flow == Core.Enums.AuthPurpose.ChangePassword)
-        {
-            var url = $"{Constants.IdentityRoutePreifix}/{nameof(ChangePasswordForm)}";
-
-            var queryStrings = new Dictionary<string, object?>();
-            queryStrings.Add("ReturnUrl", ReturnUrl ?? "/");
-            queryStrings.Add("Enforce", true);
-
-            var uri = NavManager.GetUriWithQueryParameters(url, queryStrings);
-
-            NavManager.NavigateTo(uri);
-            return;
-        }
-        else if (loginResult?.Data?.Entity?.Flow == Core.Enums.AuthPurpose.Mfa)
-        {
-            var url = $"{Constants.IdentityRoutePreifix}/{nameof(MfaForm)}";
-
-            var queryStrings = new Dictionary<string, object?>();
-            queryStrings.Add("ReturnUrl", ReturnUrl ?? "/");
-
-            var uri = NavManager.GetUriWithQueryParameters(url, queryStrings);
-
-            NavManager.NavigateTo(uri);
-            return;
-        }
-        else if (loginResult?.Data?.Entity?.Flow == Core.Enums.AuthPurpose.MfaEnrollment)
-        {
-            var url = $"{Constants.IdentityRoutePreifix}/{nameof(TotpEnrollmentForm)}";
-
-            var queryStrings = new Dictionary<string, object?>();
-            queryStrings.Add("ReturnUrl", ReturnUrl ?? "/");
-            queryStrings.Add("Enforce", true);
-
-            var uri = NavManager.GetUriWithQueryParameters(url, queryStrings);
-
-            NavManager.NavigateTo(uri);
-            return;
-        }
-
-        if (!String.IsNullOrWhiteSpace(ReturnUrl))
-        {
-            NavManager.NavigateTo(ReturnUrl, false);
-            return;
-        }
-        else
-        {
-            NavManager.NavigateTo("/", false);
-            return;
-        }
+        // The sign-in routes are the authority's; a host without it has none to send this to.
+        await ShowLoginFailure(AuthenticationFailure.Unavailable);
     }
 }

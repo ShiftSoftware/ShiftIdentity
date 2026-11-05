@@ -22,28 +22,23 @@ namespace ShiftIdentity.Blazor.Tests;
 [Trait("Category", "Ui")]
 public sealed class LoginPolishComponentTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Login_clients_trim_username_without_changing_case_internal_spaces_or_password(bool staged)
+    [Fact]
+    public async Task Login_client_trims_username_without_changing_case_internal_spaces_or_password()
     {
-        using var transport = new Transport(staged) { Success = true };
+        using var transport = new Transport() { Success = true };
         await using var context = Context(transport, out _);
         var request = new LoginDTO { Username = " \tSynthetic  User\r\n", Password = "  Synthetic password 39!\t" };
-        if (staged) await context.Services.GetRequiredService<AuthenticationFlow>().LoginAsync(request.Username, request.Password);
-        else await context.Services.GetRequiredService<ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services.AuthService>().LoginAsync(request);
+        await context.Services.GetRequiredService<AuthenticationFlow>().LoginAsync(request.Username, request.Password);
         using var body = JsonDocument.Parse(Assert.Single(transport.Bodies));
         Assert.Equal("Synthetic  User", body.RootElement.GetProperty("username").GetString());
         Assert.Equal(request.Password, body.RootElement.GetProperty("password").GetString());
         Assert.Equal(" \tSynthetic  User\r\n", request.Username);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Inline_failure_offers_help_and_opens_an_inert_reset_request(bool staged)
+    [Fact]
+    public async Task Inline_failure_offers_help_and_opens_an_inert_reset_request()
     {
-        using var transport = new Transport(staged);
+        using var transport = new Transport();
         await using var context = Context(transport, out var store);
         var cut = context.Render<LoginForm>();
         Assert.Empty(cut.FindAll("[data-testid=login-recovery-choice]"));
@@ -63,25 +58,20 @@ public sealed class LoginPolishComponentTests
         Assert.Contains("view=reset", context.Services.GetRequiredService<NavigationManager>().Uri);
         Assert.Single(transport.Bodies); Assert.Empty(store.Writes);
         Assert.Single(cut.FindAll(".identity-login-box"));
-        if (staged)
-        {
-            Assert.Contains("Username or email", cut.Markup);
-            cut.Find("input").Input("synthetic@example.invalid");
-            cut.Find("form").Submit();
-            cut.WaitForElement("[data-testid=delivery-requested]");
-            Assert.Equal(2, transport.Bodies.Count);
-            Assert.Contains("Check your inbox", cut.Markup);
-            Assert.DoesNotContain("eligible account", cut.Markup);
-            Assert.Contains("synthetic@example.invalid", transport.Bodies.Last());
-        }
+        Assert.Contains("Username or email", cut.Markup);
+        cut.Find("input").Input("synthetic@example.invalid");
+        cut.Find("form").Submit();
+        cut.WaitForElement("[data-testid=delivery-requested]");
+        Assert.Equal(2, transport.Bodies.Count);
+        Assert.Contains("Check your inbox", cut.Markup);
+        Assert.DoesNotContain("eligible account", cut.Markup);
+        Assert.Contains("synthetic@example.invalid", transport.Bodies.Last());
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Retry_clears_failure_trims_username_and_keeps_password_bytes(bool staged)
+    [Fact]
+    public async Task Retry_clears_failure_trims_username_and_keeps_password_bytes()
     {
-        using var transport = new Transport(staged);
+        using var transport = new Transport();
         await using var context = Context(transport, out var store);
         var cut = context.Render<LoginForm>();
         await Login(cut);
@@ -100,13 +90,11 @@ public sealed class LoginPolishComponentTests
     }
 
     [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
-    public async Task Service_or_connection_failure_is_distinct_and_never_renders_response_details(bool staged, bool disconnected)
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Service_or_connection_failure_is_distinct_and_never_renders_response_details(bool disconnected)
     {
-        using var transport = new Transport(staged) { Unavailable = true, Disconnected = disconnected };
+        using var transport = new Transport() { Unavailable = true, Disconnected = disconnected };
         await using var context = Context(transport, out _);
         var dialogs = context.Render<MudDialogProvider>();
         var cut = context.Render<LoginForm>();
@@ -116,12 +104,10 @@ public sealed class LoginPolishComponentTests
         Assert.DoesNotContain("server-private-detail", cut.Markup);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Retry_waits_for_the_previous_panel_to_close_before_sending_and_blocks_duplicates(bool staged)
+    [Fact]
+    public async Task Retry_waits_for_the_previous_panel_to_close_before_sending_and_blocks_duplicates()
     {
-        using var transport = new Transport(staged);
+        using var transport = new Transport();
         await using var context = Context(transport, out _);
         var module = context.JSInterop.SetupModule("./_content/ShiftSoftware.ShiftIdentity.Dashboard.Blazor/login-box.js");
         var exit = module.SetupVoid("waitForFeedbackExit", _ => true);
@@ -151,7 +137,7 @@ public sealed class LoginPolishComponentTests
     [InlineData(true)]
     public async Task Leaving_during_the_panel_exit_does_not_send_the_queued_login(bool dispose)
     {
-        using var transport = new Transport(true);
+        using var transport = new Transport();
         await using var context = Context(transport, out _);
         var module = context.JSInterop.SetupModule("./_content/ShiftSoftware.ShiftIdentity.Dashboard.Blazor/login-box.js");
         var exit = module.SetupVoid("waitForFeedbackExit", _ => true);
@@ -178,7 +164,7 @@ public sealed class LoginPolishComponentTests
     [InlineData(AuthenticationStep.EmailVerification)]
     public async Task Normal_staged_host_preserves_every_valid_challenge(AuthenticationStep step)
     {
-        using var transport = new Transport(true) { Step = step };
+        using var transport = new Transport() { Step = step };
         await using var context = Context(transport, out var store);
         var dialogs = context.Render<MudDialogProvider>();
         var cut = context.Render<LoginForm>();
@@ -193,13 +179,11 @@ public sealed class LoginPolishComponentTests
         else Assert.Single(cut.FindAll("[data-testid=restricted-step]"));
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Duplicate_submit_or_disposed_form_cannot_show_a_late_failure(bool staged)
+    [Fact]
+    public async Task Duplicate_submit_or_disposed_form_cannot_show_a_late_failure()
     {
         var response = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var transport = new Transport(staged) { Wait = response.Task };
+        using var transport = new Transport() { Wait = response.Task };
         await using var context = Context(transport, out var store);
         var dialogs = context.Render<MudDialogProvider>();
         var cut = context.Render<LoginForm>();
@@ -213,12 +197,10 @@ public sealed class LoginPolishComponentTests
         Assert.Empty(cut.FindAll(".auth-feedback-slot[data-open=true] [data-login-failure]")); Assert.Empty(store.Writes);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Whitespace_only_username_reaches_existing_refusal_as_empty(bool staged)
+    [Fact]
+    public async Task Whitespace_only_username_reaches_existing_refusal_as_empty()
     {
-        using var transport = new Transport(staged);
+        using var transport = new Transport();
         await using var context = Context(transport, out var store);
         var dialogs = context.Render<MudDialogProvider>();
         var cut = context.Render<LoginForm>();
@@ -231,7 +213,7 @@ public sealed class LoginPolishComponentTests
     [Fact]
     public async Task Browser_history_changes_restore_views_without_sending_requests()
     {
-        using var transport = new Transport(true);
+        using var transport = new Transport();
         await using var context = Context(transport, out _);
         var nav = context.Services.GetRequiredService<NavigationManager>();
         var cut = context.Render<LoginForm>();
@@ -250,7 +232,7 @@ public sealed class LoginPolishComponentTests
     [Fact]
     public async Task Top_back_button_uses_browser_history_for_an_internal_view()
     {
-        using var transport = new Transport(true);
+        using var transport = new Transport();
         await using var context = Context(transport, out _);
         var cut = context.Render<LoginForm>();
         cut.Find("[data-testid=login-help]").Click();
@@ -264,7 +246,7 @@ public sealed class LoginPolishComponentTests
     [Fact]
     public async Task Top_back_from_a_direct_reset_link_returns_through_help_without_leaving_login()
     {
-        using var transport = new Transport(true);
+        using var transport = new Transport();
         await using var context = Context(transport, out _);
         var nav = context.Services.GetRequiredService<NavigationManager>();
         nav.NavigateTo("/?view=reset");
@@ -282,7 +264,7 @@ public sealed class LoginPolishComponentTests
     public async Task Navigating_back_from_a_pending_login_discards_late_failure()
     {
         var response = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var transport = new Transport(true) { Wait = response.Task };
+        using var transport = new Transport() { Wait = response.Task };
         await using var context = Context(transport, out var store);
         var cut = context.Render<LoginForm>();
         var submit = Login(cut);
@@ -297,12 +279,10 @@ public sealed class LoginPolishComponentTests
 
     // A host whose scoped styles did not load shows everything in the markup, so the failure text must not be there
     // before a sign-in attempt, and must be gone again once a retry has succeeded.
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Failure_text_is_rendered_only_after_a_failed_attempt(bool staged)
+    [Fact]
+    public async Task Failure_text_is_rendered_only_after_a_failed_attempt()
     {
-        using var transport = new Transport(staged);
+        using var transport = new Transport();
         await using var context = Context(transport, out _);
         var cut = context.Render<LoginForm>();
         Assert.Empty(cut.FindAll("[data-testid=login-failure-message]"));
@@ -318,7 +298,7 @@ public sealed class LoginPolishComponentTests
     [Fact]
     public async Task A_second_wrong_code_at_sign_in_closes_the_error_before_the_code_is_sent()
     {
-        using var transport = new Transport(true) { Step = AuthenticationStep.ExistingMfa };
+        using var transport = new Transport() { Step = AuthenticationStep.ExistingMfa };
         await using var context = Context(transport, out _);
         var exit = context.JSInterop.SetupModule("./_content/ShiftSoftware.ShiftIdentity.Dashboard.Blazor/auth-feedback.js")
             .SetupVoid("waitForClose", _ => true);
@@ -349,7 +329,7 @@ public sealed class LoginPolishComponentTests
     [Fact]
     public async Task A_refused_recovery_shows_one_error_that_closes_before_the_next_attempt()
     {
-        using var transport = new Transport(true);
+        using var transport = new Transport();
         await using var context = Context(transport, out _);
         var exit = context.JSInterop.SetupModule("./_content/ShiftSoftware.ShiftIdentity.Dashboard.Blazor/auth-feedback.js")
             .SetupVoid("waitForClose", _ => true);
@@ -378,7 +358,7 @@ public sealed class LoginPolishComponentTests
     [Fact]
     public async Task A_wrong_code_at_mandatory_setup_during_sign_in_shows_one_error()
     {
-        using var transport = new Transport(true) { Step = AuthenticationStep.NewMfa };
+        using var transport = new Transport() { Step = AuthenticationStep.NewMfa };
         await using var context = Context(transport, out _);
         var cut = context.Render<LoginForm>();
         await Login(cut);
@@ -397,7 +377,7 @@ public sealed class LoginPolishComponentTests
     [InlineData("/images/logo.png", true)]
     public async Task Logo_is_rendered_only_when_a_logo_path_is_set(string? logoPath, bool rendered)
     {
-        using var transport = new Transport(false);
+        using var transport = new Transport();
         await using var context = Context(transport, out _);
         context.Services.GetRequiredService<ShiftSoftware.ShiftIdentity.Dashboard.Blazor.ShiftIdentityDashboardBlazorOptions>().LogoPath = logoPath!;
         var cut = context.Render<LoginForm>();
@@ -429,15 +409,14 @@ public sealed class LoginPolishComponentTests
         context.Services.AddSingleton(http); context.Services.AddSingleton(store.Session);
         context.Services.AddSingleton(new AuthenticationFlow(new HttpClient(transport) { BaseAddress = new("https://identity.invalid/") }, store.Session));
         context.Services.AddShiftBlazor(options => options.ShiftConfiguration = c => c.BaseAddress = "https://identity.invalid");
-        context.Services.AddShiftIdentityDashboardBlazor(options => options.StagedAuthority = transport.Staged);
+        context.Services.AddShiftIdentityDashboardBlazor(options => options.StagedAuthority = true);
         context.Services.AddTransient(sp => new ShiftIdentityLocalizer(sp, typeof(ShiftSoftwareLocalization.Identity.Resource)));
         context.AddAuthorization(); context.JSInterop.Mode = JSRuntimeMode.Loose;
         return context;
     }
 
-    private sealed class Transport(bool staged) : HttpMessageHandler
+    private sealed class Transport : HttpMessageHandler
     {
-        public bool Staged => staged;
         public bool Success, Unavailable, Disconnected;
         public AuthenticationStep? Step;
         public Task? Wait;
@@ -450,20 +429,15 @@ public sealed class LoginPolishComponentTests
             if (request.RequestUri!.AbsolutePath.EndsWith("password-reset/request"))
                 return new(HttpStatusCode.OK) { Content = JsonContent.Create<AuthOutcome>(new SecurityDeliveryRequested()) };
             var status = Unavailable ? HttpStatusCode.ServiceUnavailable : Success || Step is not null ? HttpStatusCode.OK : HttpStatusCode.BadRequest;
-            if (staged)
-            {
-                AuthOutcome outcome = Unavailable ? new AuthenticationRefused(AuthenticationFailure.Unavailable)
-                    : Success ? AuthenticationFlowTests.Session() : Step is { } step
-                        ? new ChallengeRequired(new(step, step is AuthenticationStep.EmailVerification or AuthenticationStep.MfaRecovery ? null : "synthetic-operation",
-                            DateTimeOffset.UtcNow.AddMinutes(5), step == AuthenticationStep.PasswordChange ? AuthenticationOperationPurpose.PasswordChange
-                                : step == AuthenticationStep.NewMfa ? AuthenticationOperationPurpose.MfaEnrollment : AuthenticationOperationPurpose.Login,
-                            step == AuthenticationStep.NewMfa ? new("JBSWY3DPEHPK3PXP", "otpauth://totp/synthetic",
-                                "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\"><path d=\"M0 0h10v10z\"/></svg>") : null))
-                        : new AuthenticationRefused(AuthenticationFailure.InvalidProof);
-                return new(status) { Content = JsonContent.Create(outcome) };
-            }
-            return new(status) { Content = JsonContent.Create(Success ? new ShiftEntityResponse<TokenDTO>(AuthenticationFlowTests.Session().Session)
-                : new ShiftEntityResponse<TokenDTO> { Message = new Message { Title = "server-private-detail", Body = "server-private-detail" } }) };
+            AuthOutcome outcome = Unavailable ? new AuthenticationRefused(AuthenticationFailure.Unavailable)
+                : Success ? AuthenticationFlowTests.Session() : Step is { } step
+                    ? new ChallengeRequired(new(step, step is AuthenticationStep.EmailVerification or AuthenticationStep.MfaRecovery ? null : "synthetic-operation",
+                        DateTimeOffset.UtcNow.AddMinutes(5), step == AuthenticationStep.PasswordChange ? AuthenticationOperationPurpose.PasswordChange
+                            : step == AuthenticationStep.NewMfa ? AuthenticationOperationPurpose.MfaEnrollment : AuthenticationOperationPurpose.Login,
+                        step == AuthenticationStep.NewMfa ? new("JBSWY3DPEHPK3PXP", "otpauth://totp/synthetic",
+                            "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\"><path d=\"M0 0h10v10z\"/></svg>") : null))
+                    : new AuthenticationRefused(AuthenticationFailure.InvalidProof);
+            return new(status) { Content = JsonContent.Create(outcome) };
         }
     }
 }

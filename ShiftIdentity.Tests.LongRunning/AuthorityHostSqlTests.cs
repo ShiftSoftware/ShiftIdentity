@@ -33,19 +33,19 @@ public sealed class AuthorityHostSqlTests(SqlIdentityFixture fixture) : IClassFi
 
     private static async Task<JsonElement> LoginAsync(HttpClient client, string username, string password)
     {
-        using var response = await client.PostAsJsonAsync("api/Auth/Login", new { Username = username, Password = password });
+        using var response = await client.PostAsJsonAsync("api/identity/v2/login", new PasswordLoginRequest(username, password, IdentityHttpHost.Pkce().Challenge));
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        return Prop(await response.Content.ReadFromJsonAsync<JsonElement>(), "Entity");
+        return Prop(await response.Content.ReadFromJsonAsync<JsonElement>(), "Session");
     }
 
-    // The deployed envelope is read case-insensitively, as the template's own tests read it.
+    // The response is read case-insensitively, as the template's own tests read it.
     private static JsonElement Prop(JsonElement element, string name) =>
         element.EnumerateObject().First(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase)).Value;
 
     private static string Claim(string token, string name) => new JsonWebToken(token).GetPayloadValue<string>(name);
 
     [Fact]
-    public async Task Startup_readies_the_client_row_and_the_deployed_login_issues_a_v2_session_the_host_accepts()
+    public async Task Startup_readies_the_client_row_and_the_login_issues_a_v2_session_the_host_accepts()
     {
         using var host = new ConfiguredIdentityHttpHost<IdentityTestDbContext>(fixture);
         await using (var db = fixture.CreateContext())
@@ -134,7 +134,7 @@ public sealed class AuthorityHostSqlTests(SqlIdentityFixture fixture) : IClassFi
         Assert.Equal("before@example.invalid", state.RecoveryEmail);
         // A user a legacy path inserts after startup (direct SQL here): the admission refuses instead of defaulting a row.
         var user = await InsertLegacyUserAsync(users, "legacy-after", "after@example.invalid", verified: false, hash);
-        using (var refused = await host.Client.PostAsJsonAsync("api/Auth/Login", new { Username = user.Username, Password = fixture.Password }))
+        using (var refused = await host.Client.PostAsJsonAsync("api/identity/v2/login", new PasswordLoginRequest(user.Username, fixture.Password, IdentityHttpHost.Pkce().Challenge)))
             Assert.Equal(HttpStatusCode.ServiceUnavailable, refused.StatusCode);
         Assert.False(await users.Set<UserSecurityState>().AnyAsync(x => x.UserID == user.ID));
         // The expansion the built-in seed and the live-data sync run (and the next start would run) creates the row.
@@ -165,11 +165,11 @@ public sealed class AuthorityHostSqlTests(SqlIdentityFixture fixture) : IClassFi
         using var host = new ConfiguredIdentityHttpHost<TemporalIdentityTestDbContext>(temporal);
         // The startup visitor read the user through the hinted query and copied its factor.
         Assert.NotNull((await db.Set<UserSecurityState>().AsNoTracking().SingleAsync(x => x.UserID == temporal.UserID)).ProtectedTotpSecret);
-        // The deployed login admits through the hinted policy, client and state reads; with an enrolled factor it
-        // answers with the MFA step credential of the deployed contract, not a refusal.
-        using var response = await host.Client.PostAsJsonAsync("api/Auth/Login", new { Username = temporal.Username, Password = temporal.Password });
+        // The login admits through the hinted policy, client and state reads; with an enrolled factor it
+        // answers with the MFA step, not a refusal.
+        using var response = await host.Client.PostAsJsonAsync("api/identity/v2/login", new PasswordLoginRequest(temporal.Username, temporal.Password, IdentityHttpHost.Pkce().Challenge));
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains(await db.Set<AuthenticationAuditEvent>().Select(x => x.Outcome).ToListAsync(), x => x == "LegacyLoginPasswordProven");
+        Assert.Contains(await db.Set<AuthenticationAuditEvent>().Select(x => x.Outcome).ToListAsync(), x => x == "LoginChallenge");
     }
 
     private async Task<User> InsertLegacyUserAsync(ShiftSoftware.ShiftIdentity.Data.ShiftIdentityDbContext db, string prefix, string email, bool verified, HashModel hash)
@@ -195,8 +195,13 @@ public sealed class AuthorityHostSqlTests(SqlIdentityFixture fixture) : IClassFi
             Assert.Null(scope.ServiceProvider.GetService<IUserAccountAuthority>());
         using (var v2 = await host.Client.PostAsJsonAsync("api/identity/v2/login", new PasswordLoginRequest(fixture.Username, fixture.Password, "challenge")))
             Assert.Equal(HttpStatusCode.NotFound, v2.StatusCode);
-        var session = await LoginAsync(host.Client, fixture.Username, fixture.Password);
-        var token = new JsonWebToken(Prop(session, "Token").GetString()!);
+        using (var removed = await host.Client.PostAsJsonAsync("api/Auth/Login", new { Username = fixture.Username, Password = fixture.Password }))
+            Assert.Equal(HttpStatusCode.NotFound, removed.StatusCode);
+        // The direct issuer stays for a caller without the authority, such as an Azure Functions login.
+        using var signIn = host.Services.CreateScope();
+        var result = await signIn.ServiceProvider.GetRequiredService<ShiftSoftware.ShiftIdentity.AspNetCore.Services.AuthService>()
+            .LoginAsync(new ShiftSoftware.ShiftIdentity.Core.DTOs.LoginDTO { Username = fixture.Username, Password = fixture.Password });
+        var token = new JsonWebToken(result.Token!.Token);
         Assert.False(token.TryGetPayloadValue<string>("shift_schema", out _));
         await using var db = fixture.CreateContext();
         Assert.False(await db.Apps.IgnoreQueryFilters().AnyAsync(x => x.AppId == ConfiguredIdentityHttpHost<IdentityTestDbContext>.ClientId));

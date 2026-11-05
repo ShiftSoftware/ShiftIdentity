@@ -55,13 +55,4 @@ internal class ShiftIdentityProvider : IShiftIdentityProvider
         return new HttpResponse<ShiftEntityResponse<UserDataDTO?>?>
             ((await response.Content.ReadFromJsonAsync<ShiftEntityResponse<UserDataDTO>>())!, response.StatusCode);
     }
-
-    public async Task<HttpResponse<ShiftEntityResponse<TokenDTO?>?>> LoginAsync(string baseUrl, LoginDTO dto)
-    {
-        var url = $"{(baseUrl.EndsWith('/') ? baseUrl : baseUrl + "/")}Auth/Login";
-        using var response = await http.PostAsJsonAsync(url, dto);
-
-        return new HttpResponse<ShiftEntityResponse<TokenDTO?>?>
-            ((await response.Content.ReadFromJsonAsync<ShiftEntityResponse<TokenDTO>>())!, response.StatusCode);
-    }
 }

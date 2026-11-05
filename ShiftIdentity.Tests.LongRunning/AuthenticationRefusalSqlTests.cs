@@ -11,6 +11,32 @@ namespace ShiftIdentity.Tests;
 [Trait("Category", "Sql")]
 public sealed class AuthenticationRefusalSqlTests(SqlIdentityFixture fixture)
 {
+    [Fact]
+    public async Task A_correct_password_clears_the_direct_issuers_counter_and_records_the_sign_in()
+    {
+        fixture.Clock = TimeProvider.System;
+        await fixture.ResetAsync();
+        await using (var db = fixture.CreateContext())
+        {
+            var user = await db.Users.Include(x => x.UserLog).SingleAsync(x => x.ID == fixture.UserID);
+            user.LoginAttempts = 9; user.LockDownUntil = DateTime.UtcNow.AddSeconds(-1);
+            user.UserLog ??= new(); user.UserLog.LastSeen = DateTimeOffset.UnixEpoch;
+            await db.SaveChangesAsync();
+        }
+        using var host = new IdentityHttpHost(fixture);
+        Assert.IsType<AuthenticationRefused>(await host.LoginAsync(fixture, IdentityHttpHost.Pkce().Challenge, "not the password"));
+        await using (var db = fixture.CreateContext())
+        {
+            var user = await db.Users.Include(x => x.UserLog).SingleAsync(x => x.ID == fixture.UserID);
+            Assert.Equal(9, user.LoginAttempts); Assert.Equal(DateTimeOffset.UnixEpoch, user.UserLog!.LastSeen);
+        }
+        Assert.IsType<SessionIssued>(await host.LoginAsync(fixture, IdentityHttpHost.Pkce().Challenge));
+        await using var verify = fixture.CreateContext();
+        var after = await verify.Users.Include(x => x.UserLog).SingleAsync(x => x.ID == fixture.UserID);
+        Assert.Equal(0, after.LoginAttempts); Assert.Null(after.LockDownUntil);
+        Assert.True(after.UserLog!.LastSeen > DateTimeOffset.UnixEpoch);
+    }
+
     [Theory]
     [InlineData("inactive", null, AuthenticationFailure.AccountUnavailable)]
     // A deleted account is not found, as in the deployed login: it never answers a sign-in.
@@ -20,6 +46,8 @@ public sealed class AuthenticationRefusalSqlTests(SqlIdentityFixture fixture)
     [InlineData("recovery", AuthenticationStep.MfaRecovery, null)]
     [InlineData("email", AuthenticationStep.EmailVerification, null)]
     [InlineData("policy", null, AuthenticationFailure.Unavailable)]
+    // Only the direct issuer sets this lock now; it still holds here on an account that issuer shares.
+    [InlineData("locked", null, AuthenticationFailure.AttemptsExhausted)]
     public async Task Local_conditions_cannot_become_ordinary_sessions(string scenario, AuthenticationStep? step, AuthenticationFailure? failure)
     {
         fixture.Clock = TimeProvider.System;
@@ -38,6 +66,7 @@ public sealed class AuthenticationRefusalSqlTests(SqlIdentityFixture fixture)
                 case "recovery": state.LocalMfaRecoveryRequired = true; policy.MfaEnabled = false; break;
                 case "email": policy.RequireVerifiedEmail = true; user.Email = "saved@example.invalid"; break;
                 case "policy": policy.Revision++; break;
+                case "locked": user.LockDownUntil = DateTime.UtcNow.AddMinutes(5); break;
             }
             await db.SaveChangesAsync();
         }

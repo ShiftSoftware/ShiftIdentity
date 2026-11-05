@@ -27,7 +27,6 @@ public sealed class SecurityFormFeedbackTests
     private static readonly Dictionary<string, int> DeployedForms = new()
     {
         ["Pages/UserManager/ChangePasswordForm.razor"] = 1,
-        ["Pages/UserManager/MfaForm.razor"] = 1,
         ["Pages/UserManager/TotpEnrollmentForm.razor"] = 1,
         ["Pages/UserManager/ResetPassword.razor"] = 1,
         ["Shared/AuthForm.razor"] = 1

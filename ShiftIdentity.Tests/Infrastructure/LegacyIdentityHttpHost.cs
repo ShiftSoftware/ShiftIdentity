@@ -49,15 +49,14 @@ public sealed class LegacyIdentityHttpHost<TContext> : IDisposable where TContex
                 RSAPrivateKeyBase64 = Convert.ToBase64String(fixture.Options.AccessPrivateKey) },
             RefreshToken = new() { Issuer = "https://legacy.invalid", Audience = "legacy-refresh", ExpireSeconds = fixture.LegacyRefreshLifetimeSeconds,
                 Key = fixture.LegacyRefreshKey },
-            // The temporary key and lifetime are the fixture's, shared by every host built on it, like one deployment's hosts.
             TemporaryTokenSettings = new() { Issuer = "https://legacy.invalid", Audience = "legacy-temporary",
-                ExpireSeconds = fixture.LegacyTemporaryLifetimeSeconds, Key = fixture.LegacyTemporaryKey },
+                ExpireSeconds = 300, Key = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)) },
             // RequirePasswordChange is the configured default the form checkboxes replace; true makes an explicit
             // "false" choice observable.
             Security = new() { LoginAttemptsForLockDown = 10, LockDownInMinutes = 5, RequirePasswordChange = true },
             SASToken = new() { Key = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)), ExpiresInSeconds = 3600 },
             HashIdSettings = new() { AcceptUnencodedIds = true, UserIdsSalt = "synthetic-test", UserIdsMinHashLength = 5 },
-            MfaSettings = new() { Enabled = fixture.LegacyMfaEnabled }, ActionTrees = []
+            MfaSettings = new() { Enabled = false }, ActionTrees = []
         };
         server = new TestServer(new WebHostBuilder().UseEnvironment("Testing").ConfigureServices(services =>
         {
@@ -88,6 +87,18 @@ public sealed class LegacyIdentityHttpHost<TContext> : IDisposable where TContex
         }));
         Client = server.CreateClient();
     }
+    /// <summary>
+    /// Signs in through the direct issuer a host without the authority keeps, the path an Azure Functions login uses.
+    /// Null when it refuses. No route serves it: password sign-in over HTTP belongs to the authority.
+    /// </summary>
+    public async Task<ShiftSoftware.ShiftIdentity.Core.DTOs.TokenDTO?> DirectSignInAsync(string username, string password)
+    {
+        using var scope = Services.CreateScope();
+        var result = await scope.ServiceProvider.GetRequiredService<ShiftSoftware.ShiftIdentity.AspNetCore.Services.AuthService>()
+            .LoginAsync(new ShiftSoftware.ShiftIdentity.Core.DTOs.LoginDTO { Username = username, Password = password });
+        return result.Token;
+    }
+
     public void Dispose() { Client.Dispose(); server.Dispose(); }
 }
 

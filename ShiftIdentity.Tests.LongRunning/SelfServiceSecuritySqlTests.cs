@@ -17,7 +17,6 @@ using ShiftSoftware.ShiftIdentity.Core.Models;
 using ShiftSoftware.ShiftIdentity.Data.Authentication;
 using ShiftSoftware.ShiftIdentity.Data.Entities;
 using Xunit;
-using static ShiftIdentity.Tests.LegacyLoginCompatibilitySqlTests;
 
 namespace ShiftIdentity.Tests;
 
@@ -85,10 +84,11 @@ public sealed class SelfServiceSecuritySqlTests(SqlIdentityFixture fixture) : IC
         Assert.Equal(before.FactorGeneration, state.FactorGeneration);
         Assert.Equal(before.ProtectedTotpSecret, state.ProtectedTotpSecret);
         Assert.Single(await Audits("PasswordChanged"));
-        // The deployed login accepts the new password and refuses the old one.
-        Assert.Equal(HttpStatusCode.BadRequest, (await Login(host)).StatusCode);
-        var again = await Entity<TokenDTO>(await Login(host, NewPassword));
-        Assert.Equal(mfa ? AuthPurpose.Mfa : AuthPurpose.None, again.Flow);
+        // The login accepts the new password and refuses the old one.
+        Assert.Equal(AuthenticationFailure.InvalidProof, Assert.IsType<AuthenticationRefused>(await Login(host)).Code);
+        var again = await Login(host, NewPassword);
+        if (mfa) Assert.Equal(AuthenticationStep.ExistingMfa, Assert.IsType<ChallengeRequired>(again).Challenge.Step);
+        else Assert.IsType<SessionIssued>(again);
     }
 
     [Fact]
@@ -160,12 +160,12 @@ public sealed class SelfServiceSecuritySqlTests(SqlIdentityFixture fixture) : IC
         await Entity<TokenDTO>(await RefreshDeployed(host, replaced.RefreshToken));
         Assert.Equal(new[] { "MfaEnrolled", "MfaReplaced" }, (await Audits("MfaEnrolled", "MfaReplaced")).Select(x => x.Outcome));
 
-        // The deployed login now needs the replacement authenticator; the old one is gone.
+        // The login now needs the replacement authenticator; the old one is gone.
         clock.Advance(TimeSpan.FromSeconds(30));
-        var step = await Entity<TokenDTO>(await Login(host));
-        Assert.Equal(AuthPurpose.Mfa, step.Flow);
-        Assert.Equal(HttpStatusCode.BadRequest, (await Mfa(host, step.Token, Code(setup))).StatusCode);
-        await Entity<TokenDTO>(await Mfa(host, step.Token, Code(replacement)));
+        var loginProof = IdentityHttpHost.Pkce();
+        var step = Challenge(await Login(host, challenge: loginProof.Challenge), AuthenticationStep.ExistingMfa);
+        Assert.IsType<AuthenticationRefused>(await Mfa(host, step.Handle!, loginProof.Verifier, Code(setup)));
+        Assert.IsType<SessionIssued>(await Mfa(host, step.Handle!, loginProof.Verifier, Code(replacement)));
     }
 
     [Theory]
@@ -178,8 +178,11 @@ public sealed class SelfServiceSecuritySqlTests(SqlIdentityFixture fixture) : IC
     {
         await PrepareAsync(forced: scenario == "step");
         using var host = Host();
-        var login = await Entity<TokenDTO>(await Login(host));
-        Assert.Equal(scenario == "step" ? AuthPurpose.ChangePassword : AuthPurpose.None, login.Flow);
+        var login = await Login(host);
+        // A step's handle and a refresh token are not ordinary access credentials.
+        var credential = scenario == "step" ? Challenge(login, AuthenticationStep.PasswordChange).Handle!
+            : scenario == "refresh" ? Assert.IsType<SessionIssued>(login).Session.RefreshToken
+            : Assert.IsType<SessionIssued>(login).Session.Token;
         var audits = await AuditCountAsync();
         if (scenario == "stale")
             await using (var db = fixture.CreateContext())
@@ -189,7 +192,7 @@ public sealed class SelfServiceSecuritySqlTests(SqlIdentityFixture fixture) : IC
                 await db.Set<UserSecurityState>().Where(x => x.UserID == fixture.UserID).ExecuteUpdateAsync(x => x.SetProperty(s => s.LocalMfaRecoveryRequired, true));
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/identity/v2/mfa");
         if (scenario != "missing")
-            request.Headers.Authorization = new("Bearer", scenario == "refresh" ? login.RefreshToken : login.Token);
+            request.Headers.Authorization = new("Bearer", credential);
         using var response = await host.Client.SendAsync(request);
         Assert.Contains("no-store", response.Headers.CacheControl!.ToString());
         var outcome = (await response.Content.ReadFromJsonAsync<AuthOutcome>())!;
@@ -223,22 +226,22 @@ public sealed class SelfServiceSecuritySqlTests(SqlIdentityFixture fixture) : IC
         using var host = Host();
         var session = await SessionAsync(host);
         var audits = await AuditCountAsync();
-        // The dashboard moved to the staged flows for these; the deployed routes serve only the forced steps of a login.
+        // These moved to the staged flows, and no sign-in step reaches the old routes any more.
         using (var change = await Send(host.Client, HttpMethod.Put, "/api/UserManager/ChangePassword", session.Token,
             new ChangePasswordDTO { CurrentPassword = fixture.Password, NewPassword = NewPassword, ConfirmPassword = NewPassword }))
         {
-            Assert.Equal(HttpStatusCode.BadRequest, change.StatusCode);
+            Assert.Equal(HttpStatusCode.Gone, change.StatusCode);
             Assert.Null((await change.Content.ReadFromJsonAsync<ShiftEntityResponse<TokenDTO>>())!.Entity);
         }
         using (var start = await Send(host.Client, HttpMethod.Get, "/api/UserManager/StartTotpEnrollment", session.Token))
         {
-            Assert.Equal(HttpStatusCode.BadRequest, start.StatusCode);
+            Assert.Equal(HttpStatusCode.Gone, start.StatusCode);
             Assert.Null((await start.Content.ReadFromJsonAsync<ShiftEntityResponse<TotpDTO>>())!.Entity);
         }
         using (var confirm = await Send(host.Client, HttpMethod.Post, "/api/UserManager/ConfirmTotpEnrollment", session.Token,
             new TotpDTO { Secret = "JBSWY3DPEHPK3PXP", SasToken = "tampered", Expires = "0", Code = "123456" }))
         {
-            Assert.Equal(HttpStatusCode.BadRequest, confirm.StatusCode);
+            Assert.Equal(HttpStatusCode.Gone, confirm.StatusCode);
             Assert.Null((await confirm.Content.ReadFromJsonAsync<ShiftEntityResponse<TokenDTO>>())!.Entity);
         }
         var user = await UserRow(); var state = await State();
@@ -379,9 +382,7 @@ public sealed class SelfServiceSecuritySqlTests(SqlIdentityFixture fixture) : IC
 
         // The account's sessions end at renewal, and the password alone signs in, on each contract.
         Assert.Equal(HttpStatusCode.BadRequest, (await RefreshDeployed(host, target.RefreshToken)).StatusCode);
-        Assert.Equal(AuthPurpose.None, (await Entity<TokenDTO>(await Login(host))).Flow);
-        Assert.IsType<SessionIssued>(await Staged(host, HttpMethod.Post, "login", null, null,
-            new PasswordLoginRequest(fixture.Username, fixture.Password, IdentityHttpHost.Pkce().Challenge)));
+        Assert.IsType<SessionIssued>(await Login(host));
         Assert.Equal(LoginResultEnum.Success, await MobileLoginAsync());
     }
 
@@ -429,7 +430,7 @@ public sealed class SelfServiceSecuritySqlTests(SqlIdentityFixture fixture) : IC
         await AdminAsync();
         // Production registration: no staged services, the deployed issuer and the direct column write.
         using var host = new LegacyIdentityHttpHost<IdentityTestDbContext>(fixture);
-        var login = await Entity<TokenDTO>(await host.Client.PostAsJsonAsync("/api/Auth/Login", new LoginDTO { Username = AdminName, Password = fixture.Password }));
+        var login = (await host.DirectSignInAsync(AdminName, fixture.Password))!;
         Assert.Equal(AuthPurpose.None, login.Flow);
         using var response = await ResetTotp(host, login.Token, fixture.UserID);
         Assert.True(response.StatusCode == HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
@@ -445,48 +446,48 @@ public sealed class SelfServiceSecuritySqlTests(SqlIdentityFixture fixture) : IC
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public async Task Turning_off_MFA_and_a_pending_deployed_MFA_login_serialize_in_both_lock_orders(bool turnOffFirst)
+    public async Task Turning_off_MFA_and_a_pending_MFA_login_serialize_in_both_lock_orders(bool turnOffFirst)
     {
         await PrepareAsync(mfa: true);
         await AdminAsync();
         using var setup = Host();
         var admin = await AdminSessionAsync(setup);
-        var step = await Entity<TokenDTO>(await Login(setup));
-        Assert.Equal(AuthPurpose.Mfa, step.Flow);
+        var loginProof = IdentityHttpHost.Pkce();
+        var step = Challenge(await Login(setup, challenge: loginProof.Challenge), AuthenticationStep.ExistingMfa);
         using var gate = new AdmissionGate("AdmissionLock");
         var signal = new SqlCommandSignal("UPDLOCK");
         using var turnOffHost = Host(turnOffFirst ? gate.Observe : null, turnOffFirst ? [] : [signal]);
         using var mfaHost = Host(turnOffFirst ? null : gate.Observe, turnOffFirst ? [signal] : []);
         Task<AuthOutcome>? turnOff = null;
-        Task<HttpResponseMessage>? mfa = null;
+        Task<AuthOutcome>? mfa = null;
         var code = ActiveCode();
         Task<AuthOutcome> TurnOff() => Staged(turnOffHost, HttpMethod.Post, "admin/mfa/turn-off", "Bearer", admin.Token,
             new AdminMfaTurnOffRequest(fixture.UserID, "Synthetic check under contention"));
         if (turnOffFirst) turnOff = TurnOff();
-        else mfa = Mfa(mfaHost, step.Token, code);
+        else mfa = Mfa(mfaHost, step.Handle!, loginProof.Verifier, code);
         try
         {
             await gate.Entered.WaitAsync(TimeSpan.FromSeconds(10));
-            if (turnOffFirst) mfa = Mfa(mfaHost, step.Token, code);
+            if (turnOffFirst) mfa = Mfa(mfaHost, step.Handle!, loginProof.Verifier, code);
             else turnOff = TurnOff();
             await signal.Entered.WaitAsync(TimeSpan.FromSeconds(10));
             Assert.False(turnOffFirst ? mfa!.IsCompleted : turnOff!.IsCompleted);
         }
         finally { gate.Release(); }
         Assert.True(Assert.IsType<AdminAccountChanged>(await turnOff!).Applied);
-        using var mfaResponse = await mfa!;
+        var mfaOutcome = await mfa!;
         var state = await State();
         Assert.Null(state.ProtectedTotpSecret); Assert.False(state.LocalMfaRecoveryRequired); Assert.Equal(2, state.SecurityVersion);
         if (turnOffFirst)
         {
             // The pending login's factor generation is gone: no session from the removed authenticator.
-            Assert.Equal(HttpStatusCode.BadRequest, mfaResponse.StatusCode);
+            Assert.IsType<AuthenticationRefused>(mfaOutcome);
             Assert.Empty(await Audits("SessionIssued"));
         }
         else
         {
             // The login admitted first issues its session at the old version; the turn-off then ends it at renewal.
-            var session = await Entity<TokenDTO>(mfaResponse);
+            var session = Assert.IsType<SessionIssued>(mfaOutcome).Session;
             Assert.Equal("1", Jwt(session.Token)["shift_sv"]);
             Assert.Equal(HttpStatusCode.BadRequest, (await RefreshDeployed(setup, session.RefreshToken)).StatusCode);
         }
@@ -550,21 +551,43 @@ public sealed class SelfServiceSecuritySqlTests(SqlIdentityFixture fixture) : IC
     private LegacyIdentityHttpHost<IdentityTestDbContext> Host(Action<string>? observe = null, params IInterceptor[] interceptors) =>
         new(fixture, authority: true, observe, interceptors);
 
-    private Task<HttpResponseMessage> Login(LegacyIdentityHttpHost<IdentityTestDbContext> host, string? password = null) =>
-        host.Client.PostAsJsonAsync("/api/Auth/Login", new LoginDTO { Username = fixture.Username, Password = password ?? fixture.Password });
+    private Task<AuthOutcome> Login(LegacyIdentityHttpHost<IdentityTestDbContext> host, string? password = null, string? challenge = null) =>
+        Staged(host, HttpMethod.Post, "login", null, null,
+            new PasswordLoginRequest(fixture.Username, password ?? fixture.Password, challenge ?? IdentityHttpHost.Pkce().Challenge));
 
-    private static Task<HttpResponseMessage> Mfa(LegacyIdentityHttpHost<IdentityTestDbContext> host, string token, string code) =>
-        Send(host.Client, HttpMethod.Post, "/api/Auth/Login/mfa", token, new { Code = code });
+    private static Task<AuthOutcome> Mfa(LegacyIdentityHttpHost<IdentityTestDbContext> host, string handle, string verifier, string code) =>
+        Staged(host, HttpMethod.Post, "login/mfa", "Operation", handle, new CompleteMfaRequest(code, verifier));
+
+    private static async Task<HttpResponseMessage> Send(HttpClient client, HttpMethod method, string path, string token, object? dto = null)
+    {
+        using var request = new HttpRequestMessage(method, path);
+        request.Headers.Authorization = new("Bearer", token);
+        if (dto is not null) request.Content = JsonContent.Create(dto);
+        return await client.SendAsync(request);
+    }
+
+    private static async Task<T> Entity<T>(HttpResponseMessage response)
+    {
+        using (response)
+        {
+            Assert.True(response.StatusCode == HttpStatusCode.OK, $"{response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
+            return (await response.Content.ReadFromJsonAsync<ShiftEntityResponse<T>>())!.Entity!;
+        }
+    }
+
+    private static Dictionary<string, string> Jwt(string token) => new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler().ReadJwtToken(token).Claims
+        .Where(x => x.Type.StartsWith("shift_", StringComparison.Ordinal) || x.Type == "auth_time").ToDictionary(x => x.Type, x => x.Value);
 
     private static Task<HttpResponseMessage> RefreshDeployed(LegacyIdentityHttpHost<IdentityTestDbContext> host, string refreshToken) =>
         host.Client.PostAsJsonAsync("/api/Auth/Refresh", new { RefreshToken = refreshToken });
 
     private async Task<TokenDTO> SessionAsync(LegacyIdentityHttpHost<IdentityTestDbContext> host, bool mfa = false)
     {
-        var token = await Entity<TokenDTO>(await Login(host));
-        if (!mfa) { Assert.Equal(AuthPurpose.None, token.Flow); return token; }
-        Assert.Equal(AuthPurpose.Mfa, token.Flow);
-        return await Entity<TokenDTO>(await Mfa(host, token.Token, ActiveCode()));
+        var proof = IdentityHttpHost.Pkce();
+        var login = await Login(host, challenge: proof.Challenge);
+        if (!mfa) return Assert.IsType<SessionIssued>(login).Session;
+        var step = Challenge(login, AuthenticationStep.ExistingMfa);
+        return Assert.IsType<SessionIssued>(await Mfa(host, step.Handle!, proof.Verifier, ActiveCode())).Session;
     }
 
     private async Task<TokenDTO> AdminSessionAsync(LegacyIdentityHttpHost<IdentityTestDbContext> host) =>

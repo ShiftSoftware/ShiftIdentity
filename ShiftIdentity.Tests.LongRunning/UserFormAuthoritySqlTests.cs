@@ -1165,9 +1165,7 @@ public sealed class UserFormAuthoritySqlTests(SqlIdentityFixture fixture) : ICla
             // Mint the pre-cutover credential with production registration, then present it to the staged host.
             using var oldAuthority = new LegacyIdentityHttpHost<IdentityTestDbContext>(fixture);
             oldAuthority.Services.GetRequiredService<ShiftIdentityConfiguration>().Token.Issuer = fixture.Options.Issuer;
-            using var login = await oldAuthority.Client.PostAsJsonAsync("/api/Auth/Login", new LoginDTO { Username = AdminName, Password = fixture.Password });
-            Assert.True(login.StatusCode == HttpStatusCode.OK, await login.Content.ReadAsStringAsync());
-            token = (await login.Content.ReadFromJsonAsync<ShiftEntityResponse<TokenDTO>>())!.Entity!.Token;
+            token = (await oldAuthority.DirectSignInAsync(AdminName, fixture.Password))!.Token;
         }
         else token = Assert.IsType<SessionIssued>(await LoginAsync(host, AdminName, fixture.Password)).Session.Token;
         host.Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);

@@ -347,8 +347,7 @@ public sealed class AppCodeSqlTests(SqlIdentityFixture fixture)
     {
         await PrepareAsync();
         using var host = new LegacyIdentityHttpHost<IdentityTestDbContext>(fixture);
-        var session = await Entity<TokenDTO>(await host.Client.PostAsJsonAsync("/api/Auth/Login",
-            new LoginDTO { Username = fixture.Username, Password = fixture.Password }));
+        var session = (await host.DirectSignInAsync(fixture.Username, fixture.Password))!;
         var verifier = Guid.NewGuid().ToString();
         var code = await Entity<AuthCodeModel>(await CreateAsync(host.Client, session.Token, verifier));
         var token = await Entity<TokenDTO>(await ExchangeAsync(host.Client, code.Code, verifier));

@@ -26,7 +26,6 @@ internal sealed record IdentityAdmissionServices(
     internal ISecurityEmailSink? EmailSink { get; init; }
     internal string? EmailVerificationRedirectUrl { get; init; }
     internal LegacyRefreshTokenCodec? LegacyRefreshTokens { get; init; }
-    internal LegacyTemporaryTokenCodec? LegacyTemporaryTokens { get; init; }
     /// <summary>Sign in with Microsoft, when the host turned it on; null otherwise.</summary>
     internal MicrosoftSignIn? Microsoft { get; init; }
     /// <summary>Sign in with Google, when the host turned it on; null otherwise.</summary>

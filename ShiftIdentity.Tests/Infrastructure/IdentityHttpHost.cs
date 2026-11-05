@@ -89,9 +89,7 @@ public sealed class IdentityHttpHost : IDisposable
             TrustedTenants = fixture.TrustedTenants,
             Device = fixture.Device,
             LegacyRefreshTokens = LegacyRefreshTokenCodec.TryCreate(
-                sp.GetService<ShiftSoftware.ShiftIdentity.Core.ShiftIdentityConfiguration>()?.RefreshToken, fixture.Clock),
-            LegacyTemporaryTokens = LegacyTemporaryTokenCodec.TryCreate(
-                sp.GetService<ShiftSoftware.ShiftIdentity.Core.ShiftIdentityConfiguration>()?.TemporaryTokenSettings, fixture.Clock)
+                sp.GetService<ShiftSoftware.ShiftIdentity.Core.ShiftIdentityConfiguration>()?.RefreshToken, fixture.Clock)
         });
         services.AddIdentityAdmissionAuthentication();
         // Request fixtures inject faults and hold locks across requests. Startup has its own host lifecycle tests;
@@ -174,6 +172,11 @@ public sealed class IdentityHttpHost : IDisposable
         request.Content = JsonContent.Create(body);
         return await Read(await Client.SendAsync(request));
     }
+
+    /// <summary>Signs in through the v2 route of any host with the authority, for a test that needs a session.</summary>
+    public static async Task<ShiftSoftware.ShiftIdentity.Core.DTOs.TokenDTO> SignInAsync(HttpClient client, string username, string password) =>
+        (await Read(await client.PostAsJsonAsync("/api/identity/v2/login", new PasswordLoginRequest(username, password, Pkce().Challenge))) as SessionIssued)?.Session
+            ?? throw new InvalidOperationException("Sign-in did not issue a session.");
 
     public static async Task<AuthOutcome> Read(HttpResponseMessage response)
     {

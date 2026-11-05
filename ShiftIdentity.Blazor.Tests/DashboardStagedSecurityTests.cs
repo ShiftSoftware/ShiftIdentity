@@ -96,35 +96,6 @@ public sealed class DashboardStagedSecurityTests
         Assert.Single(store.Writes);
     }
 
-    [Fact]
-    public async Task A_forced_change_step_token_keeps_the_deployed_route_under_the_staged_switch()
-    {
-        var storage = new RecordingStore();
-        var session = LegacySession(storage);
-        await session.StoreTokenAsync(new TokenDTO
-        {
-            Token = "step-token", Flow = AuthPurpose.ChangePassword, TokenLifeTimeInSeconds = 300,
-            UserData = new() { ID = "42", Username = "synthetic", FullName = "Synthetic User" }
-        });
-        var transport = new DashboardTransport();
-        await using var context = Context(transport, session, staged: true);
-        // The deployed login redirects here with the forced-change query; a query parameter is supplied by navigation.
-        context.Services.GetRequiredService<NavigationManager>().NavigateTo("Identity/ChangePasswordForm?Enforce=true");
-        var cut = context.Render<ChangePasswordForm>();
-        cut.WaitForAssertion(() => Assert.Equal(3, cut.FindAll("input").Count));
-        Assert.Contains("You must change your password", cut.Markup);
-        Assert.Empty(transport.Requests);
-        var inputs = cut.FindAll("input");
-        inputs[0].Change("the current password"); inputs[1].Change("A long new synthetic password"); inputs[2].Change("A long new synthetic password");
-        await Submit(cut);
-        cut.WaitForAssertion(() => Assert.Equal(2, storage.Writes.Count));
-        var put = Assert.Single(transport.Requests);
-        Assert.Equal("PUT", put.Method); Assert.EndsWith("/usermanager/ChangePassword", put.Path, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("\"currentPassword\":\"the current password\"", put.Body);
-        Assert.Contains("\"newPassword\":\"A long new synthetic password\"", put.Body);
-        Assert.Equal("legacy-session", storage.Writes.Last().Token);
-    }
-
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -413,26 +384,6 @@ public sealed class DashboardStagedSecurityTests
         Assert.Single(store.Writes);
     }
 
-    [Fact]
-    public async Task A_mandatory_enrollment_step_token_keeps_the_deployed_route_under_the_staged_switch()
-    {
-        var storage = new RecordingStore();
-        var session = LegacySession(storage);
-        await session.StoreTokenAsync(new TokenDTO
-        {
-            Token = "step-token", Flow = AuthPurpose.MfaEnrollment, TokenLifeTimeInSeconds = 300,
-            UserData = new() { ID = "42", Username = "synthetic", FullName = "Synthetic User" }
-        });
-        var transport = new DashboardTransport();
-        await using var context = Context(transport, session, staged: true);
-        context.Services.GetRequiredService<NavigationManager>().NavigateTo("Identity/TotpEnrollmentForm?Enforce=true");
-        var cut = context.Render<TotpEnrollmentForm>();
-        cut.WaitForAssertion(() => Assert.Contains("legacy-secret", cut.Markup));
-        var start = Assert.Single(transport.Requests);
-        Assert.Equal("GET", start.Method); Assert.EndsWith("/usermanager/StartTotpEnrollment", start.Path, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("You must set up two-factor authentication", cut.Markup);
-    }
-
     [Theory]
     [InlineData("none", "Set up authenticator", false)]
     [InlineData("enrolled", "Replace authenticator", true)]
@@ -714,15 +665,6 @@ public sealed class DashboardStagedSecurityTests
         context.Services.AddTypeAuth(o => o.AddActionTree<ShiftIdentityActions>());
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         return context;
-    }
-
-    /// <summary>The production session registration (legacy renewal transport) over a recording storage: it holds step tokens as the deployed login stores them.</summary>
-    private static IdentitySession LegacySession(RecordingStore storage)
-    {
-        var services = new ServiceCollection();
-        services.AddSingleton<IIdentityTokenStorage>(storage);
-        services.AddShiftIdentity("synthetic-app", "https://identity.invalid/api/", "https://identity.invalid/");
-        return services.BuildServiceProvider().GetRequiredService<IdentitySession>();
     }
 
     private static ChallengeRequired Pending(AuthenticationStep step, string handle, AuthenticationOperationPurpose purpose = AuthenticationOperationPurpose.PasswordChange) =>

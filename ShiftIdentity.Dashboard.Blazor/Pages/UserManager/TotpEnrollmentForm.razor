@@ -202,8 +202,8 @@ else
     [CascadingParameter] private AuthFeedback? Feedback { get; set; }
     private bool routedAdmission;
     // The identity host's own dashboard on the staged authority: an ordinary session sets up or replaces its
-    // authenticator through the staged flow, which the authoritative state selects between. A mandatory-enrollment
-    // step token from the deployed login keeps the deployed route, which its adapter serves.
+    // authenticator through the staged flow, which the authoritative state selects between. A step token exists
+    // only on a host without the authority, which keeps the old route.
     private bool stagedSelfService, deciding, replacing, recoveryRequired, completed, keyCopied;
     // The form started the setup itself, so it draws the box and owns cancel and close.
     private bool OwnsBox => deciding || stagedSelfService || routedAdmission;

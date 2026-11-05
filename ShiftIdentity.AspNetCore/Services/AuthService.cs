@@ -24,7 +24,6 @@ public partial class AuthService
     private readonly AuthCodeService authCodeService;
     private readonly ShiftIdentityLocalizer Loc;
     private readonly IHashIdService hashIdService;
-    private readonly TotpService totpService;
     private readonly IServiceProvider? services;
 
     public AuthService(
@@ -34,6 +33,7 @@ public partial class AuthService
         AuthCodeService authCodeService,
         ShiftIdentityLocalizer Loc,
         IHashIdService hashIdService,
+        // Unused. Kept so a direct construction, such as the TIQ Functions login's, compiles; remove with its next upgrade.
         TotpService totpService,
         IServiceProvider? services = null
         )
@@ -44,14 +44,15 @@ public partial class AuthService
         this.authCodeService = authCodeService;
         this.Loc = Loc;
         this.hashIdService = hashIdService;
-        this.totpService = totpService;
         this.services = services;
     }
 
     public async Task<LoginResultModel> LoginAsync(LoginDTO loginDto)
     {
-        if (services?.GetService<IdentityAdmissionServices>() is { } admission)
-            return CompatibleLoginResult(await BeginCompatibleLoginAsync(admission, loginDto, shiftIdentityConfigurations, CancellationToken.None));
+        // The direct issuer for hosts without the authority, such as an Azure Functions login. A host with the authority
+        // signs in through api/identity/v2/login.
+        if (services?.GetService<IdentityAdmissionServices>() is not null)
+            return new LoginResultModel(LoginResultEnum.PasswordIncorrect, Loc["Username or password is incorrect"]);
         var username = loginDto.Username?.Trim();
         if (string.IsNullOrEmpty(username))
             return new LoginResultModel(LoginResultEnum.UsernameIncorrect, Loc["Username or password is incorrect"]);
@@ -146,32 +147,6 @@ public partial class AuthService
         var token = tokenService.GenerateExternalJwtToken(user, authCode);
 
         return token;
-    }
-
-    /// <summary>
-    /// Completes an MFA login. The user is identified by <paramref name="userId"/> (the hash-encoded
-    /// id taken from the authenticated principal — the temporary MFA token validated by the step-up scheme),
-    /// so the temporary token is no longer re-validated here. Returns a full access token when the code is valid.
-    /// <para>Today the only enrolled method is TOTP, so verification dispatches to <see cref="TotpService"/>.</para>
-    /// </summary>
-    public async Task<TokenDTO?> MfaLogin(string userId, string code)
-    {
-        if (services?.GetService<IdentityAdmissionServices>() is not null) return null;
-        try
-        {
-            var user = await userRepo.FindAsync(hashIdService.Decode<UserDTO>(userId), disableDefaultDataLevelAccess: true, disableGlobalFilters: true);
-            if (user is null || !user.IsActive || user.IsDeleted)
-                return null;
-
-            if (totpService.Validate(code, user.TotpSecret))
-            {
-                return tokenService.IssueLoginToken(user, true);
-            }
-
-        }
-        catch (Exception) { }
-
-        return null;
     }
 
     private bool PasswordOnlyRefusal(User user) => shiftIdentityConfigurations.Security.PasswordOnly &&

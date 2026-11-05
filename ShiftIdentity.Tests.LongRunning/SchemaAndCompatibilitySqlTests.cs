@@ -118,20 +118,35 @@ public sealed class SchemaAndCompatibilitySqlTests(SqlIdentityFixture fixture)
     }
 
     [Fact]
-    public async Task Production_registration_keeps_existing_login_refresh_contract_and_no_v2_routes()
+    public async Task A_host_without_the_authority_keeps_direct_sign_in_and_refresh_and_has_no_password_routes()
     {
         await fixture.ResetAsync();
         using var host = new LegacyIdentityHttpHost<IdentityTestDbContext>(fixture);
-        using var login = await host.Client.PostAsJsonAsync("/api/Auth/Login", new LoginDTO { Username = fixture.Username, Password = fixture.Password });
-        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
-        var envelope = await login.Content.ReadFromJsonAsync<ShiftEntityResponse<TokenDTO>>();
-        Assert.False(string.IsNullOrWhiteSpace(envelope!.Entity!.Token));
-        using var refresh = await host.Client.PostAsJsonAsync("/api/Auth/Refresh", new { RefreshToken = envelope.Entity.RefreshToken });
+        var signedIn = await host.DirectSignInAsync(fixture.Username, fixture.Password);
+        Assert.False(string.IsNullOrWhiteSpace(signedIn!.Token));
+        using var refresh = await host.Client.PostAsJsonAsync("/api/Auth/Refresh", new { RefreshToken = signedIn.RefreshToken });
         Assert.Equal(HttpStatusCode.OK, refresh.StatusCode);
         Assert.Contains("no-store", refresh.Headers.CacheControl!.ToString());
-        using var badPassword = await host.Client.PostAsJsonAsync("/api/Auth/Login", new LoginDTO { Username = fixture.Username, Password = "wrong" });
-        Assert.Equal(HttpStatusCode.BadRequest, badPassword.StatusCode);
+        Assert.Null(await host.DirectSignInAsync(fixture.Username, "wrong"));
+        using var removed = await host.Client.PostAsJsonAsync("/api/Auth/Login", new LoginDTO { Username = fixture.Username, Password = fixture.Password });
+        Assert.Equal(HttpStatusCode.NotFound, removed.StatusCode);
         using var staged = await host.Client.PostAsJsonAsync("/api/identity/v2/login", new PasswordLoginRequest(fixture.Username, fixture.Password, IdentityHttpHost.Pkce().Challenge));
         Assert.Equal(HttpStatusCode.NotFound, staged.StatusCode);
+    }
+
+    [Fact]
+    public async Task The_old_password_routes_are_gone_under_the_authority_and_the_renewal_routes_stay()
+    {
+        await fixture.ResetAsync();
+        using var host = new LegacyIdentityHttpHost<IdentityTestDbContext>(fixture, authority: true);
+        using var login = await host.Client.PostAsJsonAsync("/api/Auth/Login", new LoginDTO { Username = fixture.Username, Password = fixture.Password });
+        Assert.Equal(HttpStatusCode.NotFound, login.StatusCode);
+        using var mfa = await host.Client.PostAsJsonAsync("/api/Auth/Login/mfa", new { Code = "000000" });
+        Assert.Equal(HttpStatusCode.NotFound, mfa.StatusCode);
+        // The direct issuer refuses too, so nothing signs in around the authority's rules.
+        Assert.Null(await host.DirectSignInAsync(fixture.Username, fixture.Password));
+        var session = await IdentityHttpHost.SignInAsync(host.Client, fixture.Username, fixture.Password);
+        using var refresh = await host.Client.PostAsJsonAsync("/api/Auth/Refresh", new { RefreshToken = session.RefreshToken });
+        Assert.Equal(HttpStatusCode.OK, refresh.StatusCode);
     }
 }

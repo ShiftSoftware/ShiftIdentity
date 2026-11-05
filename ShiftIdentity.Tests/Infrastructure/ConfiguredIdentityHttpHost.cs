@@ -86,7 +86,7 @@ public sealed class ConfiguredIdentityHttpHost<TContext> : IDisposable where TCo
         RefreshToken = new() { Issuer = "https://legacy.invalid", Audience = "legacy-refresh", ExpireSeconds = fixture.LegacyRefreshLifetimeSeconds,
             Key = fixture.LegacyRefreshKey },
         TemporaryTokenSettings = new() { Issuer = "https://legacy.invalid", Audience = "legacy-temporary",
-            ExpireSeconds = fixture.LegacyTemporaryLifetimeSeconds, Key = fixture.LegacyTemporaryKey },
+            ExpireSeconds = 300, Key = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)) },
         Security = new() { LoginAttemptsForLockDown = 10, LockDownInMinutes = 5, RequirePasswordChange = true },
         SASToken = new() { Key = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)), ExpiresInSeconds = 3600 },
         HashIdSettings = new() { AcceptUnencodedIds = true, UserIdsSalt = "synthetic-test", UserIdsMinHashLength = 5 },

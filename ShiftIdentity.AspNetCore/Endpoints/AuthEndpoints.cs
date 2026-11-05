@@ -16,15 +16,13 @@ using System.Web;
 using Microsoft.Extensions.DependencyInjection;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Authentication;
 using ShiftSoftware.ShiftIdentity.Core.Authentication;
-using ShiftSoftware.ShiftIdentity.AspNetCore.Endpoints;
 
 namespace Microsoft.AspNetCore.Builder;
 
-// The Auth endpoints (login / refresh / MFA / auth-code / external-token), ported from the API AuthController
-// (routes + verbs byte-identical). Login, app-code and refresh adapters use staged admission when registered; the
-// class-level [Authorize] + per-action [AllowAnonymous]/[StepUp] map to .AllowAnonymous()/.RequireAuthorization(policy)
-// here. Backed by the AuthEndpointTests safety net. Host calls MapShiftIdentityAuthEndpoints() where the controller
-// used to be mapped by MapControllers().
+// The Auth endpoints every Shift app relies on after signing in (refresh / auth-code / external-token), ported from the
+// API AuthController (routes + verbs byte-identical). App-code and refresh adapters use staged admission when
+// registered. Password sign-in is api/identity/v2/login. Host calls MapShiftIdentityAuthEndpoints() where the
+// controller used to be mapped by MapControllers().
 public static class ShiftIdentityAuthEndpoints
 {
     private static IResult CompatibleTokenResult(AuthOutcome outcome, string message) => outcome is SessionIssued issued
@@ -34,24 +32,6 @@ public static class ShiftIdentityAuthEndpoints
 
     public static IEndpointRouteBuilder MapShiftIdentityAuthEndpoints(this IEndpointRouteBuilder app)
     {
-        // POST api/Auth/Login — anonymous.
-        app.MapPost("api/Auth/Login", async (LoginDTO loginDto, AuthService authService, HttpContext httpContext, ShiftIdentityConfiguration configuration) =>
-        {
-            if (httpContext.RequestServices.GetService<IdentityAdmissionServices>() is { } admission)
-            {
-                httpContext.Response.Headers["Cache-Control"] = "no-store";
-                var outcome = await AuthService.BeginCompatibleLoginAsync(admission, loginDto, configuration, httpContext.RequestAborted);
-                var compatible = authService.CompatibleLoginResult(outcome);
-                return LegacyLoginEndpoints.TokenResult(outcome, compatible.ErrorMessage ?? "Login could not be completed.");
-            }
-            var result = await authService.LoginAsync(loginDto);
-
-            if (result.Result != LoginResultEnum.Success)
-                return Results.BadRequest(new ShiftEntityResponse<TokenDTO> { Message = new Message { Body = result.ErrorMessage } });
-
-            return Results.Ok(new ShiftEntityResponse<TokenDTO>(result.Token));
-        }).AllowAnonymous();
-
         // POST api/Auth/Refresh — anonymous; validates the refresh token manually. no-store cache headers preserved.
         app.MapPost("api/Auth/Refresh", async (RefreshDTO dto, HttpContext httpContext, AuthService authService, ShiftIdentityLocalizer Loc) =>
         {
@@ -70,23 +50,6 @@ public static class ShiftIdentityAuthEndpoints
 
             return Results.Ok(new ShiftEntityResponse<TokenDTO>(token));
         }).AllowAnonymous();
-
-        // POST api/Auth/Login/mfa — gated by the step-up MFA policy (a full access token must NOT satisfy it).
-        app.MapPost("api/Auth/Login/mfa", async (MfaDTO mfaDto, HttpContext httpContext, AuthService authService, ShiftIdentityLocalizer Loc) =>
-        {
-            if (LegacyLoginEndpoints.IsStaged(httpContext))
-                return await LegacyLoginEndpoints.CompleteMfaAsync(httpContext, mfaDto.Code);
-            var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (userId is null)
-                return Results.BadRequest(new ShiftEntityResponse<TokenDTO> { Message = new Message { Body = Loc["Invalid token"] } });
-
-            var tokenDto = await authService.MfaLogin(userId, mfaDto.Code);
-
-            if (tokenDto is null)
-                return Results.BadRequest(new ShiftEntityResponse<TokenDTO> { Message = new Message { Body = Loc["Invalid code"] } });
-
-            return Results.Ok(new ShiftEntityResponse<TokenDTO>(tokenDto));
-        }).RequireAuthorization(StepUpPolicy.For(AuthPurpose.Mfa, allowAccessToken: false));
 
         // POST api/Auth/AuthCode — anonymous route, but requires an authenticated user.
         app.MapPost("api/Auth/AuthCode", async (GenerateAuthCodeDTO generateAuthCodeDto, HttpContext httpContext, AuthCodeService authCodeService, IClaimService claimService, ShiftIdentityLocalizer Loc) =>

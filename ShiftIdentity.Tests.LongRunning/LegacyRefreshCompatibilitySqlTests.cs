@@ -225,8 +225,7 @@ public sealed class LegacyRefreshCompatibilitySqlTests(SqlIdentityFixture fixtur
     }
 
     private async Task<TokenDTO> LegacyLoginAsync(LegacyIdentityHttpHost<IdentityTestDbContext> host) =>
-        await EntityAsync<TokenDTO>(await host.Client.PostAsJsonAsync("/api/Auth/Login",
-            new LoginDTO { Username = fixture.Username, Password = fixture.Password }));
+        (await host.DirectSignInAsync(fixture.Username, fixture.Password))!;
 
     private string LegacyToken(string subject, DateTimeOffset expires, DateTimeOffset? notBefore = null,
         string issuer = "https://legacy.invalid", string audience = "legacy-refresh", string? key = null,
