@@ -109,12 +109,21 @@ else
                 ReturnUrl = ReturnUrl
             });
 
+        // The saved session has ended, although the page opened because a saved session exists. Forget it and load this
+        // address again. The next load finds no session and goes to the login screen, and it keeps the return address.
+        if (result.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            await AuthService.LogOutAsync();
+            NavManager.NavigateTo(NavManager.Uri, forceLoad: true);
+            return;
+        }
+
         if (result.IsSuccess)
             authCode = result?.Data?.Entity!;
         else
             errorMessage = result?.Data?.Message?.Body;
 
-        if(NoNeedAuthCode.GetValueOrDefault())
+        if (authCode is not null && NoNeedAuthCode.GetValueOrDefault())
         {
             string url = this.authCode.RedirectUri;
             if (!string.IsNullOrEmpty(this.authCode.ReturnUrl))
