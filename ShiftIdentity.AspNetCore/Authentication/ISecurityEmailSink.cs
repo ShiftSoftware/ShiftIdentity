@@ -18,6 +18,11 @@ public sealed record SecurityEmail(Guid ID, string Destination, string Subject, 
     /// Microsoft through its organization, so it has no password to reset.
     /// </summary>
     public bool MicrosoftOnly { get; init; }
+    /// <summary>
+    /// The culture of the app that requested this email, when it named a well-formed one. The email is written in it, and
+    /// its link carries it as <c>?lang=</c>, so that the link's page opens in that language. It is safe to put in a URL after escaping.
+    /// </summary>
+    public string? Language { get; init; }
 }
 
 /// <summary>

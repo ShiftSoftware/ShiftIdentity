@@ -1,9 +1,13 @@
+using System.Globalization;
+using System.Text.Json;
 using Bunit;
+using Bunit.TestDoubles;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.DependencyInjection;
 using ShiftSoftware.ShiftBlazor.Extensions;
+using ShiftSoftware.ShiftBlazor.Services;
 using ShiftSoftware.ShiftIdentity.Blazor;
 using ShiftSoftware.ShiftIdentity.Blazor.Services;
 using ShiftSoftware.ShiftIdentity.Core.Authentication;
@@ -18,6 +22,80 @@ namespace ShiftIdentity.Blazor.Tests;
 [Trait("Category", "Ui")]
 public sealed class SecurityLinkComponentTests
 {
+    [Theory]
+    [InlineData("ru")]
+    [InlineData("ru-RU")]
+    public void A_link_in_another_offered_language_saves_it_and_reloads_before_the_grant_is_read(string language)
+    {
+        using var context = Setup(AuthenticationOperationPurpose.PasswordResetEmail, out var ui, out var transport);
+        var settings = context.Services.GetRequiredService<SettingManager>();
+        settings.Configuration.AddLanguage("en-US", "English").AddLanguage("ru-RU", "Russian");
+        var navigation = context.Services.GetRequiredService<BunitNavigationManager>();
+        navigation.NavigateTo($"Identity/ResetPassword?lang={language}#grant=opaque&purpose=PasswordResetEmail");
+        context.Render<SecurityLinkForm>(p => p.Add(x => x.Context, ui));
+        Assert.Equal("ru-RU", settings.GetLanguage().CultureName);
+        Assert.True(navigation.History.First().Options.ForceLoad);
+        Assert.Equal("http://localhost/Identity/ResetPassword#grant=opaque&purpose=PasswordResetEmail", navigation.Uri);
+        Assert.Empty(transport.Requests);
+        Assert.DoesNotContain(context.JSInterop.Invocations, x => x.Identifier == "clearFragment");
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("en-GB")]
+    [InlineData("xx")]
+    public void A_link_in_the_shown_language_or_one_not_offered_opens_without_a_reload(string language)
+    {
+        using var context = Setup(AuthenticationOperationPurpose.PasswordResetEmail, out var ui, out var transport);
+        var settings = context.Services.GetRequiredService<SettingManager>();
+        settings.Configuration.AddLanguage("en-US", "English").AddLanguage("ru-RU", "Russian");
+        var before = settings.GetLanguage().CultureName;
+        var navigation = context.Services.GetRequiredService<BunitNavigationManager>();
+        navigation.NavigateTo($"Identity/ResetPassword?lang={language}#grant=opaque&purpose=PasswordResetEmail");
+        var cut = context.Render<SecurityLinkForm>(p => p.Add(x => x.Context, ui));
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("[data-testid=security-link-target]")));
+        Assert.Equal(before, settings.GetLanguage().CultureName);
+        Assert.Single(transport.Requests);
+    }
+
+    [Fact]
+    public async Task A_reset_request_names_the_language_the_app_is_showing()
+    {
+        var culture = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = new CultureInfo("ru");
+        try
+        {
+            using var context = Setup(AuthenticationOperationPurpose.PasswordResetEmail, out var ui, out var transport);
+            Assert.IsType<SecurityDeliveryRequested>(await ui.Flow.RequestPasswordResetAsync("someone"));
+            var body = JsonSerializer.Deserialize<RequestSecurityEmail>(transport.Requests.Single().Body, ScriptedHttp.Json)!;
+            Assert.Equal(("someone", "ru"), (body.Identifier, body.Language));
+        }
+        finally { CultureInfo.CurrentUICulture = culture; }
+    }
+
+    [Fact]
+    public async Task Every_other_email_request_names_the_language_the_app_is_showing()
+    {
+        var culture = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = new CultureInfo("ru");
+        try
+        {
+            using var context = Setup(AuthenticationOperationPurpose.PasswordResetEmail, out var ui, out var transport, respond: request =>
+                Task.FromResult<AuthOutcome>(request.RequestUri!.AbsolutePath.EndsWith("/start")
+                    ? new ProviderRedirect("https://accounts.google.com/o/oauth2/v2/auth?client_id=x") : new SecurityDeliveryRequested()));
+            await ui.Flow.RequestEmailVerificationAsync("someone");
+            await ui.Flow.RequestCurrentEmailVerificationAsync("access");
+            await ui.Flow.RequestAdminPasswordResetAsync("access", 1);
+            await ui.Flow.RequestAdminPasswordResetAsync("access", "key");
+            await ui.Flow.RequestAdminEmailVerificationAsync("access", 1);
+            await ui.Flow.RequestAdminEmailVerificationAsync("access", "key");
+            await ui.Flow.StartProviderAsync(SignInProvider.Google);
+            Assert.Equal(7, transport.Requests.Count);
+            Assert.All(transport.Requests, request => Assert.Contains("\"language\":\"ru\"", request.Body));
+        }
+        finally { CultureInfo.CurrentUICulture = culture; }
+    }
+
     [Fact]
     public void Same_route_consumed_link_reopens_inertly_clears_previous_success_and_reports_refusal()
     {

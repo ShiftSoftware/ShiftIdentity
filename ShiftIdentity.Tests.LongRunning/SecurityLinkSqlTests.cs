@@ -18,6 +18,58 @@ public sealed class SecurityLinkSqlTests : SecurityLinkTestBase, IClassFixture<S
 {
     public SecurityLinkSqlTests(SqlIdentityFixture fixture) : base(fixture) { }
 
+    [Fact]
+    public async Task A_profile_verification_request_names_its_language()
+    {
+        using var host = new IdentityHttpHost(fixture);
+        var login = Assert.IsType<SessionIssued>(await host.LoginAsync(fixture, IdentityHttpHost.Pkce().Challenge));
+        Assert.IsType<SecurityDeliveryRequested>(await Post(host, "email-verification/request-current", new RequestCurrentEmailVerification("ru"), login.Session.Token));
+        var message = Inbox.Messages.First();
+        Assert.Equal("ru", message.Language);
+        Assert.StartsWith("/Identity/VerifyEmail?lang=ru#grant=", message.Link);
+    }
+
+    [Fact]
+    public async Task A_profile_verification_request_without_a_body_still_works()
+    {
+        using var host = new IdentityHttpHost(fixture);
+        var login = Assert.IsType<SessionIssued>(await host.LoginAsync(fixture, IdentityHttpHost.Pkce().Challenge));
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/identity/v2/email-verification/request-current");
+        request.Headers.Authorization = new("Bearer", login.Session.Token);
+        Assert.IsType<SecurityDeliveryRequested>(await IdentityHttpHost.Read(await host.Client.SendAsync(request)));
+        Assert.Null(Inbox.Messages.First().Language);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task An_administrator_s_request_names_the_administrator_s_language(bool verification)
+    {
+        var admin = "language-operator-" + Guid.NewGuid().ToString("N");
+        await fixture.CreateSyntheticUserAsync(admin, "{\"ShiftIdentityActions\":{\"Users\":[\"w\"]}}");
+        using var host = new IdentityHttpHost(fixture);
+        var access = Assert.IsType<SessionIssued>(await Post(host, "login",
+            new PasswordLoginRequest(admin, fixture.Password, IdentityHttpHost.Pkce().Challenge))).Session.Token;
+        Assert.IsType<SecurityDeliveryRequested>(verification
+            ? await Post(host, "email-verification/admin", new AdminEmailVerificationRequest(fixture.UserID, Language: "ru"), access)
+            : await Post(host, "password-reset/admin", new AdminPasswordResetRequest(fixture.UserID, Language: "ru"), access));
+        var message = Inbox.Messages.First();
+        Assert.Equal("ru", message.Language);
+        Assert.Contains("?lang=ru#grant=", message.Link);
+    }
+
+    [Theory]
+    [InlineData("ru", "/Identity/ResetPassword?lang=ru#grant=")]
+    [InlineData("not a language", "/Identity/ResetPassword#grant=")]
+    [InlineData(null, "/Identity/ResetPassword#grant=")]
+    public async Task The_requested_language_reaches_the_emailed_link_and_the_grant_still_opens(string? language, string start)
+    {
+        using var host = new IdentityHttpHost(fixture);
+        Assert.IsType<SecurityDeliveryRequested>(await Post(host, "password-reset/request", new RequestSecurityEmail(fixture.Username, language)));
+        Assert.StartsWith(start, Inbox.Messages.First().Link);
+        Assert.IsType<SecurityLinkOpened>(await Open(host, await Grant(host), AuthenticationOperationPurpose.PasswordResetEmail));
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

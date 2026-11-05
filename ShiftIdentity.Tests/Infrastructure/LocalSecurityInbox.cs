@@ -33,13 +33,14 @@ public sealed class LocalSecurityInbox(TimeProvider? clock = null) : ISecurityEm
         var route = message.Purpose == AuthenticationOperationPurpose.EmailVerify ? "/Identity/VerifyEmail" : "/Identity/ResetPassword";
         // A provider-link notice and a Microsoft-only reset notice carry no grant; they point at the login screen.
         var link = message.Purpose == AuthenticationOperationPurpose.ProviderLogin || message.MicrosoftOnly ? "/Identity/login"
-            : route + "#grant=" + Uri.EscapeDataString(message.Grant) + "&purpose=" + message.Purpose;
+            : route + (string.IsNullOrEmpty(message.Language) ? "" : "?lang=" + Uri.EscapeDataString(message.Language))
+                + "#grant=" + Uri.EscapeDataString(message.Grant) + "&purpose=" + message.Purpose;
         lock (gate)
-            accepted.TryAdd(message.ID, new(message.ID, message.Destination, message.Subject, link, clock.GetUtcNow()));
+            accepted.TryAdd(message.ID, new(message.ID, message.Destination, message.Subject, link, clock.GetUtcNow(), message.Language));
         if (FailAfterAccept) throw new InvalidOperationException("Synthetic delivery acknowledgement failure.");
         return Task.CompletedTask;
     }
 
 }
 
-public sealed record LocalSecurityMessage(Guid ID, string Destination, string Subject, string Link, DateTimeOffset DeliveredAt);
+public sealed record LocalSecurityMessage(Guid ID, string Destination, string Subject, string Link, DateTimeOffset DeliveredAt, string? Language = null);

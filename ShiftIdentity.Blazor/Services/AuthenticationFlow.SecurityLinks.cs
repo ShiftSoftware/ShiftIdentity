@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json;
 using ShiftSoftware.ShiftIdentity.Core.Authentication;
@@ -6,22 +7,23 @@ namespace ShiftSoftware.ShiftIdentity.Blazor.Services;
 
 public sealed partial class AuthenticationFlow
 {
+    // The emailed link opens another site's page, which cannot read this app's language setting, so the request names it.
     public Task<AuthOutcome> RequestPasswordResetAsync(string identifier) => SecurityRequestAsync(
-        "password-reset/request", new RequestSecurityEmail(identifier), result => result is SecurityDeliveryRequested);
+        "password-reset/request", new RequestSecurityEmail(identifier, CultureInfo.CurrentUICulture.Name), result => result is SecurityDeliveryRequested);
     public Task<AuthOutcome> RequestEmailVerificationAsync(string identifier) => SecurityRequestAsync(
-        "email-verification/request", new RequestSecurityEmail(identifier), result => result is SecurityDeliveryRequested);
+        "email-verification/request", new RequestSecurityEmail(identifier, CultureInfo.CurrentUICulture.Name), result => result is SecurityDeliveryRequested);
     public Task<AuthOutcome> RequestCurrentEmailVerificationAsync(string access) => SecurityRequestAsync(
-        "email-verification/request-current", new { }, result => result is SecurityDeliveryRequested, access);
+        "email-verification/request-current", new RequestCurrentEmailVerification(CultureInfo.CurrentUICulture.Name), result => result is SecurityDeliveryRequested, access);
     public Task<AuthOutcome> RequestAdminPasswordResetAsync(string access, long userID, bool manual = false) => SecurityRequestAsync(
-        "password-reset/admin", new AdminPasswordResetRequest(userID, manual), result => manual
+        "password-reset/admin", new AdminPasswordResetRequest(userID, manual, Language: CultureInfo.CurrentUICulture.Name), result => manual
             ? result is SecurityDeliveryRequested || result is ManualPasswordResetIssued { Grant.Length: > 0 } issued && issued.ExpiresAt > clock.GetUtcNow()
             : result is SecurityDeliveryRequested, access);
     public Task<AuthOutcome> RequestAdminEmailVerificationAsync(string access, long userID) => SecurityRequestAsync(
-        "email-verification/admin", new AdminEmailVerificationRequest(userID), result => result is SecurityDeliveryRequested, access);
+        "email-verification/admin", new AdminEmailVerificationRequest(userID, Language: CultureInfo.CurrentUICulture.Name), result => result is SecurityDeliveryRequested, access);
     public Task<AuthOutcome> RequestAdminPasswordResetAsync(string access, string userKey) => SecurityRequestAsync(
-        "password-reset/admin", new AdminPasswordResetRequest(UserKey: userKey), result => result is SecurityDeliveryRequested, access);
+        "password-reset/admin", new AdminPasswordResetRequest(UserKey: userKey, Language: CultureInfo.CurrentUICulture.Name), result => result is SecurityDeliveryRequested, access);
     public Task<AuthOutcome> RequestAdminEmailVerificationAsync(string access, string userKey) => SecurityRequestAsync(
-        "email-verification/admin", new AdminEmailVerificationRequest(UserKey: userKey), result => result is SecurityDeliveryRequested, access);
+        "email-verification/admin", new AdminEmailVerificationRequest(UserKey: userKey, Language: CultureInfo.CurrentUICulture.Name), result => result is SecurityDeliveryRequested, access);
     public Task<AuthOutcome> OpenSecurityLinkAsync(string grant, AuthenticationOperationPurpose purpose) => SecurityRequestAsync(
         "security-link/open", new OpenSecurityLinkRequest(grant, purpose), result =>
             result is SecurityLinkOpened { PageHandle.Length: > 0 } opened && opened.Purpose == purpose && opened.ExpiresAt > clock.GetUtcNow());

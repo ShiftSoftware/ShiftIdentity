@@ -95,7 +95,8 @@ else
         expiry ? DateTimeOffset.UtcNow.AddHours(1) : null)
     {
         LogoSource = logo && !string.IsNullOrWhiteSpace(Options.LogoPath) ? Navigation.ToAbsoluteUri(Options.LogoPath).AbsoluteUri : null,
-        MicrosoftOnly = Screen == MicrosoftOnly
+        MicrosoftOnly = Screen == MicrosoftOnly,
+        Language = System.Globalization.CultureInfo.CurrentUICulture.Name
     });
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

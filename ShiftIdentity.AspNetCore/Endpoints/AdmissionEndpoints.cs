@@ -136,13 +136,13 @@ internal static class AdmissionEndpoints
             Result(await AccountSecurityService.RequestSecurityEmailAsync(services, request, false, context.Connection.RemoteIpAddress?.ToString() ?? "unknown", ct)));
         group.MapPost("/email-verification/request", async (RequestSecurityEmail request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
             Result(await AccountSecurityService.RequestSecurityEmailAsync(services, request, true, context.Connection.RemoteIpAddress?.ToString() ?? "unknown", ct)));
-        group.MapPost("/email-verification/request-current", async (HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
-            Result(await AccountSecurityService.RequestCurrentEmailVerificationAsync(services, context.Request.Headers.Authorization.ToString(), ct)));
+        group.MapPost("/email-verification/request-current", async (RequestCurrentEmailVerification? request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
+            Result(await AccountSecurityService.RequestCurrentEmailVerificationAsync(services, context.Request.Headers.Authorization.ToString(), ct, request?.Language)));
         group.MapPost("/password-reset/admin", async (AdminPasswordResetRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
             Result(await AccountSecurityService.AdminSecurityLinkAsync(services, context.Request.Headers.Authorization.ToString(), LinkTarget(services, request.UserID, request.UserKey),
-                request.Manual ? AuthenticationOperationPurpose.PasswordResetManual : AuthenticationOperationPurpose.PasswordResetEmail, ct)));
+                request.Manual ? AuthenticationOperationPurpose.PasswordResetManual : AuthenticationOperationPurpose.PasswordResetEmail, ct, request.Language)));
         group.MapPost("/email-verification/admin", async (AdminEmailVerificationRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
-            Result(await AccountSecurityService.AdminSecurityLinkAsync(services, context.Request.Headers.Authorization.ToString(), LinkTarget(services, request.UserID, request.UserKey), AuthenticationOperationPurpose.EmailVerify, ct)));
+            Result(await AccountSecurityService.AdminSecurityLinkAsync(services, context.Request.Headers.Authorization.ToString(), LinkTarget(services, request.UserID, request.UserKey), AuthenticationOperationPurpose.EmailVerify, ct, request.Language)));
         group.MapPost("/admin/password", async (AdminSetPasswordRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>
             Result(await AccountSecurityService.SetPasswordAsync(services, context.Request.Headers.Authorization.ToString(), request, ct)));
         group.MapPost("/admin/username", async (AdminUsernameChangeRequest request, HttpContext context, IdentityAdmissionServices services, CancellationToken ct) =>

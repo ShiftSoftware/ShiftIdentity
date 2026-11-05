@@ -63,6 +63,50 @@ public sealed class TrustedTenantLoginComponentTests
         Assert.Empty(http.Requests);
     }
 
+    [Fact]
+    public async Task With_the_providers_hidden_an_email_on_a_held_domain_is_told_this_app_cannot_sign_it_in()
+    {
+        using var context = Context(new(true, true, ["contoso.example"]), out var http, out var flow);
+        var cut = context.Render<LoginForm>(p => p.Add(x => x.AdmissionFlow, flow).Add(x => x.ShowSignInProviders, false));
+        // The form reads the list before it can answer. The email below is checked against that list's domains.
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("button.auth-provider")));
+        Assert.Empty(cut.FindAll(".auth-divider"));
+        cut.FindAll("input")[0].Input("Person@Contoso.Example");
+        cut.FindAll("input")[1].Input("password");
+        await FormSubmission.SubmitAsync(cut);
+        cut.WaitForAssertion(() => Assert.Contains("This app doesn't offer Microsoft sign-in yet", cut.Find("[data-testid=login-failure-message]").TextContent));
+        Assert.DoesNotContain("Choose Sign in with Microsoft", cut.Markup);
+        Assert.Empty(http.Requests);
+    }
+
+    [Fact]
+    public async Task With_the_providers_hidden_the_server_s_answer_to_a_username_does_not_mention_a_button()
+    {
+        using var context = Context(new(true, false, ["contoso.example"]), out var http, out var flow,
+            new AuthenticationRefused(AuthenticationFailure.PasswordSignInDisabled));
+        var cut = context.Render<LoginForm>(p => p.Add(x => x.AdmissionFlow, flow).Add(x => x.ShowSignInProviders, false));
+        cut.FindAll("input")[0].Input("person");
+        cut.FindAll("input")[1].Input("password");
+        await FormSubmission.SubmitAsync(cut);
+        cut.WaitForAssertion(() => Assert.Contains("This app doesn't offer Microsoft sign-in yet", cut.Find("[data-testid=login-failure-message]").TextContent));
+        Assert.DoesNotContain("Choose Sign in with Microsoft", cut.Markup);
+        Assert.Single(http.Requests);
+    }
+
+    [Fact]
+    public async Task With_the_providers_hidden_a_password_sign_in_still_works()
+    {
+        using var context = Context(new(true, true), out var http, out var flow);
+        var sessions = new List<SessionIssued>();
+        var cut = context.Render<LoginForm>(p => p.Add(x => x.AdmissionFlow, flow).Add(x => x.ShowSignInProviders, false)
+            .Add(x => x.SessionCompleted, (SessionIssued session) => sessions.Add(session)));
+        cut.FindAll("input")[0].Input("person");
+        cut.FindAll("input")[1].Input("password");
+        await FormSubmission.SubmitAsync(cut);
+        cut.WaitForAssertion(() => Assert.Single(sessions));
+        Assert.Single(http.Requests);
+    }
+
     private static BunitContext Context(SignInProviders providers, out ScriptedHttp transport, out AuthenticationFlow flow,
         AuthOutcome? answer = null)
     {

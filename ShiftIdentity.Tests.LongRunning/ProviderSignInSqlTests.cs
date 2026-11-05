@@ -75,6 +75,18 @@ public abstract class ProviderSignInSqlTests(SqlIdentityFixture fixture) : IAsyn
         Assert.StartsWith(Provider.ToString() + " sign-in linked", notice.Subject);
     }
 
+    [Theory]
+    [InlineData("ru", "ru")]
+    [InlineData("not a language", null)]
+    [InlineData(null, null)]
+    public async Task The_notice_is_in_the_language_the_sign_in_named_when_it_started(string? requested, string? expected)
+    {
+        using var host = new IdentityHttpHost(Fixture);
+        StartLanguage = requested;
+        Assert.IsType<SessionIssued>(await SignInAsync(host));
+        Assert.Equal(expected, Assert.Single(((LocalSecurityInbox)Fixture.EmailSink!).Messages).Language);
+    }
+
     [Fact]
     public async Task A_linked_identity_signs_in_again_without_a_second_notice_even_when_its_provider_email_changed()
     {
@@ -298,14 +310,17 @@ public abstract class ProviderSignInSqlTests(SqlIdentityFixture fixture) : IAsyn
 
     protected Task<AuthOutcome> StartAsync(IdentityHttpHost host, string challenge) => StartAsync(host, Name, challenge);
 
-    protected static async Task<AuthOutcome> StartAsync(IdentityHttpHost host, string name, string challenge) => await IdentityHttpHost.Read(
-        await host.Client.PostAsJsonAsync($"/api/identity/v2/providers/{name}/start", new StartProviderSignInRequest(challenge)));
+    protected static async Task<AuthOutcome> StartAsync(IdentityHttpHost host, string name, string challenge, string? language = null) => await IdentityHttpHost.Read(
+        await host.Client.PostAsJsonAsync($"/api/identity/v2/providers/{name}/start", new StartProviderSignInRequest(challenge, language)));
+
+    /// <summary>The language a sign-in names when it starts, for the notice that sign-in may send.</summary>
+    protected string? StartLanguage { get; set; }
 
     private protected async Task<string> CallbackLocationAsync(IdentityHttpHost host, string challenge, FakeProvider? tokens = null, string? name = null)
     {
         tokens ??= Tokens;
         name ??= Name;
-        var redirect = Assert.IsType<ProviderRedirect>(await StartAsync(host, name, challenge));
+        var redirect = Assert.IsType<ProviderRedirect>(await StartAsync(host, name, challenge, StartLanguage));
         var query = QueryHelpers.ParseQuery(new Uri(redirect.Url).Query);
         Assert.Equal(("S256", "select_account", "code"), (query["code_challenge_method"].ToString(), query["prompt"].ToString(), query["response_type"].ToString()));
         tokens.Expect(query["nonce"]!, query["code_challenge"]!, query["redirect_uri"]!);

@@ -127,6 +127,14 @@
     [CascadingParameter] public ShiftSoftware.ShiftIdentity.Blazor.Services.AdmissionUiContext? AdmissionContext { get; set; }
     [Parameter] public AuthenticationFlow? AdmissionFlow { get; set; }
     [Parameter] public EventCallback<SessionIssued> SessionCompleted { get; set; }
+    /// <summary>
+    /// Whether the screen offers the sign-in providers that the host turned on. Set it to false when this form is
+    /// embedded in a stand-alone app that is not the identity site. Provider sign-in is not supported there yet: the
+    /// provider's callback returns the browser only to the identity site's login page, but the verifier that completes
+    /// the sign-in stays in the session storage of the site that started it. With this off, an account that signs in
+    /// only with a provider is told that this app cannot sign it in.
+    /// </summary>
+    [Parameter] public bool ShowSignInProviders { get; set; } = true;
     [CascadingParameter] private Task<AuthenticationState>? authenticationStateTask { get; set; }
     [Parameter, SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
     [Parameter, SupplyParameterFromQuery(Name = "securityLink")] public string? SecurityLink { get; set; }
@@ -160,6 +168,7 @@
     private string FailureHint => lastFailure switch
     {
         AuthenticationFailure.Unavailable => "Check your connection and try again in a moment.",
+        AuthenticationFailure.PasswordSignInDisabled when !ShowSignInProviders => "This app doesn't offer Microsoft sign-in yet, so your account can't sign in here.",
         AuthenticationFailure.PasswordSignInDisabled => "Choose Sign in with Microsoft. Your account has no password here.",
         AuthenticationFailure.ProviderNotAllowedForAccount => "Choose Sign in with Microsoft and use your organization's account, not a personal or other account.",
         AuthenticationFailure.ProviderAccountNotFound => "Sign in with your username and password, or ask your administrator to put this email on your account.",
@@ -246,9 +255,14 @@
         }
         if (AdmissionFlow is not null)
         {
+            // The list is still read with the buttons hidden: its domains give an email that signs in only with
+            // Microsoft the clear message before any password is sent.
             signInProviders = await AdmissionFlow.ReadProvidersAsync();
-            providers = signInProviders.Enabled;
-            await ResumeProvider();
+            if (ShowSignInProviders)
+            {
+                providers = signInProviders.Enabled;
+                await ResumeProvider();
+            }
         }
     }
 

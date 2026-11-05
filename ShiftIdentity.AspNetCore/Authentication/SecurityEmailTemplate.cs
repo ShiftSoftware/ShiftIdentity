@@ -13,12 +13,12 @@ public static class SecurityEmailTemplate
     {
         if (message.Purpose != AuthenticationOperationPurpose.ProviderLogin && !message.MicrosoftOnly)
             return Compose(message.ID, message.Destination, message.FullName, message.Username, message.Purpose,
-                Link(message, frontEndUrl), message.ExpiresAt, logoUrl);
+                Link(message, frontEndUrl), message.ExpiresAt, logoUrl, message.Language);
         // A notice carries no grant: its button opens the login screen.
         ValidateFrontEndUrl(frontEndUrl);
         var body = SecurityEmailLayout.Compose(new(message.Purpose, message.FullName, message.Username,
             frontEndUrl.TrimEnd('/') + "/Identity/login", null)
-            { LogoSource = logoUrl, ProviderAccount = message.ProviderAccount, Provider = message.Provider, MicrosoftOnly = message.MicrosoftOnly });
+            { LogoSource = logoUrl, ProviderAccount = message.ProviderAccount, Provider = message.Provider, MicrosoftOnly = message.MicrosoftOnly, Language = message.Language });
         return new(message.ID, message.Destination, body.Subject, body.HtmlBody, body.TextBody);
     }
 
@@ -31,9 +31,16 @@ public static class SecurityEmailTemplate
             AuthenticationOperationPurpose.PasswordResetEmail => "ResetPassword",
             _ => throw new InvalidOperationException("This purpose cannot be delivered by email.")
         };
-        return frontEndUrl.TrimEnd('/') + "/Identity/" + page
+        // The language goes in the query, not the fragment: the page reads it before it opens the grant.
+        var language = string.IsNullOrEmpty(message.Language) ? "" : "?lang=" + Uri.EscapeDataString(message.Language);
+        return frontEndUrl.TrimEnd('/') + "/Identity/" + page + language
             + "#grant=" + Uri.EscapeDataString(message.Grant) + "&purpose=" + message.Purpose;
     }
+
+    /// <summary>The requested culture when it is a well-formed name such as "ru" or "ar-IQ"; otherwise null.</summary>
+    internal static string? WellFormedLanguage(string? language) =>
+        language is { Length: <= 35 } && System.Text.RegularExpressions.Regex.IsMatch(language,
+            @"\A[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8}){0,3}\z", System.Text.RegularExpressions.RegexOptions.CultureInvariant) ? language : null;
 
     internal static void ValidateFrontEndUrl(string? url)
     {
@@ -53,9 +60,9 @@ public static class SecurityEmailTemplate
     }
 
     private static SecurityEmailContent Compose(Guid id, string destination, string fullName, string username,
-        AuthenticationOperationPurpose purpose, string link, DateTimeOffset? expiresAt, string? logoUrl = null)
+        AuthenticationOperationPurpose purpose, string link, DateTimeOffset? expiresAt, string? logoUrl = null, string? language = null)
     {
-        var body = SecurityEmailLayout.Compose(new(purpose, fullName, username, link, expiresAt) { LogoSource = logoUrl });
+        var body = SecurityEmailLayout.Compose(new(purpose, fullName, username, link, expiresAt) { LogoSource = logoUrl, Language = language });
         return new(id, destination, body.Subject, body.HtmlBody, body.TextBody);
     }
 }

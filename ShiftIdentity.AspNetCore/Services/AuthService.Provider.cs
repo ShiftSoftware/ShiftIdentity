@@ -22,8 +22,9 @@ public partial class AuthService
     // nonce, this server's PKCE verifier for the provider, a deadline, the client and the provider it was started for
     // (so one provider's return cannot complete at another's callback). Nothing in it is readable on the way.
     // Confirmation names the administrator confirmation a popup sign-in proves, instead of a login screen's sign-in.
+    // Language is the culture of the login screen, for the notice sent when this sign-in links a new provider account.
     private sealed record ProviderState(string Challenge, string Nonce, string Verifier, long ExpiresAt, string Client,
-        SignInProvider Provider = SignInProvider.Microsoft, Guid? Confirmation = null);
+        SignInProvider Provider = SignInProvider.Microsoft, Guid? Confirmation = null, string? Language = null);
 
     /// <summary>Starts a provider sign-in for the login screen's challenge. Nothing is stored until the provider returns.</summary>
     internal static AuthOutcome StartProviderSignIn(IdentityAdmissionServices services, SignInProvider provider,
@@ -34,7 +35,8 @@ public partial class AuthService
         var verifier = WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(32));
         var nonce = WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(32));
         var state = new ProviderState(request.CodeChallenge, nonce, verifier,
-            services.Clock.GetUtcNow().AddMinutes(10).ToUnixTimeSeconds(), services.Client.ID, provider);
+            services.Clock.GetUtcNow().AddMinutes(10).ToUnixTimeSeconds(), services.Client.ID, provider,
+            Language: SecurityEmailTemplate.WellFormedLanguage(request.Language));
         var protectedState = services.FactorProtector.CreateProtector(ProviderStatePurpose).Protect(JsonSerializer.Serialize(state));
         var challenge = WebEncoders.Base64UrlEncode(SHA256.HashData(System.Text.Encoding.ASCII.GetBytes(verifier)));
         return new ProviderRedirect(signIn.AuthorizeUrl(protectedState, nonce, challenge, redirectUri));
@@ -125,7 +127,8 @@ public partial class AuthService
                     AuthenticationOperationPurpose.ProviderLogin, admittedAt)
                 {
                     UserID = services.HashIds.Encode<Core.DTOs.User.UserDTO>(unit.User.ID), Username = unit.User.Username,
-                    FullName = unit.User.FullName, ProviderAccount = identity.Email, Provider = provider
+                    FullName = unit.User.FullName, ProviderAccount = identity.Email, Provider = provider,
+                    Language = payload.Language
                 };
             }
             // Signing in with the provider as this address proves its owner has it, as completing a verification link does.

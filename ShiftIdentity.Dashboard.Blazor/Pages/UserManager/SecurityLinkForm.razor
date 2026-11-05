@@ -6,6 +6,7 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 @inject ShiftIdentityLocalizer Loc
+@inject SettingManager Settings
 @implements IDisposable
 
 <HeadContent><meta name="referrer" content="no-referrer" /></HeadContent>
@@ -111,9 +112,30 @@
     }
     protected override void OnInitialized()
     {
+        if (SwitchToLinkLanguage()) return;
         mountedPath = new Uri(Navigation.Uri).AbsolutePath;
         pendingUri = Navigation.Uri;
         Navigation.LocationChanged += LocationChanged;
+    }
+    /// <summary>
+    /// The link can name the language of the app it was requested from (<c>?lang=</c>). When this site offers that language
+    /// and shows another one, it saves the language and reloads the page. The reload happens before the grant is read, so
+    /// the grant stays in the address for the next load. The next address has no <c>lang</c>, so this runs once.
+    /// </summary>
+    private bool SwitchToLinkLanguage()
+    {
+        var requested = System.Web.HttpUtility.ParseQueryString(new Uri(Navigation.Uri).Query)["lang"];
+        if (string.IsNullOrWhiteSpace(requested)) return false;
+        static bool SameLanguage(string left, string right) =>
+            string.Equals(left.Split('-')[0], right.Split('-')[0], StringComparison.OrdinalIgnoreCase);
+        if (SameLanguage(requested, Settings.GetLanguage().CultureName)) return false;
+        var languages = Settings.Configuration.Languages;
+        var language = languages.FirstOrDefault(x => string.Equals(x.CultureName, requested, StringComparison.OrdinalIgnoreCase))
+            ?? languages.FirstOrDefault(x => SameLanguage(x.CultureName, requested));
+        if (language is null) return false;
+        Settings.SwitchLanguage(language, forceReload: false);
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameter("lang", (string?)null), forceLoad: true, replace: true);
+        return true;
     }
     private void LocationChanged(object? sender, LocationChangedEventArgs args)
     {

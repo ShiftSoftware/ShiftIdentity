@@ -35,7 +35,7 @@ internal static partial class AccountSecurityService
                 if (!await services.Store.RecheckSecurityEmailAsync(lookup, ct)) return new SecurityDeliveryRequested();
                 return CreateSecurityLink(services, unit, verification ? AuthenticationOperationPurpose.EmailVerify : AuthenticationOperationPurpose.PasswordResetEmail, out message);
             }, ct));
-            outcome = await HandoffAsync(services, outcome, lookup.UserID, message, ct);
+            outcome = await HandoffAsync(services, outcome, lookup.UserID, InLanguage(message, request.Language), ct);
             // A target-specific refusal or outage must not reveal that the identifier resolved to an account.
             return outcome is AuthenticationRefused ? new SecurityDeliveryRequested() : outcome;
         });
@@ -50,7 +50,7 @@ internal static partial class AccountSecurityService
     }
 
     internal static Task<AuthOutcome> RequestCurrentEmailVerificationAsync(IdentityAdmissionServices services,
-        string? authorization, CancellationToken ct) => AtBoundary(async () =>
+        string? authorization, CancellationToken ct, string? language = null) => AtBoundary(async () =>
     {
         var signedIn = ReadSignedIn(services, authorization);
         if (signedIn is null) return Refuse(AuthenticationFailure.InvalidGrant);
@@ -60,20 +60,23 @@ internal static partial class AccountSecurityService
             var refusal = SignedInRefusal(services, unit, signedIn);
             return Task.FromResult<AuthOutcome>(refusal ?? CreateSecurityLink(services, unit, AuthenticationOperationPurpose.EmailVerify, out message, unit.User.ID));
         }, ct);
-        return await HandoffAsync(services, outcome, signedIn.Proof.UserID, message, ct);
+        return await HandoffAsync(services, outcome, signedIn.Proof.UserID, InLanguage(message, language), ct);
     });
 
+    private static SecurityEmail? InLanguage(SecurityEmail? message, string? language) =>
+        message is null ? null : message with { Language = SecurityEmailTemplate.WellFormedLanguage(language) };
+
     internal static Task<AuthOutcome> AdminSecurityLinkAsync(IdentityAdmissionServices services, string? authorization,
-        long userID, AuthenticationOperationPurpose purpose, CancellationToken ct)
+        long userID, AuthenticationOperationPurpose purpose, CancellationToken ct, string? language = null)
     {
         var signedIn = ReadSignedIn(services, authorization);
         return signedIn is null ? Task.FromResult<AuthOutcome>(Refuse(AuthenticationFailure.InvalidGrant))
-            : AdminSecurityLinkAsync(services, new AdminActor(signedIn.Proof.UserID, signedIn), userID, purpose, ct);
+            : AdminSecurityLinkAsync(services, new AdminActor(signedIn.Proof.UserID, signedIn), userID, purpose, ct, language);
     }
 
     /// <summary>Issues a reset or verification grant for a target on behalf of an operator; shared by the staged routes and the legacy adapter.</summary>
     internal static Task<AuthOutcome> AdminSecurityLinkAsync(IdentityAdmissionServices services, AdminActor who,
-        long userID, AuthenticationOperationPurpose purpose, CancellationToken ct) => AtBoundary(async () =>
+        long userID, AuthenticationOperationPurpose purpose, CancellationToken ct, string? language = null) => AtBoundary(async () =>
     {
         if (userID <= 0 || !IsSecurityLink(purpose)) return Refuse(AuthenticationFailure.InvalidRequest);
         if (who.UserID == userID) return Refuse(AuthenticationFailure.ClientDenied);
@@ -89,7 +92,7 @@ internal static partial class AccountSecurityService
             if (refusal is not null) return Task.FromResult<AuthOutcome>(refusal);
             return Task.FromResult(CreateSecurityLink(services, unit, purpose, out message, actor.User.ID));
         }, ct);
-        return await HandoffAsync(services, outcome, userID, message, ct);
+        return await HandoffAsync(services, outcome, userID, InLanguage(message, language), ct);
     });
 
     private static AuthOutcome CreateSecurityLink(IdentityAdmissionServices services, IdentitySecurityTransaction unit,

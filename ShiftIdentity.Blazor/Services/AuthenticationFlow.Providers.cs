@@ -76,7 +76,7 @@ public sealed partial class AuthenticationFlow
         Busy = true;
         try
         {
-            using var response = await http.SendAsync(Request($"providers/{RouteName(provider)}/start", new StartProviderSignInRequest(Challenge())));
+            using var response = await http.SendAsync(Request($"providers/{RouteName(provider)}/start", new StartProviderSignInRequest(Challenge(), System.Globalization.CultureInfo.CurrentUICulture.Name)));
             var outcome = await response.Content.ReadFromJsonAsync<AuthOutcome>();
             if (response.IsSuccessStatusCode && outcome is ProviderRedirect { Url: { } url } redirect &&
                 url.StartsWith(AuthorizeOrigin(provider), StringComparison.Ordinal))

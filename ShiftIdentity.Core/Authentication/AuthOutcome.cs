@@ -163,7 +163,9 @@ public sealed record SignInProviders(bool Microsoft, bool Google = false, IReadO
 }
 
 public sealed record StartProviderSignInRequest(
-    [property: Required, StringLength(43, MinimumLength = 43)] string CodeChallenge);
+    [property: Required, StringLength(43, MinimumLength = 43)] string CodeChallenge,
+    // The culture of the app that asks. A notice about this sign-in is written in it. A malformed value is ignored.
+    string? Language = null);
 
 /// <summary>Completes a provider sign-in with the handle the provider's return carried and this browser's verifier.</summary>
 public sealed record CompleteProviderSignInRequest(
