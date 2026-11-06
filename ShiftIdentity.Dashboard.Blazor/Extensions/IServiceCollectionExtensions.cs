@@ -26,6 +26,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<AuthService>();
         services.AddScoped<HttpService>();
         services.AddScoped<UserManagerService>();
+        services.AddScoped<CountryContentLanguages>();
 
         if (shiftIdentityDashboardBlazorOptions.StagedAuthority)
         {

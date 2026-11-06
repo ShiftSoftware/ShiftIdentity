@@ -17,6 +17,7 @@
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Department
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Service
 @inject ShiftIdentityLocalizer Loc
+@inject CountryContentLanguages CountryLanguages
 
 
 
@@ -77,6 +78,7 @@
                     <ShiftAutocomplete Label="@Loc["City"]"
                                        For="@(() => context.Item.City)"
                                        @bind-Value="context.Item.City"
+                                       @bind-Value:after="RefreshLanguagesAsync"
                                        EntitySet="IdentityCity"
                                        TEntitySet="CityListDTO" />
                 </MudItem>
@@ -213,7 +215,7 @@
                 </MudItem>
 
                 <MudItem xs="12" sm="12" lg="12" xl="12">
-                    <LocalizedTextField @bind-Value="context.Item.DisplayName"
+                    <LocalizedTextField @key="Languages" Languages="Languages" @bind-Value="context.Item.DisplayName"
                                         Label="@Loc["Display Name"]"
                                         For="() => context.Item.DisplayName"
                                         Adornment="Adornment.Start"
@@ -221,7 +223,7 @@
                 </MudItem>
 
                  <MudItem xs="12" >
-                    <LocalizedTextField OnlyValidateIfDirty="true"
+                    <LocalizedTextField @key="Languages" Languages="Languages" OnlyValidateIfDirty="true"
                                         Label="@Loc["Description"]"
                                         @bind-Value="context.Item.Description"
                                         For="@(() => context.Item.Description)"
@@ -263,15 +265,15 @@
                 </MudItem>
 
                 <MudItem xs="12" sm="12" lg="12" xl="12">
-                    <LocalizedTextField @bind-Value="context.Item.WorkingHours" Label="@Loc["Standard Working Hours"]" For="() => context.Item.WorkingHours" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Schedule" />
+                    <LocalizedTextField @key="Languages" Languages="Languages" @bind-Value="context.Item.WorkingHours" Label="@Loc["Standard Working Hours"]" For="() => context.Item.WorkingHours" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Schedule" />
                 </MudItem>
 
                 <MudItem xs="12" sm="12" lg="12" xl="12">
-                    <LocalizedTextField @bind-Value="context.Item.WorkingDays" Label="@Loc["Standard Working Day"]" For="() => context.Item.WorkingDays" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.CalendarToday" />
+                    <LocalizedTextField @key="Languages" Languages="Languages" @bind-Value="context.Item.WorkingDays" Label="@Loc["Standard Working Day"]" For="() => context.Item.WorkingDays" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.CalendarToday" />
                 </MudItem>
 
                 <MudItem xs="12" sm="12" lg="12" xl="12">
-                    <LocalizedTextField @bind-Value="context.Item.Address" Label="@Loc["Address"]" For="() => context.Item.Address" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.LocationOn" />
+                    <LocalizedTextField @key="Languages" Languages="Languages" @bind-Value="context.Item.Address" Label="@Loc["Address"]" For="() => context.Item.Address" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.LocationOn" />
                 </MudItem>
 
                 <MudItem xs="12" sm="6" lg="4" xl="4">
@@ -455,16 +457,29 @@
 
     private int _activeTabIndex = 0;
 
+    private List<LanguageInfo> Languages = default!;
+
     protected override Task OnInitializedAsync()
     {
+        Languages = CountryLanguages.Default;
         this.SetCustomFiles();
 
         return base.OnInitializedAsync();
     }
 
-    private void OnTaskFinished()
+    private async Task OnTaskFinished()
     {
         this.SetCustomFiles();
+        await RefreshLanguagesAsync();
+    }
+
+    private async Task RefreshLanguagesAsync()
+    {
+        var cityId = _theItem.City?.Value;
+        var languages = await CountryLanguages.ForCityAsync(cityId, _theItem.DisplayName, _theItem.Description, _theItem.WorkingHours, _theItem.WorkingDays, _theItem.Address);
+
+        if (cityId == _theItem.City?.Value)
+            Languages = languages;
     }
 
     private void OnInvalidSubmit(ShiftEvent<EditContext> ctx)

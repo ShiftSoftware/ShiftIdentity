@@ -4,6 +4,7 @@
 @inject HttpClient Http
 @inject ShiftIdentityDashboardBlazorOptions Options
 @inject ShiftIdentityLocalizer Loc
+@inject CountryContentLanguages CountryLanguages
 
 @using ShiftSoftware.ShiftEntity.Model.Enums
 @using ShiftSoftware.ShiftIdentity.Core.DTOs.Company
@@ -22,11 +23,11 @@
     <MudGrid>
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
-            <LocalizedTextField @bind-Value="context.Item.Name" Label="@Loc["Name"]" For="() => context.Item.Name" />
+            <LocalizedTextField @key="Languages" Languages="Languages" @bind-Value="context.Item.Name" Label="@Loc["Name"]" For="() => context.Item.Name" />
         </MudItem>
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
-            <LocalizedTextField @bind-Value="context.Item.LegalName" Label="@Loc["Legal Name"]" For="() => context.Item.LegalName" />
+            <LocalizedTextField @key="Languages" Languages="Languages" @bind-Value="context.Item.LegalName" Label="@Loc["Legal Name"]" For="() => context.Item.LegalName" />
         </MudItem>
 
         <MudItem xs="12" sm="6" lg="4" xl="3">
@@ -75,7 +76,7 @@
         </MudItem>
 
         <MudItem xs="12" sm="12" lg="12" xl="12">
-            <LocalizedTextField @bind-Value="context.Item.HQAddress"
+            <LocalizedTextField @key="Languages" Languages="Languages" @bind-Value="context.Item.HQAddress"
                                 Label="@Loc["HQ Address"]"
                                 For="() => context.Item.HQAddress" />
         </MudItem>
@@ -166,16 +167,20 @@
 
     private ShiftSoftware.ShiftIdentity.Core.DTOs.Company.CompanyDTO _theItem = new();
 
+    private List<LanguageInfo> Languages = default!;
+
     protected override Task OnInitializedAsync()
     {
+        Languages = CountryLanguages.Default;
         this.SetCustomFiles();
 
         return base.OnInitializedAsync();
     }
 
-    private void OnTaskFinished()
+    private async Task OnTaskFinished()
     {
         this.SetCustomFiles();
+        Languages = await CountryLanguages.ForCompanyAsync(_theItem.ID, _theItem.Name, _theItem.LegalName, _theItem.HQAddress);
     }
 
     private void SetCustomFiles()
