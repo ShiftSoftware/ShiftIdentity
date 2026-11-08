@@ -82,6 +82,13 @@
                                 <div><strong>@Loc[FailureMessage]</strong><p>@Loc[FailureHint]</p></div>
                             </div>
                             <button type="button" class="auth-help" data-testid="login-failure-help" @onclick="OpenAccess">@Loc["Can't access your account?"] <MudIcon Icon="@Icons.Material.Filled.ChevronRight" /></button>
+                            @* The host's sign-in guide is offered only here, after an attempt has failed, and never on first load. *@
+                            @if (!string.IsNullOrWhiteSpace(ShiftIdentityDashboardBlazorOptions.LoginHelpGuideUrl))
+                            {
+                                <a class="auth-help auth-guide" data-testid="login-failure-guide" href="@ShiftIdentityDashboardBlazorOptions.LoginHelpGuideUrl" target="_blank" rel="noopener noreferrer">
+                                    <MudIcon Icon="@Icons.Material.Outlined.MenuBook" /> @Loc["Read the sign-in guide"]
+                                </a>
+                            }
                             @if (providerFailure is not null ? lastFailure is not AuthenticationFailure.ProviderAccountNotFound and not AuthenticationFailure.ProviderEmailUnverified and not AuthenticationFailure.ProviderNotAllowedForAccount
                                 : lastFailure is not AuthenticationFailure.InvalidProof and not AuthenticationFailure.AccountUnavailable and not AuthenticationFailure.PasswordSignInDisabled)
                             { <span class="auth-reference" data-testid="login-failure-reference">@Loc["Error reference"]: @FailureReference</span> }

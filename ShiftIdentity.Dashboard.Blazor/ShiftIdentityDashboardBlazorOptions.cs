@@ -40,6 +40,21 @@ public class ShiftIdentityDashboardBlazorOptions
     /// </summary>
     public bool EnablePreviewPages { get; set; }
 
+    /// <summary>
+    /// Link to a help guide for signing in, for example a PDF. The login page shows it only after a sign-in attempt
+    /// fails, inside the error message. Use an absolute URL, or a path to a file the host serves from its
+    /// <c>wwwroot</c> (for example <c>guides/sign-in.pdf</c>, resolved against the app's base address). When it is
+    /// not set, no link is shown.
+    /// </summary>
+    public string? LoginHelpGuideUrl { get; set; }
+
+    /// <summary>
+    /// Link to a help guide for the profile page: password change, authenticator set-up and similar actions. The
+    /// profile page always shows it. It takes the same forms as <see cref="LoginHelpGuideUrl"/> and can point to the
+    /// same document. When it is not set, no link is shown.
+    /// </summary>
+    public string? ProfileHelpGuideUrl { get; set; }
+
     public ShiftIdentityDashboardBlazorOptions AddCompanyBranchPhoneTag(string tag)
     {
         this.CompanyBranchPhoneTags.Add(tag);

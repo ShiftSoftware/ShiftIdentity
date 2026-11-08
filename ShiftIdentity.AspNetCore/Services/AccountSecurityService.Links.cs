@@ -24,16 +24,27 @@ internal static partial class AccountSecurityService
             // Missing host delivery support is a global failure, independent of the supplied account.
             if (services.EmailSink is null) return Refuse(AuthenticationFailure.Unavailable);
             var digest = Convert.ToHexString(HMACSHA256.HashData(services.Options.OperationKey, Encoding.UTF8.GetBytes("delivery:" + ingressKey)));
+            var purpose = verification ? AuthenticationOperationPurpose.EmailVerify : AuthenticationOperationPurpose.PasswordResetEmail;
+            // A refused request is audited once per address and window, in the limit's own transaction. The row names no
+            // user, identifier or address.
             if (!await services.Store.ConsumeIngressAsync(digest, services.Clock.GetUtcNow(),
-                services.DeliveryLimits.PublicPerIpPer15Minutes, TimeSpan.FromMinutes(15), ct)) return new SecurityDeliveryRequested();
+                services.DeliveryLimits.PublicPerIpPer15Minutes, TimeSpan.FromMinutes(15), ct,
+                refusalAudit: SecurityLinkAudit(purpose, "IngressLimited"))) return new SecurityDeliveryRequested();
             var lookup = await services.Store.ResolveSecurityEmailAsync(request.Identifier, ct);
             if (lookup is null) return new SecurityDeliveryRequested();
             services.Observe?.Invoke("SecurityEmailResolved");
             SecurityEmail? message = null;
             var outcome = await AtBoundary(() => services.Store.AdmitAsync<AuthOutcome>(lookup.UserID, null, services.Client, async unit =>
             {
-                if (!await services.Store.RecheckSecurityEmailAsync(lookup, ct)) return new SecurityDeliveryRequested();
-                return CreateSecurityLink(services, unit, verification ? AuthenticationOperationPurpose.EmailVerify : AuthenticationOperationPurpose.PasswordResetEmail, out message);
+                if (!await services.Store.RecheckSecurityEmailAsync(lookup, ct))
+                {
+                    // The identifier no longer reaches this account alone, or the account's lookup keys do not match its saved
+                    // username and email. A deleted account fails here too. The row records the refusal, not the identifier.
+                    var reason = !unit.User.IsActive || unit.User.IsDeleted ? "AccountInactive" : "ContactMismatch";
+                    unit.Audit(SecurityLinkAudit(purpose, reason), services.Clock.GetUtcNow());
+                    return new SecurityDeliveryRequested();
+                }
+                return CreateSecurityLink(services, unit, purpose, out message);
             }, ct));
             outcome = await HandoffAsync(services, outcome, lookup.UserID, InLanguage(message, request.Language), ct);
             // A target-specific refusal or outage must not reveal that the identifier resolved to an account.
@@ -103,21 +114,33 @@ internal static partial class AccountSecurityService
         if (!manual && services.EmailSink is null) return Refuse(AuthenticationFailure.Unavailable);
         var verification = purpose == AuthenticationOperationPurpose.EmailVerify;
         var now = services.Clock.GetUtcNow();
-        if (!unit.User.IsActive || unit.User.IsDeleted) return new SecurityDeliveryRequested();
-        if (!RecoveryContact.LookupMatches(unit.User, unit.Security)) return new SecurityDeliveryRequested();
-        if (unit.Policy.Revision != services.Options.PolicyRevision) return Refuse(AuthenticationFailure.Unavailable);
+        // Each refusal below writes one audit row in this admission unit, so the row is saved by the unit's existing
+        // commit. The answer to the caller does not change. Support can see that a request arrived and why it was
+        // refused; the caller still cannot.
+        AuthOutcome Refused(string reason, AuthOutcome outcome)
+        {
+            unit.Audit(SecurityLinkAudit(purpose, reason), now, actorUserID: actorID);
+            return outcome;
+        }
+        if (!unit.User.IsActive || unit.User.IsDeleted) return Refused("AccountInactive", new SecurityDeliveryRequested());
+        if (!RecoveryContact.LookupMatches(unit.User, unit.Security)) return Refused("ContactMismatch", new SecurityDeliveryRequested());
+        if (unit.Policy.Revision != services.Options.PolicyRevision) return Refused("PolicyMismatch", Refuse(AuthenticationFailure.Unavailable));
         var destination = unit.User.Email?.Trim();
-        if (!manual && (!IsDeliveryAddress(destination) ||
-            (verification ? unit.User.EmailVerified && RecoveryContact.IsEligible(unit.User, unit.Security) : !RecoveryContact.IsEligible(unit.User, unit.Security))))
-            return new SecurityDeliveryRequested();
+        if (!manual && !IsDeliveryAddress(destination)) return Refused("InvalidAddress", new SecurityDeliveryRequested());
+        // A verification link is not needed when the address is already verified and eligible. A reset link needs an
+        // eligible address: an old unverified address whose origin is unknown is not eligible.
+        if (!manual && verification && unit.User.EmailVerified && RecoveryContact.IsEligible(unit.User, unit.Security))
+            return Refused("AlreadyVerified", new SecurityDeliveryRequested());
+        if (!manual && !verification && !RecoveryContact.IsEligible(unit.User, unit.Security))
+            return Refused("Ineligible", new SecurityDeliveryRequested());
         // Manual grants share the issuance budget as well, preventing repeated privileged reissue from evading it.
         var security = unit.Security;
         if (security.LastDeliveryAt is { } last && now < last.AddSeconds(services.DeliveryLimits.CooldownSeconds))
-            return new SecurityDeliveryRequested();
+            return Refused("Cooldown", new SecurityDeliveryRequested());
         if (security.DeliveryWindowStart is not { } start || now >= start.AddHours(1))
         { security.DeliveryWindowStart = now; security.DeliveryCount = 0; }
         if (now < security.DeliveryWindowStart || security.DeliveryCount >= services.DeliveryLimits.PerUserPerHour)
-            return new SecurityDeliveryRequested();
+            return Refused("HourlyLimit", new SecurityDeliveryRequested());
         // An account held to a trusted tenant has no password to reset. Its owner gets a notice that says to sign in with
         // Microsoft instead of a link, under the same budget; the public answer stays the same as for any account.
         if (purpose == AuthenticationOperationPurpose.PasswordResetEmail && RequiredTenant(services, unit.User) is not null)
@@ -161,6 +184,17 @@ internal static partial class AccountSecurityService
         services.Observe?.Invoke("SecurityLinkPrepared");
         return manual ? new ManualPasswordResetIssued(credential.Handle, Mask(unit.User.Username), op.ExpiresAt) : new SecurityDeliveryRequested();
     }
+
+    /// <summary>
+    /// The audit outcome of a refused security-link request: the purpose, then the reason. Examples:
+    /// <c>PasswordResetIneligible</c>, <c>EmailVerificationCooldown</c>, <c>ManualPasswordResetAccountInactive</c>.
+    /// </summary>
+    internal static string SecurityLinkAudit(AuthenticationOperationPurpose purpose, string reason) => purpose switch
+    {
+        AuthenticationOperationPurpose.EmailVerify => "EmailVerification",
+        AuthenticationOperationPurpose.PasswordResetManual => "ManualPasswordReset",
+        _ => "PasswordReset"
+    } + reason;
 
     private static async Task<AuthOutcome> HandoffAsync(IdentityAdmissionServices services, AuthOutcome outcome,
         long userID, SecurityEmail? message, CancellationToken ct)

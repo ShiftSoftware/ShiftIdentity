@@ -34,6 +34,9 @@
 .identity-login-box ::deep .auth-failure strong { display: block; font-weight: 600; }
 .identity-login-box ::deep .auth-failure p { margin-top: 3px; font-size: 13px; color: #805a59; }
 .identity-login-box ::deep .auth-failure .auth-help { display: inline-flex; align-items: center; gap: 8px; margin: 13px 0 0; padding: 0; color: var(--mud-palette-primary); font-weight: 600; }
+.identity-login-box ::deep .auth-failure .auth-guide { display: flex; width: fit-content; margin-top: 8px; font-weight: 500; text-decoration: none; }
+.identity-login-box ::deep .auth-failure .auth-guide .mud-icon-root { font-size: 18px; }
+.identity-login-box ::deep .auth-failure .auth-guide:hover { text-decoration: underline; }
 .identity-login-box ::deep .auth-reference { display: block; margin-top: 8px; font-size: 11px; color: #805a59; }
 .identity-login-box ::deep .auth-notice { margin-top: 18px; }
 .identity-login-box ::deep .auth-done-icon { display: block; margin: 4px auto 14px; }

@@ -157,6 +157,30 @@ public sealed class DashboardStagedSecurityTests
         Assert.Empty(cut.FindAll("[data-testid=profile-mfa-opt-out]"));
     }
 
+    [Theory]
+    [InlineData(null, false)]
+    [InlineData("https://help.example.invalid/guide.pdf", false)]
+    [InlineData("guides/profile.pdf", true)]
+    public async Task The_profile_shows_the_configured_guide_for_every_account(string? guide, bool microsoftOnly)
+    {
+        var store = new RecordingStore();
+        await store.Session.StoreTokenAsync(AuthenticationFlowTests.Session().Session);
+        var transport = new DashboardTransport { Status = new AuthenticatorStatus(true, false, MicrosoftOnly: microsoftOnly) };
+        await using var context = Context(transport, store.Session, staged: true);
+        context.Services.GetRequiredService<ShiftSoftware.ShiftIdentity.Dashboard.Blazor.ShiftIdentityDashboardBlazorOptions>().ProfileHelpGuideUrl = guide;
+        var cut = context.Render<UserDataForm>();
+        cut.WaitForElement(microsoftOnly ? "[data-testid=profile-microsoft-only]" : "[data-testid=profile-change-password]");
+        if (guide is null)
+        {
+            Assert.Empty(cut.FindAll("[data-testid=profile-guide]"));
+            return;
+        }
+        var link = cut.Find("[data-testid=profile-guide]");
+        Assert.Equal(guide, link.GetAttribute("href"));
+        Assert.Equal("_blank", link.GetAttribute("target"));
+        Assert.Contains("User guide", link.TextContent);
+    }
+
     [Fact]
     public async Task Profile_password_change_opens_a_narrow_dialog_whose_steps_share_one_close_control_and_end_on_a_done_step()
     {

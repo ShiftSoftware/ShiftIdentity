@@ -43,7 +43,13 @@ public interface IIdentitySecurityStore
     Task<bool> RecheckSecurityEmailAsync(SecurityEmailLookup lookup, CancellationToken cancellationToken);
     /// <summary>Range-locked duplicate check for a proposed username or email; call only inside admission.</summary>
     Task<bool> IdentifierInUseAsync(string value, long exceptUserID, CancellationToken cancellationToken);
-    Task<bool> ConsumeIngressAsync(string key, DateTimeOffset now, int limit, TimeSpan window, CancellationToken cancellationToken);
+    /// <summary>
+    /// Counts one request against the bucket <paramref name="key"/>. Returns false when the bucket is full. When
+    /// <paramref name="refusalAudit"/> is given, the first refused request in a window writes one audit row with that
+    /// outcome, in the same transaction. The row names no user and does not contain the key.
+    /// </summary>
+    Task<bool> ConsumeIngressAsync(string key, DateTimeOffset now, int limit, TimeSpan window, CancellationToken cancellationToken,
+        string? refusalAudit = null);
     Task<T> AdmitAsync<T>(long userID, Guid? operationID, AuthenticationClient client,
         Func<IdentitySecurityTransaction, Task<T>> transition, CancellationToken cancellationToken);
     /// <summary>Serializes a one-time legacy refresh exchange and exposes its completed tombstone on replay.</summary>

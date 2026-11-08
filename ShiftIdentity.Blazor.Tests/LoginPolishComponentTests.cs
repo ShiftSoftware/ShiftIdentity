@@ -372,6 +372,36 @@ public sealed class LoginPolishComponentTests
     }
 
     [Theory]
+    [InlineData(null)]
+    [InlineData(" ")]
+    [InlineData("guides/sign-in.pdf")]
+    public async Task The_sign_in_guide_appears_only_in_the_failure_message_and_only_when_configured(string? guide)
+    {
+        using var transport = new Transport();
+        await using var context = Context(transport, out _);
+        context.Services.GetRequiredService<ShiftSoftware.ShiftIdentity.Dashboard.Blazor.ShiftIdentityDashboardBlazorOptions>().LoginHelpGuideUrl = guide;
+        var cut = context.Render<LoginForm>();
+        // Not on first load, whatever the configuration.
+        Assert.Empty(cut.FindAll("[data-testid=login-failure-guide]"));
+        Assert.DoesNotContain("Read the sign-in guide", cut.Markup);
+
+        await Login(cut);
+        cut.WaitForElement("[data-testid=login-failure-message]");
+        if (string.IsNullOrWhiteSpace(guide))
+        {
+            Assert.Empty(cut.FindAll("[data-testid=login-failure-guide]"));
+            return;
+        }
+        var link = cut.Find("[data-login-failure] [data-testid=login-failure-guide]");
+        Assert.Equal(guide, link.GetAttribute("href"));
+        Assert.Equal("_blank", link.GetAttribute("target"));
+        Assert.Contains("noopener", link.GetAttribute("rel"));
+        Assert.Contains("Read the sign-in guide", link.TextContent);
+        // Opening the guide is a plain link: it sends nothing to the identity service.
+        Assert.Single(transport.Bodies);
+    }
+
+    [Theory]
     [InlineData(null, false)]
     [InlineData(" ", false)]
     [InlineData("/images/logo.png", true)]

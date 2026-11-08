@@ -54,7 +54,8 @@ public sealed partial class SqlIdentitySecurityStore
         catch (SqlException e) { throw new IdentitySecurityUnavailableException("Identity lookup recheck unavailable.", e); }
     }
 
-    public async Task<bool> ConsumeIngressAsync(string key, DateTimeOffset now, int limit, TimeSpan window, CancellationToken ct)
+    public async Task<bool> ConsumeIngressAsync(string key, DateTimeOffset now, int limit, TimeSpan window, CancellationToken ct,
+        string? refusalAudit = null)
     {
         db.ChangeTracker.Clear();
         try
@@ -68,6 +69,13 @@ public sealed partial class SqlIdentitySecurityStore
             if (now >= bucket.WindowStart + window) { bucket.WindowStart = now; bucket.Count = 0; }
             var allowed = now >= bucket.WindowStart && bucket.Count < limit;
             if (allowed) bucket.Count++;
+            else if (refusalAudit is not null && bucket.Count == limit)
+            {
+                // Count one past the limit, so later refusals in this window write no further row. A flood from one
+                // address then adds one row per window, not one row per request.
+                bucket.Count++;
+                db.Set<AuthenticationAuditEvent>().Add(new() { Outcome = refusalAudit, CreatedAt = now });
+            }
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
             return allowed;

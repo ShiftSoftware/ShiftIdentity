@@ -75,7 +75,10 @@ public sealed class SecurityLinkConcurrencySqlTests : SecurityLinkTestBase, ICla
         await using (var db = fixture.CreateContext())
         {
             var bucket = Assert.Single(await db.Set<AuthThrottleBucket>().ToArrayAsync());
-            Assert.Equal(20, bucket.Count); Assert.Equal(64, bucket.Key.Length);
+            // Twenty requests were allowed. The first refusal counts one past the limit, so that the refusal is audited
+            // only once in this window; the second refusal does not count.
+            Assert.Equal(21, bucket.Count); Assert.Equal(64, bucket.Key.Length);
+            Assert.Single(await db.Set<AuthenticationAuditEvent>().Where(x => x.Outcome.EndsWith("IngressLimited")).ToArrayAsync());
         }
         clock.Advance(TimeSpan.FromHours(1));
         await Request(host, Email);

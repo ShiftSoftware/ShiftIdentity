@@ -59,6 +59,11 @@ else
                 }
             }
         }
+        @* The host's profile guide, shown in every mode and for every account. *@
+        @if (!string.IsNullOrWhiteSpace(DashboardOptions.ProfileHelpGuideUrl))
+        {
+            <MudButton Href="@DashboardOptions.ProfileHelpGuideUrl" Target="_blank" rel="noopener noreferrer" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.MenuBook" Variant="Variant.Text" data-testid="profile-guide">@Loc["User guide"]</MudButton>
+        }
     </ToolbarStartTemplate>
 
     <ChildContent>
