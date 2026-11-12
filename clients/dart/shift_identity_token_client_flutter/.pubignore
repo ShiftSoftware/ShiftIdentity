@@ -1,0 +1,2 @@
+# Development-only path override of the example; it points outside the published package.
+example/pubspec_overrides.yaml

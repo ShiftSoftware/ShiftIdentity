@@ -1,0 +1,5 @@
+# Development only: use the core package from this repository instead of pub.dev.
+# `dart pub publish` ignores this file.
+dependency_overrides:
+  shift_identity_token_client:
+    path: ../shift_identity_token_client

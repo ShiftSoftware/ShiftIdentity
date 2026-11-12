@@ -1,0 +1,4 @@
+# Development only: use the core package from this repository instead of pub.dev.
+dependency_overrides:
+  shift_identity_token_client:
+    path: ../../shift_identity_token_client

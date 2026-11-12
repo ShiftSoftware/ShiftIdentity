@@ -1,0 +1,29 @@
+name: shift_identity_token_client_flutter
+description: >-
+  ShiftIdentity.TokenClient for Flutter. Keeps a ShiftIdentity session in
+  secure storage (Keychain, encrypted storage) and hands out a valid access
+  token, refreshing ahead of expiry.
+version: 1.0.0
+repository: https://github.com/ShiftSoftware/ShiftIdentity/tree/master/clients/dart/shift_identity_token_client_flutter
+issue_tracker: https://github.com/ShiftSoftware/ShiftIdentity/issues
+topics:
+  - authentication
+  - oauth
+  - token
+  - refresh-token
+  - secure-storage
+
+environment:
+  sdk: ^3.4.0
+  flutter: ">=3.22.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_secure_storage: ">=9.2.2 <12.0.0"
+  shift_identity_token_client: ^1.0.0
+
+dev_dependencies:
+  flutter_lints: ^4.0.0
+  flutter_test:
+    sdk: flutter

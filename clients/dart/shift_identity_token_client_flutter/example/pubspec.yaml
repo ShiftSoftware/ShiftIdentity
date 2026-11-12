@@ -1,0 +1,19 @@
+name: shift_identity_token_client_flutter_example
+description: An example app for shift_identity_token_client_flutter.
+publish_to: none
+
+environment:
+  sdk: ^3.4.0
+  flutter: ">=3.22.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  shift_identity_token_client_flutter:
+    path: ../
+
+dev_dependencies:
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
