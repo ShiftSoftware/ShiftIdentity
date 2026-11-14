@@ -1,0 +1,5 @@
+<Project>
+	<ItemGroup Condition="'$(WasmEnableWebcil)' != 'false'">
+		<BlazorWebAssemblyLazyLoad Include="PhoneNumbers.wasm" />
+	</ItemGroup>
+</Project>

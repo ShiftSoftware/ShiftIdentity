@@ -29,6 +29,7 @@
 	<ItemGroup>
 		<None Include="Images\icon.png" Pack="true" PackagePath="\" />
 		<Folder Include="Images\" />
+		<None Include="buildTransitive\ShiftSoftware.ShiftIdentity.Blazor.targets" Pack="true" PackagePath="buildTransitive\" />
 	</ItemGroup>
 
 	<!-- The JavaScript token client from clients/javascript/src, shipped as static web assets. A host serves them at

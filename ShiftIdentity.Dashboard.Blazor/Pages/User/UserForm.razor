@@ -393,6 +393,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        _ = ShiftSoftware.ShiftIdentity.Blazor.Services.PhoneNumberEngine.PreloadAsync(Services);
         if (DashboardOptions.StagedAuthority)
             signInProviders = await new ShiftSoftware.ShiftIdentity.Blazor.Services.AuthenticationFlow(
                 Services.GetRequiredService<ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Services.StagedAuthorityHttpClient>(),
