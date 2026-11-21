@@ -1,5 +1,9 @@
+using System.Data.Common;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -37,6 +41,9 @@ internal sealed class IdentityAuthorityStartup(IServiceScopeFactory scopes, Iden
             if (registration.GoogleProblem is { } googleProblem)
                 logger.LogWarning("Google sign-in is enabled but stays off: {Problem} The login screen shows no Google button until this is fixed.", googleProblem);
             var db = scope.ServiceProvider.GetRequiredService<ShiftIdentityDbContext>();
+            // On SQL Server the schema comes from the host's migrations, and a missing table is reported below. Any other
+            // database is created by the host itself (EnsureCreated): say which tables are missing and how to create them.
+            if (!db.Database.IsSqlServer()) await CheckSchemaAsync(db, logger, cancellationToken);
             var revision = await EnsurePolicyAsync(db, registration, cancellationToken);
             var created = await EnsureClientAsync(db, registration, cancellationToken);
             // Device sign-in needs its table. A host that configured device clients without the migration stops here.
@@ -58,6 +65,36 @@ internal sealed class IdentityAuthorityStartup(IServiceScopeFactory scopes, Iden
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    /// <summary>
+    /// On a database other than SQL Server: every identity table must exist before the authority starts. Each table is
+    /// read with a query that returns no row, named the way the database names it; the missing ones stop the start
+    /// with a message that names them and says to create the schema before <c>app.Run()</c>.
+    /// </summary>
+    internal static async Task CheckSchemaAsync(ShiftIdentityDbContext db, ILogger logger, CancellationToken ct)
+    {
+        var sql = db.GetService<ISqlGenerationHelper>();
+        var identityAssembly = typeof(ShiftIdentityDbContext).Assembly;
+        var tables = db.GetService<IDesignTimeModel>().Model.GetRelationalModel().Tables
+            .Where(t => t.EntityTypeMappings.Any(m => m.TypeBase.ClrType.Assembly == identityAssembly))
+            .OrderBy(t => t.Name, StringComparer.Ordinal);
+        var missing = new List<string>();
+        foreach (var table in tables)
+        {
+            try
+            {
+#pragma warning disable EF1002 // The names come from the EF model and are delimited by the provider; no value is concatenated.
+                await db.Database.ExecuteSqlRawAsync($"SELECT 1 FROM {sql.DelimitIdentifier(table.Name, table.Schema)} WHERE 1 = 0", ct);
+#pragma warning restore EF1002
+            }
+            catch (DbException) { missing.Add(table.Name); }
+        }
+        if (missing.Count == 0) return;
+        logger.LogError("The identity authority could not start: the identity tables {Tables} do not exist in the {Provider} database. Create the schema before the host starts, for example with db.Database.EnsureCreated() before app.Run().",
+            string.Join(", ", missing), db.Database.ProviderName);
+        throw new InvalidOperationException($"The identity authority could not start: the identity tables {string.Join(", ", missing)} do not exist. " +
+            "Create the schema before the host starts, for example with db.Database.EnsureCreated() before app.Run().");
+    }
 
     internal static void CheckAdapters(IServiceProvider services)
     {

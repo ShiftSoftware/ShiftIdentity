@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -14,6 +15,14 @@ using ShiftSoftware.ShiftIdentity.Data.Entities;
 using Xunit;
 
 namespace ShiftIdentity.Tests.Infrastructure;
+
+public enum IdentityTestDatabase { SqlServer, SqliteInMemory, SqliteFile }
+
+/// <summary>The fixture on a SQLite database in memory, for fast tests of a SQLite host.</summary>
+public sealed class SqliteIdentityFixture : SqlIdentityFixture
+{
+    public SqliteIdentityFixture() => Database = IdentityTestDatabase.SqliteInMemory;
+}
 
 /// <summary>
 /// One owned database per fixture. Never reads appsettings, user secrets or the configured test DB.
@@ -31,6 +40,9 @@ public class SqlIdentityFixture : IAsyncLifetime
     public bool SeedLegacyFactorBeforeExpansion { get; init; }
     /// <summary>Maps the identity entities as temporal tables, the way the template's DbContext (UseTemporal) does.</summary>
     public bool Temporal { get; init; }
+    /// <summary>The database this fixture owns: a disposable SQL Server database (the default), or SQLite in memory or in a file.</summary>
+    public IdentityTestDatabase Database { get; init; } = IdentityTestDatabase.SqlServer;
+    private string? sqliteFile;
     public ShiftSoftware.ShiftIdentity.Core.Models.FactorProtectionSettings FactorProtection { get; } = new()
     {
         ActiveKeyId = "fixture-key",
@@ -82,6 +94,7 @@ public class SqlIdentityFixture : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
+        if (Database != IdentityTestDatabase.SqlServer) { await InitializeSqliteAsync(); return; }
         var configured = Environment.GetEnvironmentVariable("SHIFT_IDENTITY_TEST_SQL");
         var builder = new SqlConnectionStringBuilder(configured ??
             @"Server=.\SQLEXPRESS;Integrated Security=true;Encrypt=true;TrustServerCertificate=true;Connect Timeout=5");
@@ -109,28 +122,10 @@ public class SqlIdentityFixture : IAsyncLifetime
             mark.Parameters.AddWithValue("@marker", ownership);
             await mark.ExecuteNonQueryAsync();
         }
-        using var rsa = RSA.Create(2048);
-        Options = new("https://identity.invalid", "identity-refresh", rsa.ExportRSAPrivateKey(),
-            RandomNumberGenerator.GetBytes(64), RandomNumberGenerator.GetBytes(32));
+        CreateOptions();
         await using LegacyIdentityTestDbContext legacy = Temporal ? new TemporalLegacyIdentityTestDbContext(BuildOptions()) : new LegacyIdentityTestDbContext(BuildOptions());
         await legacy.GetService<IRelationalDatabaseCreator>().CreateTablesAsync();
-        var hash = HashService.GenerateHash(Password);
-        var country = new Country { Name = "Synthetic Country", CallingCode = "+1" };
-        var region = new Region { Name = "Synthetic Region", Country = country };
-        var city = new City { Name = "Synthetic City", Region = region };
-        var company = new Company { Name = "Synthetic Company" };
-        var branch = new CompanyBranch { Name = "Synthetic Branch", Company = company, Region = region, City = city };
-        legacy.Add(branch);
-        await legacy.SaveChangesAsync();
-        var user = new User { Username = Username, FullName = "Synthetic User", IsActive = true,
-            PasswordHash = hash.PasswordHash, Salt = hash.Salt, RegionID = region.ID, CountryID = country.ID,
-            CompanyID = company.ID, CompanyBranchID = branch.ID,
-            TotpSecret = SeedLegacyFactorBeforeExpansion ? FactorSecret : null };
-        legacy.Users.Add(user);
-        legacy.Apps.AddRange(new App { AppId = "test-client", DisplayName = "Test", RedirectUri = "https://client.invalid/callback" },
-            new App { AppId = "other-client", DisplayName = "Other", RedirectUri = "https://other.invalid/callback" });
-        await legacy.SaveChangesAsync();
-        UserID = user.ID;
+        var user = await SeedRowsAsync(legacy);
         // Exercise an actual relational migration from the existing identity model to the staged model.
         await using var current = CreateContext();
         var oldModel = legacy.GetService<IDesignTimeModel>().Model.GetRelationalModel();
@@ -146,8 +141,64 @@ public class SqlIdentityFixture : IAsyncLifetime
         await current.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// A SQLite database, in memory or in a file, created from the current model the way a SQLite host creates it
+    /// (<c>EnsureCreated</c>), with the same rows as the SQL Server database. The in-memory one is a named shared
+    /// database, which ShiftEntity keeps alive for the process; the file is deleted when the fixture is disposed.
+    /// </summary>
+    private async Task InitializeSqliteAsync()
+    {
+        if (Temporal) throw new InvalidOperationException("SQLite has no temporal tables.");
+        if (Database == IdentityTestDatabase.SqliteFile)
+        {
+            sqliteFile = Path.Combine(Path.GetTempPath(), name + ".db");
+            connectionString = new SqliteConnectionStringBuilder { DataSource = sqliteFile }.ConnectionString;
+        }
+        else
+            connectionString = $"Data Source={name};Mode=Memory;Cache=Shared";
+        CreateOptions();
+        await using var db = CreateContext();
+        await db.Database.EnsureCreatedAsync();
+        await SeedRowsAsync(db);
+        await UserSecurityExpansion.ExpandMissingAsync(db);
+        db.Set<AuthenticationPolicyState>().Add(new());
+        await db.SaveChangesAsync();
+    }
+
+    private void CreateOptions()
+    {
+        using var rsa = RSA.Create(2048);
+        Options = new("https://identity.invalid", "identity-refresh", rsa.ExportRSAPrivateKey(),
+            RandomNumberGenerator.GetBytes(64), RandomNumberGenerator.GetBytes(32));
+    }
+
+    /// <summary>The rows every fixture starts with: one branch and its geography, the synthetic user and two client apps.</summary>
+    private async Task<User> SeedRowsAsync(ShiftIdentityDbContext db)
+    {
+        var hash = HashService.GenerateHash(Password);
+        var country = new Country { Name = "Synthetic Country", CallingCode = "+1" };
+        var region = new Region { Name = "Synthetic Region", Country = country };
+        var city = new City { Name = "Synthetic City", Region = region };
+        var company = new Company { Name = "Synthetic Company" };
+        var branch = new CompanyBranch { Name = "Synthetic Branch", Company = company, Region = region, City = city };
+        db.Add(branch);
+        await db.SaveChangesAsync();
+        var user = new User { Username = Username, FullName = "Synthetic User", IsActive = true,
+            PasswordHash = hash.PasswordHash, Salt = hash.Salt, RegionID = region.ID, CountryID = country.ID,
+            CompanyID = company.ID, CompanyBranchID = branch.ID,
+            TotpSecret = SeedLegacyFactorBeforeExpansion ? FactorSecret : null };
+        db.Users.Add(user);
+        db.Apps.AddRange(new App { AppId = "test-client", DisplayName = "Test", RedirectUri = "https://client.invalid/callback" },
+            new App { AppId = "other-client", DisplayName = "Other", RedirectUri = "https://other.invalid/callback" });
+        await db.SaveChangesAsync();
+        UserID = user.ID;
+        return user;
+    }
+
     public DbContextOptions BuildOptions(params Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor[] interceptors) =>
-        new DbContextOptionsBuilder().UseSqlServer(connectionString).UseTemporal(Temporal).AddInterceptors(interceptors).Options;
+        Database == IdentityTestDatabase.SqlServer
+            ? new DbContextOptionsBuilder().UseSqlServer(connectionString).UseTemporal(Temporal).AddInterceptors(interceptors).Options
+            : new DbContextOptionsBuilder().UseSqlite(connectionString).AddInterceptors(interceptors).Options;
 
     // Temporal fixtures use context types of their own: EF caches one model per context type.
     private ShiftIdentityDbContext DefaultContext(DbContextOptions options) =>
@@ -275,6 +326,13 @@ public class SqlIdentityFixture : IAsyncLifetime
 
     public async ValueTask DisposeAsync()
     {
+        if (Database != IdentityTestDatabase.SqlServer)
+        {
+            if (sqliteFile is null) return;
+            SqliteConnection.ClearPool(new SqliteConnection(connectionString));
+            File.Delete(sqliteFile);
+            return;
+        }
         if (string.IsNullOrEmpty(connectionString)) return;
         if (!Regex.IsMatch(name, "^ShiftIdentityTests_[a-f0-9]{32}$")) throw new InvalidOperationException("Unsafe database name.");
         await using (var owned = new SqlConnection(connectionString))

@@ -212,12 +212,17 @@ public class ShiftIdentityMapper : ShiftMapperBase
         // string? on the DTO ← long? on the entity, and the names match, so the list convention binds the same
         // scalar in the same position. It therefore stays filterable — $filter=ParentCompanyID eq X still
         // translates, and EF still does not inline the Brands aggregation into the WHERE.
+        // Brands: each brand once, from the first of the company's branch-brand rows that name it. Not Distinct: a
+        // Distinct on the brand alone drops the company from the rows, which EF can only correlate with APPLY, and
+        // SQLite has no APPLY. The comparison reaches only the inner rows, so EF joins it on every database.
         CreateMap<Company, CompanyListDTO>()
             .ForMember(d => d.ParentCompanyName, opt => opt.MapFrom(e => e.ParentCompany == null ? null : e.ParentCompany.Name))
             .ForMember(d => d.Brands, opt => opt.MapFrom(e => e.CompanyBranches!
                 .SelectMany(x => x.CompanyBranchBrands!)
-                .Select(x => x.BrandID).Distinct()
-                .Select(x => new ShiftEntitySelectDTO { Value = x.ToString() }).ToList()));
+                .Where(x => !x.CompanyBranch.Company!.CompanyBranches!
+                    .SelectMany(b => b.CompanyBranchBrands!)
+                    .Any(y => y.BrandID == x.BrandID && y.ID < x.ID))
+                .Select(x => new ShiftEntitySelectDTO { Value = x.BrandID.ToString() }).ToList()));
 
         // ────────────────────────────────────────────────────────────────────────────────────────────────────
         // User — VIEW: the select convention can't fill CompanyBranchID (the DTO member is already named …ID,
