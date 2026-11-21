@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Data;
+using ShiftSoftware.ShiftIdentity.Data.Seeding;
 using ShiftSoftware.TypeAuth.Core;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Extentsions;
@@ -27,6 +30,33 @@ public static class WebApplicationExtensions
 
         return app;
     }
+
+    /// <summary>
+    /// <b>SQLite only.</b> Seeds the identity tables of the host's <see cref="ShiftIdentityDbContext"/>, in one
+    /// transaction. Call it after the schema is created (<c>EnsureCreated</c>) and before <c>app.Run()</c>, inside
+    /// your own <c>if</c> for the environments that should be seeded. On any other database it seeds nothing, logs a
+    /// warning and returns <see cref="IdentitySeedResult.Skipped"/>; SQL Server hosts use <see cref="SeedDBAsync"/>.
+    /// </summary>
+    /// <exception cref="IdentitySeedException">The seed names something that is not there; nothing was written.</exception>
+    public static async Task<IdentitySeedResult> SeedShiftIdentitySqliteAsync(this IHost host, IdentitySeedData seed,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(seed);
+        await using var scope = host.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("ShiftSoftware.ShiftIdentity.Seeding");
+        return await new IdentitySeeder(services.GetRequiredService<ShiftIdentityDbContext>(), GetRegisteredActionTrees(services), logger)
+            .SeedAsync(seed, cancellationToken);
+    }
+
+    /// <summary>
+    /// <b>SQLite only.</b> The same as the <see cref="IdentitySeedData"/> overload, from JSON of exactly that shape
+    /// (names in any case, enums by name, an unknown property is an error).
+    /// </summary>
+    /// <exception cref="IdentitySeedException">The JSON does not parse, or the seed names something that is not there; nothing was written.</exception>
+    public static Task<IdentitySeedResult> SeedShiftIdentitySqliteAsync(this IHost host, string json,
+        CancellationToken cancellationToken = default) =>
+        host.SeedShiftIdentitySqliteAsync(IdentitySeedJson.Read(json), cancellationToken);
 
     public static async Task<WebApplication> SetFullAccessAsync(this WebApplication app, params string[] username)
     {

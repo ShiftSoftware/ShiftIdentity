@@ -12,6 +12,7 @@ using ShiftSoftware.ShiftIdentity.Core;
 using ShiftSoftware.ShiftIdentity.Data;
 using ShiftSoftware.ShiftIdentity.Data.Authentication;
 using ShiftSoftware.ShiftIdentity.Data.Entities;
+using ShiftSoftware.ShiftIdentity.Data.Seeding;
 using Xunit;
 
 namespace ShiftIdentity.Tests.Infrastructure;
@@ -143,12 +144,14 @@ public class SqlIdentityFixture : IAsyncLifetime
 
     /// <summary>
     /// A SQLite database, in memory or in a file, created from the current model the way a SQLite host creates it
-    /// (<c>EnsureCreated</c>), with the same rows as the SQL Server database. The in-memory one is a named shared
-    /// database, which ShiftEntity keeps alive for the process; the file is deleted when the fixture is disposed.
+    /// (<c>EnsureCreated</c>), and given the same rows as the SQL Server database through the SQLite seed, the way a
+    /// SQLite host seeds it. The in-memory one is a named shared database, which ShiftEntity keeps alive for the
+    /// process; the file is deleted when the fixture is disposed.
     /// </summary>
     private async Task InitializeSqliteAsync()
     {
         if (Temporal) throw new InvalidOperationException("SQLite has no temporal tables.");
+        if (SeedLegacyFactorBeforeExpansion) throw new InvalidOperationException("A legacy factor is a SQL Server migration case; the SQLite seed does not write one.");
         if (Database == IdentityTestDatabase.SqliteFile)
         {
             sqliteFile = Path.Combine(Path.GetTempPath(), name + ".db");
@@ -159,8 +162,21 @@ public class SqlIdentityFixture : IAsyncLifetime
         CreateOptions();
         await using var db = CreateContext();
         await db.Database.EnsureCreatedAsync();
-        await SeedRowsAsync(db);
-        await UserSecurityExpansion.ExpandMissingAsync(db);
+        await new IdentitySeeder(db, [typeof(ShiftIdentityActions)]).SeedAsync(new IdentitySeedData
+        {
+            Countries = [new() { Key = "country", Name = "Synthetic Country", CallingCode = "+1" }],
+            Regions = [new() { Key = "region", Name = "Synthetic Region", Country = "country" }],
+            Cities = [new() { Key = "city", Name = "Synthetic City", Region = "region" }],
+            Companies = [new() { Key = "company", Name = "Synthetic Company" }],
+            CompanyBranches = [new() { Key = "branch", Name = "Synthetic Branch", Company = "company", City = "city" }],
+            Apps =
+            [
+                new() { AppId = "test-client", DisplayName = "Test", RedirectUri = "https://client.invalid/callback" },
+                new() { AppId = "other-client", DisplayName = "Other", RedirectUri = "https://other.invalid/callback" },
+            ],
+            Users = [new() { Username = Username, Password = Password, FullName = "Synthetic User", CompanyBranch = "branch" }],
+        });
+        UserID = await db.Users.Where(x => x.Username == Username).Select(x => x.ID).SingleAsync();
         db.Set<AuthenticationPolicyState>().Add(new());
         await db.SaveChangesAsync();
     }
