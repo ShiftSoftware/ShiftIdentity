@@ -206,11 +206,37 @@ namespace ShiftSoftware.ShiftIdentity.Data
 
                 x.HasIndex(d => new { d.StartDate, d.EndDate, d.CompanyID, d.IsDeleted });
             });
+
+            // On SQL Server the model is complete. Any other database leaves out SQL Server's check constraints and
+            // collations and fills in the row versions itself; SQLite also stores DateTimeOffset as a sortable number.
+            // EF builds one model per database provider, so the two never mix.
+            if (!Database.IsSqlServer())
+                OtherDatabases.AdaptModel(b, sqlite: Database.ProviderName == OtherDatabases.SqliteProviderName);
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             base.OnConfiguring(optionsBuilder);
+        }
+
+        public override int SaveChanges(bool acceptAllChangesOnSuccess)
+        {
+            SetRowVersionsWhenNotSqlServer();
+            return base.SaveChanges(acceptAllChangesOnSuccess);
+        }
+
+        public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+        {
+            SetRowVersionsWhenNotSqlServer();
+            return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        }
+
+        // SQL Server generates the row versions. Elsewhere this context sets them, on the rows the save will write.
+        private void SetRowVersionsWhenNotSqlServer()
+        {
+            if (Database.IsSqlServer()) return;
+            if (ChangeTracker.AutoDetectChangesEnabled) ChangeTracker.DetectChanges();
+            OtherDatabases.SetRowVersions(ChangeTracker);
         }
     }
 }

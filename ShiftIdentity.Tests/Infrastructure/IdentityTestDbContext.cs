@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ShiftSoftware.ShiftIdentity.Data;
 using ShiftSoftware.ShiftIdentity.Data.Authentication;
-using ShiftSoftware.ShiftIdentity.Data.Entities;
 
 namespace ShiftIdentity.Tests.Infrastructure;
 
@@ -32,23 +31,7 @@ public sealed class TemporalIdentityTestDbContext(DbContextOptions options) : Id
 public sealed class TemporalLegacyIdentityTestDbContext(DbContextOptions options) : LegacyIdentityTestDbContext(options);
 
 /// <summary>
-/// The identity model on SQLite, for fast tests that need real tables. Left out: the tables SQLite cannot create, which
-/// these tests do not read. The calendar has nvarchar(max) columns; the security tables have SQL Server check
-/// constraints and collations.
+/// The identity model on SQLite, for fast tests that need real tables. The context adapts its own model to SQLite
+/// (no SQL Server check constraints or collations, row versions it sets itself, DateTimeOffset as a sortable number).
 /// </summary>
-public sealed class SqliteIdentityTestDbContext(DbContextOptions<SqliteIdentityTestDbContext> options) : ShiftIdentityDbContext(options)
-{
-    protected override void OnModelCreating(ModelBuilder builder)
-    {
-        base.OnModelCreating(builder);
-        builder.Ignore<CompanyCalendarBranch>();
-        builder.Ignore<CompanyCalendar>();
-        builder.Ignore<UserSecurityState>();
-        builder.Ignore<AuthenticationOperation>();
-        builder.Ignore<UserProviderLink>();
-        builder.Ignore<AuthenticationPolicyState>();
-        builder.Ignore<AuthenticationAuditEvent>();
-        builder.Ignore<AuthThrottleBucket>();
-        builder.Ignore<DeviceAuthorization>();
-    }
-}
+public sealed class SqliteIdentityTestDbContext(DbContextOptions<SqliteIdentityTestDbContext> options) : ShiftIdentityDbContext(options);

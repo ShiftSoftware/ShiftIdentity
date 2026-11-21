@@ -1,6 +1,7 @@
 using System.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
 
 namespace ShiftSoftware.ShiftIdentity.Data.Authentication;
 
@@ -94,12 +95,16 @@ public sealed partial class SqlIdentitySecurityStore
             .OrderBy(x => x.ExpiresAt).Select(x => x.ID).Take(100).ToListAsync(ct);
         if (due.Count > 0)
         {
+            // A bulk update bypasses the change tracker. SQL Server bumps the row version itself; on any other database the
+            // update sets a new one, so a poll or an approval that read the row before this expiry cannot save over it.
+            var sqlServer = db.Database.IsSqlServer();
+            void RowVersion(UpdateSettersBuilder<DeviceAuthorization> x) { if (!sqlServer) x.SetProperty(y => y.RowVersion, OtherDatabases.NewRowVersion()); }
             await db.Set<DeviceAuthorization>().Where(x => due.Contains(x.ID) && x.ExpiresAt <= now && x.State == Core.Authentication.DeviceAuthorizationState.Denied)
-                .ExecuteUpdateAsync(x => x.SetProperty(y => y.DeviceCodeDigest, (byte[]?)null).SetProperty(y => y.UserCodeDigest, (byte[]?)null), ct);
+                .ExecuteUpdateAsync(x => { x.SetProperty(y => y.DeviceCodeDigest, (byte[]?)null).SetProperty(y => y.UserCodeDigest, (byte[]?)null); RowVersion(x); }, ct);
             await db.Set<DeviceAuthorization>().Where(x => due.Contains(x.ID) && x.ExpiresAt <= now &&
                     (x.State == Core.Authentication.DeviceAuthorizationState.Pending || x.State == Core.Authentication.DeviceAuthorizationState.Approved))
-                .ExecuteUpdateAsync(x => x.SetProperty(y => y.State, Core.Authentication.DeviceAuthorizationState.Expired)
-                    .SetProperty(y => y.DeviceCodeDigest, (byte[]?)null).SetProperty(y => y.UserCodeDigest, (byte[]?)null), ct);
+                .ExecuteUpdateAsync(x => { x.SetProperty(y => y.State, Core.Authentication.DeviceAuthorizationState.Expired)
+                    .SetProperty(y => y.DeviceCodeDigest, (byte[]?)null).SetProperty(y => y.UserCodeDigest, (byte[]?)null); RowVersion(x); }, ct);
         }
         var retentionCutoff = now.AddHours(-24);
         var old = await db.Set<DeviceAuthorization>().Where(x => x.ExpiresAt < retentionCutoff)
