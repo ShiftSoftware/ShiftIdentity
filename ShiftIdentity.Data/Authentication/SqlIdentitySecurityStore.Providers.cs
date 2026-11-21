@@ -35,6 +35,11 @@ public sealed partial class SqlIdentitySecurityStore
             throw new InvalidOperationException("A provider link is read for change only inside admission.");
         try
         {
+            // The lock hints are SQL Server's. Any other database reads the same row with a plain EF query, as in Hinted.
+            if (!db.Database.IsSqlServer())
+                return await db.Set<UserProviderLink>()
+                    .SingleOrDefaultAsync(x => x.Provider == provider && x.TenantID == tenantID && x.ObjectID == objectID, ct);
+
             // Names come from the EF model and the columns are listed, as in Hinted: a temporal mapping hides its period columns from SELECT *.
             var entity = db.Model.FindEntityType(typeof(UserProviderLink))!;
             var table = StoreObjectIdentifier.Table(entity.GetTableName()!, entity.GetSchema());
