@@ -193,12 +193,10 @@ namespace ShiftSoftware.ShiftIdentity.Data
             {
                 x.Property(d => d.ShiftGroups)
                     .HasConversion(shiftGroupsConverter)
-                    .HasColumnType("nvarchar(max)")
                     .Metadata.SetValueComparer(shiftGroupsComparer);
 
                 x.Property(d => d.WeekendGroups)
                     .HasConversion(weekendGroupsConverter)
-                    .HasColumnType("nvarchar(max)")
                     .Metadata.SetValueComparer(weekendGroupsComparer);
 
                 x.HasMany(d => d.Branches)
