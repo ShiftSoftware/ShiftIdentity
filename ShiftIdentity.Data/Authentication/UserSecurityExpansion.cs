@@ -71,6 +71,22 @@ public static class UserSecurityExpansion
                     // Another instance created this row first.
                     db.ChangeTracker.Clear();
                 }
+                // Any other database: no error numbers, so the two cases above are told apart by reading the keys.
+                catch (DbUpdateException) when (!db.Database.IsSqlServer())
+                {
+                    db.ChangeTracker.Clear();
+                    if (await db.Set<UserSecurityState>().AnyAsync(s => s.UserID == user.ID, ct))
+                        continue;   // another instance created this row first
+                    var username = state.UsernameLookupKey;
+                    var email = state.EmailLookupKey;
+                    if (!await db.Set<UserSecurityState>().AnyAsync(s =>
+                            (username != null && s.UsernameLookupKey == username) || (email != null && s.EmailLookupKey == email), ct))
+                        throw;
+                    // A lookup key collides with another row's. Keep the row, drop the keys, report the user.
+                    db.Set<UserSecurityState>().Add(new UserSecurityState { UserID = user.ID });
+                    created += await db.SaveChangesAsync(ct);
+                    degraded?.Invoke(user.ID);
+                }
             }
         }
     }

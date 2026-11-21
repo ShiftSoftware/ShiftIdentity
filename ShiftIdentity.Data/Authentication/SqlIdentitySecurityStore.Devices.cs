@@ -27,6 +27,17 @@ public sealed partial class SqlIdentitySecurityStore
         }
         // 2601 and 2627: the unique user code index. Another live row holds the same user code.
         catch (DbUpdateException e) when (e.InnerException is SqlException { Number: 2601 or 2627 }) { return false; }
+        // Any other database: no error numbers. A row that now holds this ID or user code is the same duplicate case.
+        catch (DbUpdateException e) when (!db.Database.IsSqlServer())
+        {
+            db.ChangeTracker.Clear();
+            var id = authorization.ID;
+            var userCode = authorization.UserCodeDigest;
+            if (await db.Set<DeviceAuthorization>().AsNoTracking()
+                    .AnyAsync(x => x.ID == id || (userCode != null && x.UserCodeDigest == userCode), ct))
+                return false;
+            throw new IdentitySecurityUnavailableException("Device sign-in could not be stored.", e);
+        }
         catch (DbUpdateException e) { throw new IdentitySecurityUnavailableException("Device sign-in could not be stored.", e); }
         catch (SqlException e) { throw new IdentitySecurityUnavailableException("Device sign-in could not be stored.", e); }
         finally { db.ChangeTracker.Clear(); }

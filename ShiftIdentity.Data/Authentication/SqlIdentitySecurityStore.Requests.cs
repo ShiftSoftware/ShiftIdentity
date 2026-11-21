@@ -62,8 +62,10 @@ public sealed partial class SqlIdentitySecurityStore
         {
             await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
             // Serialize creation as well as increments, across processes. The key is a digest, never a raw IP address.
+            // sp_getapplock is SQL Server's. Elsewhere it is skipped: the bucket's unique key refuses a second create.
             var resource = "IdentityIngress:" + key;
-            await db.Database.ExecuteSqlInterpolatedAsync($"DECLARE @r int; EXEC @r = sys.sp_getapplock @Resource={resource}, @LockMode='Exclusive', @LockOwner='Transaction', @LockTimeout=10000; IF @r < 0 THROW 51000, 'Throttle lock unavailable.', 1;", ct);
+            if (db.Database.IsSqlServer())
+                await db.Database.ExecuteSqlInterpolatedAsync($"DECLARE @r int; EXEC @r = sys.sp_getapplock @Resource={resource}, @LockMode='Exclusive', @LockOwner='Transaction', @LockTimeout=10000; IF @r < 0 THROW 51000, 'Throttle lock unavailable.', 1;", ct);
             var bucket = await db.Set<AuthThrottleBucket>().SingleOrDefaultAsync(x => x.Key == key, ct);
             if (bucket is null) { bucket = new() { Key = key, WindowStart = now }; db.Add(bucket); }
             if (now >= bucket.WindowStart + window) { bucket.WindowStart = now; bucket.Count = 0; }
