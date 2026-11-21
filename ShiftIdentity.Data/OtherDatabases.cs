@@ -27,6 +27,9 @@ internal static class OtherDatabases
     /// <item>On SQLite only, which cannot sort or compare <c>DateTimeOffset</c> in a query, every <c>DateTimeOffset</c>
     /// property without a converter of its own is stored as its UTC ticks (<see cref="UtcTicks"/>). Every entity, the
     /// consumer's included.</item>
+    /// <item>On SQLite only, which has no schemas, a table in a schema is named <c>{schema}_{table}</c>: the identity's
+    /// tables are in the <c>ShiftIdentity</c> schema, and a consumer's <c>Brands</c> or <c>Countries</c> table would
+    /// otherwise collide with the identity's. Every entity, the consumer's included.</item>
     /// </list>
     /// </summary>
     internal static void AdaptModel(ModelBuilder builder, bool sqlite)
@@ -34,6 +37,12 @@ internal static class OtherDatabases
         var identityAssembly = typeof(ShiftIdentityDbContext).Assembly;
         foreach (var entity in builder.Model.GetEntityTypes())
         {
+            if (sqlite && entity.BaseType is null && entity.GetTableName() is { } table && entity.GetSchema() is { Length: > 0 } schema)
+            {
+                entity.SetTableName($"{schema}_{table}");
+                entity.SetSchema(null);
+            }
+
             var identityEntity = entity.ClrType.Assembly == identityAssembly;
             if (identityEntity)
                 foreach (var check in entity.GetCheckConstraints().ToList())

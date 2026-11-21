@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using ShiftSoftware.ShiftIdentity.Core.Authentication;
+using ShiftSoftware.ShiftIdentity.Data;
 using ShiftSoftware.ShiftIdentity.Data.Authentication;
 using ShiftSoftware.ShiftIdentity.Data.Entities;
 using ShiftIdentity.Tests.Infrastructure;
@@ -173,5 +174,40 @@ public sealed class SqliteIdentityModelTests : IAsyncLifetime
         var calendar = await read.CompanyCalendars.SingleAsync(Ct);
         Assert.Equal([1L, 2L], calendar.ShiftGroups.Single().DepartmentIds);
         Assert.Equal([3L], calendar.WeekendGroups.Single().BrandIds);
+    }
+
+    [Fact]
+    public async Task On_SQLite_a_table_in_a_schema_is_named_with_it_so_a_consumer_table_of_the_same_name_fits_beside_it()
+    {
+        await using var other = new SqliteConnection("Data Source=:memory:");
+        await other.OpenAsync(Ct);
+        await using var db = new ConsumerWithBrands(new DbContextOptionsBuilder<ConsumerWithBrands>().UseSqlite(other).Options);
+        await db.Database.EnsureCreatedAsync(Ct);
+
+        db.Add(new ConsumerBrand { Name = "Consumer" });
+        db.Brands.Add(new Brand { Name = "Identity" });
+        await db.SaveChangesAsync(Ct);
+
+        Assert.Equal("Brands", db.Model.FindEntityType(typeof(ConsumerBrand))!.GetTableName());
+        Assert.Equal("ShiftIdentity_Brands", db.Model.FindEntityType(typeof(Brand))!.GetTableName());
+        Assert.Null(db.Model.FindEntityType(typeof(Brand))!.GetSchema());
+        await using var sqlServer = SqlServerContext();
+        Assert.Equal(("Brands", "ShiftIdentity"), (sqlServer.Model.FindEntityType(typeof(Brand))!.GetTableName(), sqlServer.Model.FindEntityType(typeof(Brand))!.GetSchema()));
+    }
+
+    // A consumer with a Brands table of its own beside the identity's, as the StockPlusPlus sample has.
+    private sealed class ConsumerBrand
+    {
+        public long ID { get; set; }
+        public string Name { get; set; } = "";
+    }
+
+    private sealed class ConsumerWithBrands(DbContextOptions<ConsumerWithBrands> options) : ShiftIdentityDbContext(options)
+    {
+        protected override void OnModelCreating(ModelBuilder builder)
+        {
+            builder.Entity<ConsumerBrand>().ToTable("Brands");
+            base.OnModelCreating(builder);
+        }
     }
 }
