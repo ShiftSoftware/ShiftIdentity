@@ -1,4 +1,5 @@
 using System.Data;
+using System.Linq.Expressions;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -169,6 +170,10 @@ public sealed partial class SqlIdentitySecurityStore(ShiftIdentityDbContext db) 
     /// </summary>
     private IQueryable<T> Hinted<T>(string hints, string property, object value, string? indexOn = null) where T : class
     {
+        // Lock and index hints are SQL Server's. Any other database reads the same rows with a plain EF query.
+        if (!db.Database.IsSqlServer())
+            return db.Set<T>().Where(PropertyEquals<T>(property, value));
+
         var entity = db.Model.FindEntityType(typeof(T)) ?? throw new InvalidOperationException($"{typeof(T).Name} is not part of this model.");
         var tableName = entity.GetTableName() ?? throw new InvalidOperationException($"{typeof(T).Name} has no table.");
         var schema = entity.GetSchema() ?? db.Model.GetDefaultSchema() ?? "dbo";
@@ -185,6 +190,24 @@ public sealed partial class SqlIdentitySecurityStore(ShiftIdentityDbContext db) 
             hint = $"{hints}, INDEX({index})";
         }
         return db.Set<T>().FromSqlRaw($"SELECT {columns} FROM [{schema}].[{tableName}] WITH ({hint}) WHERE [{column}] = {{0}}", value);
+    }
+
+    /// <summary>
+    /// <c>x =&gt; x.{property} == value</c>. The value is read from a small holder object rather than written in as a
+    /// constant, so EF sends it as a query parameter, as the hinted query above does.
+    /// </summary>
+    private static Expression<Func<T, bool>> PropertyEquals<T>(string property, object value)
+    {
+        var x = Expression.Parameter(typeof(T), "x");
+        var member = Expression.Property(x, property);
+        var holder = Activator.CreateInstance(typeof(ValueHolder<>).MakeGenericType(member.Type), value)!;
+        var parameter = Expression.Property(Expression.Constant(holder), nameof(ValueHolder<object>.Value));
+        return Expression.Lambda<Func<T, bool>>(Expression.Equal(member, parameter), x);
+    }
+
+    private sealed class ValueHolder<TValue>(TValue value)
+    {
+        public TValue Value { get; } = value;
     }
 
     /// <summary>Clears expired protected payloads under the same user lock; removes old terminal tombstones in bounded batches.</summary>
