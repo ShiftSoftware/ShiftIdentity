@@ -71,6 +71,7 @@ public partial class ActionTree : IDisposable
             return;
 
         var isDynamicSubItem = item.IsADynamicSubItem;
+        var isText = action.Type == ActionType.Text;
 
         var args = new ActionPickedEventArgs
         {
@@ -78,7 +79,12 @@ public partial class ActionTree : IDisposable
             Access = access,
             DynamicId = isDynamicSubItem ? item.ID : null,
             AnyDynamicRow = anyDynamicRow,
-            DisplayName = BuildDisplayName(item, access, anyDynamicRow)
+            // A text or number action has no access level to name; the host adds the value it searches for.
+            DisplayName = isText ? item.DisplayName ?? item.ID : BuildDisplayName(item, access, anyDynamicRow),
+            RequiresValue = isText,
+            IsNumber = action is ShiftSoftware.TypeAuth.Core.Actions.DecimalAction or ShiftSoftware.TypeAuth.Core.Actions.DynamicDecimalAction,
+            MinimumValue = (action as ShiftSoftware.TypeAuth.Core.Actions.TextAction)?.MinimumAccess ?? (action as ShiftSoftware.TypeAuth.Core.Actions.DynamicTextAction)?.MinimumAccess,
+            MaximumValue = (action as ShiftSoftware.TypeAuth.Core.Actions.TextAction)?.MaximumAccess ?? (action as ShiftSoftware.TypeAuth.Core.Actions.DynamicTextAction)?.MaximumAccess,
         };
 
         await OnActionPicked.InvokeAsync(args);

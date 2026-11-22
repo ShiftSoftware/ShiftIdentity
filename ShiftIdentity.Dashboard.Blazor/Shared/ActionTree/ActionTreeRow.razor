@@ -56,9 +56,19 @@
     {
         @if (PickerMode)
         {
-            @if (Item.Action?.Type == ActionType.Text)
+            @if (Item.Action?.Type == ActionType.Text && Item.Action is ShiftSoftware.TypeAuth.Core.Actions.DynamicAction && !Item.IsADynamicSubItem)
             {
-                <MudText Typo="Typo.caption" Color="Color.Default">@Loc["Text actions are not searchable"]</MudText>
+                @* A dynamic text or number action is searched one row at a time, and this one has no rows. *@
+                <MudText Typo="Typo.caption" Color="Color.Default">@Loc["Searched one row at a time"]</MudText>
+            }
+            else if (Item.Action?.Type == ActionType.Text)
+            {
+                @* A text or number action is searched by a value, which the host asks for. *@
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Search"
+                           OnClick="@(() => OnPick.InvokeAsync((Item, Access.Maximum, false)))">
+                    @Loc["Search by value"]
+                </MudButton>
             }
             else if (Item.Action != null)
             {

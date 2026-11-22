@@ -45,6 +45,46 @@
 
 </MudContainer>
 
+@* A text or number action is searched by a value: asked for here before the lookup runs. *@
+<MudDialog @bind-Visible="valueOpen" Options="valueDialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@pendingPick?.DisplayName</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (pendingPick is not null)
+        {
+            <MudTextField T="string" @bind-Value="pendingValue" Label="@Loc["Value"]" Variant="Variant.Outlined" AutoFocus="true" Immediate="true"
+                          InputType="@(pendingPick.IsNumber ? InputType.Number : InputType.Text)"
+                          HelperText="@(pendingPick.IsNumber ? Loc["Users who hold at least this number"] : Loc["Users whose value covers this text"])"
+                          OnKeyDown="@(async (KeyboardEventArgs e) => { if (e.Key == "Enter") await SearchByValue(); })"
+                          data-testid="reverse-lookup-value" />
+
+            @if (pendingPick.MinimumValue is not null || pendingPick.MaximumValue is not null)
+            {
+                <MudText Typo="Typo.caption" Class="mt-2">
+                    @if (pendingPick.MinimumValue is not null)
+                    {
+                        <span>@Loc["Minimum"]: @pendingPick.MinimumValue</span>
+                    }
+                    @if (pendingPick.MinimumValue is not null && pendingPick.MaximumValue is not null)
+                    {
+                        <span> · </span>
+                    }
+                    @if (pendingPick.MaximumValue is not null)
+                    {
+                        <span>@Loc["Maximum"]: @pendingPick.MaximumValue</span>
+                    }
+                </MudText>
+            }
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => valueOpen = false)" data-testid="reverse-lookup-cancel">@Loc["Cancel"]</MudButton>
+        <MudButton OnClick="SearchByValue" Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Search"
+                   Disabled="@string.IsNullOrWhiteSpace(pendingValue)" data-testid="reverse-lookup-search">@Loc["Search"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
 <MudDialog @bind-Visible="resultsOpen" Options="dialogOptions">
     <TitleContent>
         @if (lastResult is not null)
@@ -159,8 +199,40 @@
     private int activeTabIndex;
 
     private readonly DialogOptions dialogOptions = new() { FullWidth = true, MaxWidth = MaxWidth.Medium };
+    private readonly DialogOptions valueDialogOptions = new() { FullWidth = true, MaxWidth = MaxWidth.ExtraSmall };
+
+    private bool valueOpen;
+    private ActionPickedEventArgs? pendingPick;
+    private string? pendingValue;
 
     private async Task OnActionPicked(ActionPickedEventArgs args)
+    {
+        if (args.RequiresValue)
+        {
+            pendingPick = args;
+            pendingValue = null;
+            valueOpen = true;
+            return;
+        }
+
+        await RunLookupAsync(args);
+    }
+
+    private async Task SearchByValue()
+    {
+        if (pendingPick is null || string.IsNullOrWhiteSpace(pendingValue))
+            return;
+
+        var args = pendingPick;
+        args.Value = pendingValue.Trim();
+        args.DisplayName = $"{args.DisplayName} · {args.Value}";
+        pendingPick = null;
+        valueOpen = false;
+
+        await RunLookupAsync(args);
+    }
+
+    private async Task RunLookupAsync(ActionPickedEventArgs args)
     {
         lastDisplayName = args.DisplayName;
         lastResult = null;
@@ -179,6 +251,9 @@
 
             if (!string.IsNullOrWhiteSpace(args.DynamicId))
                 qs.Add($"DynamicId={System.Web.HttpUtility.UrlEncode(args.DynamicId)}");
+
+            if (args.Value is not null)
+                qs.Add($"Value={System.Web.HttpUtility.UrlEncode(args.Value)}");
 
             var url = $"ReverseTypeAuthLookup?{string.Join("&", qs)}";
 

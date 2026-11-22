@@ -64,6 +64,9 @@ internal sealed class UserFormTransport : HttpMessageHandler
     /// <summary>Every save: a POST for a new user, a PUT for an existing one.</summary>
     public List<(string Path, string Body)> Posts { get; } = [];
 
+    /// <summary>Every GET, as its path and query.</summary>
+    public List<string> Gets { get; } = [];
+
     /// <summary>Served for GET IdentityUser/{ID}; the form opens it in view mode.</summary>
     public UserDTO? Existing { get; set; }
     public string? VerificationDelivery { get; set; }
@@ -71,6 +74,7 @@ internal sealed class UserFormTransport : HttpMessageHandler
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var path = request.RequestUri!.AbsolutePath;
+        if (request.Method == HttpMethod.Get) Gets.Add(request.RequestUri.PathAndQuery);
         if (request.Method == HttpMethod.Post || request.Method == HttpMethod.Put)
         {
             Posts.Add((path, await request.Content!.ReadAsStringAsync(cancellationToken)));

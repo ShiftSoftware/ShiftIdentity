@@ -12,6 +12,7 @@ using ShiftSoftware.TypeAuth.AspNetCore.EndpointFilters;
 using ShiftSoftware.TypeAuth.Core;
 using ShiftSoftware.TypeAuth.Core.Actions;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 
@@ -63,8 +64,57 @@ internal static class ReverseTypeAuthLookupEndpoints
                         Message = new Message("Validation Error", "Dynamic actions require either DynamicId or AnyDynamicRow=true.")
                     });
 
+                // Text and number actions are searched by a value: who holds at least it, by the action's own
+                // combine rule (the greatest number wins; a list covers every entry of the value).
+                var isText = action.Type == ActionType.Text;
+
+                if (isText)
+                {
+                    request.Value = request.Value?.Trim();
+
+                    if (string.IsNullOrEmpty(request.Value))
+                        return ValidationError("Text and number actions require a Value.");
+
+                    if (isDynamic && request.AnyDynamicRow)
+                        return ValidationError("A dynamic text or number action is searched one row at a time: give a DynamicId.");
+
+                    if (action is DecimalAction or DynamicDecimalAction
+                        && !decimal.TryParse(request.Value, NumberStyles.Number, CultureInfo.InvariantCulture, out _))
+                        return ValidationError($"'{request.Value}' is not a number.");
+                }
+
                 // Registered action trees — the action-tree set every single-tree context is evaluated against.
                 var registeredActionTrees = typeAuthService.GetRegisteredActionTrees();
+
+                // Builds a context holding the registered action trees plus the given access trees. Access is purely
+                // additive (merging trees only ever adds grants), so a subject is granted the action iff at least one of
+                // their trees grants it — evaluating each tree in isolation is exact. The one exception is a text action
+                // whose rule is a list: two trees together can cover a value neither covers alone, so a user is also
+                // checked on all their trees at once (see the Users tab below).
+                TypeAuthContext BuildContext(params string[] treeJsons)
+                {
+                    var builder = new TypeAuthContextBuilder();
+                    foreach (var t in registeredActionTrees)
+                        builder.AddActionTree(t);
+                    foreach (var treeJson in treeJsons)
+                        builder.AddAccessTree(treeJson);
+                    return builder.Build();
+                }
+
+                if (isText)
+                {
+                    // A value no greater than the action's minimum is held by everyone, access or not: refuse it rather
+                    // than list every user. Evaluating it here also refuses a value the action's rule can't read.
+                    try
+                    {
+                        if (HasAccess(BuildContext("{}"), action, isDynamic, request))
+                            return ValidationError($"Every user holds '{request.Value}': it is not more than the action's minimum.");
+                    }
+                    catch (FormatException)
+                    {
+                        return ValidationError($"'{request.Value}' is not a value this action accepts.");
+                    }
+                }
 
                 // Load candidate users — active, not deleted. Include their named access trees.
                 var users = await db.Users
@@ -73,19 +123,6 @@ internal static class ReverseTypeAuthLookupEndpoints
                     .Include(x => x.CompanyBranch)
                     .Include(x => x.AccessTrees).ThenInclude(x => x.AccessTree)
                     .ToListAsync();
-
-                // Builds a context holding the registered action trees plus a single access tree, so one tree
-                // can be evaluated on its own. Access is purely additive (merging trees only ever adds grants),
-                // so a subject is granted the action iff at least one of their trees grants it — evaluating each
-                // tree in isolation is exact, and there is never a need to build a combined per-subject context.
-                TypeAuthContext BuildContext(string treeJson)
-                {
-                    var builder = new TypeAuthContextBuilder();
-                    foreach (var t in registeredActionTrees)
-                        builder.AddActionTree(t);
-                    builder.AddAccessTree(treeJson);
-                    return builder.Build();
-                }
 
                 // Named access trees are shared across many users, so their contexts are cached by the tree's
                 // (cheap-to-hash) id. A user's inline "direct" tree is unique per user with no reuse, so it is
@@ -135,20 +172,41 @@ internal static class ReverseTypeAuthLookupEndpoints
                 // Users tab: a user matches iff any of their access-tree sources grants the action. Because access
                 // is additive, evaluating each source on its own both decides the match and attributes it — the
                 // direct tree feeds GrantedDirectly, each granting named tree feeds GrantingAccessTrees — so there
-                // is no separate combined-context pass and no source is evaluated twice.
+                // is no separate combined-context pass and no source is evaluated twice. A text action is the
+                // exception: when no source covers the value alone, the user's trees are checked together, and the
+                // sources that hold any value of the action are the ones credited.
                 var matched = new List<ReverseTypeAuthLookupUserDTO>();
 
                 foreach (var user in users)
                 {
-                    var grantingAccessTrees = new List<string>();
-                    if (user.AccessTrees != null)
-                        foreach (var uat in user.AccessTrees)
-                            if (uat.AccessTree != null && !string.IsNullOrWhiteSpace(uat.AccessTree.Tree)
-                                && HasAccess(NamedTreeContext(uat.AccessTreeID, uat.AccessTree.Tree), action, isDynamic, request))
-                                grantingAccessTrees.Add(uat.AccessTree.Name);
+                    var namedSources = (user.AccessTrees ?? [])
+                        .Where(uat => uat.AccessTree != null && !string.IsNullOrWhiteSpace(uat.AccessTree.Tree))
+                        .Select(uat => (uat.AccessTree.Name, Context: NamedTreeContext(uat.AccessTreeID, uat.AccessTree.Tree)))
+                        .ToList();
+                    var directContext = string.IsNullOrWhiteSpace(user.AccessTree) ? null : BuildContext(user.AccessTree);
 
-                    var grantedDirectly = !string.IsNullOrWhiteSpace(user.AccessTree)
-                        && HasAccess(BuildContext(user.AccessTree), action, isDynamic, request);
+                    var grantingAccessTrees = namedSources
+                        .Where(x => HasAccess(x.Context, action, isDynamic, request))
+                        .Select(x => x.Name)
+                        .ToList();
+
+                    var grantedDirectly = directContext != null && HasAccess(directContext, action, isDynamic, request);
+
+                    if (!grantedDirectly && grantingAccessTrees.Count == 0 && isText && namedSources.Count + (directContext is null ? 0 : 1) > 1)
+                    {
+                        var allTrees = (user.AccessTrees ?? [])
+                            .Where(uat => uat.AccessTree != null && !string.IsNullOrWhiteSpace(uat.AccessTree.Tree))
+                            .Select(uat => uat.AccessTree.Tree)
+                            .Append(user.AccessTree)
+                            .Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x!)
+                            .ToArray();
+
+                        if (HasAccess(BuildContext(allTrees), action, isDynamic, request))
+                        {
+                            grantingAccessTrees = namedSources.Where(x => HoldsAValue(x.Context, action, request)).Select(x => x.Name).ToList();
+                            grantedDirectly = directContext != null && HoldsAValue(directContext, action, request);
+                        }
+                    }
 
                     if (!grantedDirectly && grantingAccessTrees.Count == 0)
                         continue;
@@ -172,8 +230,18 @@ internal static class ReverseTypeAuthLookupEndpoints
         return app;
     }
 
+    private static IResult ValidationError(string body) =>
+        Results.BadRequest(new ShiftEntityResponse<ReverseTypeAuthLookupResponseDTO> { Message = new Message("Validation Error", body) });
+
     private static bool HasAccess(TypeAuthContext context, ActionBase action, bool isDynamic, ReverseTypeAuthLookupRequestDTO request)
     {
+        // A text or number action: the tree's value covers the value searched for, by the action's combine rule.
+        if (action is TextAction text)
+            return context.Covers(text, request.Value);
+
+        if (action is DynamicTextAction dynamicText)
+            return context.Covers(dynamicText, request.Value, request.DynamicId);
+
         if (!isDynamic)
             return context.Can(action, request.Access);
 
@@ -186,6 +254,19 @@ internal static class ReverseTypeAuthLookupEndpoints
         }
 
         return context.Can(action, request.Access, request.DynamicId!);
+    }
+
+    // Whether a tree holds any value of a text action beyond its minimum (it contributes to a combined value).
+    private static bool HoldsAValue(TypeAuthContext context, ActionBase action, ReverseTypeAuthLookupRequestDTO request)
+    {
+        var (held, minimum) = action switch
+        {
+            TextAction text => (context.AccessValue(text), text.MinimumAccess),
+            DynamicTextAction dynamicText => (context.AccessValue(dynamicText, request.DynamicId), dynamicText.MinimumAccess),
+            _ => (null, null),
+        };
+
+        return !string.IsNullOrEmpty(held) && held != minimum;
     }
 
     private static ReverseTypeAuthLookupUserDTO MapUser(User user, List<string> grantingAccessTrees, bool grantedDirectly)

@@ -24,4 +24,12 @@ public class ReverseTypeAuthLookupRequestDTO
     /// DynamicId is ignored when this is true.
     /// </summary>
     public bool AnyDynamicRow { get; set; }
+
+    /// <summary>
+    /// The value searched for on a text or number action (required for them, ignored otherwise): the lookup returns
+    /// whoever holds at least this value by the action's combine rule — a number at least as great, or a list that
+    /// covers every entry of it. <see cref="Access"/> is ignored for these actions. A number is read with the
+    /// invariant culture ("12.5").
+    /// </summary>
+    public string? Value { get; set; }
 }
