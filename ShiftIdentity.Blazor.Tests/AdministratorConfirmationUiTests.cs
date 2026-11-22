@@ -54,7 +54,7 @@ public sealed class AdministratorConfirmationUiTests
         list.SelectState.Toggle(new UserListDTO { ID = "43" });
         cut.Render();
         var action = cut.FindComponents<ActionButton<UserListDTO>>().Single(x => x.Instance.Endpoint!.EndsWith("VerifyPhones"));
-        action.Instance.Confirm = false;
+        action.Instance.DisableConfirm = true;
         var clicking = cut.InvokeAsync(() => action.Instance.OnClick.InvokeAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs()));
         dialogs.WaitForElement("[data-testid=administrator-confirmation-provider-button]:not([disabled])");
         // A Microsoft-only account has no password; a Google session keeps the password beside the Google button.
@@ -104,7 +104,7 @@ public sealed class AdministratorConfirmationUiTests
         list.SelectState.Toggle(new UserListDTO { ID = "43" });
         cut.Render();
         var action = cut.FindComponents<ActionButton<UserListDTO>>().Single(x => x.Instance.Endpoint!.EndsWith("VerifyPhones"));
-        action.Instance.Confirm = false;
+        action.Instance.DisableConfirm = true;
         var clicking = cut.InvokeAsync(() => action.Instance.OnClick.InvokeAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs()));
         dialogs.WaitForElement("[data-testid=administrator-confirmation-form] input");
         Assert.Equal(new[] { "42", "43" }, list.SelectState.Items.Select(x => x.ID).Order());

@@ -38,7 +38,6 @@ else
                           Variant="Variant.Outlined"
                           Size="Size.Small"
                           StartIcon="@Icons.Material.Filled.LockReset"
-                          Confirm
                           OnResult="AssignRandomPasswordsResponse"
                           T="UserListDTO"
                           Endpoint="@($"{Constants.IdentityRoutePreifix}User/AssignRandomPasswords?shareWithUser={SharePasswordWithUser}&passwordLength={passwordLength}&requireChangeAtNextLogin={RequireChangeAtNextLogin}")">
@@ -66,7 +65,6 @@ else
                               Variant="Variant.Outlined"
                               Size="Size.Small"
                               StartIcon="@Icons.Material.Filled.LockReset"
-                              Confirm
                               OnResult="ResetTotpResponse"
                               T="UserListDTO"
                               Endpoint="@($"{Constants.IdentityRoutePreifix}User/ResetTotp")">
@@ -78,7 +76,6 @@ else
                           Variant="Variant.Outlined"
                           Size="Size.Small"
                           StartIcon="@Icons.Material.Filled.Email"
-                          Confirm
                           OnResult="VerifyEmailsResponse"
                           T="UserListDTO"
                           Endpoint="@($"{Constants.IdentityRoutePreifix}User/VerifyEmails")">
@@ -89,7 +86,6 @@ else
                           Variant="Variant.Outlined"
                           Size="Size.Small"
                           StartIcon="@Icons.Material.Filled.Phone"
-                          Confirm
                           OnResult="VerifyPhonesResponse"
                           T="UserListDTO"
                           Endpoint="@($"{Constants.IdentityRoutePreifix}User/VerifyPhones")">
