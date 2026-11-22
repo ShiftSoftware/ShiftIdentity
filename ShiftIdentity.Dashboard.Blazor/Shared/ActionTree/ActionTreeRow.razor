@@ -62,12 +62,16 @@
             }
             else if (Item.Action != null)
             {
+                @* A dynamic action expanded with no rows has nothing to pick a row from, so it is searched for any row,
+                   like the dynamic-action parent above; the lookup refuses a dynamic action with neither a row nor any row. *@
+                var anyDynamicRow = Item.Action is ShiftSoftware.TypeAuth.Core.Actions.DynamicAction && !Item.IsADynamicSubItem;
+
                 @foreach (var access in ActionTree.GetPickerAccessLevels(Item.Action.Type))
                 {
                     <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="@ActionTree.GetAccessColor(access)"
                                StartIcon="@Icons.Material.Filled.Search"
-                               OnClick="@(() => OnPick.InvokeAsync((Item, access, false)))">
-                        @Loc[ActionTree.GetAccessLabel(access)]
+                               OnClick="@(() => OnPick.InvokeAsync((Item, access, anyDynamicRow)))">
+                        @(anyDynamicRow ? $"{Loc[ActionTree.GetAccessLabel(access)]} ({Loc["any row"]})" : Loc[ActionTree.GetAccessLabel(access)])
                     </MudButton>
                 }
             }

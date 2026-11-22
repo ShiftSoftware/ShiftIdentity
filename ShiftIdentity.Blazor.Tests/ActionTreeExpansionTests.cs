@@ -110,6 +110,26 @@ public sealed class ActionTreeExpansionTests
         Assert.Equal("Orders · Write", picked.DisplayName);
     }
 
+    [Fact]
+    public async Task In_picker_mode_a_dynamic_action_with_no_rows_is_picked_for_any_row()
+    {
+        // Branches is never expanded, so it has no rows to pick one from; the lookup refuses a dynamic action picked
+        // with neither a row nor any row.
+        await using var context = UserFormHarness.Create(out _, accessTree: Admin, actionTrees: typeof(ExpansionTestActions));
+        ActionPickedEventArgs? picked = null;
+        var cut = Render(context, p => p.Add(x => x.PickerMode, true).Add(x => x.OnActionPicked, (ActionPickedEventArgs x) => picked = x));
+        ActionTreeRows.Expand(cut, "Expansion Test Actions", "Branches");
+
+        Button(cut, "Branches", "Read (any row)").Click();
+
+        Assert.NotNull(picked);
+        Assert.Equal(ExpansionTestActions.Branches.Path, picked!.ActionPath);
+        Assert.Equal(Access.Read, picked.Access);
+        Assert.True(picked.AnyDynamicRow);
+        Assert.Null(picked.DynamicId);
+        Assert.Equal("Branches (any row) · Read", picked.DisplayName);
+    }
+
     private static IRenderedComponent<ActionTreeComponent> Render(BunitContext context, Action<ComponentParameterCollectionBuilder<ActionTreeComponent>>? parameters = null)
     {
         var cut = context.Render<ActionTreeComponent>(p => { p.Add(x => x.Tree, "{}"); parameters?.Invoke(p); });
@@ -124,6 +144,8 @@ public sealed class ActionTreeExpansionTests
     public class ExpansionTestActions
     {
         public static readonly ReadWriteDeleteAction Orders = new("Orders");
+
+        public static readonly DynamicReadWriteDeleteAction Branches = new("Branches");
 
         [ActionTree("Reports", "")]
         public class Reports
