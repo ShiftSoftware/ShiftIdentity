@@ -14,6 +14,7 @@
 @inject ShiftIdentityLocalizer Loc
 @inject MessageService MessageService
 @inject IJSRuntime JS
+@inject ITypeAuthService TypeAuthService
 
 <style>
     /* Cap every column so no single long value (email, branch, name, ...) stretches the table.
@@ -36,12 +37,22 @@
 
     <MudPaper Elevation="2" Class="pa-4 mb-4">
         <MudText Typo="Typo.h5">@Loc["Reverse TypeAuth Lookup"]</MudText>
-        <MudText Typo="Typo.body2" Class="mt-2">
-            @Loc["Click an access level on any action below to list all active users who have that access."]
-        </MudText>
+        @if (TypeAuthService.CanAccess(ShiftIdentityActions.ReverseTypeAuthLookup))
+        {
+            <MudText Typo="Typo.body2" Class="mt-2">
+                @Loc["Click an access level on any action below to list all active users who have that access."]
+            </MudText>
+        }
     </MudPaper>
 
-    <ActionTree Tree="@emptyTree" PickerMode="true" OnActionPicked="OnActionPicked" />
+    @if (TypeAuthService.CanAccess(ShiftIdentityActions.ReverseTypeAuthLookup))
+    {
+        <ActionTree Tree="@emptyTree" PickerMode="true" OnActionPicked="OnActionPicked" />
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Warning" data-testid="reverse-lookup-denied">@Loc["You do not have permission to use the Reverse TypeAuth Lookup."]</MudAlert>
+    }
 
 </MudContainer>
 

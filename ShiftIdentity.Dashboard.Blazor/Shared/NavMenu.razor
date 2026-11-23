@@ -93,6 +93,14 @@
                           Icon="@Icons.Material.Outlined.AccountTree"
                           TypeAuthAction="ShiftIdentityActions.AccessTrees">@Loc["Access Trees"]</AuthorizedMudNavLink>
 
+    @* A boolean action: AuthorizedMudNavLink checks read/write/delete only, so the check is written here. *@
+    @if (TypeAuthService.CanAccess(ShiftIdentityActions.ReverseTypeAuthLookup))
+    {
+        <MudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(Pages.ReverseTypeAuthLookup.ReverseTypeAuthLookup)}")"
+                    Match="NavLinkMatch.All"
+                    Icon="@Icons.Material.Outlined.ManageSearch">@Loc["Reverse TypeAuth Lookup"]</MudNavLink>
+    }
+
     <AuthorizedMudNavLink Href="@($"{Constants.IdentityRoutePreifix}/{nameof(UserList)}")"
                           Match="NavLinkMatch.All"
                           Icon="@Icons.Material.Outlined.People"

@@ -14,32 +14,24 @@ using ShiftSoftware.TypeAuth.Core.Actions;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Net;
 
 namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Endpoints;
 
 // The reverse-TypeAuth-lookup endpoint ("which users/access-trees grant this action?"), ported verbatim from
-// ReverseTypeAuthLookupController (route + verb byte-identical: GET api/ReverseTypeAuthLookup). The controller's
-// class-level [Authorize] + [TypeAuth<ShiftIdentityActions>(Users, Read)] becomes .RequireTypeAuthRead(Users); the
-// body still AND-gates AccessTrees Read. Composed into the dashboard by MapShiftIdentityDashboard().
+// ReverseTypeAuthLookupController (route + verb byte-identical: GET api/ReverseTypeAuthLookup). Guarded by its own
+// boolean action, ShiftIdentityActions.ReverseTypeAuthLookup, rather than by Users and Access Trees read: listing who
+// holds an access is an audit capability granted on its own. Composed into the dashboard by MapShiftIdentityDashboard().
 internal static class ReverseTypeAuthLookupEndpoints
 {
     public static IEndpointRouteBuilder MapReverseTypeAuthLookupEndpoints(this IEndpointRouteBuilder app)
     {
-        // GET api/ReverseTypeAuthLookup — Users Read (filter) AND-gated with AccessTrees Read (body).
+        // GET api/ReverseTypeAuthLookup — requires the Reverse TypeAuth Lookup action.
         // The request DTO binds from the query string ([AsParameters] mirrors the controller's [FromQuery]).
         app.MapGet("api/ReverseTypeAuthLookup",
             async ([AsParameters] ReverseTypeAuthLookupRequestDTO request,
                    ShiftIdentityDbContext db,
                    ITypeAuthService typeAuthService) =>
             {
-                // AND-gate against AccessTrees Read (the RequireTypeAuthRead filter handles Users Read).
-                if (!typeAuthService.CanRead(ShiftIdentityActions.AccessTrees))
-                    return Results.Json(new ShiftEntityResponse<ReverseTypeAuthLookupResponseDTO>
-                    {
-                        Message = new Message("Forbidden", "Read access to both Users and Access Trees is required.")
-                    }, statusCode: (int)HttpStatusCode.Forbidden);
-
                 if (string.IsNullOrWhiteSpace(request.ActionPath))
                     return Results.BadRequest(new ShiftEntityResponse<ReverseTypeAuthLookupResponseDTO>
                     {
@@ -225,7 +217,7 @@ internal static class ReverseTypeAuthLookupEndpoints
                     TotalMatchingAccessTrees = matchedTrees.Count
                 }));
             })
-            .RequireTypeAuthRead(ShiftIdentityActions.Users);
+            .RequireTypeAuth(ShiftIdentityActions.ReverseTypeAuthLookup, Access.Maximum);
 
         return app;
     }

@@ -10,6 +10,7 @@ public class ShiftIdentityActions
     public readonly static ReadWriteDeleteAction AccessTrees = new ReadWriteDeleteAction("Access Trees");
     public readonly static ReadWriteDeleteAction Users = new ReadWriteDeleteAction("Users");
     public readonly static BooleanAction ManageMfaRecovery = new BooleanAction("Manage MFA Recovery");
+    public readonly static BooleanAction ReverseTypeAuthLookup = new BooleanAction("Reverse TypeAuth Lookup", "List the active users and access trees that grant any given action");
     public readonly static ReadWriteDeleteAction Teams = new ReadWriteDeleteAction("Teams");
 
     public readonly static ReadWriteDeleteAction Countries = new ReadWriteDeleteAction("Countries");

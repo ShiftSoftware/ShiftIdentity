@@ -5,6 +5,7 @@ using ShiftSoftware.TypeAuth.Core.Actions;
 using Xunit;
 using ActionPickedEventArgs = ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Shared.ActionTree.ActionPickedEventArgs;
 using ActionTreeComponent = ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Shared.ActionTree.ActionTree;
+using NavMenu = ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Shared.NavMenu;
 using ReverseTypeAuthLookupPage = ShiftSoftware.ShiftIdentity.Dashboard.Blazor.Pages.ReverseTypeAuthLookup.ReverseTypeAuthLookup;
 
 namespace ShiftIdentity.Blazor.Tests;
@@ -19,7 +20,7 @@ public sealed class ReverseTypeAuthLookupPageTests
     [Fact]
     public async Task A_number_action_is_searched_by_the_value_entered()
     {
-        await using var context = UserFormHarness.Create(out var transport, accessTree: "{}", actionTrees: typeof(LookupPageActions));
+        await using var context = UserFormHarness.Create(out var transport, accessTree: Auditor, actionTrees: typeof(LookupPageActions));
         var dialogs = context.Render<MudDialogProvider>();
         var cut = context.Render<ReverseTypeAuthLookupPage>();
         cut.WaitForAssertion(() => Assert.NotNull(ActionTreeRows.Find(cut, "Lookup Page Actions")));
@@ -46,7 +47,7 @@ public sealed class ReverseTypeAuthLookupPageTests
     [Fact]
     public async Task Cancelling_the_value_searches_nothing()
     {
-        await using var context = UserFormHarness.Create(out var transport, accessTree: "{}", actionTrees: typeof(LookupPageActions));
+        await using var context = UserFormHarness.Create(out var transport, accessTree: Auditor, actionTrees: typeof(LookupPageActions));
         var dialogs = context.Render<MudDialogProvider>();
         var cut = context.Render<ReverseTypeAuthLookupPage>();
         cut.WaitForAssertion(() => Assert.NotNull(ActionTreeRows.Find(cut, "Lookup Page Actions")));
@@ -85,6 +86,29 @@ public sealed class ReverseTypeAuthLookupPageTests
         Assert.Empty(branchDiscount.QuerySelectorAll("button"));
         Assert.Contains("Searched one row at a time", branchDiscount.TextContent);
     }
+
+    [Fact]
+    public async Task Without_the_lookup_action_the_page_shows_no_tree_and_the_menu_no_link()
+    {
+        await using var context = UserFormHarness.Create(out var transport, accessTree: "{\"ShiftIdentityActions\":{\"Users\":[\"r\"],\"AccessTrees\":[\"r\"]}}", actionTrees: typeof(LookupPageActions));
+        var cut = context.Render<ReverseTypeAuthLookupPage>();
+
+        cut.WaitForElement("[data-testid=reverse-lookup-denied]");
+        Assert.Null(ActionTreeRows.Find(cut, "Lookup Page Actions"));
+        Assert.DoesNotContain(transport.Gets, x => x.StartsWith("/ReverseTypeAuthLookup?", StringComparison.Ordinal));
+
+        Assert.DoesNotContain("ReverseTypeAuthLookup", context.Render<NavMenu>().Markup);
+    }
+
+    [Fact]
+    public async Task With_the_lookup_action_the_menu_links_to_the_page()
+    {
+        await using var context = UserFormHarness.Create(out _, accessTree: Auditor);
+
+        Assert.Contains("ReverseTypeAuthLookup", context.Render<NavMenu>().Markup);
+    }
+
+    private const string Auditor = "{\"ShiftIdentityActions\":{\"ReverseTypeAuthLookup\":[\"m\"]}}";
 
     [ActionTree("Lookup Page Actions", "")]
     public class LookupPageActions

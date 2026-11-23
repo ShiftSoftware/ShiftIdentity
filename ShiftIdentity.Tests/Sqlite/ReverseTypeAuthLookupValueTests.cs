@@ -111,6 +111,23 @@ public sealed class ReverseTypeAuthLookupValueTests(SqliteIdentityFixture fixtur
         Assert.Contains(message, body);
     }
 
+    [Fact]
+    public async Task The_lookup_takes_its_own_action_and_not_users_and_access_trees_read()
+    {
+        var readerOnly = await UserAsync("reader", """{"ShiftIdentityActions":{"Users":["r"],"AccessTrees":["r"]}}""");
+        var lookupOnly = await UserAsync("auditor", """{"ShiftIdentityActions":{"ReverseTypeAuthLookup":["m"]}}""");
+        var query = $"Access=Maximum&ActionPath={Path(LookupTestActions.Discount)}&Value=40&AnyDynamicRow=false";
+
+        using (var host = await HostAsync(readerOnly))
+            Assert.Equal(HttpStatusCode.Forbidden, (await RawLookupAsync(host, query)).Status);
+
+        using (var host = await HostAsync(lookupOnly))
+        {
+            var (status, body) = await RawLookupAsync(host, query);
+            Assert.True(status == HttpStatusCode.OK, $"{status}: {body}");
+        }
+    }
+
     private string Name(string name) => $"{name}-{run}";
 
     private static string Tree(string actions) => $$"""{"LookupTestActions":{{actions}}}""";
@@ -142,14 +159,15 @@ public sealed class ReverseTypeAuthLookupValueTests(SqliteIdentityFixture fixtur
         return username;
     }
 
-    // The identity host with the test action tree registered beside ShiftIdentity's, signed in as an administrator.
-    private async Task<ConfiguredIdentityHttpHost<IdentityTestDbContext>> HostAsync()
+    // The identity host with the test action tree registered beside ShiftIdentity's, signed in as an administrator
+    // unless another user is named.
+    private async Task<ConfiguredIdentityHttpHost<IdentityTestDbContext>> HostAsync(string username = AdminName)
     {
         var host = new ConfiguredIdentityHttpHost<IdentityTestDbContext>(fixture, configureServices: services =>
             services.Configure<TypeAuthAspNetCoreOptions>(o => o.AddActionTree<LookupTestActions>()));
 
         using var response = await host.Client.PostAsJsonAsync("api/identity/v2/login",
-            new PasswordLoginRequest(AdminName, fixture.Password, IdentityHttpHost.Pkce().Challenge), Ct);
+            new PasswordLoginRequest(username, fixture.Password, IdentityHttpHost.Pkce().Challenge), Ct);
         var session = Prop(await response.Content.ReadFromJsonAsync<JsonElement>(Ct), "Session");
         host.Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Prop(session, "Token").GetString());
         return host;
