@@ -54,6 +54,8 @@ public sealed class SqliteIdentityModelTests : IAsyncLifetime
 
         Assert.Empty(onSqlite.GetCheckConstraints());
         Assert.Null(onSqlite.FindProperty(nameof(UserSecurityState.UsernameLookupKey))!.GetCollation());
+        Assert.Equal("NOCASE", sqliteModel.FindEntityType(typeof(User))!.FindProperty(nameof(User.Username))!.GetCollation());
+        Assert.Null(sqlServerModel.FindEntityType(typeof(User))!.FindProperty(nameof(User.Username))!.GetCollation());
         Assert.Equal(ValueGenerated.Never, onSqlite.FindProperty(nameof(UserSecurityState.RowVersion))!.ValueGenerated);
         Assert.True(onSqlite.FindProperty(nameof(UserSecurityState.RowVersion))!.IsConcurrencyToken);
         Assert.Equal(typeof(long), sqliteModel.FindEntityType(typeof(User))!.FindProperty(nameof(User.LastSaveDate))!.GetValueConverter()?.ProviderClrType);

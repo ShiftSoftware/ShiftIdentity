@@ -206,11 +206,27 @@ public sealed class SqliteSecurityStoreTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task A_username_and_an_email_match_in_any_case_as_on_SQL_Server()
+    {
+        var branch = await db.Set<CompanyBranch>().AsNoTracking().Include(x => x.Region).FirstAsync(Ct);
+        db.Users.Add(NewUser("Dave", "Dave@Example.com", branch));
+        await db.SaveChangesAsync(Ct);
+        db.ChangeTracker.Clear();
+
+        Assert.True(await db.Users.AnyAsync(x => x.Username == "DAVE", Ct));
+        Assert.True(await db.Users.AnyAsync(x => x.Email == "dave@example.com", Ct));
+        db.Users.Add(NewUser("dave", null, branch));
+        await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync(Ct));   // unique without case, as on SQL Server
+    }
+
+    [Fact]
     public async Task Security_rows_are_created_and_a_lookup_key_collision_keeps_the_row_without_keys()
     {
         var branch = await db.Set<CompanyBranch>().AsNoTracking().Include(x => x.Region).FirstAsync(Ct);
         var carol = NewUser("carol", null, branch);
-        var carolAgain = NewUser("CAROL", null, branch);   // a different username with the same lookup key
+        // A different username with the same lookup key. Not "CAROL": the username column compares without case, as on
+        // SQL Server, so its unique index refuses that one; a leading space is distinct in both, and the key trims it.
+        var carolAgain = NewUser(" carol", null, branch);
         db.Users.AddRange(carol, carolAgain);
         await db.SaveChangesAsync(Ct);
         db.ChangeTracker.Clear();
