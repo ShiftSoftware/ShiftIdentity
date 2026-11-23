@@ -206,17 +206,39 @@ public sealed class SqliteSecurityStoreTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task A_username_and_an_email_match_in_any_case_as_on_SQL_Server()
+    public async Task By_default_a_username_and_an_email_match_with_case_as_SQLite_compares()
     {
         var branch = await db.Set<CompanyBranch>().AsNoTracking().Include(x => x.Region).FirstAsync(Ct);
         db.Users.Add(NewUser("Dave", "Dave@Example.com", branch));
         await db.SaveChangesAsync(Ct);
         db.ChangeTracker.Clear();
 
-        Assert.True(await db.Users.AnyAsync(x => x.Username == "DAVE", Ct));
-        Assert.True(await db.Users.AnyAsync(x => x.Email == "dave@example.com", Ct));
-        db.Users.Add(NewUser("dave", null, branch));
-        await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync(Ct));   // unique without case, as on SQL Server
+        Assert.True(await db.Users.AnyAsync(x => x.Username == "Dave", Ct));
+        Assert.False(await db.Users.AnyAsync(x => x.Username == "DAVE", Ct));
+        Assert.False(await db.Users.AnyAsync(x => x.Email == "dave@example.com", Ct));
+    }
+
+    [Fact]
+    public async Task With_UseCaseInsensitiveText_a_username_and_an_email_match_in_any_case()
+    {
+        await using var other = new SqliteConnection("Data Source=:memory:");
+        await other.OpenAsync(Ct);
+        await using var noCase = new SqliteIdentityTestDbContext(
+            new DbContextOptionsBuilder<SqliteIdentityTestDbContext>().UseSqlite(other, sqlite => sqlite.UseCaseInsensitiveText()).Options);
+        await noCase.Database.EnsureCreatedAsync(Ct);
+        var country = new Country { Name = "Country", CallingCode = "+1" };
+        var region = new Region { Name = "Region", Country = country };
+        var branch = new CompanyBranch { Name = "Branch", Company = new Company { Name = "Company" }, Region = region, City = new City { Name = "City", Region = region } };
+        noCase.Add(branch);
+        await noCase.SaveChangesAsync(Ct);
+        noCase.Users.Add(NewUser("Dave", "Dave@Example.com", branch));
+        await noCase.SaveChangesAsync(Ct);
+        noCase.ChangeTracker.Clear();
+
+        Assert.True(await noCase.Users.AnyAsync(x => x.Username == "DAVE", Ct));
+        Assert.True(await noCase.Users.AnyAsync(x => x.Email == "dave@example.com", Ct));
+        noCase.Users.Add(NewUser("dave", null, branch));
+        await Assert.ThrowsAsync<DbUpdateException>(() => noCase.SaveChangesAsync(Ct));   // unique without case, as on SQL Server
     }
 
     [Fact]
@@ -224,9 +246,7 @@ public sealed class SqliteSecurityStoreTests : IAsyncLifetime
     {
         var branch = await db.Set<CompanyBranch>().AsNoTracking().Include(x => x.Region).FirstAsync(Ct);
         var carol = NewUser("carol", null, branch);
-        // A different username with the same lookup key. Not "CAROL": the username column compares without case, as on
-        // SQL Server, so its unique index refuses that one; a leading space is distinct in both, and the key trims it.
-        var carolAgain = NewUser(" carol", null, branch);
+        var carolAgain = NewUser("CAROL", null, branch);   // a different username with the same lookup key
         db.Users.AddRange(carol, carolAgain);
         await db.SaveChangesAsync(Ct);
         db.ChangeTracker.Clear();
