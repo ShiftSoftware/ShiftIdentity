@@ -9,7 +9,7 @@ using ShiftSoftware.ShiftIdentity.Core;
 namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 
 // Attribute-driven endpoint — see Brand for the full rationale. No controller, no repository class; feature
-// locking is enforced centrally by FeatureLockSaveValidator. The route reproduces the old
+// locking is enforced centrally by FeatureLock. The route reproduces the old
 // IdentityServiceController's "api/[controller]" output exactly.
 [TemporalShiftEntity]
 [Table("Services", Schema = "ShiftIdentity")]

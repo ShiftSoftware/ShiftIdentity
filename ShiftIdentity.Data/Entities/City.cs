@@ -20,7 +20,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 // Attribute-driven endpoint (Rung B): City has no controller and no repository class. The secure CRUD routes come
 // from the attribute (built-in repository + the automatic ShiftMapper maps), gated by ShiftIdentityActions.Cities. The
 // protected-row guard (IsProtected) is enforced by the built-in repository and feature locking by
-// FeatureLockSaveValidator. The old CityRepository's jobs are split by responsibility: the Region→Country include
+// FeatureLock. The old CityRepository's jobs are split by responsibility: the Region→Country include
 // via IConfiguresShiftRepository (below), the flattened list columns in Mappers/ShiftIdentityMapper.cs (the one
 // mapper class — what a member maps from is not the repository's business), and the CountryID-from-Region
 // derivation (genuine write logic) via IUpsertsShiftRepository.

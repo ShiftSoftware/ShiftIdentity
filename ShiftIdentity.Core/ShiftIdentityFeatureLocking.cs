@@ -19,13 +19,13 @@ public class ShiftIdentityFeatureLocking
     public bool CompanyCalendarFeatureIsLocked { get; set; }
 
     // Entity-type-NAME → (is-this-feature-locked, localization key) map. This is what lets the generalized
-    // FeatureLockSaveValidator enforce feature locking on every repository save WITHOUT a per-repository
+    // FeatureLock enforce feature locking on every repository save WITHOUT a per-repository
     // SaveChangesAsync override. The message keys are the exact strings the old per-repository overrides threw,
     // so existing localization entries keep resolving.
     //
     // Keyed by the entity type's simple NAME (not typeof(...)) so this config class — part of the ShiftIdentity.Core
     // configuration surface — does not depend on the entity types, which live in ShiftIdentity.Data. The entity
-    // names are unique, and FeatureLockSaveValidator passes the concrete entity type, so name-matching is
+    // names are unique, and FeatureLock passes the concrete entity type, so name-matching is
     // behaviorally identical to the previous typeof() comparison.
     private static readonly (string EntityTypeName, Func<ShiftIdentityFeatureLocking, bool> IsLocked, string MessageKey)[] FeatureMap =
     {

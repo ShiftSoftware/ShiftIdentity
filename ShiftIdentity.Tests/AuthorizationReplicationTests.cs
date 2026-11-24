@@ -16,7 +16,7 @@ using Xunit;
 
 namespace ShiftIdentity.Tests;
 
-/// <summary>Runs Identity's actual authorization registration and mapper through the real save trigger.
+/// <summary>Runs Identity's actual authorization registration and mapper through real replication on save.
 /// SQLite stores the named trees; Cosmos is an in-process stand-in. Assignments and memberships have no documents of
 /// their own: <c>IdentityCatchUpSqlTests</c> covers the user and team documents that list them.</summary>
 public class AuthorizationReplicationTests
@@ -70,7 +70,7 @@ public class AuthorizationReplicationTests
         services.AddLogging(builder => builder.AddProvider(log));
         services.AddDbContext<ReplicationDb>(options => options.UseSqlite(connection));
         services.AddShiftIdentityReplicationMapper();
-        services.AddShiftEntityCosmosDbReplicationTrigger<ReplicationDb>(options =>
+        services.AddShiftEntityCosmosDbReplicationOnSave<ReplicationDb>(options =>
             options.SetUpAuthorizationReplication<ReplicationDb>(client, "Identity"));
         await using var provider = services.BuildServiceProvider(validateScopes: true);
         await using var scope = provider.CreateAsyncScope();

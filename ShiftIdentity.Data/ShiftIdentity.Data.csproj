@@ -47,6 +47,9 @@
 		     project drives it through the source's own methods and stands in for Cosmos at the read seam. -->
 		<InternalsVisibleTo Include="ShiftIdentity.Data.Tests" />
     <InternalsVisibleTo Include="ShiftIdentity.ReverseAccess.Benchmarks" />
+		<!-- The user repository's hand-over of a verification send is internal too. The SQL Server tests ask for a send
+		     the way the User upsert hook does. -->
+		<InternalsVisibleTo Include="ShiftIdentity.Tests.LongRunning" />
 	</ItemGroup>
 
 	<ItemGroup>

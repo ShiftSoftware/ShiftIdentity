@@ -68,8 +68,10 @@ internal static class UserEndpoints
                 // The forced change at next sign-in is the caller's per-request choice (the reset dialog's checkbox);
                 // a caller that sends no choice keeps the configured default, except for accounts that allow device
                 // sign-in. With the staged authority the save admits every credential in one transaction; a refusal
-                // returns the envelope message.
+                // returns the envelope message. A step after the commit that fails leaves the new passwords committed,
+                // so they are answered all the same: without them the users would be locked out.
                 IEnumerable<UserInfoDTO> userInfos;
+                ShiftSoftware.ShiftEntity.EFCore.AfterCommitException? saved;
                 try
                 {
                     var users = await GetSelectedUsersAsync(httpContext, ids);
@@ -81,7 +83,7 @@ internal static class UserEndpoints
 
                     userInfos = userRepo.AssignRandomPasswords(users, passwordLength ?? 20, requireChangeAtNextLogin);
 
-                    await userRepo.SaveChangesAsync();
+                    saved = await SaveAnswer.SaveAsync(userRepo, httpContext);
                 }
                 catch (ShiftEntityException ex)
                 {
@@ -95,13 +97,13 @@ internal static class UserEndpoints
                             await sendUserInfo.SendUserInfoAsync(userInfos);
                 }
 
-                return Results.Ok(new ShiftEntityResponse<IEnumerable<UserInfoDTO>>
+                return Results.Ok(SaveAnswer.With(new ShiftEntityResponse<IEnumerable<UserInfoDTO>>
                 {
                     Additional = new Dictionary<string, object>
                     {
                         ["Users"] = userInfos,
                     }
-                });
+                }, saved));
             })
             .RequireTypeAuthWrite(ShiftIdentityActions.Users);
 
@@ -119,6 +121,7 @@ internal static class UserEndpoints
                     }, statusCode: (int)HttpStatusCode.BadRequest);
 
                 var users = await GetSelectedUsersAsync(httpContext, ids);
+                ShiftSoftware.ShiftEntity.EFCore.AfterCommitException? saved;
 
                 try
                 {
@@ -128,14 +131,14 @@ internal static class UserEndpoints
                     foreach (var user in users)
                         await userRepo.SetTotpSecret(null, user);
 
-                    await userRepo.SaveChangesAsync();
+                    saved = await SaveAnswer.SaveAsync(userRepo, httpContext);
                 }
                 catch (ShiftEntityException ex)
                 {
                     return Results.Json(new ShiftEntityResponse<IEnumerable<UserInfoDTO>> { Message = ex.Message, Additional = ex.AdditionalData }, statusCode: ex.HttpStatusCode);
                 }
 
-                return Results.Ok(new ShiftEntityResponse<IEnumerable<UserInfoDTO>>(users.ToInfoDTOs()));
+                return Results.Ok(SaveAnswer.With(new ShiftEntityResponse<IEnumerable<UserInfoDTO>>(users.ToInfoDTOs()), saved));
             })
             .RequireTypeAuthWrite(ShiftIdentityActions.Users);
 
@@ -192,14 +195,15 @@ internal static class UserEndpoints
                     datas.Add((user, fullUrl));
                 }
 
-                await userRepo.SaveChangesAsync();
+                // The tokens are committed even when a step after the commit fails, so the links still go out.
+                var saved = await SaveAnswer.SaveAsync(userRepo, httpContext);
 
                 foreach (var data in datas)
                     if (sendEmailVerifications is not null)
                         foreach (var sendEmailVerification in sendEmailVerifications)
                             await sendEmailVerification.SendEmailVerificationAsync(data.fullUrl, data.user.ToDataDTO());
 
-                return Results.Ok(new ShiftEntityResponse<IEnumerable<UserInfoDTO>>(users.ToInfoDTOs()));
+                return Results.Ok(SaveAnswer.With(new ShiftEntityResponse<IEnumerable<UserInfoDTO>>(users.ToInfoDTOs()), saved));
             })
             .RequireTypeAuthWrite(ShiftIdentityActions.Users);
 
@@ -208,11 +212,12 @@ internal static class UserEndpoints
             async (SelectStateDTO<UserListDTO> ids, HttpContext httpContext, UserRepository userRepo) =>
             {
                 var users = userRepo.VerifyPhonesAsync(await GetSelectedUsersAsync(httpContext, ids));
+                ShiftSoftware.ShiftEntity.EFCore.AfterCommitException? saved;
 
                 // With the staged authority the flag is written by the admitted save, so the rows are mapped after it.
                 try
                 {
-                    await userRepo.SaveChangesAsync();
+                    saved = await SaveAnswer.SaveAsync(userRepo, httpContext);
                 }
                 catch (ShiftEntityException ex)
                 {
@@ -221,7 +226,7 @@ internal static class UserEndpoints
 
                 var userInfos = users.ToListDTOs();
 
-                return Results.Ok(new ShiftEntityResponse<IEnumerable<UserListDTO>> { Entity = userInfos });
+                return Results.Ok(SaveAnswer.With(new ShiftEntityResponse<IEnumerable<UserListDTO>> { Entity = userInfos }, saved));
             })
             .RequireTypeAuthWrite(ShiftIdentityActions.Users);
 
@@ -233,6 +238,8 @@ internal static class UserEndpoints
                    ITypeAuthService typeAuth,
                    IEnumerable<ISendUserInfo>? sendUserInfos) =>
             {
+                ShiftSoftware.ShiftEntity.EFCore.AfterCommitException? saved;
+
                 try
                 {
                     var selfBranchId = httpContext.GetHashedCompanyBranchID()!;
@@ -242,7 +249,8 @@ internal static class UserEndpoints
 
                     var users = await userRepo.UserImportAsync(userImport.Users);
 
-                    await userRepo.SaveChangesAsync();
+                    // The users are committed even when a step after the commit fails, so their login info still goes.
+                    saved = await SaveAnswer.SaveAsync(userRepo, httpContext);
 
                     if (userImport.SendLoginInfoByEmail)
                         if (sendUserInfos is not null)
@@ -263,7 +271,7 @@ internal static class UserEndpoints
                     }, statusCode: ex.HttpStatusCode);
                 }
 
-                return Results.Ok(new ShiftEntityResponse<UserImportDTO> { Entity = userImport });
+                return Results.Ok(SaveAnswer.With(new ShiftEntityResponse<UserImportDTO> { Entity = userImport }, saved));
             })
             .RequireTypeAuthWrite(ShiftIdentityActions.Users);
 

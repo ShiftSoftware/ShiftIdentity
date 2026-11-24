@@ -11,6 +11,8 @@ using ShiftSoftware.ShiftIdentity.Data.IRepositories;
 using ShiftSoftware.ShiftIdentity.Core.Localization;
 using System.Security.Claims;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftIdentity.AspNetCore.Authentication;
 using ShiftSoftware.ShiftIdentity.Core.Authentication;
 
@@ -33,7 +35,7 @@ public partial class AuthService
         AuthCodeService authCodeService,
         ShiftIdentityLocalizer Loc,
         IHashIdService hashIdService,
-        // Unused. Kept so a direct construction, such as the TIQ Functions login's, compiles; remove with its next upgrade.
+        // Unused. Kept so that a host that constructs this service directly still compiles; remove it once no host does.
         TotpService totpService,
         IServiceProvider? services = null
         )
@@ -75,7 +77,7 @@ public partial class AuthService
                 user.LockDownUntil = DateTime.UtcNow.AddMinutes(shiftIdentityConfigurations.Security.LockDownInMinutes);
             }
 
-            await userRepo.SaveChangesAsync();
+            await SaveBookkeepingAsync("a wrong password");
 
             return new LoginResultModel(LoginResultEnum.PasswordIncorrect, Loc["Username or password is incorrect"]);
         }
@@ -103,10 +105,30 @@ public partial class AuthService
         else
             user.UserLog.LastSeen = DateTimeOffset.UtcNow;
 
-        await userRepo.SaveChangesAsync();
+        await SaveBookkeepingAsync("a sign-in");
 
         TokenDTO tokenDTO = tokenService.IssueLoginToken(user);
         return new LoginResultModel(tokenDTO);
+    }
+
+    // The sign-in bookkeeping is saved through the user repository. When a step that runs after the commit of that save
+    // fails, such as an after-commit handler that a host registered on users, the bookkeeping is committed all the same:
+    // the call goes on as saved, and each failure is logged. A wrong password then gets its usual answer, a sign-in its
+    // token, and a refresh its token, rather than an error or an ended session.
+    private async Task SaveBookkeepingAsync(string what)
+    {
+        try
+        {
+            await userRepo.SaveChangesAsync();
+        }
+        catch (AfterCommitException saved)
+        {
+            var logger = services?.GetService<ILogger<AuthService>>();
+
+            foreach (var failure in saved.Failures)
+                logger?.LogError(failure, "The sign-in bookkeeping of {What} was saved, but a step that runs after the commit failed. " +
+                    "The call goes on as saved.", what);
+        }
     }
 
     /// <summary>
@@ -187,7 +209,7 @@ public partial class AuthService
             else
                 user.UserLog.LastSeen = DateTimeOffset.UtcNow;
 
-            await this.userRepo.SaveChangesAsync();
+            await SaveBookkeepingAsync("a refresh");
 
             return token;
         }

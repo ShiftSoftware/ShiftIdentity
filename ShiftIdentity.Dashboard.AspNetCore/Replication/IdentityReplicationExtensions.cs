@@ -18,7 +18,7 @@ namespace ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Replication;
 /// built.) A host wiring replication without the dashboard calls <c>AddShiftIdentityReplicationMapper()</c> itself, or
 /// includes <see cref="ShiftIdentityReplicationMapper"/> in a mapper of its own; one that does neither fails the first sync loudly
 /// (the pipeline checks the pair before writing anything), not silently. The host calls, inside
-/// <c>AddShiftEntityCosmosDbReplicationTrigger&lt;DB&gt;(x =&gt; …)</c>:
+/// <c>AddShiftEntityCosmosDbReplicationOnSave&lt;DB&gt;(x =&gt; …)</c>:
 /// <code>x.SetUpAllIdentityReplications&lt;DB&gt;(client, databaseId);</code>
 /// Container names/partition keys are byte-identical to the previous inline configuration.
 /// </summary>

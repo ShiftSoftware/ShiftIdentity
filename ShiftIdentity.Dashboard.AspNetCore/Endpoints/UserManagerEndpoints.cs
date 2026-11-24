@@ -52,7 +52,7 @@ internal static class UserManagerEndpoints
 
         // PUT api/UserManager/UserData — update the current user's own data.
         app.MapPut("api/UserManager/UserData",
-            async (UserDataDTO dto, IClaimService claimService, UserRepository userRepo) =>
+            async (UserDataDTO dto, HttpContext httpContext, IClaimService claimService, UserRepository userRepo) =>
             {
                 var loginUser = claimService.GetUser();
                 User? user;
@@ -69,9 +69,9 @@ internal static class UserManagerEndpoints
                 if (user is null)
                     return Results.BadRequest(new ShiftEntityResponse<UserDataDTO> { Message = new Message { Body = "Could not update user data!" } });
 
-                await userRepo.SaveChangesAsync();
+                var saved = await SaveAnswer.SaveAsync(userRepo, httpContext);
 
-                return Results.Ok(new ShiftEntityResponse<UserDataDTO>(user.ToDataDTO()));
+                return Results.Ok(SaveAnswer.With(new ShiftEntityResponse<UserDataDTO>(user.ToDataDTO()), saved));
             })
             .RequireAuthorization();
 
@@ -97,13 +97,14 @@ internal static class UserManagerEndpoints
                 if (user is null)
                     return Results.BadRequest(new ShiftEntityResponse<UserDataDTO> { Message = new Message { Body = "Could not update user data!" } });
 
-                await userRepo.SaveChangesAsync();
+                // The new password is committed even when a step after the commit fails, so the user gets the token.
+                var saved = await SaveAnswer.SaveAsync(userRepo, httpContext);
 
                 var token = authService.IssueLoginToken(user);
                 if (token is null)
                     return Results.BadRequest(new ShiftEntityResponse<TokenDTO> { Message = new Message { Body = "The user is deactivated" } });
 
-                return Results.Ok(new ShiftEntityResponse<TokenDTO>(token));
+                return Results.Ok(SaveAnswer.With(new ShiftEntityResponse<TokenDTO>(token), saved));
             })
             .RequireAuthorization(StepUpPolicy.For(AuthPurpose.ChangePassword, allowAccessToken: true));
 
@@ -138,13 +139,15 @@ internal static class UserManagerEndpoints
                 var fullUrl = $"{baseUrl}{(baseUrl.EndsWith('/') ? baseUrl.Substring(0, baseUrl.Length - 1) : "")}{url}?expires={expires}&token={token}";
 
                 user.VerificationSASToken = token;
-                await userRepo.SaveChangesAsync();
+
+                // The token is committed even when a step after the commit fails, so the link still goes out.
+                var saved = await SaveAnswer.SaveAsync(userRepo, httpContext);
 
                 if (sendEmailVerifications is not null)
                     foreach (var sendEmailVerification in sendEmailVerifications)
                         await sendEmailVerification.SendEmailVerificationAsync(fullUrl, user.ToDataDTO());
 
-                return Results.Ok();
+                return saved is null ? Results.Ok() : Results.Ok(SaveAnswer.With(new ShiftEntityResponse(), saved));
             })
             .RequireAuthorization();
 
@@ -173,9 +176,11 @@ internal static class UserManagerEndpoints
 
                 user.EmailVerified = true;
                 user.VerificationSASToken = null;
-                await userRepo.SaveChangesAsync();
+                var saved = await SaveAnswer.SaveAsync(userRepo, httpContext);
 
-                return Results.Ok("Youre email is verified successfully.");
+                const string verified = "Youre email is verified successfully.";
+
+                return saved is null ? Results.Ok(verified) : Results.Ok(SaveAnswer.With(new ShiftEntityResponse<string>(verified), saved));
             })
             .AllowAnonymous()
             .WithName(VerifyEmailRouteName);
@@ -208,13 +213,15 @@ internal static class UserManagerEndpoints
                 var fullUrl = $"{baseUrl}{(baseUrl.EndsWith('/') ? baseUrl.Substring(0, baseUrl.Length - 1) : "")}/Identity/ResetPassword/{encodedId}?expires={expires}&token={token}";
 
                 user.VerificationSASToken = token;
-                await userRepo.SaveChangesAsync();
+
+                // The token is committed even when a step after the commit fails, so the link still goes out.
+                var saved = await SaveAnswer.SaveAsync(userRepo, httpContext);
 
                 if (sendEmailResetPasswords is not null)
                     foreach (var sendEmailResetPassword in sendEmailResetPasswords)
                         await sendEmailResetPassword.SendEmailResetPasswordAsync(fullUrl, user.ToDataDTO());
 
-                return Results.Ok();
+                return saved is null ? Results.Ok() : Results.Ok(SaveAnswer.With(new ShiftEntityResponse(), saved));
             })
             .AllowAnonymous();
 
@@ -244,9 +251,9 @@ internal static class UserManagerEndpoints
                 // The user just chose this password themselves via the reset link, so don't force
                 // another change on next login.
                 user.RequireChangePassword = false;
-                await userRepo.SaveChangesAsync();
+                var saved = await SaveAnswer.SaveAsync(userRepo, httpContext);
 
-                return Results.Ok(new ShiftEntityResponse<UserDataDTO> { Message = new Message { Body = "Your password is reset successfully." } });
+                return Results.Ok(SaveAnswer.With(new ShiftEntityResponse<UserDataDTO> { Message = new Message { Body = "Your password is reset successfully." } }, saved));
             })
             .AllowAnonymous()
             .WithName(ResetPasswordRouteName);
@@ -300,12 +307,13 @@ internal static class UserManagerEndpoints
                     if (user is null)
                         return Results.BadRequest(new ShiftEntityResponse<UserDataDTO> { Message = new Message { Body = "User not found!" } });
 
-                    await userRepo.SaveChangesAsync();
+                    // The authenticator is committed even when a step after the commit fails, so the user gets the token.
+                    var saved = await SaveAnswer.SaveAsync(userRepo, httpContext);
                     var token = authService.IssueLoginToken(user, true);
                     if (token is null)
                         return Results.BadRequest(new ShiftEntityResponse<TokenDTO> { Message = new Message { Body = "The user is deactivated" } });
 
-                    return Results.Ok(new ShiftEntityResponse<TokenDTO>(token));
+                    return Results.Ok(SaveAnswer.With(new ShiftEntityResponse<TokenDTO>(token), saved));
                 }
 
                 return Results.BadRequest(new ShiftEntityResponse<UserDataDTO> { Message = new Message { Body = "Invalid code." } });

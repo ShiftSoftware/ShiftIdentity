@@ -17,7 +17,7 @@ public static class IdentityReplicationMapperServiceCollectionExtensions
     /// mapper class itself is never registered — the generated mapper builds it on first use.
     /// <para>
     /// A host normally never calls this: the identity registrations do — <c>AddShiftIdentityDashboard&lt;TDbContext&gt;()</c>
-    /// on the API side (the save trigger's <c>SetUpAllIdentityReplications</c>) and the Functions worker's
+    /// on the API side (the save side's <c>SetUpAllIdentityReplications</c>) and the Functions worker's
     /// <c>AddShiftIdentity(issuer, key)</c> (the catch-up <c>ReplicateAllAsync</c>). It is public for a host that
     /// wires replication without either, and it is IDEMPOTENT: ShiftMapper keeps ONE registry per collection and a
     /// second registration of the same assembly's generated mapper changes nothing, whichever lifetime it asks for —

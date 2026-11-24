@@ -219,24 +219,25 @@ namespace ShiftSoftware.ShiftIdentity.Data
             base.OnConfiguring(optionsBuilder);
         }
 
-        public override int SaveChanges(bool acceptAllChangesOnSuccess)
+        /// <summary>
+        /// The save handlers that belong to the identity model, so that every host that saves identity records has
+        /// them: the feature lock, a guard that runs before every other handler; the send of what the User form asked
+        /// for once the user is committed; and on a database other than SQL Server, a guard that sets the row versions
+        /// after every other before-save handler. A context that overrides this calls the base method.
+        /// </summary>
+        protected override void ConfigureSaveHandlers(SaveHandlerSet handlers)
         {
-            SetRowVersionsWhenNotSqlServer();
-            return base.SaveChanges(acceptAllChangesOnSuccess);
-        }
+            base.ConfigureSaveHandlers(handlers);
 
-        public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
-        {
-            SetRowVersionsWhenNotSqlServer();
-            return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
-        }
+            handlers
+                .Add<FeatureLock>(order: int.MinValue)
+                .Add<UserVerificationSend>();
 
-        // SQL Server generates the row versions. Elsewhere this context sets them, on the rows the save will write.
-        private void SetRowVersionsWhenNotSqlServer()
-        {
-            if (Database.IsSqlServer()) return;
-            if (ChangeTracker.AutoDetectChangesEnabled) ChangeTracker.DetectChanges();
-            OtherDatabases.SetRowVersions(ChangeTracker);
+            // SQL Server generates the row versions. Elsewhere this context sets them, last in each round of the
+            // before-save stage, so that a row another handler adds or changes gets one too. The handlers are worked out
+            // once per model, and EF builds one model per database provider, so a context on SQL Server never has it.
+            if (!Database.IsSqlServer())
+                handlers.Add<OtherDatabaseRowVersions>(order: int.MaxValue);
         }
     }
 }

@@ -7,7 +7,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Replication;
 
 /// <summary>
 /// The <c>Entity → *Model</c> maps Cosmos replication uses for the ShiftIdentity domain — the ShiftMapper mapper class
-/// the package ships. The trigger side (<c>SetUpAllIdentityReplications</c>) and the catch-up side (<c>ReplicateAllAsync</c>)
+/// the package ships. The save side (<c>SetUpAllIdentityReplications</c>) and the catch-up side (<c>ReplicateAllAsync</c>)
 /// register their <c>Replicate</c> / <c>ReplicateTree</c> calls WITHOUT a mapping
 /// delegate, and the replication pipeline maps every document through the host's registered <see cref="IMapper"/>
 /// — so the host has to carry these pairs. It does so without asking: the identity registrations

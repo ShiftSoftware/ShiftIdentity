@@ -59,7 +59,7 @@ public class IdentityCatchUpSqlTests
             services.AddLogging(x => x.AddProvider(host.Log));
             services.AddDbContext<IdentityTestDbContext>(o => o.UseSqlServer(host.catalog.ConnectionString));
             if (saveSide)
-                services.AddShiftEntityCosmosDbReplicationTrigger<IdentityTestDbContext>(x =>
+                services.AddShiftEntityCosmosDbReplicationOnSave<IdentityTestDbContext>(x =>
                 {
                     x.SetUpOrganizationReplications<IdentityTestDbContext>(cosmos.Client, Database);
                     if (users)
@@ -229,7 +229,7 @@ public class IdentityCatchUpSqlTests
         Assert.Equal(savedTeam.ToString(), Assert.Single(host.Cosmos.Stored(TeamContainerName)).ToString());
     }
 
-    // RV-19. The run used to stop at the branch step when Branches was missing, so companies and teams never ran.
+    // The run used to stop at the branch step when Branches was missing, so companies and teams never ran.
     [Fact]
     public async Task An_organization_run_goes_on_past_a_step_whose_container_is_missing_and_reports_it()
     {

@@ -17,7 +17,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 // Attribute-driven endpoint (Rung A): Country has no controller and no repository class. The secure CRUD
 // routes are generated from the attribute below (built-in repository + source-generated mapper), gated by the
 // ShiftIdentityActions.Countries TypeAuth node. The protected-row guard (IsProtected) is enforced centrally by
-// the built-in repository, and feature locking by FeatureLockSaveValidator, so no repository overrides remain.
+// the built-in repository, and feature locking by FeatureLock, so no repository overrides remain.
 // The route reproduces the old IdentityCountryController's "api/[controller]" output exactly.
 [TemporalShiftEntity]
 [Table("Countries", Schema = "ShiftIdentity")]

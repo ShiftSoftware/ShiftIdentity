@@ -14,7 +14,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 // Attribute-driven endpoint (Rung B): Region has no controller and no repository class. The secure CRUD routes
 // come from the attribute (built-in repository + the automatic ShiftMapper maps), gated by ShiftIdentityActions.Regions.
 // The protected-row guard (IsProtected) is enforced by the built-in repository and feature locking by
-// FeatureLockSaveValidator. The only repository shaping Region needs — the Country include — is on the entity via
+// FeatureLock. The only repository shaping Region needs — the Country include — is on the entity via
 // IConfiguresShiftRepository; the flattened list columns are in the mapper class (Mappers/ShiftIdentityMapper.cs).
 [TemporalShiftEntity]
 [Table("Regions", Schema = "ShiftIdentity")]

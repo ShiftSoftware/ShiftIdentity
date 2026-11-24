@@ -37,6 +37,18 @@ public sealed class LegacyIdentityHttpHost<TContext> : IDisposable where TContex
     public RecordingEmailVerification Verifications { get; } = new();
     public LegacyIdentityHttpHost(SqlIdentityFixture fixture, bool authority = false, Action<string>? observe = null,
         params Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor[] interceptors)
+        : this(fixture, authority, observe, configureServices: null, interceptors)
+    {
+    }
+
+    /// <summary>The same host, with registrations of the test's own added last, such as a save handler of the host.</summary>
+    public LegacyIdentityHttpHost(SqlIdentityFixture fixture, Action<IServiceCollection> configureServices, bool authority = false)
+        : this(fixture, authority, observe: null, configureServices, [])
+    {
+    }
+
+    private LegacyIdentityHttpHost(SqlIdentityFixture fixture, bool authority, Action<string>? observe, Action<IServiceCollection>? configureServices,
+        Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor[] interceptors)
     {
         using var rsa = RSA.Create();
         rsa.ImportRSAPrivateKey(fixture.Options.AccessPrivateKey, out _);
@@ -73,6 +85,7 @@ public sealed class LegacyIdentityHttpHost<TContext> : IDisposable where TContex
             mvc.AddShiftEntityWeb(x => x.AddShiftIdentityDataAssembly());
             mvc.AddShiftIdentity(settings.Token.Issuer, publicKey)
                 .AddShiftIdentityDashboard<TContext>(settings);
+            configureServices?.Invoke(services);
         }).Configure(app =>
         {
             app.UseRouting();

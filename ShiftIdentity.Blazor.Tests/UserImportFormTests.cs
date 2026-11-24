@@ -39,6 +39,11 @@ public sealed class UserImportFormTests
         Assert.DoesNotContain("childcontent", cut.Markup, StringComparison.OrdinalIgnoreCase);
 
         await button.ClickAsync(new());
-        Assert.Contains(context.JSInterop.Invocations, invocation => invocation.Identifier == "mudFileUpload.openFilePicker");
+
+        // The page goes on calling JavaScript after the click, on the renderer's dispatcher, and reading the calls from
+        // the test's thread meanwhile failed with "Collection was modified". So they are copied on the dispatcher, where
+        // the page's own work runs one item at a time.
+        var invocations = await cut.InvokeAsync(() => context.JSInterop.Invocations.ToList());
+        Assert.Contains(invocations, invocation => invocation.Identifier == "mudFileUpload.openFilePicker");
     }
 }

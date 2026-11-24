@@ -36,15 +36,14 @@ public class UserRepository :
     private readonly ShiftIdentityConfiguration configuration;
     private readonly IUserAccountAuthority? authority;
 
-    // Work the upsert hook defers until the save has committed (the verification email for a new address). It runs
-    // after base.SaveChangesAsync() returns, i.e. outside the repository transaction, and is discarded if the save
-    // throws. Each item is responsible for its own failure handling; nothing here can fail an already committed save.
-    private readonly List<Func<Task>> afterSaveWork = [];
-
     // Security changes waiting for admission in the next save, and rows created by that save whose security state
     // must be recorded once their IDs exist. Both are cleared whether the save commits or fails.
     private readonly List<UserAccountChange> pendingChanges = [];
     private readonly List<UserAccountCreation> pendingCreations = [];
+
+    // What the User upsert hook asked to send, for this repository's next save and no other. Cleared when that save
+    // starts, whatever then happens to it.
+    private readonly List<(User User, Func<Task> Send)> pendingSends = [];
 
     public UserRepository(ShiftIdentityDbContext db,
         ShiftIdentityDefaultDataLevelAccessOptions shiftIdentityDefaultDataLevelAccessOptions,
@@ -76,13 +75,6 @@ public class UserRepository :
         (authority ?? throw new InvalidOperationException("The identity authority is required."))
             .RequestVerificationAsync(userID, cancellationToken);
 
-    /// <summary>
-    /// Registers work that runs once the next <see cref="SaveChangesAsync"/> has committed — outside the repository
-    /// transaction. Used by the User upsert hook, which runs before the save and therefore cannot send anything
-    /// itself. The work is dropped when the save fails and must handle its own errors.
-    /// </summary>
-    public void RunAfterSave(Func<Task> work) => afterSaveWork.Add(work);
-
     /// <summary>Queues a sensitive change for admission by the staged authority in the next save.</summary>
     public void RequireAdmission(UserAccountChange change)
     {
@@ -99,6 +91,18 @@ public class UserRepository :
             throw new InvalidOperationException("The staged authority is not registered in this host.");
 
         pendingCreations.Add(creation);
+    }
+
+    /// <summary>
+    /// Asks for a send to a user (the verification link the User form asked for) once this repository's next save,
+    /// which writes that user, is committed. Asked again for the same user, the later send counts. The send goes
+    /// with that save and with no other: <see cref="UserVerificationSend"/> takes it into the save, and a save that
+    /// does not commit it, or that is switched off for it, drops it.
+    /// </summary>
+    internal void SendWhenCommitted(User user, Func<Task> send)
+    {
+        pendingSends.RemoveAll(pending => ReferenceEquals(pending.User, user));
+        pendingSends.Add((user, send));
     }
 
     /// <summary>
@@ -208,35 +212,32 @@ public class UserRepository :
         return user;
     }
 
+    // What the upsert hook asked to send for a user (the verification link for a new address) is not this method's to
+    // run: it waits for the commit of the save that writes the user, wherever that commit is. This save hands each send
+    // to its user for as long as the save runs, and UserVerificationSend takes it from there into the save. When the
+    // save ends, whichever way, the users no longer carry it, so no later save can send it.
     public override async Task<int> SaveChangesAsync()
     {
-        int result;
+        var sends = pendingSends.ToArray();
+        pendingSends.Clear();
+
+        foreach (var (user, send) in sends)
+            user.verificationSendOfThisSave = send;
 
         try
         {
-            result = authority is null || (pendingChanges.Count == 0 && pendingCreations.Count == 0)
+            return authority is null || (pendingChanges.Count == 0 && pendingCreations.Count == 0)
                 ? await base.SaveChangesAsync()
                 : await SaveAdmittedAsync(authority);
         }
-        catch
+        finally
         {
-            // Nothing was committed, so nothing may be sent for it.
-            afterSaveWork.Clear();
+            foreach (var (user, _) in sends)
+                user.verificationSendOfThisSave = null;
+
             pendingChanges.Clear();
             pendingCreations.Clear();
-            throw;
         }
-
-        if (afterSaveWork.Count == 0)
-            return result;
-
-        var work = afterSaveWork.ToArray();
-        afterSaveWork.Clear();
-
-        foreach (var item in work)
-            await item();
-
-        return result;
     }
 
     // One transaction: admission (locks, current-state checks, version increments, audit rows) → the ordinary flush →

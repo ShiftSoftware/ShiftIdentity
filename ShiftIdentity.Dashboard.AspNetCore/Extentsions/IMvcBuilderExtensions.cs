@@ -23,7 +23,7 @@ public static class IMvcBuilderExtensions
         Assembly repositoryAssembly = typeof(Marker).Assembly; // Adjust this as needed
 
         // Find all types in the assembly that implement IRepository<>
-        var repositoryTypes = repositoryAssembly.GetTypes()
+        var repositoryTypes = AssemblyScan.TypesOf(repositoryAssembly)
             .Where(t => t.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IShiftEntityFind<>)) &&
                 !t.IsInterface);
 
@@ -44,7 +44,7 @@ public static class IMvcBuilderExtensions
     {
         Assembly repositoryAssembly=typeof(Marker).Assembly;
 
-        var repositoryTypes = repositoryAssembly.GetTypes()
+        var repositoryTypes = AssemblyScan.TypesOf(repositoryAssembly)
             .Where(t => t.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IShiftEntityPrepareForReplicationAsync<>)) && 
                 !t.IsInterface);
 
@@ -73,9 +73,9 @@ public static class IMvcBuilderExtensions
         // ShiftRepository path (which has no per-entity constructor to assign it) picks it up automatically.
         builder.Services.TryAddSingleton<DefaultDataLevelAccessOptions>(shiftIdentityConfiguration.DefaultDataLevelAccessOptions);
 
-        // Generalized feature locking: one save-time validator replaces the 13 per-repository SaveChangesAsync
-        // overrides. The built-in ShiftRepository invokes every registered IShiftEntitySaveValidator before saving.
-        builder.Services.AddScoped<IShiftEntitySaveValidator, FeatureLockSaveValidator>();
+        // Generalized feature locking needs no registration here: FeatureLock is a save handler that the
+        // identity model declares itself (ShiftIdentityDbContext.ConfigureSaveHandlers), and it reads the
+        // ShiftIdentityFeatureLocking registered above.
 
         // Attribute-driven CRUD endpoints: scans ShiftIdentity.Data (where the entities live, alongside the
         // DbContext + EF Core) for entities decorated with [ShiftEntitySecureEndpoint<…>] (e.g. Brand) and
@@ -86,13 +86,16 @@ public static class IMvcBuilderExtensions
 
         builder.Services.AddShiftIdentityAuthCoreServices();
 
-        builder.Services.AddScoped<IUserRepository, UserRepository>();
+        // One user repository per scope, whichever name resolves it. The User form's upsert hook asks the repository it
+        // was given for a verification send, and only that repository's save hands the send on, so a second instance in
+        // the scope would save the user without it. RegisterShiftRepositories above has registered the class already.
+        builder.Services.TryAddScoped<UserRepository>();
+        builder.Services.AddScoped<IUserRepository>(services => services.GetRequiredService<UserRepository>());
         builder.Services.AddScoped<IAppRepository, AppRepository>();
 
-        builder.Services.AddScoped<UserRepository>();
-
-        // The User form's "send a verification link" choice: the User upsert hook asks UserRepository to send after
-        // its save commits, and this dashboard implementation builds/sends the legacy SAS link (needs the request).
+        // The User form's "send a verification link" choice: the User upsert hook asks for the send once the save that
+        // writes the user is committed, and this dashboard implementation builds/sends the legacy SAS link (needs the
+        // request).
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddScoped<IUserEmailVerificationSender, ShiftSoftware.ShiftIdentity.Dashboard.AspNetCore.Services.UserEmailVerificationSender>();
 
@@ -110,7 +113,7 @@ public static class IMvcBuilderExtensions
         builder.Services.AddScoped<ShiftIdentityDbContext>(x=> x.GetRequiredService<TDbContext>());
 
         // The ShiftMapper mapper the identity Cosmos replication maps through. SetUpAllIdentityReplications passes no
-        // mapping delegates, and the replication trigger resolves IMapper for every document — so the mapper has
+        // mapping delegates, and replication on save resolves IMapper for every document — so the mapper has
         // to be in the container of every host that hosts identity, whether or not it turns replication on: the
         // registration is a factory, nothing is built until something replicates. Idempotent, so a host that also
         // calls AddShiftIdentityReplicationMapper() itself does not end up with two.

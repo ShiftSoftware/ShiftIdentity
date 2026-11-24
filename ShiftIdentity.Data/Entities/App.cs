@@ -17,7 +17,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 
 // Attribute-driven endpoint: App has no controller. The secure CRUD routes come from the attribute (built-in
 // repository + source-generated mapper — App uses AppDTO for both list and view), gated by
-// ShiftIdentityActions.Apps. Feature locking is enforced centrally by FeatureLockSaveValidator. The duplicate-AppId
+// ShiftIdentityActions.Apps. Feature locking is enforced centrally by FeatureLock. The duplicate-AppId
 // write check moves onto the entity via IUpsertsShiftRepository. A slim AppRepository survives ONLY to serve
 // IAppRepository.GetAppAsync (used by the OAuth AuthCodeService) — it no longer participates in CRUD.
 [TemporalShiftEntity]

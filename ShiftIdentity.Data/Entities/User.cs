@@ -141,6 +141,10 @@ public class User : ShiftEntity<User>,
         TeamUsers = new HashSet<TeamUser>();
     }
 
+    // What the User form asked to send to this user, handed to UserVerificationSend by the repository's save that
+    // writes the user, and only for as long as that save runs. A field, so that nothing maps or serializes it.
+    internal Func<Task>? verificationSendOfThisSave;
+
     // All work happens on `entity` BEFORE context.Base(): Base() maps the convention scalars (FullName/BirthDate) +
     // IntegrationId (ForEntity), audit-stamps, runs the protected-row guard, and the company-scoped data-level write
     // check — which authorizes against the CompanyBranch-derived scope set below. Username/IsActive/Email/Phone/
@@ -422,18 +426,22 @@ public class User : ShiftEntity<User>,
                 repository.RequireCreation(new UserAccountCreation(saved));
             }
 
-            // The staged delivery path issues the link after the commit; the legacy SAS sender is not used here.
+            // The staged delivery path issues the link after the commit; the legacy SAS sender is not used here. This
+            // hook runs before the save, so it only asks: the request is made once the repository's save that writes
+            // this user is committed, and its outcome reaches the caller through the repository's response envelope.
             if (sendVerification)
-                repository.RunAfterSave(() => repository.ReportVerificationAsync(authority, saved.ID));
+                repository.SendWhenCommitted(saved, () => repository.ReportVerificationAsync(authority, saved.ID));
         }
         else if (sendVerification
             && repository is not null
             && context.Services.GetService<IUserEmailVerificationSender>() is { } sender)
         {
             // This hook runs before SaveChanges, so it must not send. The link needs the committed row (a created user
-            // has no ID yet), so the repository sends it after its save has committed, outside the transaction. A host
-            // without the dashboard sender registered sends nothing, exactly like VerifyEmails without providers.
-            repository.RunAfterSave(() => sender.SendAsync(saved));
+            // has no ID yet), so it is sent once the repository's save that writes this user is committed, also when
+            // the caller began the transaction around that save. A save that fails, is refused, is rolled back or is
+            // switched off sends nothing, and no later save sends it. A host without the dashboard sender registered
+            // sends nothing, exactly like VerifyEmails without providers.
+            repository.SendWhenCommitted(saved, () => sender.SendAsync(saved));
         }
 
         return saved;

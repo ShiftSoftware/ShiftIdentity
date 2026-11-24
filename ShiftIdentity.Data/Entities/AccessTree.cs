@@ -18,7 +18,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Entities;
 
 // Attribute-driven endpoint (Rung B): AccessTree has no controller and no repository class. The secure CRUD
 // routes come from the attribute (built-in repository + source-generated mapper), gated by
-// ShiftIdentityActions.AccessTrees; feature locking is central (FeatureLockSaveValidator). The write logic —
+// ShiftIdentityActions.AccessTrees; feature locking is central (FeatureLock). The write logic —
 // name-uniqueness + the TypeAuth access-tree generation — moves onto the entity via IUpsertsShiftRepository, and the
 // rule that a tree still in use cannot be deleted via IDeletesShiftRepository.
 [TemporalShiftEntity]

@@ -1,9 +1,12 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using ShiftIdentity.Tests.Infrastructure;
+using ShiftSoftware.ShiftEntity.EFCore;
 using ShiftSoftware.ShiftEntity.Model;
 using ShiftSoftware.ShiftEntity.Model.Dtos;
 using ShiftSoftware.ShiftIdentity.Core;
@@ -223,9 +226,111 @@ public sealed class UserFormLegacySqlTests(SqlIdentityFixture fixture) : IClassF
         Assert.Empty(host.Verifications.Sent);
     }
 
-    private async Task<LegacyIdentityHttpHost<IdentityTestDbContext>> HostAsync()
+    // ── A step after the commit that fails ──────────────────────────────────────────────────────────────────────────
+
+    /// <summary>Makes the host's after-commit handler on users fail, while it is armed.</summary>
+    public sealed class FailAfterTheCommit
     {
-        var host = new LegacyIdentityHttpHost<IdentityTestDbContext>(fixture);
+        public bool Armed { get; set; }
+    }
+
+    /// <summary>A host's own after-commit handler on users, such as one that tells a directory. It fails while armed.</summary>
+    public sealed class TellsTheDirectory(FailAfterTheCommit fail) : IAfterCommitHandler<User>
+    {
+        public ValueTask AfterCommitAsync(SavedRows<User> rows, CancellationToken cancellationToken) => fail.Armed
+            ? throw new ShiftEntityException(new Message("Directory not told", "The users were saved, but the directory could not be told."))
+            : ValueTask.CompletedTask;
+    }
+
+    private static void AssertSavedWithFailure(ShiftEntityResponse? body)
+    {
+        Assert.NotNull(body);
+        Assert.Equal("Directory not told", body!.Message?.Title);
+        Assert.True(body.Additional is { } additional && additional.TryGetValue(ShiftEntityResponse.SavedWithFailure, out var marker) && marker is JsonElement { ValueKind: JsonValueKind.True });
+    }
+
+    [Fact]
+    public async Task Assign_random_passwords_answers_as_saved_with_the_new_passwords_when_a_step_after_the_commit_fails()
+    {
+        var fail = new FailAfterTheCommit();
+        using var host = await HostAsync(services => services.AddSingleton(fail).AddSaveHandler<TellsTheDirectory>());
+        var id = await CreateAsync(host, NewUser(sendVerification: false));
+
+        fail.Armed = true;
+
+        using var response = await host.Client.PostAsJsonAsync("/api/IdentityUser/AssignRandomPasswords",
+            new SelectStateDTO<UserListDTO> { Items = [new UserListDTO { ID = id.ToString() }] });
+
+        // The passwords are committed, so the answer is the answer of a successful save, with them in it: without them
+        // the users would be locked out.
+        Assert.True(response.StatusCode == HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        var body = await response.Content.ReadFromJsonAsync<ShiftEntityResponse<IEnumerable<UserInfoDTO>>>();
+        AssertSavedWithFailure(body);
+
+        var users = ((JsonElement)body!.Additional!["Users"]).Deserialize<List<UserInfoDTO>>(new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+        var password = Assert.Single(users).PlainTextPassword;
+        Assert.False(string.IsNullOrEmpty(password));
+
+        await using var db = fixture.CreateContext();
+        var user = await db.Users.SingleAsync(x => x.ID == id);
+        Assert.True(HashService.VerifyPassword(password!, user.Salt, user.PasswordHash));
+    }
+
+    [Fact]
+    public async Task Reset_TOTP_and_an_edit_of_ones_own_data_answer_as_saved_when_a_step_after_the_commit_fails()
+    {
+        var fail = new FailAfterTheCommit();
+        using var host = await HostAsync(services => services.AddSingleton(fail).AddSaveHandler<TellsTheDirectory>());
+        var id = await CreateAsync(host, NewUser(sendVerification: false));
+
+        await using (var setup = fixture.CreateContext())
+            await setup.Users.Where(x => x.ID == id).ExecuteUpdateAsync(x => x.SetProperty(u => u.TotpSecret, new byte[] { 1, 2, 3 }));
+
+        fail.Armed = true;
+
+        using (var reset = await host.Client.PostAsJsonAsync("/api/IdentityUser/ResetTotp",
+            new SelectStateDTO<UserListDTO> { Items = [new UserListDTO { ID = id.ToString() }] }))
+        {
+            Assert.True(reset.StatusCode == HttpStatusCode.OK, await reset.Content.ReadAsStringAsync());
+            AssertSavedWithFailure(await reset.Content.ReadFromJsonAsync<ShiftEntityResponse<IEnumerable<UserInfoDTO>>>());
+        }
+
+        await using (var db = fixture.CreateContext())
+            Assert.Null((await db.Users.AsNoTracking().SingleAsync(x => x.ID == id)).TotpSecret);
+
+        // The account endpoints answer the same: the administrator edits their own data.
+        fail.Armed = false;
+
+        UserDataDTO data;
+        using (var read = await host.Client.GetAsync("/api/UserManager/UserData"))
+            data = (await read.Content.ReadFromJsonAsync<ShiftEntityResponse<UserDataDTO>>())!.Entity!;
+
+        data.FullName = "Synthetic Operator (edited)";
+        fail.Armed = true;
+
+        using (var edit = await host.Client.PutAsJsonAsync("/api/UserManager/UserData", data))
+        {
+            Assert.True(edit.StatusCode == HttpStatusCode.OK, await edit.Content.ReadAsStringAsync());
+            var body = await edit.Content.ReadFromJsonAsync<ShiftEntityResponse<UserDataDTO>>();
+            AssertSavedWithFailure(body);
+            Assert.Equal("Synthetic Operator (edited)", body!.Entity!.FullName);
+        }
+
+        await using (var db = fixture.CreateContext())
+            Assert.Equal("Synthetic Operator (edited)", (await db.Users.AsNoTracking().SingleAsync(x => x.Username == AdminName)).FullName);
+
+        // Put back for the other tests, which share the operator.
+        fail.Armed = false;
+        data.FullName = "Synthetic Operator";
+        using (var restore = await host.Client.PutAsJsonAsync("/api/UserManager/UserData", data))
+            Assert.True(restore.StatusCode == HttpStatusCode.OK, await restore.Content.ReadAsStringAsync());
+    }
+
+    private async Task<LegacyIdentityHttpHost<IdentityTestDbContext>> HostAsync(Action<IServiceCollection>? services = null)
+    {
+        var host = services is null
+            ? new LegacyIdentityHttpHost<IdentityTestDbContext>(fixture)
+            : new LegacyIdentityHttpHost<IdentityTestDbContext>(fixture, services);
         var token = (await host.DirectSignInAsync(AdminName, fixture.Password))!.Token;
         host.Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return host;

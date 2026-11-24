@@ -14,7 +14,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Replication;
 
 /// <summary>
 /// Reusable Cosmos "catch-up" replication for the ShiftIdentity domain — the function/timer counterpart to the
-/// trigger-side <c>SetUpAllIdentityReplications</c>. Each <c>ReplicateXAsync</c> re-syncs ONE entity's rows to Cosmos
+/// save-side <c>SetUpAllIdentityReplications</c>. Each <c>ReplicateXAsync</c> re-syncs ONE entity's rows to Cosmos
 /// through the framework's <see cref="CosmosDBReplication"/> service; <see cref="ReplicateAllAsync{TDbContext}(CosmosDBReplication, string, string, bool)"/>
 /// runs them all, and <see cref="ReplicateOrganizationAsync{TDbContext}(CosmosDBReplication, string, string, bool)"/> runs all but
 /// users and authorization. By default only DIRTY rows are synced (<c>updateAll: false</c> — the incremental hourly catch-up); pass
@@ -28,7 +28,7 @@ namespace ShiftSoftware.ShiftIdentity.Data.Replication;
 /// <see cref="IdentityCatchUpException"/> with that report.
 ///
 /// No call passes a mapping delegate: every document is mapped through the host's registered ShiftMapper mapper —
-/// the same maps the trigger side uses, so a backfilled document is byte-identical to one a live save produces.
+/// the same maps the save side uses, so a backfilled document is byte-identical to one a live save produces.
 /// The Functions worker's <c>AddShiftIdentity(issuer, key)</c> and the API's <c>AddShiftIdentityDashboard</c> register
 /// that mapper (the ready-made <see cref="ShiftIdentityReplicationMapper"/>), so a host that hosts identity has nothing
 /// extra to wire; one that wires replication without them calls <c>AddShiftIdentityReplicationMapper()</c> itself, or
@@ -38,10 +38,10 @@ namespace ShiftSoftware.ShiftIdentity.Data.Replication;
 /// It lives in ShiftIdentity.Data so both a Functions app (its timers and <c>replicate-all</c>) and an API (the
 /// dashboard's <c>api/IdentityReplication</c> endpoints) can run it.
 ///
-/// The catch-up side has no <c>IShiftEntityPrepareForReplicationAsync</c> hook (that runs only inside the save
-/// trigger), so navigations the models depend on (Team's branches) are loaded HERE via the <c>SetUp(…, query)</c>
+/// The catch-up side has no <c>IShiftEntityPrepareForReplicationAsync</c> hook (that runs only inside a save), so
+/// navigations the models depend on (Team's branches) are loaded HERE via the <c>SetUp(…, query)</c>
 /// include shaper. A branch is loaded with its replication tree, as the save side loads it.
-/// Containers/partition data are byte-identical to the trigger configuration.
+/// Containers/partition data are byte-identical to the save-side configuration.
 /// </summary>
 public static class IdentityCatchUpReplicationExtensions
 {
@@ -110,7 +110,7 @@ public static class IdentityCatchUpReplicationExtensions
 
     /// <summary>
     /// Catches up named grants and assignments using the existing replication watermarks.
-    /// Hard deletes are delivered by the save trigger; this scan cannot recover an already removed SQL row.
+    /// Hard deletes are delivered by replication on save; this scan cannot recover an already removed SQL row.
     /// Run alongside user, company and branch catch-up.
     /// </summary>
     public static Task ReplicateAuthorizationAsync<TDbContext>(this CosmosDBReplication cosmos,
