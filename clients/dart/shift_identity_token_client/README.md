@@ -285,4 +285,5 @@ refreshes through another HTTP stack. The client fills in its `timeout` on each 
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+Apache License, Version 2.0. See [LICENSE](LICENSE), and
+[licence and ownership](https://github.com/ShiftSoftware/ShiftIdentity/blob/master/LICENSING.md).

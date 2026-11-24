@@ -15,7 +15,6 @@
 		<Authors>aza.asim,Shift Software,Nahro</Authors>
 		<PackageProjectUrl>https://github.com/ShiftSoftware/ShiftIdentity</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/ShiftSoftware/ShiftIdentity</RepositoryUrl>
-		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<PackageIcon>icon.png</PackageIcon>
 	</PropertyGroup>
 

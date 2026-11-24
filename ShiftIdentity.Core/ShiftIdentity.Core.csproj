@@ -13,7 +13,6 @@
 		<PackageId>ShiftSoftware.ShiftIdentity.Core</PackageId>
 		<Version>$(ShiftFrameworkVersion)</Version>
 		<Authors>aza.asim,Shift Software,Nahro</Authors>
-		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<IsPackable>True</IsPackable>
 		<PackageIcon>icon.png</PackageIcon>
 	</PropertyGroup>
