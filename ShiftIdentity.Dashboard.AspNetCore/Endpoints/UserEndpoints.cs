@@ -120,11 +120,13 @@ internal static class UserEndpoints
                         Message = new Message("Reset TOTP", "This host uses the identity authority. Open the user and choose Turn off MFA, or Recover authenticator for a lost phone.")
                     }, statusCode: (int)HttpStatusCode.BadRequest);
 
-                var users = await GetSelectedUsersAsync(httpContext, ids);
+                List<User> users;
                 ShiftSoftware.ShiftEntity.EFCore.AfterCommitException? saved;
 
                 try
                 {
+                    users = await GetSelectedUsersAsync(httpContext, ids);
+
                     // Refused as a whole, naming the users, when the admin doesn't cover any of them (review F16).
                     await RefuseUncoveredAsync(httpContext, users);
 
@@ -153,7 +155,16 @@ internal static class UserEndpoints
                    LinkGenerator linkGenerator,
                    IEnumerable<ISendEmailVerification>? sendEmailVerifications) =>
             {
-                var users = await GetSelectedUsersAsync(httpContext, ids);
+                List<User> users;
+
+                try
+                {
+                    users = await GetSelectedUsersAsync(httpContext, ids);
+                }
+                catch (ShiftEntityException ex)
+                {
+                    return Results.Json(new ShiftEntityResponse<IEnumerable<UserInfoDTO>> { Message = ex.Message, Additional = ex.AdditionalData }, statusCode: ex.HttpStatusCode);
+                }
 
                 List<(User user, string fullUrl)> datas = new();
 
@@ -211,12 +222,14 @@ internal static class UserEndpoints
         app.MapPost("api/IdentityUser/VerifyPhones",
             async (SelectStateDTO<UserListDTO> ids, HttpContext httpContext, UserRepository userRepo) =>
             {
-                var users = userRepo.VerifyPhonesAsync(await GetSelectedUsersAsync(httpContext, ids));
+                IEnumerable<User> users;
                 ShiftSoftware.ShiftEntity.EFCore.AfterCommitException? saved;
 
                 // With the staged authority the flag is written by the admitted save, so the rows are mapped after it.
                 try
                 {
+                    users = userRepo.VerifyPhonesAsync(await GetSelectedUsersAsync(httpContext, ids));
+
                     saved = await SaveAnswer.SaveAsync(userRepo, httpContext);
                 }
                 catch (ShiftEntityException ex)
@@ -295,10 +308,11 @@ internal static class UserEndpoints
 
     // Selected-entity resolution ported from ShiftEntitySecureControllerAsync.GetSelectedEntitiesAsync — the CRUD
     // handler is new()-able and resolves the repository (same request scope, so same tracked DbContext as the
-    // injected UserRepository).
+    // injected UserRepository). Every caller changes or mails the selected users, so a selection over the admin's
+    // GeneralActionTree.DataGridBulkWriteMaxTop is refused (400) before a user is loaded: call it inside a try.
     private static async Task<List<User>> GetSelectedUsersAsync(HttpContext httpContext, SelectStateDTO<UserListDTO> ids)
     {
-        var users = await new ShiftEntityCrudHandler<UserRepository, User, UserListDTO, UserDTO>().GetSelectedEntitiesAsync(httpContext, ids);
+        var users = await new ShiftEntityCrudHandler<UserRepository, User, UserListDTO, UserDTO>().GetSelectedEntitiesForBulkWriteAsync(httpContext, ids);
         if (!httpContext.RequestServices.GetRequiredService<UserRepository>().UsesAuthority) return users;
         var db = httpContext.RequestServices.GetRequiredService<ShiftIdentityDbContext>();
         var userIds = users.Select(x => x.ID).ToArray();
